@@ -29,25 +29,16 @@ app.use(session({
   cookie: { secure: false }
 }));
 
-// Configuração do pool de conexões MySQL
-const mysql = require('mysql2');
+const connection = require('./db'); // ajuste o caminho se necessário
 
-const connection = mysql.createConnection({
-  host: '159.223.147.154',
-  user: 'root',
-  password: '289956Hg@#nhm',
-  database: 'banco_linha',
-});
-
-connection.connect(err => {
+// Exemplo de uso:
+connection.query('SELECT * FROM sua_tabela', (err, results) => {
   if (err) {
-    console.error('Erro ao conectar ao banco:', err);
+    console.error('Erro na query:', err);
     return;
   }
-  console.log('Conectado ao banco de dados MySQL!');
+  console.log(results);
 });
-
-module.exports = connection;
 
 
 
