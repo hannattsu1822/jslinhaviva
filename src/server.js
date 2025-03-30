@@ -30,15 +30,26 @@ app.use(session({
 }));
 
 // Configuração do pool de conexões MySQL
-const pool = mysql.createPool({
-  host: 'localhost',
+const mysql = require('mysql2');
+
+const connection = mysql.createConnection({
+  host: '159.223.147.154',
   user: 'root',
-  password: '289956Hg@#', // Substitua pela sua senha
-  database: 'banco_linha', // Substitua pelo nome do seu banco
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+  password: '289956Hg@#nhm',
+  database: 'banco_linha',
 });
+
+connection.connect(err => {
+  if (err) {
+    console.error('Erro ao conectar ao banco:', err);
+    return;
+  }
+  console.log('Conectado ao banco de dados MySQL!');
+});
+
+module.exports = connection;
+
+
 
 // Promisify para usar async/await com MySQL
 const promisePool = pool.promise();
