@@ -29,31 +29,19 @@ app.use(session({
   cookie: { secure: false }
 }));
 
-const connection = require('./db'); // Ajuste o caminho conforme necessário
-
-// Exemplo de uso com callback:
-connection.query('SELECT * FROM sua_tabela', (err, results) => {
-  if (err) {
-    console.error('Erro na query:', err);
-    return;
-  }
-  console.log('Resultados (callback):', results);
+// Configuração do pool de conexões MySQL
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '289956Hg@#', // Substitua pela sua senha
+  database: 'banco_linha', // Substitua pelo nome do seu banco
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 // Promisify para usar async/await com MySQL
-const promiseConnection = connection.promise();
-
-// Exemplo de uso com async/await:
-async function fetchData() {
-  try {
-    const [rows] = await promiseConnection.query('SELECT * FROM sua_tabela');
-    console.log('Resultados (async/await):', rows);
-  } catch (err) {
-    console.error('Erro na query:', err);
-  }
-}
-
-fetchData();
+const promisePool = pool.promise();
 
 
 // Função para converter Excel Serial Date para data legível
