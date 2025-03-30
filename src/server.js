@@ -952,6 +952,6 @@ app.get('/api/inspecoes_publico/:id', async (req, res) => {
 });
 
 // Iniciar o servidor
-app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
+app.listen(3000, '0.0.0.0', () => {
+    console.log('Servidor rodando em http://159.223.147.154:3000');
 });
