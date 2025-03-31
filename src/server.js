@@ -401,19 +401,29 @@ app.post('/api/upload_transformadores', autenticar, upload.single('planilha'), a
         'DATA DE ENTRADA NO ALMOXARIFADO (RETIRADA)': data_entrada_almoxarifado,
       } = row;
 
+      // Validação e limpeza de dados
+      const numero_serie_valido = String(numero_serie).trim(); // Garantir que é uma string e remover espaços extras
+      if (!numero_serie_valido || numero_serie_valido.length === 0) {
+        console.error('Erro: O campo "numero_serie" está ausente ou inválido na linha:', row);
+        continue;
+      }
+
       if (!item || isNaN(item)) {
         console.error('Erro: O campo "item" está ausente ou não é um número válido na linha:', row);
         continue;
       }
 
+      // Conversão da data
       const dataFormatada = excelSerialDateToJSDate(data_entrada_almoxarifado);
 
+      // Verificar se o transformador já existe
       const [transformadorExistente] = await promisePool.query(
         'SELECT * FROM transformadores WHERE numero_serie = ?',
-        [numero_serie]
+        [numero_serie_valido]
       );
 
       if (transformadorExistente.length > 0) {
+        // Atualizar o transformador existente
         await promisePool.query(
           `UPDATE transformadores SET
             item = ?,
@@ -434,10 +444,11 @@ app.post('/api/upload_transformadores', autenticar, upload.single('planilha'), a
             regional,
             motivo_desativacao,
             dataFormatada,
-            numero_serie,
+            numero_serie_valido,
           ]
         );
       } else {
+        // Inserir novo transformador
         await promisePool.query(
           `INSERT INTO transformadores (
             item, marca, potencia, numero_fases, numero_serie, local_retirada, regional, motivo_desativacao, data_entrada_almoxarifado
@@ -447,7 +458,7 @@ app.post('/api/upload_transformadores', autenticar, upload.single('planilha'), a
             marca,
             potencia,
             numero_fases,
-            numero_serie,
+            numero_serie_valido,
             local_retirada,
             regional,
             motivo_desativacao,
@@ -457,6 +468,7 @@ app.post('/api/upload_transformadores', autenticar, upload.single('planilha'), a
       }
     }
 
+    // Registro de auditoria
     await registrarAuditoria(req.user.matricula, 'Upload de Planilha de Transformadores', 'Planilha processada com sucesso');
     res.status(200).json({ message: 'Dados processados com sucesso!' });
   } catch (error) {
@@ -464,6 +476,7 @@ app.post('/api/upload_transformadores', autenticar, upload.single('planilha'), a
     res.status(500).json({ message: 'Erro ao processar planilha!' });
   }
 });
+
 
 // Rota para salvar o checklist de transformadores
 app.post('/api/salvar_checklist', autenticar, async (req, res) => {
