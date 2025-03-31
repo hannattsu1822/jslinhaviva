@@ -31,7 +31,7 @@ app.use(session({
 
 // Configuração do pool de conexões MySQL
 const pool = mysql.createPool({
-  host: '127.0.0.1',
+  host: '159.223.147.154',
   user: 'root',
   password: '289956Hg@#nhm', // Substitua pela sua senha
   database: 'banco_linha', // Substitua pelo nome do seu banco
