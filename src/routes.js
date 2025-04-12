@@ -69,39 +69,89 @@ function excelSerialDateToJSDate(input) {
     return null;
 }
 
-// Rotas de autenticação
 router.post('/login', async (req, res) => {
     const { matricula, senha } = req.body;
 
+    if (!matricula || !senha) {
+        return res.status(400).json({ message: 'Matrícula e senha são obrigatórias!' });
+    }
+
     try {
-        const [rows] = await promisePool.query('SELECT * FROM users WHERE matricula = ?', [matricula]);
+        const [rows] = await promisePool.query(
+            'SELECT * FROM users WHERE matricula = ?', 
+            [matricula]
+        );
 
-        if (rows.length > 0) {
-            const user = rows[0];
-
-            if (senha === user.senha) {
-                req.session.user = {
-                    nome: user.nome,
-                    matricula: user.matricula,
-                    cargo: user.cargo,
-                };
-
-                res.status(200).json({
-                    message: 'Login bem-sucedido!',
-                    user: req.session.user,
-                });
-            } else {
-                res.status(401).json({ message: 'Matrícula ou senha incorretas!' });
-            }
-        } else {
-            res.status(404).json({ message: 'Usuário não encontrado!' });
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Usuário não encontrado!' });
         }
+
+        const user = rows[0];
+        
+        // Verificar cargos permitidos
+        const cargosPermitidos = [
+            'Motorista', 
+            'Inspetor', 
+            'Encarregado', 
+            'Técnico', 
+            'Engenheiro', 
+            'Gerente', 
+            'ADM', 
+            'ADMIN'
+        ];
+        
+        if (!cargosPermitidos.includes(user.cargo)) {
+            return res.status(403).json({ 
+                message: 'Seu cargo não tem permissão para acessar o sistema!' 
+            });
+        }
+
+        // Verificar senha (simplificado - considere usar bcrypt em produção)
+        if (senha !== user.senha) {
+            return res.status(401).json({ message: 'Credenciais inválidas!' });
+        }
+
+        // Configurar sessão
+        req.session.user = {
+            id: user.id,
+            nome: user.nome,
+            matricula: user.matricula,
+            cargo: user.cargo,
+            regional: user.regional || null
+        };
+
+        // Registrar auditoria
+        await registrarAuditoria(
+            user.matricula, 
+            'Login', 
+            `Usuário ${user.nome} acessou o sistema`
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Login realizado com sucesso!',
+            user: {
+                nome: user.nome,
+                matricula: user.matricula,
+                cargo: user.cargo,
+                regional: user.regional
+            }
+        });
+
     } catch (err) {
-        res.status(500).json({ message: 'Erro ao conectar ao banco de dados!' });
+        console.error('Erro no login:', err);
+        res.status(500).json({ 
+            message: 'Erro interno no servidor durante o login',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 });
 
 router.get('/login', (req, res) => {
+    // Se já estiver logado, redireciona para o dashboard
+    if (req.session.user) {
+        return res.redirect('/dashboard');
+    }
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
