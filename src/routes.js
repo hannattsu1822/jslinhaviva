@@ -71,56 +71,80 @@ function excelSerialDateToJSDate(input) {
 
 
 
-// Importação ÚNICA no topo do arquivo
-const { autenticar, registrarAuditoria } = require('./auth');
-
+// Rota de Login
 router.post('/login', async (req, res) => {
     try {
         const { matricula, senha } = req.body;
-        if (!matricula || !senha) return res.status(400).json({ message: 'Credenciais necessárias' });
+        
+        if (!matricula || !senha) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Matrícula e senha são obrigatórias' 
+            });
+        }
 
-        const [users] = await promisePool.query('SELECT * FROM users WHERE matricula = ?', [matricula]);
-        if (users.length === 0) return res.status(404).json({ message: 'Usuário não encontrado' });
+        const [users] = await promisePool.query(
+            'SELECT id, nome, matricula, cargo, senha, regional FROM users WHERE matricula = ? LIMIT 1',
+            [matricula]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Usuário não encontrado' 
+            });
+        }
 
         const user = users[0];
-        if (senha !== user.senha) return res.status(401).json({ message: 'Senha incorreta' });
+
+        if (senha !== user.senha) {
+            return res.status(401).json({ 
+                success: false,
+                message: 'Credenciais inválidas' 
+            });
+        }
 
         req.session.user = {
             id: user.id,
             nome: user.nome,
             matricula: user.matricula,
-            cargo: user.cargo
+            cargo: user.cargo,
+            regional: user.regional || null
         };
 
-        await registrarAuditoria(user.matricula, 'Login', `Acesso por ${user.nome}`);
+        await registrarAuditoria(
+            user.matricula, 
+            'Login', 
+            `Usuário ${user.nome} (${user.cargo}) acessou o sistema`
+        );
 
-        res.json({
+        res.status(200).json({
             success: true,
+            message: 'Login realizado com sucesso',
             user: {
                 nome: user.nome,
                 matricula: user.matricula,
-                cargo: user.cargo
+                cargo: user.cargo,
+                regional: user.regional
             }
         });
 
     } catch (error) {
         console.error('Erro no login:', error);
-        res.status(500).json({ message: 'Erro no servidor' });
+        res.status(500).json({ 
+            success: false,
+            message: 'Erro interno no servidor' 
+        });
     }
 });
 
-router.get('/login', (req, res) => {
-    if (req.session.user) return res.redirect('/dashboard');
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-// Rota para servir a página de login
 router.get('/login', (req, res) => {
     if (req.session.user) {
         return res.redirect('/dashboard');
     }
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
+
 
 
 // Rotas de veículos
