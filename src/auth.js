@@ -23,9 +23,10 @@ function verificarPermissaoPorCargo(req, res, next) {
 
     const rotasPermitidas = {
         Motorista: ['/frota', '/checklist_veiculos'],
-        Inspetor: ['/transformadores', '/upload_transformadores', '/formulario_transformadores'],
+        Inspetor: ['*'], // Modificado para ter acesso total
         Técnico: ['*'],
         Engenheiro: ['*'],
+        Encarregado: ['*'], // Novo cargo com acesso total
         ADM: ['*'],
         ADMIN: ['*'],
     };
@@ -48,7 +49,7 @@ function verificarPermissaoPorCargo(req, res, next) {
 // Função para verificar permissão geral
 function verificarPermissao(req, res, next) {
     const cargo = req.user.cargo;
-    const cargosPermitidos = ['Técnico', 'Engenheiro', 'ADMIN'];
+    const cargosPermitidos = ['Técnico', 'Engenheiro', 'Encarregado', 'ADMIN']; // Adicionado Encarregado
 
     if (cargosPermitidos.includes(cargo)) {
         next();
