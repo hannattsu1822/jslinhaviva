@@ -69,83 +69,49 @@ function excelSerialDateToJSDate(input) {
     return null;
 }
 
-const { registrarAuditoria } = require('./auth');
 
-// Certifique-se que esta linha aparece UMA ÚNICA VEZ no topo do arquivo:
+
+// Importação ÚNICA no topo do arquivo
 const { autenticar, registrarAuditoria } = require('./auth');
 
-// Rota de login
 router.post('/login', async (req, res) => {
-    const { matricula, senha } = req.body;
-
-    // Validação básica
-    if (!matricula || !senha) {
-        return res.status(400).json({ 
-            success: false,
-            message: 'Matrícula e senha são obrigatórias' 
-        });
-    }
-
     try {
-        // Busca usuário no banco
-        const [users] = await promisePool.query(
-            'SELECT id, nome, matricula, cargo, senha, regional FROM users WHERE matricula = ?', 
-            [matricula]
-        );
+        const { matricula, senha } = req.body;
+        if (!matricula || !senha) return res.status(400).json({ message: 'Credenciais necessárias' });
 
-        // Verifica se usuário existe
-        if (users.length === 0) {
-            return res.status(404).json({ 
-                success: false,
-                message: 'Usuário não encontrado' 
-            });
-        }
+        const [users] = await promisePool.query('SELECT * FROM users WHERE matricula = ?', [matricula]);
+        if (users.length === 0) return res.status(404).json({ message: 'Usuário não encontrado' });
 
         const user = users[0];
+        if (senha !== user.senha) return res.status(401).json({ message: 'Senha incorreta' });
 
-        // Verificação de senha (em produção, use bcrypt)
-        if (senha !== user.senha) {
-            return res.status(401).json({ 
-                success: false,
-                message: 'Credenciais inválidas' 
-            });
-        }
-
-        // Cria sessão
         req.session.user = {
             id: user.id,
             nome: user.nome,
             matricula: user.matricula,
-            cargo: user.cargo,
-            regional: user.regional || null
+            cargo: user.cargo
         };
 
-        // Registra auditoria
-        await registrarAuditoria(
-            user.matricula, 
-            'Login', 
-            `Usuário ${user.nome} (${user.cargo}) acessou o sistema`
-        );
+        await registrarAuditoria(user.matricula, 'Login', `Acesso por ${user.nome}`);
 
-        // Resposta de sucesso
-        res.status(200).json({
+        res.json({
             success: true,
-            message: 'Login realizado com sucesso',
             user: {
                 nome: user.nome,
                 matricula: user.matricula,
-                cargo: user.cargo,
-                regional: user.regional
+                cargo: user.cargo
             }
         });
 
     } catch (error) {
-        console.error('Erro durante login:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erro interno no servidor'
-        });
+        console.error('Erro no login:', error);
+        res.status(500).json({ message: 'Erro no servidor' });
     }
+});
+
+router.get('/login', (req, res) => {
+    if (req.session.user) return res.redirect('/dashboard');
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Rota para servir a página de login
