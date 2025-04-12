@@ -71,29 +71,47 @@ function excelSerialDateToJSDate(input) {
 
 const { registrarAuditoria } = require('./auth');
 
+// Certifique-se que esta linha aparece UMA ÚNICA VEZ no topo do arquivo:
+const { autenticar, registrarAuditoria } = require('./auth');
+
+// Rota de login
 router.post('/login', async (req, res) => {
     const { matricula, senha } = req.body;
 
+    // Validação básica
     if (!matricula || !senha) {
-        return res.status(400).json({ message: 'Matrícula e senha são obrigatórias!' });
+        return res.status(400).json({ 
+            success: false,
+            message: 'Matrícula e senha são obrigatórias' 
+        });
     }
 
     try {
-        const [rows] = await promisePool.query(
-            'SELECT * FROM users WHERE matricula = ?', 
+        // Busca usuário no banco
+        const [users] = await promisePool.query(
+            'SELECT id, nome, matricula, cargo, senha, regional FROM users WHERE matricula = ?', 
             [matricula]
         );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'Usuário não encontrado!' });
+        // Verifica se usuário existe
+        if (users.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Usuário não encontrado' 
+            });
         }
 
-        const user = rows[0];
-        
+        const user = users[0];
+
+        // Verificação de senha (em produção, use bcrypt)
         if (senha !== user.senha) {
-            return res.status(401).json({ message: 'Credenciais inválidas!' });
+            return res.status(401).json({ 
+                success: false,
+                message: 'Credenciais inválidas' 
+            });
         }
 
+        // Cria sessão
         req.session.user = {
             id: user.id,
             nome: user.nome,
@@ -102,17 +120,17 @@ router.post('/login', async (req, res) => {
             regional: user.regional || null
         };
 
-        // Modifique esta parte para usar o módulo auth diretamente:
-        const auth = require('./auth');
-        await auth.registrarAuditoria(
+        // Registra auditoria
+        await registrarAuditoria(
             user.matricula, 
             'Login', 
-            `Usuário ${user.nome} acessou o sistema`
+            `Usuário ${user.nome} (${user.cargo}) acessou o sistema`
         );
 
+        // Resposta de sucesso
         res.status(200).json({
             success: true,
-            message: 'Login realizado com sucesso!',
+            message: 'Login realizado com sucesso',
             user: {
                 nome: user.nome,
                 matricula: user.matricula,
@@ -121,12 +139,21 @@ router.post('/login', async (req, res) => {
             }
         });
 
-    } catch (err) {
-        console.error('Erro no login:', err);
-        res.status(500).json({ 
-            message: 'Erro interno no servidor durante o login'
+    } catch (error) {
+        console.error('Erro durante login:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro interno no servidor'
         });
     }
+});
+
+// Rota para servir a página de login
+router.get('/login', (req, res) => {
+    if (req.session.user) {
+        return res.redirect('/dashboard');
+    }
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 
