@@ -23,9 +23,11 @@ function verificarPermissaoPorCargo(req, res, next) {
 
     const rotasPermitidas = {
         Motorista: ['/frota', '/checklist_veiculos'],
-        Inspetor: ['/transformadores', '/upload_transformadores', '/formulario_transformadores'],
+        Inspetor: ['/transformadores', '/upload_transformadores', '/formulario_transformadores', '/filtrar_transformadores'],
+        Encarregado: ['/transformadores', '/upload_transformadores', '/formulario_transformadores', '/filtrar_transformadores'], // Mesmas permissões do Inspetor
         Técnico: ['*'],
         Engenheiro: ['*'],
+        Gerente: ['*'],
         ADM: ['*'],
         ADMIN: ['*'],
     };
@@ -33,12 +35,12 @@ function verificarPermissaoPorCargo(req, res, next) {
     const rotasPermitidasUsuario = rotasPermitidas[cargo] || [];
     const rotaPermitida = rotasPermitidasUsuario.some(rota => {
         if (rota === '*') return true;
-        return req.path === rota;
+        return req.path.startsWith(rota); // Alterado para verificar prefixo da rota
     });
 
     if (!rotaPermitida) {
         console.log('Acesso negado!');
-        res.status(403).json({ message: 'Acesso negado!' });
+        return res.status(403).json({ message: 'Acesso negado! Cargo não autorizado.' });
     } else {
         console.log('Acesso permitido!');
         next();
@@ -48,12 +50,12 @@ function verificarPermissaoPorCargo(req, res, next) {
 // Função para verificar permissão geral
 function verificarPermissao(req, res, next) {
     const cargo = req.user.cargo;
-    const cargosPermitidos = ['Técnico', 'Engenheiro', 'ADMIN'];
+    const cargosPermitidos = ['Técnico', 'Engenheiro', 'Gerente', 'ADMIN', 'ADM', 'Encarregado'];
 
     if (cargosPermitidos.includes(cargo)) {
         next();
     } else {
-        res.status(403).json({ message: 'Acesso negado!' });
+        res.status(403).json({ message: 'Acesso negado! Nível de permissão insuficiente.' });
     }
 }
 
