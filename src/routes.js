@@ -71,44 +71,29 @@ function excelSerialDateToJSDate(input) {
 
 const { registrarAuditoria } = require('./auth');
 
-// Rota POST /login (autenticação)
 router.post('/login', async (req, res) => {
     const { matricula, senha } = req.body;
 
-    // Validação básica
     if (!matricula || !senha) {
-        return res.status(400).json({ 
-            success: false,
-            message: 'Matrícula e senha são obrigatórias' 
-        });
+        return res.status(400).json({ message: 'Matrícula e senha são obrigatórias!' });
     }
 
     try {
-        // Consulta ao banco
-        const [users] = await promisePool.query(
+        const [rows] = await promisePool.query(
             'SELECT * FROM users WHERE matricula = ?', 
             [matricula]
         );
 
-        // Verificação de usuário
-        if (users.length === 0) {
-            return res.status(404).json({ 
-                success: false,
-                message: 'Usuário não encontrado' 
-            });
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Usuário não encontrado!' });
         }
 
-        const user = users[0];
-
-        // Verificação de senha (simplificada - ideal usar bcrypt)
+        const user = rows[0];
+        
         if (senha !== user.senha) {
-            return res.status(401).json({ 
-                success: false,
-                message: 'Credenciais inválidas' 
-            });
+            return res.status(401).json({ message: 'Credenciais inválidas!' });
         }
 
-        // Criação da sessão
         req.session.user = {
             id: user.id,
             nome: user.nome,
@@ -117,40 +102,34 @@ router.post('/login', async (req, res) => {
             regional: user.regional || null
         };
 
-        // Registro de auditoria
-        await registrarAuditoria(
+        // Modifique esta parte para usar o módulo auth diretamente:
+        const auth = require('./auth');
+        await auth.registrarAuditoria(
             user.matricula, 
             'Login', 
-            `Acesso concedido para ${user.nome} (${user.cargo})`
+            `Usuário ${user.nome} acessou o sistema`
         );
 
-        // Resposta de sucesso
         res.status(200).json({
             success: true,
-            message: 'Autenticação bem-sucedida',
+            message: 'Login realizado com sucesso!',
             user: {
                 nome: user.nome,
                 matricula: user.matricula,
-                cargo: user.cargo
+                cargo: user.cargo,
+                regional: user.regional
             }
         });
 
-    } catch (error) {
-        console.error('Erro no login:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Falha interna no servidor'
+    } catch (err) {
+        console.error('Erro no login:', err);
+        res.status(500).json({ 
+            message: 'Erro interno no servidor durante o login'
         });
     }
 });
 
-// Rota GET /login (página de login)
-router.get('/login', (req, res) => {
-    if (req.session.user) {
-        return res.redirect('/dashboard');
-    }
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
+
 // Rotas de veículos
 router.get('/api/motoristas', autenticar, async (req, res) => {
     try {
