@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Serviços</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/gestao_servico.css">
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-header text-center py-3">
+                    <div class="user-icon mb-2">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h5 class="user-name mb-1" id="user-name"></h5>
+                </div>
+
+                <div class="user-info p-3 mt-2 rounded">
+                    <div class="info-item mb-2">
+                        <i class="fas fa-id-card me-2"></i>
+                        <span id="user-matricula"></span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-briefcase me-2"></i>
+                        <span id="user-cargo"></span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <span id="current-date"></span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-clock me-2"></i>
+                        <span id="current-time"></span>
+                    </div>
+                </div>
+
+                <!-- Menu de Navegação -->
+                <nav class="sidebar-menu">
+                    <a href="/dashboard" class="menu-item">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a href="/transformadores" class="menu-item">
+                        <i class="fas fa-bolt me-2"></i>Transformadores
+                    </a>
+                    <a href="/subestacao" class="menu-item">
+                        <i class="fas fa-industry me-2"></i>Subestação
+                    </a>
+                    <a href="/frota" class="menu-item">
+                        <i class="fas fa-truck me-2"></i>Frota
+                    </a>
+                    <a href="/gestao-servicos" class="menu-item active">
+                        <i class="fas fa-tools me-2"></i>Gestão de Serviços
+                    </a>
+                </nav>
+
+                <!-- Botão Sair no rodapé -->
+                <div class="sidebar-footer">
+                    <button onclick="logout()" class="btn-logout">
+                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="main-content">
+                <div class="container py-4">
+                    <h1 class="page-title mb-4">
+                        <i class="fas fa-tools me-3"></i>Gestão de Serviços
+                    </h1>
+
+                    <!-- Cards de Ação -->
+                    <div class="row g-4">
+                        <!-- Card: Registro de Serviço -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" onclick="navigateTo('registro_servicos')">
+                                <div class="card-body d-flex flex-column align-items-center justify-content-center p-4">
+                                    <div class="icon-circle bg-primary mb-3">
+                                        <i class="fas fa-plus"></i>
+                                    </div>
+                                    <h3 class="card-title">Registro de Serviço</h3>
+                                    <p class="card-text text-center">Cadastre novos serviços</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Serviços Ativos -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" onclick="navigateTo('servicos_ativos')">
+                                <div class="card-body d-flex flex-column align-items-center justify-content-center p-4">
+                                    <div class="icon-circle bg-warning mb-3">
+                                        <i class="fas fa-hourglass-half"></i>
+                                    </div>
+                                    <h3 class="card-title">Serviços Ativos</h3>
+                                    <p class="card-text text-center">Serviços em andamento</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Serviços Concluídos -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" onclick="navigateTo('servicos_concluidos')">
+                                <div class="card-body d-flex flex-column align-items-center justify-content-center p-4">
+                                    <div class="icon-circle bg-success mb-3">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <h3 class="card-title">Serviços Concluídos</h3>
+                                    <p class="card-text text-center">Histórico de serviços</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Acesso Negado -->
+    <div id="access-denied-modal" class="modal fade">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <i class="fas fa-exclamation-circle text-danger mb-3" style="font-size: 3rem;"></i>
+                    <h4 class="mb-3">Acesso negado!</h4>
+                    <p>Você não tem permissão para acessar este recurso.</p>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Recupera os dados do usuário do localStorage
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        // Atualiza a data e hora
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('pt-BR');
+        }
+
+        // Exibe as informações do usuário
+        if (user) {
+            document.getElementById('user-name').textContent = user.nome;
+            document.getElementById('user-matricula').textContent = `Matrícula: ${user.matricula}`;
+            document.getElementById('user-cargo').textContent = `Cargo: ${user.cargo}`;
+
+            // Atualiza data e hora a cada segundo
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        } else {
+            window.location.href = '/';
+        }
+
+        // Modal de acesso negado
+        const accessDeniedModal = new bootstrap.Modal(document.getElementById('access-denied-modal'));
+
+        // Função para navegar e capturar erros de acesso
+        async function navigateTo(url) {
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    window.location.href = url;
+                } else if (response.status === 403) {
+                    accessDeniedModal.show();
+                } else {
+                    accessDeniedModal.show();
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                accessDeniedModal.show();
+            }
+        }
+
+        // Função para logout
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+
+</html>

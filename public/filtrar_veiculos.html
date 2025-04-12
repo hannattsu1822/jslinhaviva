@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filtrar Veículos</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- CSS Personalizado -->
+  <link rel="stylesheet" href="/static/css/filtrar_veiculos.css">
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row min-vh-100">
+      <!-- Sidebar -->
+      <div class="sidebar bg-glass">
+        <div class="sidebar-header text-center py-3">
+          <div class="user-icon mb-2">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <h5 class="user-name mb-1" id="user-name"></h5>
+        </div>
+
+        <div class="user-info p-3 mt-2 rounded">
+          <div class="info-item mb-2">
+            <i class="fas fa-id-card me-2"></i>
+            <span id="user-matricula"></span>
+          </div>
+          <div class="info-item mb-2">
+            <i class="fas fa-briefcase me-2"></i>
+            <span id="user-cargo"></span>
+          </div>
+          <div class="info-item mb-2">
+            <i class="fas fa-calendar-alt me-2"></i>
+            <span id="current-date"></span>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-clock me-2"></i>
+            <span id="current-time"></span>
+          </div>
+        </div>
+
+        <!-- Menu de Navegação -->
+        <nav class="sidebar-menu">
+          <a href="/dashboard" class="menu-item">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+          </a>
+          <a href="/transformadores" class="menu-item">
+            <i class="fas fa-bolt me-2"></i>Transformadores
+          </a>
+          <a href="/subestacao" class="menu-item">
+            <i class="fas fa-industry me-2"></i>Subestação
+          </a>
+          <a href="/frota" class="menu-item active">
+            <i class="fas fa-truck me-2"></i>Frota
+          </a>
+          <a href="/gestao-servicos" class="menu-item">
+            <i class="fas fa-tools me-2"></i>Gestão de Serviços
+          </a>
+        </nav>
+
+        <!-- Botão Sair no rodapé -->
+        <div class="sidebar-footer">
+          <button onclick="logout()" class="btn-logout">
+            <i class="fas fa-sign-out-alt me-2"></i>Sair
+          </button>
+        </div>
+      </div>
+
+      <!-- Conteúdo Principal -->
+      <div class="main-content">
+        <div class="container py-4">
+          <h1 class="page-title mb-4">
+            <i class="fas fa-filter me-3"></i>Filtrar Inspeções de Veículos
+          </h1>
+
+          <!-- Card de Filtros -->
+          <div class="card glass-card p-4 mb-4">
+            <h3 class="mb-3"><i class="fas fa-search me-2"></i>Filtros de Pesquisa</h3>
+            <form id="filtroForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="placa" class="form-label">Placa do Veículo:</label>
+                  <select class="form-select glass-select" id="placa" name="placa">
+                    <option value="">Selecione uma placa</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="matricula" class="form-label">Matrícula do Motorista:</label>
+                  <select class="form-select glass-select" id="matricula" name="matricula">
+                    <option value="">Selecione uma matrícula</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="dataInicial" class="form-label">Data Inicial:</label>
+                  <input type="date" class="form-control glass-select" id="dataInicial" name="dataInicial">
+                </div>
+                <div class="col-md-6">
+                  <label for="dataFinal" class="form-label">Data Final:</label>
+                  <input type="date" class="form-control glass-select" id="dataFinal" name="dataFinal">
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary glass-btn w-100">
+                    <i class="fas fa-filter me-2"></i>Filtrar
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Card de Resultados -->
+          <div class="card glass-card p-4">
+            <h3 class="mb-3"><i class="fas fa-table me-2"></i>Resultados das Inspeções</h3>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle" id="tabelaResultados">
+                <thead class="glass-table-header">
+                  <tr>
+                    <th>ID</th>
+                    <th>Placa</th>
+                    <th>Matrícula</th>
+                    <th>Data</th>
+                    <th>KM Atual</th>
+                    <th>Horímetro</th>
+                    <th>Relatório</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Os resultados serão preenchidos aqui dinamicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Botão de Voltar -->
+          <div class="mt-4">
+            <button onclick="window.location.href='/frota'" class="btn btn-secondary glass-btn w-100">
+              <i class="fas fa-arrow-left me-2"></i>Voltar para Frota
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle com Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Recupera os dados do usuário do localStorage
+    const user = JSON.parse(localStorage.getItem('user'));
+
+    // Atualiza a data e hora
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
+      document.getElementById('current-time').textContent = now.toLocaleTimeString('pt-BR');
+    }
+
+    // Exibe as informações do usuário
+    if (user) {
+      document.getElementById('user-name').textContent = user.nome;
+      document.getElementById('user-matricula').textContent = `Matrícula: ${user.matricula}`;
+      document.getElementById('user-cargo').textContent = `Cargo: ${user.cargo}`;
+
+      // Atualiza data e hora a cada segundo
+      updateDateTime();
+      setInterval(updateDateTime, 1000);
+    } else {
+      window.location.href = '/';
+    }
+
+    // Função para logout
+    function logout() {
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+
+    // Função para carregar as placas dos veículos
+    async function carregarPlacas() {
+      try {
+        const response = await fetch('/api/placas');
+        const data = await response.json();
+
+        const placaSelect = document.getElementById('placa');
+        placaSelect.innerHTML = '<option value="">Selecione uma placa</option>';
+
+        data.forEach((veiculo) => {
+          const option = document.createElement('option');
+          option.value = veiculo.placa;
+          option.textContent = veiculo.placa;
+          placaSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar placas:', error);
+      }
+    }
+
+    // Função para carregar as matrículas dos motoristas
+    async function carregarMatriculas() {
+      try {
+        const response = await fetch('/api/motoristas');
+        const data = await response.json();
+
+        const matriculaSelect = document.getElementById('matricula');
+        matriculaSelect.innerHTML = '<option value="">Selecione uma matrícula</option>';
+
+        data.forEach((motorista) => {
+          const option = document.createElement('option');
+          option.value = motorista.matricula;
+          option.textContent = `${motorista.matricula} - ${motorista.nome}`;
+          matriculaSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar matrículas:', error);
+      }
+    }
+
+    // Função para buscar inspeções filtradas
+    async function buscarInspecoes(filtros) {
+      try {
+        const response = await fetch('/api/filtrar_inspecoes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(filtros),
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao buscar inspeções');
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Erro:', error);
+        return [];
+      }
+    }
+
+    // Função para exibir os resultados na tabela
+    function exibirResultados(inspecoes) {
+      const tbody = document.querySelector('#tabelaResultados tbody');
+      tbody.innerHTML = '';
+
+      inspecoes.forEach((inspecao) => {
+        const row = document.createElement('tr');
+        row.className = 'glass-table-row';
+        row.innerHTML = `
+          <td>${inspecao.id}</td>
+          <td>${inspecao.placa}</td>
+          <td>${inspecao.matricula}</td>
+          <td>${new Date(inspecao.data_inspecao).toLocaleDateString()}</td>
+          <td>${inspecao.km_atual}</td>
+          <td>${inspecao.horimetro}</td>
+          <td>
+            <button onclick="window.location.href='/relatorio_veiculos?id=${inspecao.id}'" class="btn btn-sm btn-success glass-btn">
+              <i class="fas fa-file-alt me-1"></i>
+            </button>
+          </td>
+          <td>
+            <div class="d-flex gap-2">
+              <button onclick="editarInspecao(${inspecao.id})" class="btn btn-sm btn-primary glass-btn">
+                <i class="fas fa-edit me-1"></i>
+              </button>
+              <button onclick="excluirInspecao(${inspecao.id})" class="btn btn-sm btn-danger glass-btn">
+                <i class="fas fa-trash me-1"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Função para editar uma inspeção
+    async function editarInspecao(id) {
+      window.location.href = `/editar_inspecao?id=${id}`;
+    }
+
+    // Função para excluir uma inspeção
+    async function excluirInspecao(id) {
+      if (confirm('Tem certeza que deseja excluir esta inspeção?')) {
+        try {
+          const response = await fetch(`/api/excluir_inspecao/${id}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) {
+            throw new Error('Erro ao excluir inspeção');
+          }
+
+          // Recarrega os resultados após a exclusão
+          const filtros = {
+            placa: document.getElementById('placa').value,
+            matricula: document.getElementById('matricula').value,
+            dataInicial: document.getElementById('dataInicial').value,
+            dataFinal: document.getElementById('dataFinal').value,
+          };
+
+          const inspecoes = await buscarInspecoes(filtros);
+          exibirResultados(inspecoes);
+        } catch (error) {
+          console.error('Erro:', error);
+          alert('Erro ao excluir inspeção');
+        }
+      }
+    }
+
+    // Evento de submit do formulário
+    document.getElementById('filtroForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const filtros = {
+        placa: document.getElementById('placa').value,
+        matricula: document.getElementById('matricula').value,
+        dataInicial: document.getElementById('dataInicial').value,
+        dataFinal: document.getElementById('dataFinal').value,
+      };
+
+      if (!filtros.placa && !filtros.matricula && !filtros.dataInicial && !filtros.dataFinal) {
+        alert('Preencha pelo menos um filtro!');
+        return;
+      }
+
+      const inspecoes = await buscarInspecoes(filtros);
+      exibirResultados(inspecoes);
+    });
+
+    // Carrega as placas e matrículas ao carregar a página
+    document.addEventListener('DOMContentLoaded', () => {
+      carregarPlacas();
+      carregarMatriculas();
+    });
+  </script>
+
+</html>

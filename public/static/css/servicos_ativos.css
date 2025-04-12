@@ -1,0 +1,465 @@
+/* Estilos gerais */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #ffffff;
+    color: #333;
+    min-height: 100vh;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 220px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem 1rem;
+    text-align: center;
+}
+
+.user-icon {
+    font-size: 3rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 auto;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fff;
+    margin-top: 0.5rem;
+}
+
+.user-cargo {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+}
+
+.user-info {
+    background: rgba(0, 0, 0, 0.15);
+    margin: 15px;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.info-item {
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Menu de Navegação */
+.sidebar-menu {
+    flex-grow: 1;
+    padding: 0 15px;
+    margin-top: 1rem;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.menu-item.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-weight: 500;
+    border-left: 3px solid #fff;
+}
+
+.menu-item i {
+    width: 24px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+/* Rodapé da Sidebar */
+.sidebar-footer {
+    margin-top: auto;
+    padding: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Botão Sair */
+.btn-logout {
+    background-color: #dc3545;
+    border: none;
+    transition: all 0.3s;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.btn-logout:hover {
+    background-color: #bb2d3b;
+    transform: translateY(-2px);
+}
+
+/* Conteúdo principal */
+.main-content {
+    margin-left: 220px;
+    padding: 20px;
+    min-height: 100vh;
+    width: calc(100% - 220px);
+    background-color: #ffffff;
+}
+
+.page-title {
+    font-weight: 600;
+    color: #2a5298;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.page-title i {
+    margin-right: 10px;
+    color: #2a5298;
+}
+
+/* Cards */
+.card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    background-color: #fff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 1rem 1.25rem;
+    font-weight: 500;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* Tabela */
+.table-responsive {
+    max-height: 65vh;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+
+.table {
+    color: #333;
+    background-color: transparent;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px 15px;
+    font-weight: 600;
+}
+
+.table tbody tr {
+    transition: all 0.2s;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa !important;
+}
+
+.table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+/* Botões */
+.btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn i {
+    margin-right: 6px;
+}
+
+.btn-primary {
+    background-color: #2a5298;
+    border-color: #1e3c72;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1e3c72;
+    border-color: #142850;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #bb2d3b;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #bb2d3b;
+    border-color: #9a2532;
+    color: white;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #218838;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #5a6268;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #484e53;
+    color: white;
+}
+
+/* Formulários */
+.form-control {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #2a5298;
+    box-shadow: 0 0 0 0.2rem rgba(42, 82, 152, 0.25);
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+/* Paginação */
+.pagination .page-link {
+    color: #2a5298;
+    border: 1px solid #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #2a5298;
+    border-color: #1e3c72;
+    color: white;
+}
+
+.pagination .page-link:hover {
+    background-color: #f8f9fa;
+}
+
+/* Modal */
+.modal-content {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e0e0e0;
+    padding: 1rem 1.5rem;
+}
+
+.modal-title {
+    font-weight: 600;
+    color: #2a5298;
+}
+
+.modal-footer {
+    border-top: 1px solid #e0e0e0;
+    padding: 1rem 1.5rem;
+}
+
+/* Estilos adicionais para serviços ativos */
+.badge {
+    font-size: 0.85em;
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    border-radius: 50rem;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.badge.bg-success {
+    background-color: #28a745 !important;
+}
+
+.glass-table-row {
+    transition: all 0.2s;
+}
+
+.glass-table-row:hover {
+    background-color: rgba(248, 249, 250, 0.7) !important;
+}
+
+/* Modal de conclusão */
+.glass-modal {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+.toast.bg-success {
+    background-color: #28a745 !important;
+    color: white;
+}
+
+.toast.bg-danger {
+    background-color: #dc3545 !important;
+    color: white;
+}
+
+.toast.bg-info {
+    background-color: #17a2b8 !important;
+    color: white;
+}
+
+.toast-header {
+    font-weight: 600;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Ajustes para tabela responsiva */
+@media (max-width: 992px) {
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table td,
+    .table th {
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding-top: 1rem;
+    }
+
+    .user-icon {
+        font-size: 2.5rem;
+    }
+
+    .sidebar-footer {
+        margin-top: 1rem;
+    }
+
+    .table-responsive {
+        max-height: none;
+    }
+}
+
+/* Estilos para os novos elementos de câmera */
+#btnCamera,
+#btnGaleria {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#btnCamera i,
+#btnGaleria i {
+    margin-right: 8px;
+}
+
+#imagePreview {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+
+    #btnCamera,
+    #btnGaleria {
+        width: 100%;
+    }
+}

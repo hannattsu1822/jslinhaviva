@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Serviços</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/registro_servicos.css">
+</head>
+
+<body>
+    <div class="container registro-container">
+        <div class="header">
+            <h1><i class="fas fa-tools me-2"></i>Registro de Serviços</h1>
+            <a href="/gestao-servicos" class="btn btn-back">
+                <i class="fas fa-arrow-left me-2"></i>Voltar
+            </a>
+        </div>
+
+        <div class="card-form">
+            <form id="formServico" enctype="multipart/form-data">
+                <!-- Linha 1 -->
+                <div class="row form-row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="processo" class="form-label">Número do Processo *</label>
+                            <input type="text" class="form-control" id="processo" name="processo" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="data_prevista_execucao" class="form-label">Data Prevista *</label>
+                            <input type="date" class="form-control" id="data_prevista_execucao"
+                                name="data_prevista_execucao" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Linha 2 -->
+                <div class="row form-row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="desligamento" class="form-label">Desligamento *</label>
+                            <select class="form-control" id="desligamento" name="desligamento" required>
+                                <option value="SIM">SIM</option>
+                                <option value="NÃO">NÃO</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="subestacao" class="form-label">Subestação *</label>
+                            <input type="text" class="form-control" id="subestacao" name="subestacao" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="alimentador" class="form-label">Alimentador *</label>
+                            <input type="text" class="form-control" id="alimentador" name="alimentador" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Linha 3 -->
+                <div class="row form-row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="chave_montante" class="form-label">Chave Montante *</label>
+                            <input type="text" class="form-control" id="chave_montante" name="chave_montante" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="turma_matricula" class="form-label">Matrícula da Turma *</label>
+                            <input type="text" class="form-control" id="turma_matricula" name="turma_matricula"
+                                required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Linha 4 -->
+                <div class="row form-row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label for="maps" class="form-label">Link do Google Maps</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                                <input type="text" class="form-control" id="maps" name="maps">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload de Múltiplos Arquivos -->
+                <div class="row form-row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label class="form-label">Anexos (Máx. 5 arquivos)</label>
+                            <div class="file-upload">
+                                <input type="file" class="form-control" id="anexos" name="anexos" multiple
+                                    accept=".pdf,.jpg,.jpeg,.png">
+                                <div class="upload-area" id="uploadArea">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>Arraste ou clique para selecionar</p>
+                                    <small>Formatos aceitos: PDF, JPG, PNG (até 10MB cada)</small>
+                                </div>
+                                <div id="arquivos-selecionados" class="mt-3"></div>
+                            </div>
+                            <div id="anexos-container" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botão de Submit -->
+                <div class="row form-row">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-submit">
+                            <i class="fas fa-save me-2"></i>REGISTRAR SERVIÇO
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Elementos DOM
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('anexos');
+        const arquivosSelecionados = document.getElementById('arquivos-selecionados');
+        const anexosContainer = document.getElementById('anexos-container');
+
+        // Drag and Drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            mostrarArquivosSelecionados();
+        });
+
+        // Mostrar arquivos selecionados
+        function mostrarArquivosSelecionados() {
+            arquivosSelecionados.innerHTML = '';
+
+            if (fileInput.files.length > 0) {
+                const lista = document.createElement('ul');
+                lista.className = 'list-group';
+
+                Array.from(fileInput.files).forEach((file, index) => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                    const fileInfo = document.createElement('span');
+                    fileInfo.innerHTML = `
+                        <i class="fas fa-file-${file.type.includes('image') ? 'image' : 'pdf'} me-2"></i>
+                        ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)
+                    `;
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'btn btn-sm btn-danger';
+                    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    removeBtn.onclick = (e) => {
+                        e.preventDefault();
+                        const newFiles = Array.from(fileInput.files);
+                        newFiles.splice(index, 1);
+
+                        // Criar nova FileList (simulada com DataTransfer)
+                        const dataTransfer = new DataTransfer();
+                        newFiles.forEach(file => dataTransfer.items.add(file));
+                        fileInput.files = dataTransfer.files;
+
+                        mostrarArquivosSelecionados();
+                    };
+
+                    item.appendChild(fileInfo);
+                    item.appendChild(removeBtn);
+                    lista.appendChild(item);
+                });
+
+                arquivosSelecionados.appendChild(lista);
+            }
+        }
+
+        fileInput.addEventListener('change', mostrarArquivosSelecionados);
+
+        // Envio do Formulário
+        document.getElementById('formServico').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+
+            try {
+                const formData = new FormData(e.target);
+
+                // Verificar tamanho dos arquivos
+                if (fileInput.files.length > 0) {
+                    Array.from(fileInput.files).forEach(file => {
+                        if (file.size > 10 * 1024 * 1024) {
+                            throw new Error(`O arquivo ${file.name} excede o limite de 10MB`);
+                        }
+                    });
+                }
+
+                const response = await fetch('/api/servicos', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Serviço registrado com sucesso!');
+
+                    // Limpar formulário
+                    e.target.reset();
+                    arquivosSelecionados.innerHTML = '';
+                    anexosContainer.innerHTML = '';
+
+                    // Mostrar links para os anexos
+                    if (result.anexos && result.anexos.length > 0) {
+                        const anexosTitle = document.createElement('h6');
+                        anexosTitle.className = 'mt-3';
+                        anexosTitle.textContent = 'Anexos enviados:';
+                        anexosContainer.appendChild(anexosTitle);
+
+                        result.anexos.forEach(anexo => {
+                            const anexoDiv = document.createElement('div');
+                            anexoDiv.className = 'd-flex align-items-center mb-2';
+
+                            const anexoLink = document.createElement('a');
+                            anexoLink.href = anexo.caminho;
+                            anexoLink.textContent = anexo.nomeOriginal;
+                            anexoLink.className = 'me-3';
+                            anexoLink.target = '_blank';
+
+                            const downloadBtn = document.createElement('button');
+                            downloadBtn.className = 'btn btn-sm btn-outline-secondary';
+                            downloadBtn.innerHTML = '<i class="fas fa-download me-1"></i>';
+                            downloadBtn.onclick = (e) => {
+                                e.preventDefault();
+                                window.open(`${anexo.caminho}?download=true`, '_blank');
+                            };
+
+                            anexoDiv.appendChild(anexoLink);
+                            anexoDiv.appendChild(downloadBtn);
+                            anexosContainer.appendChild(anexoDiv);
+                        });
+                    }
+                } else {
+                    throw new Error(result.message || 'Erro ao registrar serviço');
+                }
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="fas fa-save me-2"></i>REGISTRAR SERVIÇO';
+            }
+        });
+    </script>
+</body>
+
+</html>

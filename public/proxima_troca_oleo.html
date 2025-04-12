@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Próxima Troca de Óleo</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- CSS -->
+    <link rel="stylesheet" href="static/css/transformadores.css">
+    <link rel="stylesheet" href="static/css/proxima_troca_oleo.css">
+    <style>
+        /* Estilos para os horímetros */
+        .horimetro-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .horimetro-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .horimetro-label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .horimetro-value {
+            text-align: right;
+        }
+
+        .proxima-troca {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* Estilos para os cards */
+        .card {
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            padding: 15px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .card-header.urgent {
+            background-color: #dc3545;
+        }
+
+        .card-header.warning {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .card-header.ok {
+            background-color: #28a745;
+        }
+
+        .card-body {
+            padding: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .badge.urgent {
+            background-color: #fff;
+            color: #dc3545;
+        }
+
+        .badge.warning {
+            background-color: #fff;
+            color: #ffc107;
+        }
+
+        .badge.ok {
+            background-color: #fff;
+            color: #28a745;
+        }
+
+        /* Estilos gerais */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2rem;
+        }
+
+        .no-vehicles,
+        .error {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .page-title {
+            margin-bottom: 30px;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+            <!-- Sidebar -->
+            <div class="sidebar bg-glass">
+                <div class="sidebar-header text-center py-3">
+                    <div class="user-icon mb-2">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h5 class="user-name mb-1" id="user-name"></h5>
+                </div>
+
+                <div class="user-info p-3 mt-2 rounded">
+                    <div class="info-item mb-2">
+                        <i class="fas fa-id-card me-2"></i>
+                        <span id="user-matricula"></span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-briefcase me-2"></i>
+                        <span id="user-cargo"></span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <span id="current-date"></span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-clock me-2"></i>
+                        <span id="current-time"></span>
+                    </div>
+                </div>
+
+                <!-- Menu de Navegação -->
+                <nav class="sidebar-menu">
+                    <a href="/dashboard" class="menu-item">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a href="/transformadores" class="menu-item">
+                        <i class="fas fa-bolt me-2"></i>Transformadores
+                    </a>
+                    <a href="/subestacao" class="menu-item">
+                        <i class="fas fa-industry me-2"></i>Subestação
+                    </a>
+                    <a href="/frota" class="menu-item">
+                        <i class="fas fa-truck me-2"></i>Frota
+                    </a>
+                    <a href="/registro_oleo" class="menu-item">
+                        <i class="fas fa-oil-can me-2"></i>Trocas de Óleo
+                    </a>
+                    <a href="/proxima_troca_oleo" class="menu-item active">
+                        <i class="fas fa-calendar-check me-2"></i>Próximas Trocas
+                    </a>
+                </nav>
+
+                <!-- Botão Sair no rodapé -->
+                <div class="sidebar-footer">
+                    <button onclick="logout()" class="btn-logout">
+                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="main-content">
+                <div class="container py-4">
+                    <h2 class="page-title">
+                        <i class="fas fa-calendar-check me-2"></i>Próximas Trocas de Óleo
+                    </h2>
+
+                    <div class="cards-container">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Carregando dados dos veículos...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle com Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Carregar dados do usuário
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) window.location.href = '/';
+
+            document.getElementById('user-name').textContent = user.nome;
+            document.getElementById('user-matricula').textContent = `Matrícula: ${user.matricula}`;
+            document.getElementById('user-cargo').textContent = `Cargo: ${user.cargo}`;
+
+            // Atualizar data e hora
+            function updateDateTime() {
+                const now = new Date();
+                document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
+                document.getElementById('current-time').textContent = now.toLocaleTimeString('pt-BR');
+            }
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            // Carregar dados das próximas trocas
+            fetch('/api/proxima_troca_oleo')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.querySelector('.cards-container');
+                    container.innerHTML = '';
+
+                    if (data.length === 0) {
+                        container.innerHTML = `
+                            <div class="no-vehicles">
+                                <i class="fas fa-info-circle me-2"></i>Nenhum veículo encontrado
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    data.forEach(veiculo => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+
+                        // Garantir que todos os valores são inteiros
+                        const horimetroInspecao = parseInt(veiculo.horimetroInspecao) || 0;
+                        const ultimaTroca = parseInt(veiculo.ultimaTroca) || 0;
+                        const horimetroAtual = horimetroInspecao + ultimaTroca;
+                        const proximaTroca = parseInt(veiculo.proximaTroca) || 0;
+                        const horasRestantes = Math.max(0, proximaTroca - horimetroAtual);
+
+                        // Calcular status (urgente, próximo, ok)
+                        const status = horimetroAtual >= proximaTroca ? 'urgent' :
+                            (horimetroAtual >= proximaTroca * 0.8 ? 'warning' : 'ok');
+
+                        card.innerHTML = `
+                            <div class="card-header ${status}">
+                                <h3><i class="fas fa-truck me-2"></i>${veiculo.placa}</h3>
+                                <span class="badge ${status}">
+                                    ${status === 'urgent' ? 'URGENTE' : (status === 'warning' ? 'ATENÇÃO' : 'EM DIA')}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div class="info-row">
+                                    <span>Modelo:</span>
+                                    <strong>${veiculo.modelo || 'N/A'}</strong>
+                                </div>
+                                <div class="horimetro-info">
+                                    <div class="horimetro-item">
+                                        <span class="horimetro-label">Horímetro inspeção:</span>
+                                        <span class="horimetro-value">${horimetroInspecao} h</span>
+                                    </div>
+                                    <div class="horimetro-item">
+                                        <span class="horimetro-label">Horímetro última troca:</span>
+                                        <span class="horimetro-value">${ultimaTroca} h</span>
+                                    </div>
+                                    <div class="horimetro-item">
+                                        <span class="horimetro-label">Horímetro atual (total):</span>
+                                        <span class="horimetro-value">${horimetroAtual} h</span>
+                                    </div>
+                                    <div class="horimetro-item proxima-troca">
+                                        <span class="horimetro-label">Próxima troca:</span>
+                                        <span class="horimetro-value">${proximaTroca} h</span>
+                                    </div>
+                                    <div class="horimetro-item ${status}">
+                                        <span class="horimetro-label">Horas restantes:</span>
+                                        <span class="horimetro-value">${horasRestantes} h</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        container.appendChild(card);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    document.querySelector('.cards-container').innerHTML = `
+                        <div class="error">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Erro ao carregar dados dos veículos
+                        </div>
+                    `;
+                });
+        });
+
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+
+</html>

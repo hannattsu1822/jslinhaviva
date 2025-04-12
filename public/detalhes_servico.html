@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Serviço | Sistema de Gestão</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/detalhes_servico.css">
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-header text-center py-3">
+                    <div class="user-icon mb-2">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h5 class="user-name mb-1" id="user-name-sidebar"></h5>
+                    <p class="user-cargo small" id="user-cargo-sidebar"></p>
+                </div>
+
+                <div class="user-info p-3 mt-2 rounded">
+                    <div class="info-item mb-2">
+                        <i class="fas fa-id-card me-2"></i>
+                        <span id="user-matricula"></span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <span id="current-date"></span>
+                    </div>
+                </div>
+
+                <!-- Menu de Navegação -->
+                <nav class="sidebar-menu">
+                    <a href="/dashboard" class="menu-item">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a href="/transformadores" class="menu-item">
+                        <i class="fas fa-bolt me-2"></i>Transformadores
+                    </a>
+                    <a href="/subestacao" class="menu-item">
+                        <i class="fas fa-industry me-2"></i>Subestação
+                    </a>
+                    <a href="/frota" class="menu-item">
+                        <i class="fas fa-truck me-2"></i>Frota
+                    </a>
+                    <a href="/gestao-servicos" class="menu-item">
+                        <i class="fas fa-tools me-2"></i>Gestão de Serviços
+                    </a>
+                    <a href="/servicos_ativos" class="menu-item">
+                        <i class="fas fa-hourglass-half me-2"></i>Serviços Ativos
+                    </a>
+                    <a href="/servicos_concluidos" class="menu-item">
+                        <i class="fas fa-check-circle me-2"></i>Serviços Concluídos
+                    </a>
+                </nav>
+
+                <!-- Botão Sair no rodapé -->
+                <div class="sidebar-footer">
+                    <button onclick="logout()" class="btn-logout">
+                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="main-content">
+                <div class="container py-4">
+                    <!-- Cabeçalho -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="/servicos_ativos">Serviços</a></li>
+                                    <li class="breadcrumb-item active" aria-current="page">Detalhes</li>
+                                </ol>
+                            </nav>
+                            <h1 class="page-title mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Detalhes do Serviço
+                            </h1>
+                        </div>
+                        <div>
+                            <a href="/servicos_ativos" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-arrow-left me-1"></i>Voltar
+                            </a>
+                            <button class="btn btn-primary me-2" id="btn-editar">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <button class="btn btn-danger" id="btn-excluir">
+                                <i class="fas fa-trash me-1"></i>Excluir
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Card Principal -->
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body p-4">
+                            <div class="row">
+                                <!-- Coluna Esquerda - Informações Básicas -->
+                                <div class="col-lg-6">
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Básicas
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Número do
+                                                        Processo</label>
+                                                    <div class="fw-bold fs-5" id="processo">-</div>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Status</label>
+                                                    <div><span class="badge rounded-pill" id="status">-</span></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Subestação</label>
+                                                    <div class="fw-bold" id="subestacao">-</div>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Alimentador</label>
+                                                    <div class="fw-bold" id="alimentador">-</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Desligamento</label>
+                                                    <div class="fw-bold" id="desligamento">-</div>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Chave
+                                                        Montante</label>
+                                                    <div class="fw-bold" id="chave_montante">-</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Localização</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="maps-container" class="text-center py-3">
+                                                <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">Nenhuma localização informada</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Coluna Direita - Datas e Responsável -->
+                                <div class="col-lg-6">
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0"><i class="far fa-calendar-alt me-2"></i>Datas</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Data
+                                                        Prevista</label>
+                                                    <div class="fw-bold" id="data_prevista">-</div>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Data de
+                                                        Conclusão</label>
+                                                    <div class="fw-bold" id="data_conclusao">-</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Responsável</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Matrícula</label>
+                                                    <div class="fw-bold" id="turma_matricula">-</div>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label text-muted small mb-1">Nome</label>
+                                                    <div class="fw-bold" id="responsavel">-</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <h5 class="mb-0"><i class="fas fa-paperclip me-2"></i>Anexos</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="anexos-container" class="text-center py-3">
+                                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">Nenhum anexo encontrado</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja excluir este serviço permanentemente? Esta ação não pode ser desfeita.</p>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Todos os anexos e registros relacionados serão removidos.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Confirmar Exclusão</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Carrega dados do usuário
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (user) {
+                document.getElementById('user-name-sidebar').textContent = user.nome;
+                document.getElementById('user-cargo-sidebar').textContent = user.cargo;
+                document.getElementById('user-matricula').textContent = `Matrícula: ${user.matricula}`;
+                updateDateTime();
+                setInterval(updateDateTime, 1000);
+            } else {
+                window.location.href = '/';
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const servicoId = urlParams.get('id');
+
+            if (!servicoId) {
+                alert('ID do serviço não informado');
+                window.location.href = '/servicos_ativos';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/servicos/${servicoId}`);
+                const servico = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(servico.message || 'Erro ao carregar serviço');
+                }
+
+                // Preencher os dados básicos
+                document.getElementById('processo').textContent = servico.processo || '-';
+
+                // Status com badge colorido
+                const statusBadge = document.getElementById('status');
+                statusBadge.textContent = servico.status ? servico.status.charAt(0).toUpperCase() + servico.status.slice(1) : 'Não informado';
+
+                if (servico.status === 'ativo') {
+                    statusBadge.classList.add('bg-warning', 'text-dark');
+                } else if (servico.status === 'concluido') {
+                    statusBadge.classList.add('bg-success');
+                } else {
+                    statusBadge.classList.add('bg-secondary');
+                }
+
+                document.getElementById('subestacao').textContent = servico.subestacao || '-';
+                document.getElementById('alimentador').textContent = servico.alimentador || '-';
+                document.getElementById('data_prevista').textContent = formatarData(servico.data_prevista_execucao) || '-';
+                document.getElementById('data_conclusao').textContent = servico.data_conclusao ? formatarData(servico.data_conclusao) : 'Não concluído';
+                document.getElementById('turma_matricula').textContent = servico.turma_matricula || '-';
+                document.getElementById('responsavel').textContent = servico.responsavel || 'Não informado';
+                document.getElementById('desligamento').textContent = servico.desligamento === 'SIM' ? 'Sim' : 'Não';
+                document.getElementById('chave_montante').textContent = servico.chave_montante || '-';
+
+                // Link do Maps
+                const mapsContainer = document.getElementById('maps-container');
+                if (servico.maps) {
+                    mapsContainer.innerHTML = `
+                        <div class="text-start">
+                            <a href="${servico.maps}" target="_blank" class="btn btn-outline-primary">
+                                <i class="fas fa-map-marked-alt me-2"></i>Ver no Google Maps
+                            </a>
+                        </div>
+                        <div class="mt-3">
+                            <iframe 
+                                src="https://maps.google.com/maps?q=${encodeURIComponent(servico.subestacao)}&output=embed" 
+                                width="100%" 
+                                height="200" 
+                                style="border:0;" 
+                                allowfullscreen="" 
+                                loading="lazy">
+                            </iframe>
+                        </div>
+                    `;
+                }
+
+                // Processar anexos
+                const anexosContainer = document.getElementById('anexos-container');
+                if (servico.anexos && servico.anexos.length > 0) {
+                    anexosContainer.innerHTML = '';
+
+                    servico.anexos.forEach((anexo, index) => {
+                        const fileExt = anexo.nomeOriginal.split('.').pop().toLowerCase();
+                        const isPDF = fileExt === 'pdf';
+                        const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(fileExt);
+                        const iconClass = isPDF ? 'fa-file-pdf text-danger' : isImage ? 'fa-file-image text-primary' : 'fa-file text-secondary';
+
+                        const anexoDiv = document.createElement('div');
+                        anexoDiv.className = 'd-flex justify-content-between align-items-center p-3 border-bottom';
+
+                        anexoDiv.innerHTML = `
+                            <div class="d-flex align-items-center">
+                                <i class="fas ${iconClass} fa-2x me-3"></i>
+                                <div>
+                                    <div class="fw-bold">${anexo.nomeOriginal}</div>
+                                    <small class="text-muted">${formatFileSize(anexo.tamanho)} • ${formatarData(anexo.dataUpload)}</small>
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <a href="${anexo.caminho}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="${anexo.caminho}?download=true" download="${anexo.nomeOriginal}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </div>
+                        `;
+
+                        anexosContainer.appendChild(anexoDiv);
+                    });
+                }
+
+                // Botões de ação
+                document.getElementById('btn-editar').addEventListener('click', () => {
+                    window.location.href = `/editar_servico?id=${servicoId}`;
+                });
+
+                const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                document.getElementById('btn-excluir').addEventListener('click', () => {
+                    confirmModal.show();
+                });
+
+                document.getElementById('confirmDelete').addEventListener('click', async () => {
+                    try {
+                        const response = await fetch(`/api/servicos/${servicoId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            alert('Serviço excluído com sucesso!');
+                            window.location.href = '/servicos_ativos';
+                        } else {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || 'Erro ao excluir serviço');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao excluir serviço:', error);
+                        alert('Erro ao excluir serviço: ' + error.message);
+                    } finally {
+                        confirmModal.hide();
+                    }
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar detalhes do serviço:', error);
+                alert(error.message);
+                window.location.href = '/servicos_ativos';
+            }
+        });
+
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
+        }
+
+        function formatarData(dataString) {
+            if (!dataString) return 'Não informado';
+            try {
+                const data = new Date(dataString);
+                return data.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                console.error('Erro ao formatar data:', e);
+                return dataString;
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0 || !bytes) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+
+</html>

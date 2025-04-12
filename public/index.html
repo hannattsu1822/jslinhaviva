@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linha Viva | Sistema Integrado de Inspeções</title>
+  <link rel="stylesheet" href="/static/css/linha-viva.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="linha-viva-container">
+    <div class="linha-viva-header">
+      <div class="linha-viva-logo">
+        <i class="fas fa-bolt"></i>
+        <h1>Linha Viva</h1>
+        <p>Sistema Integrado de Inspeções</p>
+      </div>
+    </div>
+
+    <form class="linha-viva-form">
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input type="text" id="matricula" placeholder="Matrícula" required>
+      </div>
+
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="senha" placeholder="Senha" required>
+      </div>
+
+      <button type="button" onclick="login()" class="linha-viva-btn">
+        <span>Acessar Sistema</span>
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </form>
+
+    <div id="linha-viva-message"></div>
+  </div>
+
+  <script>
+    async function login() {
+      const matricula = document.getElementById('matricula').value;
+      const senha = document.getElementById('senha').value;
+      const messageEl = document.getElementById('linha-viva-message');
+
+      try {
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matricula, senha })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem('user', JSON.stringify(result.user));
+          window.location.href = '/dashboard';
+        } else {
+          messageEl.textContent = result.message || 'Credenciais inválidas';
+          messageEl.style.display = 'block';
+        }
+      } catch (error) {
+        messageEl.textContent = 'Erro de conexão com o servidor';
+        messageEl.style.display = 'block';
+      }
+    }
+
+    // Efeitos interativos
+    document.querySelectorAll('.input-group input').forEach(input => {
+      input.addEventListener('focus', function () {
+        this.parentNode.style.borderColor = '#2a5298';
+        this.parentNode.querySelector('i').style.color = '#2a5298';
+      });
+      input.addEventListener('blur', function () {
+        this.parentNode.style.borderColor = '#ddd';
+        this.parentNode.querySelector('i').style.color = '#aaa';
+      });
+    });
+  </script>
+</body>
+
+</html>
