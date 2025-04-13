@@ -1,4 +1,5 @@
 const { promisePool } = require('./init');
+const bcrypt = require('bcrypt');
 
 // Função para autenticar
 function autenticar(req, res, next) {
@@ -7,6 +8,63 @@ function autenticar(req, res, next) {
         next();
     } else {
         res.redirect('/login');
+    }
+}
+
+// Função para login seguro com migração automática de senhas
+async function loginSeguro(req, res, next) {
+    const { matricula, senha } = req.body;
+
+    try {
+        // Busca o usuário no banco de dados
+        const [rows] = await promisePool.query(
+            'SELECT * FROM usuarios WHERE matricula = ?',
+            [matricula]
+        );
+        
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'Matrícula ou senha inválida' });
+        }
+
+        const usuario = rows[0];
+        let senhaValida = false;
+
+        // Verifica se a senha está em bcrypt (começa com $2b$)
+        const senhaJaCriptografada = usuario.senha.startsWith('$2b$');
+
+        if (senhaJaCriptografada) {
+            // Compara usando bcrypt se já estiver criptografada
+            senhaValida = await bcrypt.compare(senha, usuario.senha);
+        } else {
+            // Comparação direta para senhas em texto puro (durante migração)
+            senhaValida = senha === usuario.senha;
+            
+            // Se a senha estiver correta e não criptografada, migra para bcrypt
+            if (senhaValida) {
+                const hash = await bcrypt.hash(senha, 10);
+                await promisePool.query(
+                    'UPDATE usuarios SET senha = ? WHERE matricula = ?',
+                    [hash, matricula]
+                );
+                console.log(`Senha migrada para bcrypt (usuário ${matricula})`);
+            }
+        }
+
+        if (!senhaValida) {
+            return res.status(401).json({ message: 'Matrícula ou senha inválida' });
+        }
+
+        // Remove a senha do objeto do usuário antes de salvar na sessão
+        const { senha: _, ...userWithoutPassword } = usuario;
+        req.session.user = userWithoutPassword;
+        
+        // Registra a ação de login na auditoria
+        await registrarAuditoria(matricula, 'LOGIN', 'Login no sistema');
+        
+        next();
+    } catch (err) {
+        console.error('Erro no login:', err);
+        res.status(500).json({ message: 'Erro interno no servidor' });
     }
 }
 
@@ -23,10 +81,10 @@ function verificarPermissaoPorCargo(req, res, next) {
 
     const rotasPermitidas = {
         Motorista: ['/frota', '/checklist_veiculos'],
-        Inspetor: ['*'], // Modificado para ter acesso total
+        Inspetor: ['/transformadores', '/upload_transformadores', '/formulario_transformadores'],
         Técnico: ['*'],
         Engenheiro: ['*'],
-        Encarregado: ['*'], // Novo cargo com acesso total
+        Encarregado: ['*'],
         ADM: ['*'],
         ADMIN: ['*'],
     };
@@ -49,7 +107,7 @@ function verificarPermissaoPorCargo(req, res, next) {
 // Função para verificar permissão geral
 function verificarPermissao(req, res, next) {
     const cargo = req.user.cargo;
-    const cargosPermitidos = ['Técnico', 'Engenheiro', 'Encarregado', 'ADMIN']; // Adicionado Encarregado
+    const cargosPermitidos = ['Técnico', 'Engenheiro', 'Encarregado', 'ADMIN'];
 
     if (cargosPermitidos.includes(cargo)) {
         next();
@@ -58,7 +116,7 @@ function verificarPermissao(req, res, next) {
     }
 }
 
-// Função para registrar auditoria (modificada para suportar transações)
+// Função para registrar auditoria
 async function registrarAuditoria(matricula, acao, detalhes = null, connection = null) {
     if (!matricula) {
         console.error('Tentativa de registrar auditoria sem matrícula');
@@ -69,21 +127,32 @@ async function registrarAuditoria(matricula, acao, detalhes = null, connection =
 
     try {
         if (connection) {
-            // Usa a conexão existente da transação
             await connection.query(query, [matricula, acao, detalhes]);
         } else {
-            // Cria uma nova conexão se não for passada
             await promisePool.query(query, [matricula, acao, detalhes]);
         }
     } catch (err) {
         console.error('Erro ao registrar auditoria:', err);
-        throw err; // Propaga o erro para ser tratado na transação
+        throw err;
     }
+}
+
+// Função para criar hash de senha (usar em cadastros/resets)
+async function criarHashSenha(senha) {
+    return await bcrypt.hash(senha, 10);
+}
+
+// Função para verificar senha (uso geral)
+async function verificarSenha(senhaDigitada, hashArmazenado) {
+    return await bcrypt.compare(senhaDigitada, hashArmazenado);
 }
 
 module.exports = {
     autenticar,
+    loginSeguro,
     verificarPermissaoPorCargo,
     verificarPermissao,
-    registrarAuditoria
+    registrarAuditoria,
+    criarHashSenha,
+    verificarSenha
 };
