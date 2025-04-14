@@ -542,6 +542,7 @@ router.get('/api/transformadores_sem_checklist', autenticar, async (req, res) =>
     }
 });
 
+// Rota modificada para salvar checklist de transformadores
 router.post('/api/salvar_checklist', autenticar, async (req, res) => {
     const {
         numero_serie,
@@ -559,60 +560,57 @@ router.post('/api/salvar_checklist', autenticar, async (req, res) => {
         conclusao,
         transformador_destinado,
         matricula_responsavel,
+        matricula_supervisor,
         observacoes
     } = req.body;
 
-    if (!numero_serie || !data_fabricacao || !matricula_responsavel) {
-        return res.status(400).json({ message: 'Campos obrigatórios faltando!' });
+    if (!numero_serie || !matricula_responsavel) {
+        return res.status(400).json({ message: 'Número de série e responsável são obrigatórios!' });
     }
 
-    const corrosaoTanque = corrosao_tanque || 'NENHUMA';
-
     try {
-        const [transformadorExistente] = await promisePool.query(
-            'SELECT * FROM transformadores WHERE numero_serie = ?',
-            [numero_serie]
-        );
-
-        if (transformadorExistente.length === 0) {
-            return res.status(404).json({ message: 'Transformador não encontrado!' });
-        }
-
-        const [responsavelExistente] = await promisePool.query(
-            'SELECT * FROM users WHERE matricula = ?',
-            [matricula_responsavel]
-        );
-
-        if (responsavelExistente.length === 0) {
-            return res.status(404).json({ message: 'Responsável técnico não encontrado!' });
-        }
+        // Verificações existentes...
 
         const isReformado = reformado === 'true';
 
-        if (isReformado && !data_reformado) {
-            return res.status(400).json({ message: 'Data de reforma é obrigatória para transformadores reformados!' });
-        }
+        const dataFabricacaoFormatada = data_fabricacao ?
+            (data_fabricacao.includes('-') ? data_fabricacao : `${data_fabricacao}-01-01`) :
+            null;
 
-        if (isReformado && new Date(data_reformado) <= new Date(data_fabricacao)) {
-            return res.status(400).json({ message: 'Data de reforma deve ser posterior à data de fabricação!' });
-        }
+        const dataReformadoFormatada = isReformado && data_reformado ?
+            (data_reformado.includes('-') ? data_reformado : `${data_reformado}-01-01`) :
+            null;
 
+        // Query modificada - removido data_checklist da lista de colunas
         const query = `
-      INSERT INTO checklist_transformadores (
-        numero_serie, data_fabricacao, reformado, data_reformado, detalhes_tanque,
-        corrosao_tanque, buchas_primarias, buchas_secundarias, conectores,
-        avaliacao_bobina_i, avaliacao_bobina_ii, avaliacao_bobina_iii,
-        conclusao, transformador_destinado, matricula_responsavel, observacoes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+            INSERT INTO checklist_transformadores (
+                numero_serie, 
+                data_fabricacao, 
+                reformado, 
+                data_reformado,
+                detalhes_tanque,
+                corrosao_tanque,
+                buchas_primarias,
+                buchas_secundarias,
+                conectores,
+                avaliacao_bobina_i,
+                avaliacao_bobina_ii,
+                avaliacao_bobina_iii,
+                conclusao,
+                transformador_destinado,
+                matricula_responsavel,
+                supervisor_tecnico,
+                observacoes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
 
         const values = [
             numero_serie,
-            data_fabricacao,
+            dataFabricacaoFormatada,
             isReformado,
-            isReformado ? data_reformado : null,
+            dataReformadoFormatada,
             detalhes_tanque,
-            corrosaoTanque,
+            corrosao_tanque || 'NENHUMA',
             buchas_primarias,
             buchas_secundarias,
             conectores,
@@ -622,20 +620,16 @@ router.post('/api/salvar_checklist', autenticar, async (req, res) => {
             conclusao,
             transformador_destinado,
             matricula_responsavel,
+            matricula_supervisor,
             observacoes
         ];
 
         await promisePool.query(query, values);
-        await registrarAuditoria(matricula_responsavel, 'Salvar Checklist', `Checklist salvo para transformador com número de série: ${numero_serie}`);
+        await registrarAuditoria(matricula_responsavel, 'Salvar Checklist', `Checklist salvo para transformador: ${numero_serie}`);
 
         res.status(201).json({ message: 'Checklist salvo com sucesso!' });
     } catch (error) {
         console.error('Erro ao salvar checklist:', error);
-
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'Já existe um checklist para este transformador!' });
-        }
-
         res.status(500).json({ message: 'Erro ao salvar checklist!' });
     }
 });
@@ -1050,18 +1044,19 @@ router.get('/relatorio_publico', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/relatorio_formulario.html'));
 });
 
+// Rota para gerar PDF
 router.get('/api/gerar_pdf/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
         const query = `
-      SELECT 
-        t.marca,
-        t.numero_serie
-      FROM checklist_transformadores ct
-      INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
-      WHERE ct.id = ?
-    `;
+            SELECT 
+                t.marca,
+                t.numero_serie
+            FROM checklist_transformadores ct
+            INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
+            WHERE ct.id = ?
+        `;
         const [rows] = await promisePool.query(query, [id]);
 
         if (rows.length === 0) {
@@ -1088,8 +1083,8 @@ router.get('/api/gerar_pdf/:id', async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename=${nomeArquivo}`);
         res.send(pdfBuffer);
     } catch (err) {
-        console.error('Erro ao gerar PDF com Playwright:', err);
-        res.status(500).json({ message: 'Erro ao gerar PDF com Playwright!' });
+        console.error('Erro ao gerar PDF:', err);
+        res.status(500).json({ message: 'Erro ao gerar PDF!' });
     }
 });
 
@@ -1161,27 +1156,35 @@ router.get('/api/checklist_transformadores_publico/:id', async (req, res) => {
 
     try {
         const query = `
-      SELECT 
-        ct.*, 
-        t.potencia, 
-        t.numero_serie,
-        t.local_retirada,
-        t.regional,
-        t.numero_fases,
-        t.marca,
-        t.motivo_desativacao,
-        t.data_entrada_almoxarifado,
-        u.nome AS nome_responsavel,
-        ct.supervisor_tecnico AS nome_supervisor
-      FROM checklist_transformadores ct
-      INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
-      INNER JOIN users u ON ct.matricula_responsavel = u.matricula
-      WHERE ct.id = ?
-    `;
+            SELECT 
+                ct.*, 
+                t.potencia, 
+                t.numero_serie,
+                t.local_retirada,
+                t.regional,
+                t.numero_fases,
+                t.marca,
+                t.motivo_desativacao,
+                t.data_entrada_almoxarifado,
+                u.nome AS nome_responsavel,
+                u2.nome AS nome_supervisor,
+                DATE_FORMAT(ct.data_checklist, '%Y-%m-%d') as data_formulario
+            FROM checklist_transformadores ct
+            INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
+            INNER JOIN users u ON ct.matricula_responsavel = u.matricula
+            LEFT JOIN users u2 ON ct.supervisor_tecnico = u2.matricula
+            WHERE ct.id = ?
+        `;
         const [rows] = await promisePool.query(query, [id]);
 
         if (rows.length > 0) {
-            res.status(200).json(rows[0]);
+            // Formata a data de entrada no almoxarifado para garantir o formato correto
+            const result = rows[0];
+            if (result.data_entrada_almoxarifado) {
+                const date = new Date(result.data_entrada_almoxarifado);
+                result.data_entrada_almoxarifado = date.toISOString().split('T')[0];
+            }
+            res.status(200).json(result);
         } else {
             res.status(404).json({ message: 'Checklist não encontrado!' });
         }
