@@ -258,7 +258,7 @@
                         // Garantir que todos os valores são inteiros
                         const horimetroInspecao = parseInt(veiculo.horimetroInspecao) || 0;
                         const ultimaTroca = parseInt(veiculo.ultimaTroca) || 0;
-                        const horimetroAtual = horimetroInspecao + ultimaTroca;
+                        const horimetroAtual = horimetroInspecao;
                         const proximaTroca = parseInt(veiculo.proximaTroca) || 0;
                         const horasRestantes = Math.max(0, proximaTroca - horimetroAtual);
 
