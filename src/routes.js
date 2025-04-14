@@ -981,7 +981,7 @@ router.get('/api/proxima_troca_oleo', autenticar, async (req, res) => {
             // 5. Calcular valores (todos como inteiros)
             const horimetroInspecao = inspecao[0]?.horimetro || 0;
             const ultimaTroca = troca[0]?.horimetro || 0;
-            const horimetroAtual = horimetroInspecao + ultimaTroca;
+            const horimetroAtual = ((horimetroInspecao - ultimaTroca) + ultimaTroca);
             const proximaTroca = ultimaTroca + 300; // 300 horas após a última troca
 
             return {
