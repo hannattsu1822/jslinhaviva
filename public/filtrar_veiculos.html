@@ -261,23 +261,77 @@
           <td>${inspecao.km_atual}</td>
           <td>${inspecao.horimetro}</td>
           <td>
-            <button onclick="window.location.href='/relatorio_veiculos?id=${inspecao.id}'" class="btn btn-sm btn-success glass-btn">
-              <i class="fas fa-file-alt me-1"></i>
+            <button onclick="window.location.href='/relatorio_veiculos?id=${inspecao.id}'" 
+                    class="btn btn-sm btn-success glass-btn" title="Ver Relatório">
+              <i class="fas fa-file-alt"></i>
             </button>
           </td>
           <td>
             <div class="d-flex gap-2">
-              <button onclick="editarInspecao(${inspecao.id})" class="btn btn-sm btn-primary glass-btn">
-                <i class="fas fa-edit me-1"></i>
+              <button onclick="editarInspecao(${inspecao.id})" 
+                      class="btn btn-sm btn-primary glass-btn" title="Editar">
+                <i class="fas fa-edit"></i>
               </button>
-              <button onclick="excluirInspecao(${inspecao.id})" class="btn btn-sm btn-danger glass-btn">
-                <i class="fas fa-trash me-1"></i>
+              <button onclick="excluirInspecao(${inspecao.id})" 
+                      class="btn btn-sm btn-danger glass-btn" title="Excluir">
+                <i class="fas fa-trash"></i>
+              </button>
+              <button onclick="gerarPDF(${inspecao.id}, this)" 
+                      class="btn btn-sm btn-pdf glass-btn" title="Gerar PDF">
+                <i class="fas fa-file-pdf"></i>
               </button>
             </div>
           </td>
         `;
         tbody.appendChild(row);
       });
+    }
+
+    // Função para gerar PDF com loading (padronizada)
+    async function gerarPDF(id, button) {
+      const originalHTML = button.innerHTML;
+
+      // Mostra loading
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      button.disabled = true;
+
+      try {
+        // Primeiro obtém os dados da inspeção para pegar a placa
+        const responseInspecao = await fetch(`/api/inspecoes/${id}`);
+        if (!responseInspecao.ok) {
+          throw new Error('Erro ao obter dados da inspeção');
+        }
+        const inspecao = await responseInspecao.json();
+
+        // Gera o PDF
+        const responsePDF = await fetch(`/api/gerar_pdf_veiculos/${id}`);
+        if (!responsePDF.ok) {
+          throw new Error('Erro ao gerar PDF');
+        }
+
+        const blob = await responsePDF.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        // Formata o nome do arquivo como ID_PLACA.pdf
+        const placaFormatada = inspecao.placa.replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `${id}_${placaFormatada}.pdf`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+      } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        alert('Erro ao gerar PDF: ' + error.message);
+      } finally {
+        // Restaura o botão
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+      }
     }
 
     // Função para editar uma inspeção
@@ -340,5 +394,6 @@
       carregarMatriculas();
     });
   </script>
+</body>
 
 </html>
