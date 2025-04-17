@@ -12,6 +12,7 @@
   --success: #28a745;
   --warning: #ffc107;
   --danger: #dc3545;
+  --pdf-red: #d32f2f;
 }
 
 /* Estilos Gerais */
@@ -378,6 +379,7 @@ textarea.form-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 32px;
 }
 
 .btn-primary {
@@ -403,6 +405,40 @@ textarea.form-control {
 
 .btn-icon {
   margin-right: 8px;
+}
+
+/* Botão PDF */
+.btn-pdf {
+  background-color: var(--pdf-red) !important;
+  color: var(--white) !important;
+}
+
+.btn-pdf:hover {
+  background-color: #b71c1c !important;
+}
+
+/* Glass Buttons */
+.glass-btn {
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s;
+  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.glass-btn i {
+  margin: 0 !important;
+}
+
+.glass-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.glass-btn:active {
+  transform: translateY(0);
 }
 
 /* Responsividade */
@@ -467,4 +503,31 @@ textarea.form-control {
 
 .fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Spinner */
+.loading-spinner {
+  display: none;
+  width: 2rem;
+  height: 2rem;
+  border: 0.25em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mensagens de erro */
+.error-message {
+  color: #ff6b6b;
+  font-weight: 500;
+  text-align: center;
+  margin: 1rem 0;
+  display: none;
 }
