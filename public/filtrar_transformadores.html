@@ -12,86 +12,7 @@
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- CSS Personalizado -->
-  <link rel="stylesheet" href="/static/css/transformadores.css">
-  <style>
-    /* Estilos adicionais específicos para esta página */
-    .glass-select {
-      background: rgba(255, 255, 255, 0.1) !important;
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
-      backdrop-filter: blur(10px);
-    }
-
-    .glass-select:focus {
-      background: rgba(255, 255, 255, 0.2) !important;
-      border-color: rgba(255, 255, 255, 0.4) !important;
-      box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .glass-select option {
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-    }
-
-    .glass-table-header {
-      background: rgba(255, 255, 255, 0.1) !important;
-      color: white !important;
-    }
-
-    .glass-table-row {
-      background: rgba(255, 255, 255, 0.05);
-      color: white;
-      transition: all 0.3s;
-    }
-
-    .glass-table-row:hover {
-      background: rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .glass-btn {
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      transition: all 0.3s;
-    }
-
-    .glass-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    .glass-btn:active {
-      transform: translateY(0);
-    }
-
-    /* Ajustes para inputs de data */
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-    }
-
-    .loading-spinner {
-      display: none;
-      width: 2rem;
-      height: 2rem;
-      border: 0.25em solid currentColor;
-      border-right-color: transparent;
-      border-radius: 50%;
-      animation: spinner-border 0.75s linear infinite;
-      margin: 0 auto;
-    }
-
-    @keyframes spinner-border {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .error-message {
-      color: #ff6b6b;
-      font-weight: 500;
-      text-align: center;
-      margin: 1rem 0;
-      display: none;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/css/filtrar_transformadores.css">
 </head>
 
 <body>
@@ -167,13 +88,12 @@
                 <div class="col-md-6">
                   <label for="numero_serie" class="form-label">Número de Série:</label>
                   <input type="text" class="form-control" id="numero_serie" name="numero_serie"
-                    placeholder="Digite parte do número de série" style="color: black !important;">
+                    placeholder="Digite parte do número de série">
                 </div>
 
                 <div class="col-md-6">
                   <label for="matricula_responsavel" class="form-label">Responsável Técnico:</label>
-                  <select class="form-select" id="matricula_responsavel" name="matricula_responsavel"
-                    style="color: black !important;">
+                  <select class="form-select" id="matricula_responsavel" name="matricula_responsavel">
                     <option value="">Selecione um responsável</option>
                     <!-- As opções serão preenchidas dinamicamente via JavaScript -->
                   </select>
@@ -181,14 +101,12 @@
 
                 <div class="col-md-6">
                   <label for="dataInicial" class="form-label">Data Inicial:</label>
-                  <input type="date" class="form-control" id="dataInicial" name="dataInicial"
-                    style="color: black !important;">
+                  <input type="date" class="form-control" id="dataInicial" name="dataInicial">
                 </div>
 
                 <div class="col-md-6">
                   <label for="dataFinal" class="form-label">Data Final:</label>
-                  <input type="date" class="form-control" id="dataFinal" name="dataFinal"
-                    style="color: black !important;">
+                  <input type="date" class="form-control" id="dataFinal" name="dataFinal">
                 </div>
 
                 <div class="col-12">
@@ -215,7 +133,7 @@
                     <th>Marca</th>
                     <th>Data do Formulário</th>
                     <th>Responsável Técnico</th>
-                    <th>Status</th>
+                    <th>Destinado</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -347,7 +265,7 @@
         }
 
         const data = await response.json();
-        return Array.isArray(data) ? data : []; // Garante que sempre retorna um array
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         console.error('Erro na requisição:', error);
         mostrarErro('Erro ao buscar transformadores: ' + error.message);
@@ -357,25 +275,20 @@
       }
     }
 
-    // Função robusta para formatar data no formato brasileiro (apenas dia/mês/ano)
+    // Função para formatar data
     function formatarData(dataString) {
       if (!dataString) return '-';
-
-      // Tenta converter a string para objeto Date
       const dateObj = new Date(dataString);
 
-      // Verifica se a conversão foi válida
       if (isNaN(dateObj.getTime())) {
-        // Se não for uma data válida, tenta extrair manualmente
         const dateMatch = dataString.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (dateMatch) {
           const [_, ano, mes, dia] = dateMatch;
           return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
         }
-        return dataString; // Retorna original se não conseguir formatar
+        return dataString;
       }
 
-      // Formata a data válida como DD/MM/YYYY
       const dia = String(dateObj.getDate()).padStart(2, '0');
       const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
       const ano = dateObj.getFullYear();
@@ -383,16 +296,56 @@
       return `${dia}/${mes}/${ano}`;
     }
 
+    // Função para gerar PDF diretamente
+    async function gerarPDF(id) {
+      const btnPDF = document.querySelector(`button[onclick="gerarPDF('${id}')"]`);
+      const originalHTML = btnPDF.innerHTML;
+      btnPDF.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      btnPDF.disabled = true;
+
+      try {
+        const response = await fetch(`/api/gerar_pdf/${id}`);
+        if (!response.ok) {
+          throw new Error('Erro ao gerar PDF');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        // Obtém o nome do arquivo do cabeçalho ou usa um padrão
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `transformador_${id}.pdf`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1];
+          }
+        }
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        mostrarErro('Erro ao gerar PDF: ' + error.message);
+      } finally {
+        btnPDF.innerHTML = originalHTML;
+        btnPDF.disabled = false;
+      }
+    }
+
     // Função para exibir os resultados na tabela
     function exibirResultados(dados) {
       const tbody = document.getElementById('resultadosBody');
       const semResultados = document.getElementById('semResultados');
 
-      // Limpa a tabela
       tbody.innerHTML = '';
 
       if (!dados || dados.length === 0) {
-        // Cria a linha "sem resultados" se não existir
         const tr = document.createElement('tr');
         tr.id = 'semResultados';
         const td = document.createElement('td');
@@ -406,7 +359,6 @@
         return;
       }
 
-      // Preenche a tabela com os resultados
       dados.forEach((item) => {
         const row = document.createElement('tr');
         row.className = 'glass-table-row';
@@ -417,7 +369,7 @@
           <td>${item.marca || '-'}</td>
           <td>${formatarData(item.data_formulario) || '-'}</td>
           <td>${item.nome_responsavel ? `${item.matricula_responsavel} - ${item.nome_responsavel}` : '-'}</td>
-          <td>${item.status || 'Não informado'}</td>
+          <td>${item.transformador_destinado || 'Não informado'}</td>
           <td>
             <div class="d-flex gap-2">
               <button onclick="excluirTransformador('${item.id}')" class="btn btn-sm btn-danger glass-btn" title="Excluir">
@@ -426,16 +378,17 @@
               <button onclick="abrirRelatorio('${item.id}')" class="btn btn-sm btn-success glass-btn" title="Relatório">
                 <i class="fas fa-file-alt"></i>
               </button>
+              <button onclick="gerarPDF('${item.id}')" class="btn btn-sm btn-pdf glass-btn" title="Gerar PDF">
+                <i class="fas fa-file-pdf"></i>
+              </button>
             </div>
           </td>
         `;
         tbody.appendChild(row);
       });
 
-      // Atualiza contador de resultados
       document.getElementById('contadorResultados').textContent = `${dados.length} resultado${dados.length !== 1 ? 's' : ''} encontrado${dados.length !== 1 ? 's' : ''}`;
 
-      // Atualiza informações dos filtros aplicados
       const filtros = document.getElementById('filtroForm');
       let infoFiltros = 'Filtros: ';
       if (filtros.numero_serie.value) infoFiltros += `Série: ${filtros.numero_serie.value} `;
@@ -463,7 +416,6 @@
             throw new Error(errorData.message || 'Erro ao excluir transformador');
           }
 
-          // Recarrega os resultados após a exclusão
           const filtros = {
             numero_serie: document.getElementById('numero_serie').value,
             matricula_responsavel: document.getElementById('matricula_responsavel').value,
@@ -484,16 +436,15 @@
       }
     }
 
-    // Função para abrir o relatório do formulário
+    // Função para abrir o relatório
     function abrirRelatorio(id) {
       window.location.href = `/relatorio_formulario?id=${id}`;
     }
 
-    // Evento de submit do formulário de filtro
+    // Evento de submit do formulário
     document.getElementById('filtroForm').addEventListener('submit', async (event) => {
       event.preventDefault();
 
-      // Captura os valores dos filtros
       const filtros = {
         numero_serie: document.getElementById('numero_serie').value.trim(),
         matricula_responsavel: document.getElementById('matricula_responsavel').value.trim(),
@@ -501,37 +452,28 @@
         dataFinal: document.getElementById('dataFinal').value,
       };
 
-      // Validação básica
       if (!filtros.numero_serie && !filtros.matricula_responsavel && !filtros.dataInicial && !filtros.dataFinal) {
         mostrarErro('Por favor, preencha pelo menos um filtro');
         return;
       }
 
-      // Validação de datas
       if (filtros.dataInicial && filtros.dataFinal && filtros.dataInicial > filtros.dataFinal) {
         mostrarErro('A data final deve ser maior ou igual à data inicial');
         return;
       }
 
-      // Busca os transformadores filtrados
       const dados = await buscarTransformadores(filtros);
-
-      // Exibe os resultados na tabela
       exibirResultados(dados);
     });
 
-    // Carrega os responsáveis técnicos ao carregar a página
+    // Inicialização da página
     document.addEventListener('DOMContentLoaded', () => {
       carregarResponsaveis();
 
-      // Preenche a data atual como padrão para data final
       const hoje = new Date().toISOString().split('T')[0];
       document.getElementById('dataFinal').value = hoje;
 
-      // Carrega alguns resultados iniciais
-      const filtrosIniciais = {
-        dataFinal: hoje
-      };
+      const filtrosIniciais = { dataFinal: hoje };
       buscarTransformadores(filtrosIniciais)
         .then(dados => exibirResultados(dados));
     });
