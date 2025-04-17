@@ -1293,7 +1293,7 @@ router.post('/api/filtrar_transformadores', autenticar, async (req, res) => {
                 DATE(ct.data_checklist) as data_formulario,
                 ct.matricula_responsavel,
                 u.nome as nome_responsavel,
-                ct.conclusao as status
+                ct.transformador_destinado
             FROM checklist_transformadores ct
             INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
             INNER JOIN users u ON ct.matricula_responsavel = u.matricula
@@ -1349,6 +1349,68 @@ router.post('/api/filtrar_transformadores', autenticar, async (req, res) => {
             message: 'Falha ao filtrar transformadores',
             error: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
+    }
+});
+
+router.get('/api/gerar_pdf/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const query = `
+            SELECT 
+                t.marca,
+                t.numero_serie
+            FROM checklist_transformadores ct
+            INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
+            WHERE ct.id = ?
+        `;
+        const [rows] = await promisePool.query(query, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Checklist não encontrado!' });
+        }
+
+        const { marca, numero_serie } = rows[0];
+        const marcaFormatada = marca.replace(/[^a-zA-Z0-9]/g, '_');
+        const nomeArquivo = `checklist_${id}_${numero_serie}_${marcaFormatada}.pdf`;
+
+        const browser = await chromium.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        const url = `http://localhost:${process.env.SERVER_PORT || 3000}/relatorio_publico?id=${id}`;
+
+        await page.goto(url, {
+            waitUntil: 'networkidle',
+            timeout: 60000
+        });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: {
+                top: '20mm',
+                right: '15mm',
+                bottom: '20mm',
+                left: '15mm'
+            }
+        });
+
+        await browser.close();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
+        res.send(pdfBuffer);
+    } catch (err) {
+        console.error('Erro ao gerar PDF:', err);
+
+        if (!res.headersSent) {
+            res.status(500).json({
+                message: 'Erro ao gerar PDF!',
+                error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            });
+        }
     }
 });
 router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
@@ -1739,7 +1801,7 @@ router.delete('/api/servicos/:id', autenticar, async (req, res) => {
 
 // Rota para concluir serviço com imagem
 // routes.js - Adicione esta rota modificada
-router.post('/api/servicos/:id/concluir', autenticar, upload.single('imagem_conclusao'), async (req, res) => {
+router.post('/api/servicos/:id/concluir', autenticar, upload.array('fotos_conclusao', 5), async (req, res) => {
     const connection = await promisePool.getConnection();
     try {
         await connection.beginTransaction();
@@ -1750,7 +1812,6 @@ router.post('/api/servicos/:id/concluir', autenticar, upload.single('imagem_conc
         // 1. Verificar se o serviço existe
         const [servico] = await connection.query('SELECT * FROM processos WHERE id = ?', [id]);
         if (servico.length === 0) {
-            if (req.file?.path) fs.unlinkSync(req.file.path);
             return res.status(404).json({ message: 'Serviço não encontrado' });
         }
 
@@ -1764,38 +1825,33 @@ router.post('/api/servicos/:id/concluir', autenticar, upload.single('imagem_conc
             [observacoes || null, id]
         );
 
-        // 3. Processar imagem de conclusão se existir
-        if (req.file) {
-            const fileExtension = path.extname(req.file.originalname).toLowerCase();
-            const novoNome = `conclusao_${id}${fileExtension}`;
+        // 3. Processar fotos de conclusão se existirem
+        if (req.files && req.files.length > 0) {
             const uploadDir = path.join(__dirname, '../upload_arquivos');
-
             if (!fs.existsSync(uploadDir)) {
                 fs.mkdirSync(uploadDir, { recursive: true });
             }
 
-            const novoPath = path.join(uploadDir, novoNome);
-            fs.renameSync(req.file.path, novoPath);
+            for (let i = 0; i < req.files.length; i++) {
+                const file = req.files[i];
+                const fileExtension = path.extname(file.originalname).toLowerCase();
+                const novoNome = `conclusao_${id}_${Date.now()}_${i}${fileExtension}`;
+                const novoPath = path.join(uploadDir, novoNome);
 
-            await connection.query(
-                `INSERT INTO processos_anexos (
-                    processo_id, 
-                    nome_original, 
-                    caminho_servidor, 
-                    tamanho,
-                    tipo_anexo
-                ) VALUES (?, ?, ?, ?, 'imagem_conclusao')`,
-                [id, req.file.originalname, `/api/upload_arquivos/${novoNome}`, req.file.size]
-            );
+                fs.renameSync(file.path, novoPath);
+
+                await connection.query(
+                    `INSERT INTO processos_anexos (
+                        processo_id, 
+                        nome_original, 
+                        caminho_servidor, 
+                        tamanho,
+                        tipo_anexo
+                    ) VALUES (?, ?, ?, ?, 'foto_conclusao')`,
+                    [id, file.originalname, `/api/upload_arquivos/${novoNome}`, file.size]
+                );
+            }
         }
-
-        // 4. Registrar auditoria (usando a mesma conexão da transação)
-        await registrarAuditoria(
-            req.user.matricula,
-            'Concluir Serviço',
-            `Serviço concluído - ID: ${id}, Processo: ${servico[0].processo}`,
-            connection
-        );
 
         await connection.commit();
         res.json({ success: true, message: 'Serviço concluído com sucesso' });
@@ -1803,12 +1859,6 @@ router.post('/api/servicos/:id/concluir', autenticar, upload.single('imagem_conc
     } catch (error) {
         await connection.rollback();
         console.error('Erro ao concluir serviço:', error);
-
-        // Remove arquivo temporário se houver erro
-        if (req.file?.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
-
         res.status(500).json({
             success: false,
             message: 'Erro ao concluir serviço',
