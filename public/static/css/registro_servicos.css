@@ -1,19 +1,12 @@
 /* Variáveis de cor atualizadas */
 :root {
     --cor-primaria: #2a5298;
-    /* Azul mais escuro */
     --cor-secundaria: #1e3c72;
-    /* Azul mais escuro para contrastes */
     --cor-fundo: #ffffff;
-    /* Fundo branco */
     --cor-borda: #dee2e6;
-    /* Bordas cinza claro */
     --cor-texto: #495057;
-    /* Texto escuro */
     --cor-destaque: #e9ecef;
-    /* Destaque cinza claro */
     --cor-hover: #f8f9fa;
-    /* Cor de hover */
 }
 
 /* Estilos gerais */
@@ -243,6 +236,55 @@ select.form-control {
 #anexos-container a:hover {
     color: var(--cor-secundaria);
     text-decoration: underline;
+}
+
+/* Estilos para o modal de responsáveis */
+#listaResponsaveis .list-group-item {
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
+#listaResponsaveis .list-group-item:hover {
+    background-color: var(--cor-hover);
+}
+
+#listaResponsaveis .list-group-item.active {
+    background-color: var(--cor-primaria);
+    color: white;
+    border-color: var(--cor-primaria);
+}
+
+#listaResponsaveis .list-group-item.active small {
+    color: #e9ecef !important;
+}
+
+/* Estilo para mensagens */
+.text-muted {
+    color: #6c757d !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.alert {
+    margin: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.alert-danger {
+    background-color: #fff5f5;
+    color: #c92a2a;
+    border: 1px solid #ffc9c9;
+}
+
+.dragover {
+    background-color: var(--cor-hover);
+    border-color: var(--cor-primaria) !important;
 }
 
 /* Responsividade */
