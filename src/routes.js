@@ -1951,4 +1951,25 @@ router.get('/api/servico/:id', autenticar, async (req, res) => {
     }
 });
 
+// Rota para obter responsáveis técnicos (Encarregado/Técnico/Engenheiro) - apenas matrícula e primeiro nome
+router.get('/api/responsaveis_tecnicos', autenticar, async (req, res) => {
+    try {
+        const [rows] = await promisePool.query(
+            `SELECT 
+                matricula, 
+                SUBSTRING_INDEX(nome, ' ', 1) as nome
+             FROM users 
+             WHERE cargo IN ('Encarregado', 'Técnico', 'Engenheiro')
+             ORDER BY nome`
+        );
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error('Erro ao buscar responsáveis técnicos:', err);
+        res.status(500).json({ message: 'Erro ao buscar responsáveis técnicos!' });
+    }
+});
+
+
+
+
 module.exports = router;
