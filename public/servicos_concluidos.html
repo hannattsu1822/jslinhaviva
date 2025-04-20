@@ -4,15 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serviços Concluídos | Sistema de Gestão</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>Serviços Concluídos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <!-- CSS Personalizado -->
     <link rel="stylesheet" href="/static/css/servicos_concluidos.css">
 </head>
 
@@ -40,7 +36,6 @@
                     </div>
                 </div>
 
-                <!-- Menu de Navegação -->
                 <nav class="sidebar-menu">
                     <a href="/dashboard" class="menu-item">
                         <i class="fas fa-tachometer-alt me-2"></i>Dashboard
@@ -65,7 +60,6 @@
                     </a>
                 </nav>
 
-                <!-- Botão Sair no rodapé -->
                 <div class="sidebar-footer">
                     <button onclick="logout()" class="btn-logout">
                         <i class="fas fa-sign-out-alt me-2"></i>Sair
@@ -76,190 +70,70 @@
             <!-- Conteúdo Principal -->
             <div class="main-content">
                 <div class="container py-4">
-                    <!-- Cabeçalho -->
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <h1 class="page-title mb-0">
-                                <i class="fas fa-check-circle me-3"></i>Serviços Concluídos
-                            </h1>
-                            <p class="text-muted mb-0">Histórico completo de todos os serviços finalizados</p>
-                        </div>
-                        <div>
-                            <button class="btn btn-primary glass-btn" id="btn-exportar">
-                                <i class="fas fa-file-export me-2"></i>Exportar
+                        <h1 class="page-title mb-0">
+                            <i class="fas fa-check-circle me-3"></i>Serviços Concluídos
+                        </h1>
+                        <div class="btn-group">
+                            <button class="btn glass-btn" onclick="window.location.reload()">
+                                <i class="fas fa-sync-alt me-1"></i> Atualizar
                             </button>
                         </div>
                     </div>
 
-                    <!-- Cartões Resumo -->
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="card glass-card h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="card-title text-muted mb-1">Total Concluídos</h6>
-                                            <h3 class="mb-0" id="total-concluidos">0</h3>
-                                        </div>
-                                        <div class="icon-circle bg-primary">
-                                            <i class="fas fa-check"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <span class="text-success"><i class="fas fa-caret-up me-1"></i> <span
-                                                id="variacao-mes">0%</span> no mês</span>
-                                        <span class="text-muted ms-2">vs mês anterior</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card glass-card h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="card-title text-muted mb-1">Média de Tempo</h6>
-                                            <h3 class="mb-0" id="media-tempo">0d</h3>
-                                        </div>
-                                        <div class="icon-circle bg-warning">
-                                            <i class="fas fa-clock"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <span class="text-success"><i class="fas fa-caret-down me-1"></i> <span
-                                                id="variacao-tempo">0%</span> menos</span>
-                                        <span class="text-muted ms-2">vs mês anterior</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card glass-card h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="card-title text-muted mb-1">Eficiência</h6>
-                                            <h3 class="mb-0" id="eficiencia">0%</h3>
-                                        </div>
-                                        <div class="icon-circle bg-success">
-                                            <i class="fas fa-chart-line"></i>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <span class="text-success"><i class="fas fa-caret-up me-1"></i> <span
-                                                id="variacao-eficiencia">0%</span> melhor</span>
-                                        <span class="text-muted ms-2">vs mês anterior</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Filtros Avançados -->
+                    <!-- Filtros -->
                     <div class="card glass-card mb-4">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros Avançados</h5>
-                        </div>
                         <div class="card-body">
-                            <form id="filtros-form">
+                            <form id="filtrosForm">
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label">Período</label>
-                                        <select class="form-select glass-select" name="periodo" id="filtroPeriodo">
-                                            <option value="7">Últimos 7 dias</option>
-                                            <option value="30" selected>Últimos 30 dias</option>
-                                            <option value="90">Últimos 3 meses</option>
-                                            <option value="365">Último ano</option>
-                                            <option value="custom">Personalizado</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3" id="custom-date-start" style="display: none;">
-                                        <label class="form-label">Data Inicial</label>
-                                        <input type="date" class="form-control glass-select" name="data_inicial"
-                                            id="filtroDataInicial">
-                                    </div>
-                                    <div class="col-md-3" id="custom-date-end" style="display: none;">
-                                        <label class="form-label">Data Final</label>
-                                        <input type="date" class="form-control glass-select" name="data_final"
-                                            id="filtroDataFinal">
+                                        <label for="filtroProcesso" class="form-label">Número do Processo</label>
+                                        <input type="text" class="form-control glass-input" id="filtroProcesso"
+                                            placeholder="Filtrar por processo...">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Subestação</label>
-                                        <select class="form-select glass-select" name="subestacao"
-                                            id="filtroSubestacao">
-                                            <option value="">Todas</option>
-                                        </select>
+                                        <label for="filtroSubestacao" class="form-label">Subestação</label>
+                                        <input type="text" class="form-control glass-input" id="filtroSubestacao"
+                                            placeholder="Filtrar por subestação...">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Responsável</label>
-                                        <select class="form-select glass-select" name="responsavel"
-                                            id="filtroResponsavel">
-                                            <option value="">Todos</option>
-                                        </select>
+                                        <label for="filtroAlimentador" class="form-label">Alimentador</label>
+                                        <input type="text" class="form-control glass-input" id="filtroAlimentador"
+                                            placeholder="Filtrar por alimentador...">
                                     </div>
-                                    <div class="col-md-12 d-flex justify-content-end mt-2">
-                                        <button type="button" class="btn btn-outline-secondary me-2 glass-btn"
-                                            id="btn-limpar">
-                                            <i class="fas fa-broom me-2"></i>Limpar
-                                        </button>
-                                        <button type="submit" class="btn btn-primary glass-btn">
-                                            <i class="fas fa-filter me-2"></i>Aplicar Filtros
-                                        </button>
+                                    <div class="col-md-3">
+                                        <label for="filtroData" class="form-label">Data de Conclusão</label>
+                                        <input type="date" class="form-control glass-input" id="filtroData">
                                     </div>
                                 </div>
                             </form>
                         </div>
                     </div>
 
-                    <!-- Tabela de Serviços -->
+                    <!-- Tabela de Serviços Concluídos -->
                     <div class="card glass-card">
-                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Histórico de Serviços</h5>
-                            <div class="d-flex">
-                                <div class="input-group input-group-sm" style="width: 200px;">
-                                    <input type="text" class="form-control glass-select" placeholder="Pesquisar..."
-                                        id="search-input">
-                                    <button class="btn btn-outline-secondary glass-btn" type="button"
-                                        id="btn-pesquisar">
-                                        <i class="fas fa-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
+                        <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-hover mb-0" id="servicos-table">
+                                <table class="table table-hover align-middle">
                                     <thead>
                                         <tr>
-                                            <th width="80px">ID</th>
+                                            <th>ID</th>
                                             <th>Processo</th>
                                             <th>Subestação</th>
+                                            <th>Alimentador</th>
+                                            <th>Data Conclusão</th>
                                             <th>Responsável</th>
-                                            <th width="120px">Conclusão</th>
-                                            <th width="120px">Tempo</th>
-                                            <th width="100px">Status</th>
-                                            <th width="120px" class="text-end">Ações</th>
+                                            <th class="text-center">Ações</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td colspan="8" class="text-center py-4">
-                                                <div class="spinner-border text-primary" role="status">
-                                                    <span class="visually-hidden">Carregando...</span>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                    <tbody id="tabela-servicos">
+                                        <!-- Dados serão carregados aqui -->
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                        <div class="card-footer bg-light d-flex justify-content-between align-items-center">
-                            <div class="text-muted small">
-                                Mostrando <span id="showing-from">0</span> a <span id="showing-to">0</span> de <span
-                                    id="total-items">0</span> itens
-                            </div>
-                            <nav>
-                                <ul class="pagination pagination-sm mb-0" id="pagination">
+                            <nav aria-label="Navegação de páginas" class="mt-3">
+                                <ul class="pagination justify-content-center" id="paginacao">
+                                    <!-- Paginação será gerada aqui -->
                                 </ul>
                             </nav>
                         </div>
@@ -269,43 +143,38 @@
         </div>
     </div>
 
-    <!-- Modal de Detalhes Rápidos -->
-    <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content glass-modal">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title">Detalhes do Serviço</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="quick-view-content">
-                    <!-- Conteúdo será preenchido via JS -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary glass-btn"
-                        data-bs-dismiss="modal">Fechar</button>
-                    <button type="button" class="btn btn-primary glass-btn" id="btn-ver-detalhes">
-                        <i class="fas fa-external-link-alt me-2"></i>Ver Detalhes Completos
-                    </button>
-                </div>
+    <!-- Toast Notification -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Notificação</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
+            <div class="toast-body"></div>
         </div>
     </div>
 
-    <!-- Bootstrap Bundle com Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS para exportação em Excel -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
-
     <script>
         // Variáveis globais
         let servicosData = [];
         let currentPage = 1;
         const itemsPerPage = 10;
         let currentServicoId = null;
-        const quickViewModal = new bootstrap.Modal('#quickViewModal');
-        let chart = null;
+        const toastLive = document.getElementById('liveToast');
+        const toast = new bootstrap.Toast(toastLive);
+
+        // Mostrar notificação
+        function showToast(message, type = 'success') {
+            const toastBody = toastLive.querySelector('.toast-body');
+            toastBody.textContent = message;
+
+            // Reset classes
+            toastLive.className = 'toast';
+            toastLive.classList.add('bg-' + type);
+
+            toast.show();
+        }
 
         // Recupera os dados do usuário do localStorage
         const user = JSON.parse(localStorage.getItem('user'));
@@ -321,309 +190,150 @@
             window.location.href = '/';
         }
 
-        // Função para carregar opções de filtros
-        async function carregarOpcoesFiltros() {
-            try {
-                const response = await fetch('/api/servicos_concluidos');
-                if (!response.ok) throw new Error('Erro ao carregar serviços');
-
-                const servicos = await response.json();
-
-                // Extrair subestações únicas
-                const subestacoes = [...new Set(servicos.map(s => s.subestacao))].filter(Boolean);
-                const selectSubestacao = document.getElementById('filtroSubestacao');
-                selectSubestacao.innerHTML = '<option value="">Todas</option>';
-                subestacoes.forEach(sub => {
-                    const option = document.createElement('option');
-                    option.value = sub;
-                    option.textContent = sub;
-                    selectSubestacao.appendChild(option);
-                });
-
-                // Extrair responsáveis únicos
-                const responsaveis = [...new Set(servicos.map(s => s.responsavel))].filter(Boolean);
-                const selectResponsavel = document.getElementById('filtroResponsavel');
-                selectResponsavel.innerHTML = '<option value="">Todos</option>';
-                responsaveis.forEach(resp => {
-                    const option = document.createElement('option');
-                    const matricula = resp.split(' - ')[0];
-                    option.value = matricula;
-                    option.textContent = resp;
-                    selectResponsavel.appendChild(option);
-                });
-
-            } catch (error) {
-                console.error('Erro ao carregar opções de filtro:', error);
-                carregarOpcoesFiltrosFallback();
-            }
-        }
-
-        // Fallback para dados simulados
-        function carregarOpcoesFiltrosFallback() {
-            const subestacoes = ["Subestação Norte", "Subestação Sul", "Subestação Central"];
-            const responsaveis = ["001 - João Silva", "002 - Maria Souza", "003 - Carlos Oliveira"];
-
-            const selectSubestacao = document.getElementById('filtroSubestacao');
-            subestacoes.forEach(sub => {
-                const option = document.createElement('option');
-                option.value = sub;
-                option.textContent = sub;
-                selectSubestacao.appendChild(option);
-            });
-
-            const selectResponsavel = document.getElementById('filtroResponsavel');
-            responsaveis.forEach(resp => {
-                const option = document.createElement('option');
-                const matricula = resp.split(' - ')[0];
-                option.value = matricula;
-                option.textContent = resp;
-                selectResponsavel.appendChild(option);
-            });
-        }
-
-        // Função para calcular datas com base no período selecionado
-        function calcularPeriodo(periodo) {
-            const endDate = new Date();
-            let startDate = new Date();
-
-            switch (periodo) {
-                case '7':
-                    startDate.setDate(endDate.getDate() - 7);
-                    break;
-                case '30':
-                    startDate.setDate(endDate.getDate() - 30);
-                    break;
-                case '90':
-                    startDate.setDate(endDate.getDate() - 90);
-                    break;
-                case '365':
-                    startDate.setDate(endDate.getDate() - 365);
-                    break;
-                case 'custom':
-                    return {
-                        data_inicial: document.getElementById('filtroDataInicial').value,
-                        data_final: document.getElementById('filtroDataFinal').value
-                    };
-                default:
-                    startDate.setDate(endDate.getDate() - 30);
-            }
-
-            return {
-                data_inicial: startDate.toISOString().split('T')[0],
-                data_final: endDate.toISOString().split('T')[0]
-            };
-        }
-
-        // Atualiza data e hora
         function updateDateTime() {
             const now = new Date();
             document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
         }
 
-        // Carrega serviços concluídos
-        async function carregarServicos(filtros = {}) {
+        // Carregar serviços concluídos
+        async function carregarServicosConcluidos() {
             try {
-                // Construir query string com os filtros
-                const queryParams = new URLSearchParams();
+                const response = await fetch('/api/servicos?status=concluido');
 
-                if (filtros.subestacao) queryParams.append('subestacao', filtros.subestacao);
-                if (filtros.responsavel) queryParams.append('responsavel', filtros.responsavel);
-                if (filtros.data_inicial) queryParams.append('dataInicial', filtros.data_inicial);
-                if (filtros.data_final) queryParams.append('dataFinal', filtros.data_final);
-
-                // Mostra loading
-                const tbody = document.querySelector('#servicos-table tbody');
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Carregando...</span>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-
-                const response = await fetch(`/api/servicos_concluidos?${queryParams.toString()}`);
-                if (!response.ok) throw new Error('Erro ao carregar serviços');
+                if (!response.ok) {
+                    throw new Error('Erro ao carregar serviços concluídos');
+                }
 
                 servicosData = await response.json();
 
-                // Atualiza estatísticas
-                atualizarEstatisticas(servicosData);
+                if (!Array.isArray(servicosData)) {
+                    throw new Error('Formato de dados inválido');
+                }
 
-                // Preenche a tabela
                 atualizarTabela();
+                atualizarPaginacao();
 
             } catch (error) {
-                console.error('Erro ao carregar serviços:', error);
-                const tbody = document.querySelector('#servicos-table tbody');
+                console.error('Erro ao carregar serviços concluídos:', error);
+                showToast('Erro ao carregar serviços concluídos: ' + error.message, 'danger');
+            }
+        }
+
+        // Atualizar tabela com os dados
+        function atualizarTabela() {
+            const tbody = document.getElementById('tabela-servicos');
+            tbody.innerHTML = '';
+
+            // Aplicar filtros
+            const filtroProcesso = document.getElementById('filtroProcesso').value.toLowerCase();
+            const filtroSubestacao = document.getElementById('filtroSubestacao').value.toLowerCase();
+            const filtroAlimentador = document.getElementById('filtroAlimentador').value.toLowerCase();
+            const filtroData = document.getElementById('filtroData').value;
+
+            const servicosFiltrados = servicosData.filter(servico => {
+                return servico.processo.toLowerCase().includes(filtroProcesso) &&
+                    servico.subestacao.toLowerCase().includes(filtroSubestacao) &&
+                    (servico.alimentador ? servico.alimentador.toLowerCase().includes(filtroAlimentador) : true) &&
+                    (filtroData === '' || servico.data_conclusao.includes(filtroData));
+            });
+
+            // Paginação
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const servicosPagina = servicosFiltrados.slice(startIndex, endIndex);
+
+            if (servicosPagina.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-danger">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                            <p>Erro ao carregar serviços</p>
-                            <button class="btn btn-sm btn-outline-primary" onclick="carregarServicos()">
-                                <i class="fas fa-sync-alt me-1"></i>Tentar novamente
-                            </button>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="fas fa-info-circle me-2"></i>Nenhum serviço concluído encontrado
                         </td>
                     </tr>
                 `;
-            }
-        }
-
-        // Atualiza estatísticas na parte superior
-        function atualizarEstatisticas(servicos) {
-            // Total concluídos
-            document.getElementById('total-concluidos').textContent = servicos.length;
-
-            // Calcula média de tempo (em dias)
-            if (servicos.length > 0) {
-                const totalDias = servicos.reduce((acc, servico) => {
-                    const inicio = servico.data_inicio ? new Date(servico.data_inicio) : null;
-                    const conclusao = servico.data_conclusao ? new Date(servico.data_conclusao) : null;
-
-                    if (inicio && conclusao) {
-                        const diffTime = Math.abs(conclusao - inicio);
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        return acc + diffDays;
-                    }
-                    return acc;
-                }, 0);
-
-                const mediaDias = Math.round(totalDias / servicos.length);
-                document.getElementById('media-tempo').textContent = `${mediaDias}d`;
-
-                // Calcula eficiência (simplificado)
-                const eficiencia = Math.min(100, Math.round(100 - (mediaDias / 30 * 100) + 70));
-                document.getElementById('eficiencia').textContent = `${eficiencia}%`;
-            } else {
-                document.getElementById('media-tempo').textContent = '0d';
-                document.getElementById('eficiencia').textContent = '0%';
+                return;
             }
 
-            // Atualiza gráfico
-            atualizarGrafico(servicos);
-        }
-
-        // Atualiza gráfico de tendências
-        function atualizarGrafico(servicos) {
-            const ctx = document.createElement('canvas');
-            ctx.id = 'grafico-tendencias';
-
-            // Remove gráfico anterior se existir
-            const container = document.querySelector('.grafico-container');
-            if (container) {
-                container.innerHTML = '';
-                container.appendChild(ctx);
-            } else {
-                // Cria container se não existir
-                const graficoContainer = document.createElement('div');
-                graficoContainer.className = 'grafico-container mt-4';
-                document.querySelector('.container.py-4').appendChild(graficoContainer);
-                graficoContainer.appendChild(ctx);
-            }
-
-            // Agrupa por mês
-            const dadosPorMes = {};
-            servicos.forEach(servico => {
-                if (servico.data_conclusao) {
-                    const date = new Date(servico.data_conclusao);
-                    const mesAno = `${date.getMonth() + 1}/${date.getFullYear()}`;
-
-                    if (!dadosPorMes[mesAno]) {
-                        dadosPorMes[mesAno] = 0;
-                    }
-                    dadosPorMes[mesAno]++;
-                }
+            servicosPagina.forEach(servico => {
+                const tr = document.createElement('tr');
+                tr.className = 'glass-table-row';
+                tr.setAttribute('data-id', servico.id);
+                tr.innerHTML = `
+                    <td>${servico.id}</td>
+                    <td>${servico.processo}</td>
+                    <td>${servico.subestacao}</td>
+                    <td>${servico.alimentador || 'Não informado'}</td>
+                    <td>${formatarData(servico.data_conclusao)}</td>
+                    <td>${servico.responsavel || 'Não informado'}</td>
+                    <td class="text-center">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm glass-btn me-1" onclick="window.location.href='/detalhes_servico?id=${servico.id}'" title="Visualizar">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${servico.id})" title="Retornar para Ativos">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
+        }
 
-            // Prepara dados para o gráfico
-            const labels = Object.keys(dadosPorMes).sort();
-            const data = labels.map(label => dadosPorMes[label]);
+        // Reativar serviço (retornar para ativos)
+        async function reativarServico(id) {
+            if (!confirm('Deseja realmente retornar este serviço para ativos?')) {
+                return;
+            }
 
-            // Cria ou atualiza gráfico
-            if (chart) {
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = data;
-                chart.update();
-            } else {
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Serviços Concluídos por Mês',
-                            data: data,
-                            backgroundColor: 'rgba(42, 82, 152, 0.2)',
-                            borderColor: 'rgba(42, 82, 152, 1)',
-                            borderWidth: 2,
-                            tension: 0.1,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        return `${context.dataset.label}: ${context.raw}`;
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1
-                                }
-                            }
-                        }
+            try {
+                const response = await fetch(`/api/servicos/${id}/reativar`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
                     }
                 });
+
+                if (!response.ok) {
+                    throw new Error('Erro ao reativar serviço');
+                }
+
+                showToast('Serviço retornado para ativos com sucesso!', 'success');
+                // Recarrega a lista de serviços concluídos
+                await carregarServicosConcluidos();
+            } catch (error) {
+                console.error('Erro ao reativar serviço:', error);
+                showToast('Erro ao reativar serviço: ' + error.message, 'danger');
             }
         }
 
-        // Atualiza contadores e paginação
-        function atualizarContadores(total) {
-            document.getElementById('total-items').textContent = total;
-            document.getElementById('showing-from').textContent = (currentPage - 1) * itemsPerPage + 1;
-            document.getElementById('showing-to').textContent = Math.min(currentPage * itemsPerPage, total);
+        // Atualizar paginação
+        function atualizarPaginacao() {
+            const paginacao = document.getElementById('paginacao');
+            paginacao.innerHTML = '';
 
-            // Paginação
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
+            const totalPages = Math.ceil(servicosData.length / itemsPerPage);
 
-            if (total > itemsPerPage) {
-                const totalPages = Math.ceil(total / itemsPerPage);
+            if (totalPages <= 1) return;
 
-                // Botão Anterior
-                const liPrev = document.createElement('li');
-                liPrev.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-                liPrev.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${currentPage - 1})">&laquo;</a>`;
-                pagination.appendChild(liPrev);
+            // Botão Anterior
+            const liPrev = document.createElement('li');
+            liPrev.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            liPrev.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${currentPage - 1})">Anterior</a>`;
+            paginacao.appendChild(liPrev);
 
-                // Páginas
-                const startPage = Math.max(1, currentPage - 2);
-                const endPage = Math.min(totalPages, currentPage + 2);
-
-                for (let i = startPage; i <= endPage; i++) {
-                    const li = document.createElement('li');
-                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                    li.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${i})">${i}</a>`;
-                    pagination.appendChild(li);
-                }
-
-                // Botão Próximo
-                const liNext = document.createElement('li');
-                liNext.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-                liNext.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${currentPage + 1})">&raquo;</a>`;
-                pagination.appendChild(liNext);
+            // Números das páginas
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${i})">${i}</a>`;
+                paginacao.appendChild(li);
             }
+
+            // Botão Próximo
+            const liNext = document.createElement('li');
+            liNext.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            liNext.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${currentPage + 1})">Próximo</a>`;
+            paginacao.appendChild(liNext);
         }
 
         // Mudar página
@@ -633,316 +343,27 @@
             window.scrollTo(0, 0);
         }
 
-        // Atualizar tabela (para paginação)
-        function atualizarTabela() {
-            const tbody = document.querySelector('#servicos-table tbody');
-            tbody.innerHTML = '';
-
-            if (servicosData.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="text-center py-4 text-muted">
-                            <i class="fas fa-inbox fa-2x mb-3"></i>
-                            <p>Nenhum serviço encontrado</p>
-                        </td>
-                    </tr>
-                `;
-                atualizarContadores(0);
-                return;
-            }
-
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const servicosPagina = servicosData.slice(startIndex, endIndex);
-
-            servicosPagina.forEach(servico => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${servico.id}</td>
-                    <td>
-                        <div class="fw-bold">${servico.processo}</div>
-                        <small class="text-muted">${servico.subestacao || 'Sem subestação especificada'}</small>
-                    </td>
-                    <td>${servico.subestacao || 'N/A'}</td>
-                    <td>${servico.responsavel || 'N/A'}</td>
-                    <td>${servico.data_conclusao ? formatarData(servico.data_conclusao) : 'N/A'}</td>
-                    <td>
-                        <span class="badge bg-light text-dark">
-                            ${calcularTempoServico(servico.data_inicio, servico.data_conclusao)}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge bg-success">Concluído</span>
-                    </td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary" onclick="verDetalhesRapidos(${servico.id})" title="Visualizar">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        ${servico.anexo_path ? `
-                        <a href="${servico.anexo_path}" class="btn btn-sm btn-outline-success" title="Anexo" target="_blank">
-                            <i class="fas fa-paperclip"></i>
-                        </a>
-                        ` : ''}
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            // Atualiza paginação e contadores
-            atualizarContadores(servicosData.length);
-        }
-
-        // Função para visualização rápida
-        async function verDetalhesRapidos(id) {
-            try {
-                currentServicoId = id;
-
-                // Busca os detalhes do serviço
-                const servico = servicosData.find(s => s.id == id);
-                if (!servico) throw new Error('Serviço não encontrado');
-
-                // Busca detalhes completos da API
-                const response = await fetch(`/api/servico/${id}`);
-                if (!response.ok) throw new Error('Erro ao buscar detalhes');
-                const detalhes = await response.json();
-
-                // Combina dados
-                const servicoCompleto = { ...servico, ...detalhes };
-
-                document.getElementById('quick-view-content').innerHTML = `
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="info-group">
-                                <label class="info-label">Processo</label>
-                                <div class="info-value">${servicoCompleto.processo || 'N/A'}</div>
-                            </div>
-                            <div class="info-group">
-                                <label class="info-label">Subestação</label>
-                                <div class="info-value">${servicoCompleto.subestacao || 'N/A'}</div>
-                            </div>
-                            <div class="info-group">
-                                <label class="info-label">Alimentador</label>
-                                <div class="info-value">${servicoCompleto.alimentador || 'N/A'}</div>
-                            </div>
-                            <div class="info-group">
-                                <label class="info-label">Chave Montante</label>
-                                <div class="info-value">${servicoCompleto.chave_montante || 'N/A'}</div>
-                            </div>
-                            <div class="info-group">
-                                <label class="info-label">Desligamento</label>
-                                <div class="info-value">${servicoCompleto.desligamento || 'N/A'}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="info-group">
-                                <label class="info-label">Responsável</label>
-                                <div class="info-value">${servicoCompleto.responsavel || 'N/A'}</div>
-                            </div>
-                            <div class="info-group">
-                                <label class="info-label">Data Prevista</label>
-                                <div class="info-value">${servicoCompleto.data_inicio ? formatarData(servicoCompleto.data_inicio) : 'N/A'}</div>
-                            </div>
-                            <div class="info-group">
-                                <label class="info-label">Data Conclusão</label>
-                                <div class="info-value">${servicoCompleto.data_conclusao ? formatarData(servicoCompleto.data_conclusao) : 'N/A'}</div>
-                            </div>
-                            <div class="info-group">
-                                <label class="info-label">Status</label>
-                                <div class="info-value">${servicoCompleto.status || 'N/A'}</div>
-                            </div>
-                            ${servicoCompleto.maps ? `
-                            <div class="info-group">
-                                <label class="info-label">Localização</label>
-                                <div class="info-value">
-                                    <a href="${servicoCompleto.maps}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-map-marker-alt me-1"></i>Ver no Mapa
-                                    </a>
-                                </div>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    <div class="info-group">
-                        <label class="info-label">Relatório de Conclusão</label>
-                        <div class="info-value text-muted small">${servicoCompleto.relatorio_resumido || 'Nenhum relatório disponível.'}</div>
-                    </div>
-                    ${servicoCompleto.anexos?.length > 0 ? `
-                    <div class="info-group">
-                        <label class="info-label">Anexos</label>
-                        <div class="info-value">
-                            ${servicoCompleto.anexos.map(anexo => `
-                            <a href="${anexo.caminho}" target="_blank" class="btn btn-sm btn-outline-primary me-2 mb-2">
-                                <i class="fas fa-paperclip me-1"></i>${anexo.nomeOriginal}
-                            </a>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-                `;
-
-                document.getElementById('btn-ver-detalhes').onclick = () => {
-                    window.location.href = `/detalhes_servico?id=${id}`;
-                };
-
-                quickViewModal.show();
-            } catch (error) {
-                console.error('Erro ao buscar detalhes:', error);
-                alert('Erro ao carregar detalhes do serviço');
-            }
-        }
-
-        // Função para exportar dados
-        async function exportarDados() {
-            try {
-                // Mostra loading
-                const btnExportar = document.getElementById('btn-exportar');
-                const originalText = btnExportar.innerHTML;
-                btnExportar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exportando...';
-                btnExportar.disabled = true;
-
-                // Cria workbook
-                const wb = XLSX.utils.book_new();
-
-                // Prepara dados para exportação
-                const dadosExportacao = servicosData.map(servico => ({
-                    'ID': servico.id,
-                    'Processo': servico.processo,
-                    'Subestação': servico.subestacao,
-                    'Responsável': servico.responsavel,
-                    'Data Início': servico.data_inicio ? formatarData(servico.data_inicio) : 'N/A',
-                    'Data Conclusão': servico.data_conclusao ? formatarData(servico.data_conclusao) : 'N/A',
-                    'Tempo': calcularTempoServico(servico.data_inicio, servico.data_conclusao),
-                    'Status': 'Concluído'
-                }));
-
-                // Adiciona worksheet
-                const ws = XLSX.utils.json_to_sheet(dadosExportacao);
-                XLSX.utils.book_append_sheet(wb, ws, "Serviços Concluídos");
-
-                // Gera arquivo
-                const date = new Date();
-                const fileName = `servicos_concluidos_${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}.xlsx`;
-                XLSX.writeFile(wb, fileName);
-
-            } catch (error) {
-                console.error('Erro ao exportar:', error);
-                alert('Erro ao exportar dados');
-            } finally {
-                // Restaura botão
-                const btnExportar = document.getElementById('btn-exportar');
-                btnExportar.innerHTML = originalText;
-                btnExportar.disabled = false;
-            }
-        }
-
-        // Funções auxiliares
+        // Formatar data
         function formatarData(dataString) {
-            if (!dataString) return 'N/A';
-            try {
-                const data = new Date(dataString);
-                return data.toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-            } catch (e) {
-                console.error('Erro ao formatar data:', e);
-                return dataString;
-            }
+            if (!dataString) return 'Não informado';
+            const data = new Date(dataString);
+            return data.toLocaleDateString('pt-BR');
         }
 
-        function calcularTempoServico(dataInicio, dataConclusao) {
-            if (!dataInicio || !dataConclusao) return 'N/A';
-
-            try {
-                const inicio = new Date(dataInicio);
-                const fim = new Date(dataConclusao);
-                const diffTime = Math.abs(fim - inicio);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                if (diffDays === 0) {
-                    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-                    return `${diffHours}h`;
-                } else if (diffDays < 7) {
-                    return `${diffDays}d`;
-                } else {
-                    const weeks = Math.floor(diffDays / 7);
-                    const remainingDays = diffDays % 7;
-                    return `${weeks}sem ${remainingDays > 0 ? remainingDays + 'd' : ''}`.trim();
-                }
-            } catch (e) {
-                console.error('Erro ao calcular tempo:', e);
-                return 'N/A';
-            }
-        }
-
+        // Função para logout
         function logout() {
             localStorage.removeItem('user');
             window.location.href = '/';
         }
 
         // Event Listeners
-        document.getElementById('filtroPeriodo').addEventListener('change', (e) => {
-            const showCustom = e.target.value === 'custom';
-            document.getElementById('custom-date-start').style.display = showCustom ? 'block' : 'none';
-            document.getElementById('custom-date-end').style.display = showCustom ? 'block' : 'none';
-        });
-
-        document.getElementById('btn-limpar').addEventListener('click', () => {
-            document.getElementById('filtros-form').reset();
-            document.getElementById('custom-date-start').style.display = 'none';
-            document.getElementById('custom-date-end').style.display = 'none';
-            carregarServicos();
-        });
-
-        document.getElementById('filtros-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const filtros = Object.fromEntries(formData.entries());
-
-            // Adicionar datas com base no período selecionado
-            const periodo = filtros.periodo;
-            const datas = calcularPeriodo(periodo);
-
-            // Remover o campo periodo (não é usado na API)
-            delete filtros.periodo;
-
-            // Mesclar os filtros
-            const filtrosCompletos = {
-                ...filtros,
-                ...datas
-            };
-
-            carregarServicos(filtrosCompletos);
-        });
-
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const termo = e.target.value.toLowerCase();
-            const linhas = document.querySelectorAll('#servicos-table tbody tr');
-
-            linhas.forEach(linha => {
-                const textoLinha = linha.textContent.toLowerCase();
-                linha.style.display = textoLinha.includes(termo) ? '' : 'none';
-            });
-        });
-
-        document.getElementById('btn-pesquisar').addEventListener('click', () => {
-            const termo = document.getElementById('search-input').value.toLowerCase();
-            const linhas = document.querySelectorAll('#servicos-table tbody tr');
-
-            linhas.forEach(linha => {
-                const textoLinha = linha.textContent.toLowerCase();
-                linha.style.display = textoLinha.includes(termo) ? '' : 'none';
-            });
-        });
-
-        document.getElementById('btn-exportar').addEventListener('click', exportarDados);
+        document.getElementById('filtroProcesso').addEventListener('input', atualizarTabela);
+        document.getElementById('filtroSubestacao').addEventListener('input', atualizarTabela);
+        document.getElementById('filtroAlimentador').addEventListener('input', atualizarTabela);
+        document.getElementById('filtroData').addEventListener('change', atualizarTabela);
 
         // Inicialização
-        document.addEventListener('DOMContentLoaded', async () => {
-            await carregarServicos();
-            await carregarOpcoesFiltros();
-        });
+        document.addEventListener('DOMContentLoaded', carregarServicosConcluidos);
     </script>
 </body>
 
