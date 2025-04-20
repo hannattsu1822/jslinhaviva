@@ -36,7 +36,6 @@
                     </div>
                 </div>
 
-                <!-- Menu de Navegação -->
                 <nav class="sidebar-menu">
                     <a href="/dashboard" class="menu-item">
                         <i class="fas fa-tachometer-alt me-2"></i>Dashboard
@@ -61,7 +60,6 @@
                     </a>
                 </nav>
 
-                <!-- Botão Sair no rodapé -->
                 <div class="sidebar-footer">
                     <button onclick="logout()" class="btn-logout">
                         <i class="fas fa-sign-out-alt me-2"></i>Sair
@@ -85,130 +83,149 @@
                                 <i class="fas fa-info-circle me-2"></i>Detalhes do Serviço
                             </h1>
                         </div>
-                        <div>
+                        <div class="action-buttons">
                             <a href="/servicos_ativos" class="btn btn-outline-secondary me-2">
-                                <i class="fas fa-arrow-left me-1"></i>Voltar
+                                <i class="fas fa-arrow-left me-1"></i> Voltar
                             </a>
                             <button class="btn btn-primary me-2" id="btn-editar">
-                                <i class="fas fa-edit me-1"></i>Editar
+                                <i class="fas fa-edit me-1"></i> Editar
                             </button>
                             <button class="btn btn-danger" id="btn-excluir">
-                                <i class="fas fa-trash me-1"></i>Excluir
+                                <i class="fas fa-trash me-1"></i> Excluir
                             </button>
                         </div>
                     </div>
 
-                    <!-- Card Principal -->
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body p-4">
-                            <div class="row">
-                                <!-- Coluna Esquerda - Informações Básicas -->
-                                <div class="col-lg-6">
-                                    <div class="card mb-4">
-                                        <div class="card-header bg-light">
-                                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Básicas
-                                            </h5>
+                    <!-- Informações do Serviço -->
+                    <div class="row">
+                        <!-- Coluna Esquerda -->
+                        <div class="col-lg-6">
+                            <!-- Informações Básicas -->
+                            <div class="detail-card card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-info-circle me-2"></i>Informações Básicas
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">ID do Serviço</span>
+                                            <div class="detail-value" id="servico-id">-</div>
                                         </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Número do
-                                                        Processo</label>
-                                                    <div class="fw-bold fs-5" id="processo">-</div>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Status</label>
-                                                    <div><span class="badge rounded-pill" id="status">-</span></div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Subestação</label>
-                                                    <div class="fw-bold" id="subestacao">-</div>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Alimentador</label>
-                                                    <div class="fw-bold" id="alimentador">-</div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Desligamento</label>
-                                                    <div class="fw-bold" id="desligamento">-</div>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Chave
-                                                        Montante</label>
-                                                    <div class="fw-bold" id="chave_montante">-</div>
-                                                </div>
-                                            </div>
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Número do Processo</span>
+                                            <div class="detail-value" id="servico-processo">-</div>
                                         </div>
                                     </div>
 
-                                    <div class="card mb-4">
-                                        <div class="card-header bg-light">
-                                            <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Localização</h5>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Status</span>
+                                            <div><span class="status-badge" id="servico-status">-</span></div>
                                         </div>
-                                        <div class="card-body">
-                                            <div id="maps-container" class="text-center py-3">
-                                                <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
-                                                <p class="text-muted">Nenhuma localização informada</p>
-                                            </div>
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Subestação</span>
+                                            <div class="detail-value" id="servico-subestacao">-</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Alimentador</span>
+                                            <div class="detail-value" id="servico-alimentador">-</div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Chave Montante</span>
+                                            <div class="detail-value" id="servico-chave-montante">-</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Desligamento</span>
+                                            <div class="detail-value" id="servico-desligamento">-</div>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- Coluna Direita - Datas e Responsável -->
-                                <div class="col-lg-6">
-                                    <div class="card mb-4">
-                                        <div class="card-header bg-light">
-                                            <h5 class="mb-0"><i class="far fa-calendar-alt me-2"></i>Datas</h5>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Data
-                                                        Prevista</label>
-                                                    <div class="fw-bold" id="data_prevista">-</div>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Data de
-                                                        Conclusão</label>
-                                                    <div class="fw-bold" id="data_conclusao">-</div>
-                                                </div>
-                                            </div>
+                            <!-- Localização -->
+                            <div class="detail-card card mb-4" id="location-card">
+                                <a href="#" id="maps-link" class="stretched-link"
+                                    style="text-decoration: none; color: inherit;">
+                                    <div class="card-header">
+                                        <i class="fas fa-map-marked-alt me-2"></i>Localização
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="text-center py-2" style="min-height: 120px;">
+                                            <i class="fas fa-map-marked-alt fa-3x mb-3 text-primary"></i>
+                                            <p class="text-muted mb-0">Clique em qualquer lugar deste card para abrir o
+                                                mapa</p>
                                         </div>
                                     </div>
+                                </a>
+                            </div>
+                        </div>
 
-                                    <div class="card mb-4">
-                                        <div class="card-header bg-light">
-                                            <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Responsável</h5>
+                        <!-- Coluna Direita -->
+                        <div class="col-lg-6">
+                            <!-- Datas -->
+                            <div class="detail-card card mb-4">
+                                <div class="card-header">
+                                    <i class="far fa-calendar-alt me-2"></i>Datas
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Data Prevista</span>
+                                            <div class="detail-value" id="servico-data-prevista">-</div>
                                         </div>
-                                        <div class="card-body">
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Matrícula</label>
-                                                    <div class="fw-bold" id="turma_matricula">-</div>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label text-muted small mb-1">Nome</label>
-                                                    <div class="fw-bold" id="responsavel">-</div>
-                                                </div>
-                                            </div>
+                                        <div class="col-md-6 mb-3">
+                                            <span class="detail-label">Data de Conclusão</span>
+                                            <div class="detail-value" id="servico-data-conclusao">-</div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div class="card">
-                                        <div class="card-header bg-light">
-                                            <h5 class="mb-0"><i class="fas fa-paperclip me-2"></i>Anexos</h5>
+                            <!-- Responsável -->
+                            <div class="detail-card card mb-4">
+                                <div class="card-header">
+                                    <i class="fas fa-user-tie me-2"></i>Responsável
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="detail-label">Responsável Técnico</span>
+                                            <div class="detail-value" id="servico-responsavel">-</div>
                                         </div>
-                                        <div class="card-body">
-                                            <div id="anexos-container" class="text-center py-3">
-                                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                                                <p class="text-muted">Nenhum anexo encontrado</p>
-                                            </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Conclusão (condicional) -->
+                            <div class="detail-card card mb-4 d-none" id="conclusao-container">
+                                <div class="card-header">
+                                    <i class="fas fa-clipboard-check me-2"></i>Conclusão
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="detail-label">Observações</span>
+                                            <div class="detail-value" id="servico-observacoes">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Anexos -->
+                            <div class="detail-card card">
+                                <div class="card-header">
+                                    <i class="fas fa-paperclip me-2"></i>Anexos
+                                </div>
+                                <div class="card-body">
+                                    <div id="anexos-container" class="row">
+                                        <div class="col-12">
+                                            <p class="text-center text-muted py-3">Nenhum anexo encontrado</p>
                                         </div>
                                     </div>
                                 </div>
@@ -258,149 +275,182 @@
                 window.location.href = '/';
             }
 
+            // Carregar detalhes do serviço
+            await carregarDetalhesServico();
+
+            // Configurar botões de ação
+            const urlParams = new URLSearchParams(window.location.search);
+            const servicoId = urlParams.get('id');
+
+            document.getElementById('btn-editar').addEventListener('click', () => {
+                window.location.href = `/editar_servico?id=${servicoId}`;
+            });
+
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            document.getElementById('btn-excluir').addEventListener('click', () => {
+                confirmModal.show();
+            });
+
+            document.getElementById('confirmDelete').addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`/api/servicos/${servicoId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        alert('Serviço excluído com sucesso!');
+                        window.location.href = '/servicos_ativos';
+                    } else {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Erro ao excluir serviço');
+                    }
+                } catch (error) {
+                    console.error('Erro ao excluir serviço:', error);
+                    alert('Erro ao excluir serviço: ' + error.message);
+                } finally {
+                    confirmModal.hide();
+                }
+            });
+        });
+
+        async function carregarDetalhesServico() {
             const urlParams = new URLSearchParams(window.location.search);
             const servicoId = urlParams.get('id');
 
             if (!servicoId) {
-                alert('ID do serviço não informado');
-                window.location.href = '/servicos_ativos';
+                mostrarErro('ID do serviço não especificado');
                 return;
             }
 
             try {
                 const response = await fetch(`/api/servicos/${servicoId}`);
-                const servico = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(servico.message || 'Erro ao carregar serviço');
+                    throw new Error('Erro ao carregar detalhes do serviço');
                 }
 
-                // Preencher os dados básicos
-                document.getElementById('processo').textContent = servico.processo || '-';
+                const { success, data, message } = await response.json();
 
-                // Status com badge colorido
-                const statusBadge = document.getElementById('status');
-                statusBadge.textContent = servico.status ? servico.status.charAt(0).toUpperCase() + servico.status.slice(1) : 'Não informado';
+                if (!success) {
+                    throw new Error(message || 'Erro ao carregar detalhes');
+                }
 
-                if (servico.status === 'ativo') {
-                    statusBadge.classList.add('bg-warning', 'text-dark');
-                } else if (servico.status === 'concluido') {
-                    statusBadge.classList.add('bg-success');
+                // Preencher os dados na página
+                document.getElementById('servico-id').textContent = data.id;
+                document.getElementById('servico-processo').textContent = data.processo || 'Não informado';
+                document.getElementById('servico-subestacao').textContent = data.subestacao || 'Não informado';
+                document.getElementById('servico-alimentador').textContent = data.alimentador || 'Não informado';
+                document.getElementById('servico-chave-montante').textContent = data.chave_montante || 'Não informado';
+                document.getElementById('servico-responsavel').textContent =
+                    data.responsavel_matricula ? `${data.responsavel_matricula} - ${data.responsavel_nome || 'Não informado'}` : 'Não informado';
+                document.getElementById('servico-data-prevista').textContent = formatarData(data.data_prevista_execucao);
+                document.getElementById('servico-desligamento').textContent = data.desligamento === 'SIM' ? 'Sim' : 'Não';
+
+                // Configurar status
+                const statusElement = document.getElementById('servico-status');
+                statusElement.textContent = data.status === 'ativo' ? 'Ativo' : data.status === 'concluido' ? 'Concluído' : data.status;
+                statusElement.className = 'status-badge ' + (data.status === 'ativo' ? 'bg-warning' : 'bg-success');
+
+                // Configurar link do mapa
+                const locationCard = document.getElementById('location-card');
+                const mapsLink = document.getElementById('maps-link');
+
+                if (data.maps) {
+                    let mapsUrl = data.maps;
+                    if (!mapsUrl.startsWith('http')) {
+                        mapsUrl = 'https://' + mapsUrl;
+                    }
+                    mapsLink.href = mapsUrl;
+                    locationCard.classList.add('hover-effect');
+                    locationCard.style.cursor = 'pointer';
                 } else {
-                    statusBadge.classList.add('bg-secondary');
+                    locationCard.style.cursor = 'not-allowed';
+                    mapsLink.removeAttribute('href');
+                    mapsLink.onclick = (e) => e.preventDefault();
+                    const icon = locationCard.querySelector('.fa-map-marked-alt');
+                    if (icon) icon.classList.replace('text-primary', 'text-muted');
                 }
 
-                document.getElementById('subestacao').textContent = servico.subestacao || '-';
-                document.getElementById('alimentador').textContent = servico.alimentador || '-';
-                document.getElementById('data_prevista').textContent = formatarData(servico.data_prevista_execucao) || '-';
-                document.getElementById('data_conclusao').textContent = servico.data_conclusao ? formatarData(servico.data_conclusao) : 'Não concluído';
-                document.getElementById('turma_matricula').textContent = servico.turma_matricula || '-';
-                document.getElementById('responsavel').textContent = servico.responsavel || 'Não informado';
-                document.getElementById('desligamento').textContent = servico.desligamento === 'SIM' ? 'Sim' : 'Não';
-                document.getElementById('chave_montante').textContent = servico.chave_montante || '-';
-
-                // Link do Maps
-                const mapsContainer = document.getElementById('maps-container');
-                if (servico.maps) {
-                    mapsContainer.innerHTML = `
-                        <div class="text-start">
-                            <a href="${servico.maps}" target="_blank" class="btn btn-outline-primary">
-                                <i class="fas fa-map-marked-alt me-2"></i>Ver no Google Maps
-                            </a>
-                        </div>
-                        <div class="mt-3">
-                            <iframe 
-                                src="https://maps.google.com/maps?q=${encodeURIComponent(servico.subestacao)}&output=embed" 
-                                width="100%" 
-                                height="200" 
-                                style="border:0;" 
-                                allowfullscreen="" 
-                                loading="lazy">
-                            </iframe>
-                        </div>
-                    `;
+                if (data.status === 'concluido') {
+                    document.getElementById('conclusao-container').classList.remove('d-none');
+                    document.getElementById('servico-data-conclusao').textContent = formatarData(data.data_conclusao);
+                    document.getElementById('servico-observacoes').textContent = data.observacoes_conclusao || 'Nenhuma observação';
                 }
 
-                // Processar anexos
-                const anexosContainer = document.getElementById('anexos-container');
-                if (servico.anexos && servico.anexos.length > 0) {
-                    anexosContainer.innerHTML = '';
+                // Preencher anexos
+                preencherAnexos(data.anexos || []);
 
-                    servico.anexos.forEach((anexo, index) => {
-                        const fileExt = anexo.nomeOriginal.split('.').pop().toLowerCase();
-                        const isPDF = fileExt === 'pdf';
-                        const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(fileExt);
-                        const iconClass = isPDF ? 'fa-file-pdf text-danger' : isImage ? 'fa-file-image text-primary' : 'fa-file text-secondary';
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarErro(error.message);
+            }
+        }
 
-                        const anexoDiv = document.createElement('div');
-                        anexoDiv.className = 'd-flex justify-content-between align-items-center p-3 border-bottom';
+        function preencherAnexos(anexos) {
+            const anexosContainer = document.getElementById('anexos-container');
+            anexosContainer.innerHTML = '';
 
-                        anexoDiv.innerHTML = `
-                            <div class="d-flex align-items-center">
-                                <i class="fas ${iconClass} fa-2x me-3"></i>
-                                <div>
-                                    <div class="fw-bold">${anexo.nomeOriginal}</div>
-                                    <small class="text-muted">${formatFileSize(anexo.tamanho)} • ${formatarData(anexo.dataUpload)}</small>
-                                </div>
+            if (anexos.length === 0) {
+                anexosContainer.innerHTML = `
+                    <div class="col-12">
+                        <div class="text-center py-3">
+                            <i class="fas fa-paperclip fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Nenhum anexo encontrado</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            anexos.forEach(anexo => {
+                const anexoElement = document.createElement('div');
+                anexoElement.className = 'col-md-4 col-6 mb-3';
+                anexoElement.innerHTML = `
+                    <div class="attachment-card card h-100">
+                        <div class="card-body text-center">
+                            <div class="attachment-thumbnail">
+                                <i class="fas ${getFileIcon(anexo.nomeOriginal)}"></i>
                             </div>
-                            <div class="btn-group">
-                                <a href="${anexo.caminho}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <div class="btn-group mt-2">
+                                <a href="${anexo.caminho || '#'}" target="_blank" class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="${anexo.caminho}?download=true" download="${anexo.nomeOriginal}" class="btn btn-sm btn-outline-secondary">
+                                <a href="${anexo.caminho || '#'}?download=true" download="${anexo.nomeOriginal || 'arquivo'}" class="btn btn-sm btn-outline-secondary">
                                     <i class="fas fa-download"></i>
                                 </a>
                             </div>
-                        `;
+                        </div>
+                    </div>
+                `;
+                anexosContainer.appendChild(anexoElement);
+            });
+        }
 
-                        anexosContainer.appendChild(anexoDiv);
-                    });
-                }
+        function getFileIcon(filename) {
+            if (!filename) return 'fa-file text-secondary';
+            const ext = filename.split('.').pop().toLowerCase();
 
-                // Botões de ação
-                document.getElementById('btn-editar').addEventListener('click', () => {
-                    window.location.href = `/editar_servico?id=${servicoId}`;
-                });
+            const icons = {
+                pdf: 'fa-file-pdf text-danger',
+                doc: 'fa-file-word text-primary',
+                docx: 'fa-file-word text-primary',
+                xls: 'fa-file-excel text-success',
+                xlsx: 'fa-file-excel text-success',
+                ppt: 'fa-file-powerpoint text-warning',
+                pptx: 'fa-file-powerpoint text-warning',
+                jpg: 'fa-file-image text-info',
+                jpeg: 'fa-file-image text-info',
+                png: 'fa-file-image text-info',
+                gif: 'fa-file-image text-info',
+                zip: 'fa-file-archive text-secondary',
+                rar: 'fa-file-archive text-secondary',
+                txt: 'fa-file-alt text-secondary',
+                csv: 'fa-file-csv text-success'
+            };
 
-                const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-                document.getElementById('btn-excluir').addEventListener('click', () => {
-                    confirmModal.show();
-                });
-
-                document.getElementById('confirmDelete').addEventListener('click', async () => {
-                    try {
-                        const response = await fetch(`/api/servicos/${servicoId}`, {
-                            method: 'DELETE',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-
-                        if (response.ok) {
-                            alert('Serviço excluído com sucesso!');
-                            window.location.href = '/servicos_ativos';
-                        } else {
-                            const errorData = await response.json();
-                            throw new Error(errorData.message || 'Erro ao excluir serviço');
-                        }
-                    } catch (error) {
-                        console.error('Erro ao excluir serviço:', error);
-                        alert('Erro ao excluir serviço: ' + error.message);
-                    } finally {
-                        confirmModal.hide();
-                    }
-                });
-
-            } catch (error) {
-                console.error('Erro ao carregar detalhes do serviço:', error);
-                alert(error.message);
-                window.location.href = '/servicos_ativos';
-            }
-        });
-
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
+            return icons[ext] || 'fa-file text-secondary';
         }
 
         function formatarData(dataString) {
@@ -420,12 +470,16 @@
             }
         }
 
-        function formatFileSize(bytes) {
-            if (bytes === 0 || !bytes) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        function mostrarErro(mensagem) {
+            const alerta = document.createElement('div');
+            alerta.className = 'alert alert-danger';
+            alerta.textContent = mensagem;
+            document.querySelector('.main-content .container').prepend(alerta);
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
         }
 
         function logout() {
