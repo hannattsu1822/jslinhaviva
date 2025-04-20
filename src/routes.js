@@ -1413,8 +1413,23 @@ router.get('/api/gerar_pdf/:id', async (req, res) => {
         }
     }
 });
+// Adicione esta função auxiliar no início do arquivo routes.js (antes das rotas)
+const getTipoAnexo = (filename) => {
+    const ext = path.extname(filename).toLowerCase();
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif'];
+
+    if (imageExtensions.includes(ext)) {
+        return 'imagem_conclusao';
+    }
+    return 'documento';
+};
+
+// Rota POST /api/servicos (substitua a existente por esta)
 router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
+    const connection = await promisePool.getConnection();
     try {
+        await connection.beginTransaction();
+
         const {
             processo,
             data_prevista_execucao,
@@ -1422,13 +1437,12 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             subestacao,
             alimentador,
             chave_montante,
-            turma_matricula,
+            responsavel_matricula,
             maps
         } = req.body;
 
         // Validação dos campos obrigatórios
         if (!processo || !data_prevista_execucao || !subestacao || !desligamento) {
-            // Remove arquivos temporários se houver erro
             if (req.files) {
                 req.files.forEach(file => {
                     if (fs.existsSync(file.path)) {
@@ -1436,11 +1450,14 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                     }
                 });
             }
-            return res.status(400).json({ message: 'Campos obrigatórios faltando' });
+            return res.status(400).json({
+                success: false,
+                message: 'Processo, data prevista, subestação e desligamento são obrigatórios'
+            });
         }
 
-        // Inserir o processo principal no banco de dados
-        const [result] = await promisePool.query(
+        // Inserir o processo principal
+        const [result] = await connection.query(
             `INSERT INTO processos (
                 processo, 
                 data_prevista_execucao, 
@@ -1448,7 +1465,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                 subestacao, 
                 alimentador,
                 chave_montante, 
-                turma_matricula, 
+                responsavel_matricula,
                 maps, 
                 status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
@@ -1459,59 +1476,79 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                 subestacao,
                 alimentador || null,
                 chave_montante || null,
-                turma_matricula || null,
+                responsavel_matricula || 'pendente',
                 maps || null
             ]
         );
 
-        const processId = result.insertId;
-        const anexosSalvos = [];
-
-        // Processar cada anexo enviado
+        // Processar anexos se existirem
         if (req.files && req.files.length > 0) {
-            for (let i = 0; i < req.files.length; i++) {
-                const file = req.files[i];
-                const fileExtension = path.extname(file.originalname).toLowerCase();
-                const novoNome = `${processId}_${i + 1}${fileExtension}`;
-                const novoPath = path.join(__dirname, '../upload_arquivos', novoNome);
+            const uploadDir = path.join(__dirname, '../upload_arquivos');
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
 
-                // Renomear o arquivo temporário
+            for (const file of req.files) {
+                const fileExtension = path.extname(file.originalname).toLowerCase();
+                const novoNome = `anexo_${result.insertId}_${Date.now()}${fileExtension}`;
+                const novoPath = path.join(uploadDir, novoNome);
+                const tipoAnexo = getTipoAnexo(file.originalname);
+
+                // Verificar tamanho do arquivo (máximo 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    throw new Error(`O arquivo ${file.originalname} excede o limite de 10MB`);
+                }
+
+                // Mover arquivo para o diretório permanente
                 fs.renameSync(file.path, novoPath);
 
-                const caminhoServidor = `/api/upload_arquivos/${novoNome}`;
-
-                // Inserir metadados do anexo na tabela processos_anexos
-                const [anexoResult] = await promisePool.query(
+                // Inserir registro do anexo no banco de dados
+                await connection.query(
                     `INSERT INTO processos_anexos (
                         processo_id, 
                         nome_original, 
                         caminho_servidor, 
-                        tamanho
-                    ) VALUES (?, ?, ?, ?)`,
-                    [processId, file.originalname, caminhoServidor, file.size]
+                        tamanho,
+                        tipo_anexo
+                    ) VALUES (?, ?, ?, ?, ?)`,
+                    [
+                        result.insertId,
+                        file.originalname,
+                        `/api/upload_arquivos/${novoNome}`,
+                        file.size,
+                        tipoAnexo
+                    ]
                 );
-
-                anexosSalvos.push({
-                    id: anexoResult.insertId,
-                    nomeOriginal: file.originalname,
-                    caminho: caminhoServidor,
-                    tamanho: file.size
-                });
             }
         }
 
-        // Resposta de sucesso
+        await connection.commit();
+
+        // Registrar auditoria apenas se houver usuário autenticado
+        if (req.user?.matricula) {
+            await registrarAuditoria(
+                req.user.matricula,
+                'Registro de Serviço',
+                `Novo serviço registrado: ${processo}`
+            );
+        }
+
         res.status(201).json({
             success: true,
             message: 'Serviço registrado com sucesso',
-            processId: processId,
-            anexos: anexosSalvos
+            id: result.insertId,
+            anexos: req.files ? req.files.map(file => ({
+                nomeOriginal: file.originalname,
+                caminho: `/api/upload_arquivos/anexo_${result.insertId}_${Date.now()}${path.extname(file.originalname)}`,
+                tipo: getTipoAnexo(file.originalname)
+            })) : []
         });
 
     } catch (error) {
+        await connection.rollback();
         console.error('Erro ao registrar serviço:', error);
 
-        // Remove arquivos temporários em caso de erro
+        // Limpar arquivos temporários em caso de erro
         if (req.files) {
             req.files.forEach(file => {
                 if (fs.existsSync(file.path)) {
@@ -1523,70 +1560,157 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Erro ao registrar serviço',
-            error: error.message
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno no servidor'
         });
+    } finally {
+        connection.release();
     }
 });
 
-// Listar serviços com filtros
+
+//filtrar
 router.get('/api/servicos', autenticar, async (req, res) => {
     try {
         const { status } = req.query;
-        let query = 'SELECT p.*, u.nome as responsavel FROM processos p LEFT JOIN users u ON p.turma_matricula = u.matricula';
+
+        let query = `
+            SELECT 
+                p.id,
+                p.processo,
+                p.data_prevista_execucao,
+                p.desligamento,
+                p.subestacao,
+                p.alimentador,
+                p.chave_montante,
+                p.responsavel_matricula,
+                p.maps,
+                p.status,
+                p.data_conclusao,
+                p.observacoes_conclusao,
+                u.nome as responsavel
+            FROM processos p
+            LEFT JOIN users u ON p.responsavel_matricula = u.matricula
+        `;
+
         const params = [];
 
         if (status) {
             query += ' WHERE p.status = ?';
             params.push(status);
         }
-        query += ' ORDER BY p.data_prevista_execucao DESC';
+
+        query += ' ORDER BY p.data_prevista_execucao ASC';
 
         const [servicos] = await promisePool.query(query, params);
-        res.json(servicos);
+
+        res.status(200).json(servicos);
+
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar serviços' });
+        console.error('Erro ao buscar serviços:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao buscar serviços',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
+
+// Função para formatar tamanho de arquivo (bytes para KB/MB/GB)
+function formatarTamanhoArquivo(bytes) {
+    if (bytes === 0 || !bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
 // Detalhes de um serviço específico
 router.get('/api/servicos/:id', autenticar, async (req, res) => {
+    const connection = await promisePool.getConnection();
     try {
-        // Busca os dados do processo
-        const [processo] = await promisePool.query(`
-            SELECT p.*, u.nome as responsavel 
-            FROM processos p 
-            LEFT JOIN users u ON p.turma_matricula = u.matricula 
-            WHERE p.id = ?`,
-            [req.params.id]
-        );
+        const { id } = req.params;
 
-        if (processo.length === 0) {
-            return res.status(404).json({ message: 'Serviço não encontrado' });
+        // 1. Buscar os dados principais do serviço
+        const [servico] = await connection.query(`
+            SELECT 
+                p.id,
+                p.processo,
+                p.data_prevista_execucao,
+                p.data_conclusao,
+                p.desligamento,
+                p.subestacao,
+                p.alimentador,
+                p.chave_montante,
+                p.responsavel_matricula,
+                p.maps,
+                p.status,
+                p.observacoes_conclusao,
+                u.nome as responsavel_nome,
+                u.matricula as responsavel_matricula
+            FROM processos p
+            LEFT JOIN users u ON p.responsavel_matricula = u.matricula
+            WHERE p.id = ?
+        `, [id]);
+
+        if (servico.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Serviço não encontrado'
+            });
         }
 
-        // Busca os anexos relacionados
-        const [anexos] = await promisePool.query(
-            'SELECT * FROM processos_anexos WHERE processo_id = ?',
-            [req.params.id]
-        );
+        // 2. Buscar os anexos do serviço
+        const [anexos] = await connection.query(`
+            SELECT 
+                id,
+                nome_original as nomeOriginal,
+                caminho_servidor as caminho,
+                tamanho,
+                tipo_anexo as tipo,
+                DATE_FORMAT(data_upload, '%d/%m/%Y %H:%i') as dataUpload
+            FROM processos_anexos
+            WHERE processo_id = ?
+            ORDER BY data_upload DESC
+        `, [id]);
 
-        // Formata a resposta
-        const servico = {
-            ...processo[0],
+        // 3. Formatar a resposta
+        const resultado = {
+            id: servico[0].id,
+            processo: servico[0].processo,
+            data_prevista_execucao: servico[0].data_prevista_execucao,
+            data_conclusao: servico[0].data_conclusao,
+            desligamento: servico[0].desligamento,
+            subestacao: servico[0].subestacao,
+            alimentador: servico[0].alimentador,
+            chave_montante: servico[0].chave_montante,
+            responsavel_matricula: servico[0].responsavel_matricula,
+            responsavel_nome: servico[0].responsavel_nome,
+            maps: servico[0].maps,
+            status: servico[0].status,
+            observacoes_conclusao: servico[0].observacoes_conclusao,
             anexos: anexos.map(anexo => ({
-                id: anexo.id,
-                nomeOriginal: anexo.nome_original,
-                caminho: anexo.caminho_servidor,
-                tamanho: anexo.tamanho,
-                dataUpload: anexo.data_upload
+                ...anexo,
+                tamanho: formatarTamanhoArquivo(anexo.tamanho) || '0 Bytes'
             }))
         };
 
-        res.json(servico);
+        res.status(200).json({
+            success: true,
+            data: resultado
+        });
+
     } catch (error) {
-        res.status(500).json({ message: 'Erro no servidor' });
+        console.error('Erro ao buscar detalhes do serviço:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao buscar detalhes do serviço',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        connection.release();
     }
 });
+
 
 // Atualizar status do serviço
 router.patch('/api/servicos/:id/status', autenticar, async (req, res) => {
@@ -1613,48 +1737,42 @@ router.patch('/api/servicos/:id/status', autenticar, async (req, res) => {
 });
 
 // Excluir serviço
-// routes.js
-router.get('/api/servicos/:id', autenticar, async (req, res) => {
+
+
+// Rota para obter encarregados (turmas)
+router.get('/api/encarregados', autenticar, async (req, res) => {
     try {
-        // 1. Busca o serviço principal
-        const [servicoRows] = await promisePool.query(`
-            SELECT p.*, u.nome as responsavel 
-            FROM processos p
-            LEFT JOIN users u ON p.turma_matricula = u.matricula
-            WHERE p.id = ?`,
-            [req.params.id]
+        // Busca usuários com cargo de "Encarregado" ou similar
+        const [rows] = await promisePool.query(
+            "SELECT DISTINCT matricula, nome FROM users WHERE cargo IN ('Encarregado', 'Supervisor', 'Gerente') ORDER BY nome"
         );
-
-        if (servicoRows.length === 0) {
-            return res.status(404).json({ message: 'Serviço não encontrado' });
-        }
-
-        // 2. Busca os anexos
-        const [anexosRows] = await promisePool.query(`
-            SELECT * FROM processos_anexos 
-            WHERE processo_id = ?`,
-            [req.params.id]
-        );
-
-        // 3. Formata a resposta
-        const response = {
-            ...servicoRows[0],
-            anexos: anexosRows.map(anexo => ({
-                id: anexo.id,
-                nomeOriginal: anexo.nome_original,
-                caminho: anexo.caminho_servidor,
-                tamanho: anexo.tamanho,
-                dataUpload: anexo.data_upload
-            }))
-        };
-
-        res.json(response);
-    } catch (error) {
-        console.error('Erro ao buscar serviço:', error);
-        res.status(500).json({ message: 'Erro ao buscar serviço' });
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error('Erro ao buscar encarregados:', err);
+        res.status(500).json({ message: 'Erro ao buscar encarregados!' });
     }
 });
 
+// Rota para atualizar responsável do serviço
+router.patch('/api/servicos/:id', autenticar, async (req, res) => {
+    const { id } = req.params;
+    const { responsavel_matricula } = req.body;
+
+    try {
+        await promisePool.query(
+            'UPDATE processos SET responsavel_matricula = ? WHERE id = ?',
+            [responsavel_matricula, id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao atualizar responsável:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao atualizar responsável'
+        });
+    }
+});
 // Contador de serviços por status
 router.get('/api/servicos/contador', autenticar, async (req, res) => {
     try {
@@ -1730,6 +1848,11 @@ router.get('/editar_servico', autenticar, (req, res) => {
     res.sendFile(path.join(__dirname, '../public/editar_servico.html'));
 });
 
+// routes.js - Adicione esta rota
+router.get('/servicos_atribuidos', autenticar, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/servicos_atribuidos.html'));
+});
+
 
 
 router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
@@ -1752,11 +1875,17 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
 
 // Rota para excluir serviço
 router.delete('/api/servicos/:id', autenticar, async (req, res) => {
-    const { id } = req.params;
-
+    const connection = await promisePool.getConnection();
     try {
+        await connection.beginTransaction();
+
+        const { id } = req.params;
+
         // 1. Verificar se o serviço existe
-        const [servico] = await promisePool.query('SELECT * FROM processos WHERE id = ?', [id]);
+        const [servico] = await connection.query(
+            'SELECT * FROM processos WHERE id = ?',
+            [id]
+        );
 
         if (servico.length === 0) {
             return res.status(404).json({
@@ -1765,40 +1894,44 @@ router.delete('/api/servicos/:id', autenticar, async (req, res) => {
             });
         }
 
-        // 2. Excluir anexos primeiro (se houver)
-        await promisePool.query('DELETE FROM processos_anexos WHERE processo_id = ?', [id]);
+        // 2. Excluir anexos primeiro
+        await connection.query(
+            'DELETE FROM processos_anexos WHERE processo_id = ?',
+            [id]
+        );
 
         // 3. Excluir o serviço principal
-        const [result] = await promisePool.query('DELETE FROM processos WHERE id = ?', [id]);
+        const [result] = await connection.query(
+            'DELETE FROM processos WHERE id = ?',
+            [id]
+        );
 
-        if (result.affectedRows > 0) {
-            // Registrar auditoria
-            await registrarAuditoria(
-                req.user.matricula,
-                'Excluir Serviço',
-                `Serviço excluído - ID: ${id}, Processo: ${servico[0].processo}`
-            );
+        await connection.commit();
 
-            res.json({
-                success: true,
-                message: 'Serviço excluído com sucesso'
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                message: 'Nenhum serviço foi excluído'
-            });
-        }
+        // Registrar auditoria
+        await registrarAuditoria(
+            req.user.matricula,
+            'Exclusão de Serviço',
+            `Serviço excluído - ID: ${id}, Processo: ${servico[0].processo}`
+        );
+
+        res.json({
+            success: true,
+            message: 'Serviço excluído com sucesso'
+        });
+
     } catch (error) {
+        await connection.rollback();
         console.error('Erro ao excluir serviço:', error);
         res.status(500).json({
             success: false,
             message: 'Erro ao excluir serviço',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
+    } finally {
+        connection.release();
     }
 });
-
 // Rota para concluir serviço com imagem
 // routes.js - Adicione esta rota modificada
 router.post('/api/servicos/:id/concluir', autenticar, upload.array('fotos_conclusao', 5), async (req, res) => {
@@ -1809,13 +1942,7 @@ router.post('/api/servicos/:id/concluir', autenticar, upload.array('fotos_conclu
         const { id } = req.params;
         const { observacoes } = req.body;
 
-        // 1. Verificar se o serviço existe
-        const [servico] = await connection.query('SELECT * FROM processos WHERE id = ?', [id]);
-        if (servico.length === 0) {
-            return res.status(404).json({ message: 'Serviço não encontrado' });
-        }
-
-        // 2. Atualizar status do serviço
+        // 1. Atualizar status do serviço
         await connection.query(
             `UPDATE processos SET 
                 status = 'concluido',
@@ -1825,7 +1952,7 @@ router.post('/api/servicos/:id/concluir', autenticar, upload.array('fotos_conclu
             [observacoes || null, id]
         );
 
-        // 3. Processar fotos de conclusão se existirem
+        // 2. Processar fotos de conclusão se existirem
         if (req.files && req.files.length > 0) {
             const uploadDir = path.join(__dirname, '../upload_arquivos');
             if (!fs.existsSync(uploadDir)) {
@@ -1854,7 +1981,18 @@ router.post('/api/servicos/:id/concluir', autenticar, upload.array('fotos_conclu
         }
 
         await connection.commit();
-        res.json({ success: true, message: 'Serviço concluído com sucesso' });
+
+        // Registrar auditoria
+        await registrarAuditoria(
+            req.user.matricula,
+            'Conclusão de Serviço',
+            `Serviço concluído - ID: ${id}`
+        );
+
+        res.json({
+            success: true,
+            message: 'Serviço concluído com sucesso'
+        });
 
     } catch (error) {
         await connection.rollback();
@@ -1951,6 +2089,8 @@ router.get('/api/servico/:id', autenticar, async (req, res) => {
     }
 });
 
+
+
 // Rota para obter responsáveis técnicos (Encarregado/Técnico/Engenheiro) - apenas matrícula e primeiro nome
 router.get('/api/responsaveis_tecnicos', autenticar, async (req, res) => {
     try {
@@ -1970,6 +2110,25 @@ router.get('/api/responsaveis_tecnicos', autenticar, async (req, res) => {
 });
 
 
+// Rota para retornar serviço concluído para ativo
+// Rota para reativar serviço corrigida
+router.patch('/api/servicos/:id/reativar', autenticar, async (req, res) => {
+    try {
+        const [result] = await promisePool.query(
+            'UPDATE processos SET status = "ativo", data_conclusao = NULL WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Serviço não encontrado' });
+        }
+
+        res.json({ message: 'Serviço reativado com sucesso' });
+    } catch (error) {
+        console.error('Erro ao reativar serviço:', error);
+        res.status(500).json({ message: 'Erro ao reativar serviço' });
+    }
+});
 
 
 module.exports = router;
