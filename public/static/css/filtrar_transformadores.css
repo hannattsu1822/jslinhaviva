@@ -239,27 +239,41 @@ body {
   background-color: var(--danger) !important;
 }
 
-/* Tabelas */
+/* Tabelas - Ajustes para coluna fixa */
 .table-responsive {
+  position: relative;
   max-height: 65vh;
   overflow-y: auto;
+  overflow-x: auto;
   border-radius: 8px;
+  display: block;
 }
 
 .table {
   color: var(--text-dark);
   background-color: transparent;
   width: 100%;
+  min-width: 100%;
+  position: relative;
+  margin-bottom: 0;
 }
 
 .table thead th {
   position: sticky;
   top: 0;
+  z-index: 20;
   background-color: var(--primary-blue);
   color: var(--white);
   border-bottom: 2px solid var(--dark-blue);
   padding: 12px 15px;
   font-weight: 500;
+}
+
+.table thead th.actions-header {
+  position: sticky;
+  right: 0;
+  z-index: 30;
+  background-color: var(--primary-blue);
 }
 
 .table tbody tr {
@@ -274,6 +288,20 @@ body {
   padding: 12px 15px;
   border-bottom: 1px solid var(--medium-gray);
   vertical-align: middle;
+  background-color: var(--white);
+}
+
+.table tbody td.actions-cell {
+  position: sticky;
+  right: 0;
+  z-index: 10;
+  background-color: var(--white);
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.table tbody tr:hover td.actions-cell {
+  background-color: var(--white) !important;
 }
 
 /* Dropdown Menu */
@@ -470,6 +498,13 @@ textarea.form-control {
   .dropdown-menu {
     width: 100%;
   }
+
+  /* Ajustes para mobile na coluna fixa */
+  .table thead th.actions-header,
+  .table tbody td.actions-cell {
+    position: static;
+    box-shadow: none;
+  }
 }
 
 @media (max-width: 576px) {
@@ -530,4 +565,28 @@ textarea.form-control {
   text-align: center;
   margin: 1rem 0;
   display: none;
+}
+
+
+/* Estilo para o botão de gerar PDF */
+.btn-pdf {
+  background-color: var(--pdf-red) !important;
+  color: var(--white) !important;
+  border: none;
+  transition: all 0.3s;
+}
+
+.btn-pdf:hover {
+  background-color: #b71c1c !important;
+  transform: translateY(-2px);
+}
+
+/* Estilo para a tabela no PDF */
+.glass-table-header {
+  background: linear-gradient(135deg, var(--dark-blue) 0%, var(--primary-blue) 100%);
+  color: var(--white);
+}
+
+.glass-table-row:hover {
+  background-color: var(--light-blue) !important;
 }
