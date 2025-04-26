@@ -428,3 +428,11 @@ body {
         margin-bottom: 1.5rem;
     }
 }
+
+/* Transição para campos de horário */
+#hora-inicio-container,
+#hora-fim-container {
+    transition: all 0.3s ease;
+}
+
+/*novo
