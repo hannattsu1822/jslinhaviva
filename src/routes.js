@@ -639,7 +639,7 @@ router.get('/api/responsaveis', autenticar, async (req, res) => {
         const query = `
       SELECT matricula, nome 
       FROM users 
-      WHERE cargo IN ('Engenheiro', 'Técnico', 'Gerente', 'ADMIN', 'ADM')
+      WHERE cargo IN ('Engenheiro', 'Técnico', 'Gerente', 'ADMIN', 'ADM', 'Inspetor')
     `;
         const [rows] = await promisePool.query(query);
         res.status(200).json(rows);
@@ -1328,25 +1328,16 @@ router.post('/api/filtrar_transformadores', autenticar, async (req, res) => {
         query += ' ORDER BY ct.data_checklist DESC';
 
         const [rows] = await promisePool.query(query, params);
-
-        if (rows.length === 0) {
-            return res.status(200).json({
-                message: 'Nenhum transformador encontrado com os filtros aplicados',
-                data: []
-            });
-        }
-
         res.status(200).json(rows);
+
     } catch (err) {
-        console.error('Erro detalhado:', {
+        console.error('Erro ao filtrar transformadores:', {
             message: err.message,
             stack: err.stack,
-            sql: err.sql,
-            code: err.code
+            sql: err.sql
         });
-
         res.status(500).json({
-            message: 'Falha ao filtrar transformadores',
+            message: 'Erro ao filtrar transformadores',
             error: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
     }
@@ -1434,6 +1425,8 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             processo,
             data_prevista_execucao,
             desligamento,
+            hora_inicio,
+            hora_fim,
             subestacao,
             alimentador,
             chave_montante,
@@ -1456,23 +1449,42 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             });
         }
 
+        // Validação adicional para horários de desligamento
+        if (desligamento === 'SIM' && (!hora_inicio || !hora_fim)) {
+            if (req.files) {
+                req.files.forEach(file => {
+                    if (fs.existsSync(file.path)) {
+                        fs.unlinkSync(file.path);
+                    }
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: 'Horário de início e término são obrigatórios para desligamentos'
+            });
+        }
+
         // Inserir o processo principal
         const [result] = await connection.query(
             `INSERT INTO processos (
                 processo, 
                 data_prevista_execucao, 
                 desligamento, 
+                hora_inicio,
+                hora_fim,
                 subestacao, 
                 alimentador,
                 chave_montante, 
                 responsavel_matricula,
                 maps, 
                 status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
             [
                 processo,
                 data_prevista_execucao,
                 desligamento,
+                desligamento === 'SIM' ? hora_inicio : null,
+                desligamento === 'SIM' ? hora_fim : null,
                 subestacao,
                 alimentador || null,
                 chave_montante || null,
@@ -1638,6 +1650,8 @@ router.get('/api/servicos/:id', autenticar, async (req, res) => {
                 p.data_prevista_execucao,
                 p.data_conclusao,
                 p.desligamento,
+                p.hora_inicio,
+                p.hora_fim,
                 p.subestacao,
                 p.alimentador,
                 p.chave_montante,
@@ -1680,6 +1694,8 @@ router.get('/api/servicos/:id', autenticar, async (req, res) => {
             data_prevista_execucao: servico[0].data_prevista_execucao,
             data_conclusao: servico[0].data_conclusao,
             desligamento: servico[0].desligamento,
+            hora_inicio: servico[0].hora_inicio,
+            hora_fim: servico[0].hora_fim,
             subestacao: servico[0].subestacao,
             alimentador: servico[0].alimentador,
             chave_montante: servico[0].chave_montante,
@@ -1710,32 +1726,6 @@ router.get('/api/servicos/:id', autenticar, async (req, res) => {
         connection.release();
     }
 });
-
-
-// Atualizar status do serviço
-router.patch('/api/servicos/:id/status', autenticar, async (req, res) => {
-    try {
-        const { status } = req.body;
-        const statusValidos = ['ativo', 'concluido', 'cancelado', 'pendente'];
-
-        if (!statusValidos.includes(status)) {
-            return res.status(400).json({ message: 'Status inválido' });
-        }
-
-        await promisePool.query(
-            `UPDATE processos SET 
-                status = ?,
-                data_conclusao = ${status === 'concluido' ? 'CURRENT_DATE()' : 'NULL'}
-             WHERE id = ?`,
-            [status, req.params.id]
-        );
-
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ message: 'Erro no servidor' });
-    }
-});
-
 // Excluir serviço
 
 
@@ -1880,6 +1870,18 @@ router.delete('/api/servicos/:id', autenticar, async (req, res) => {
         await connection.beginTransaction();
 
         const { id } = req.params;
+        const user = req.user; // Dados do usuário autenticado
+
+        // Lista de cargos permitidos para exclusão
+        const cargosPermitidos = ['ADMIN', 'Gerente', 'Supervisor', 'Engenheiro', 'Técnico', 'Inspetor'];
+
+        // Verificar se o usuário tem permissão
+        if (!cargosPermitidos.includes(user.cargo)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Apenas administradores, gerentes e supervisores podem excluir serviços'
+            });
+        }
 
         // 1. Verificar se o serviço existe
         const [servico] = await connection.query(
@@ -1910,7 +1912,7 @@ router.delete('/api/servicos/:id', autenticar, async (req, res) => {
 
         // Registrar auditoria
         await registrarAuditoria(
-            req.user.matricula,
+            user.matricula,
             'Exclusão de Serviço',
             `Serviço excluído - ID: ${id}, Processo: ${servico[0].processo}`
         );
@@ -2131,4 +2133,148 @@ router.patch('/api/servicos/:id/reativar', autenticar, async (req, res) => {
 });
 
 
+
+router.post('/api/gerar_pdf_tabela_transformadores', autenticar, async (req, res) => {
+    const { dados, filtros } = req.body;
+
+    try {
+        // Criar HTML com o mesmo estilo da tabela
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <title>Relatório de Transformadores</title>
+                <style>
+                    body {
+                        font-family: 'Poppins', sans-serif;
+                        color: #495057;
+                        padding: 20px;
+                    }
+                    h1 {
+                        color: #2a5298;
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .info-filtros {
+                        background-color: #e6f0ff;
+                        padding: 10px;
+                        border-radius: 5px;
+                        margin-bottom: 20px;
+                        font-size: 14px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                    }
+                    th {
+                        background-color: #2a5298;
+                        color: white;
+                        padding: 10px;
+                        text-align: left;
+                        font-weight: 500;
+                    }
+                    td {
+                        padding: 10px;
+                        border-bottom: 1px solid #dee2e6;
+                        vertical-align: middle;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f8f9fa;
+                    }
+                    tr:hover {
+                        background-color: #e6f0ff;
+                    }
+                    .footer {
+                        margin-top: 30px;
+                        font-size: 12px;
+                        text-align: right;
+                        color: #6c757d;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Relatório de Transformadores</h1>
+                
+                <div class="info-filtros">
+                    <strong>Filtros aplicados:</strong><br>
+                    ${filtros.dataInicial ? `Data inicial: ${filtros.dataInicial}<br>` : ''}
+                    ${filtros.dataFinal ? `Data final: ${filtros.dataFinal}<br>` : ''}
+                    ${filtros.numero_serie ? `Número de série: ${filtros.numero_serie}<br>` : ''}
+                    ${filtros.responsavel ? `Responsável: ${filtros.responsavel}<br>` : ''}
+                    Data de geração: ${new Date().toLocaleDateString('pt-BR')}
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Número de Série</th>
+                            <th>Potência (kVA)</th>
+                            <th>Marca</th>
+                            <th>Data do Formulário</th>
+                            <th>Responsável Técnico</th>
+                            <th>Destinado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${dados.map(item => `
+                            <tr>
+                                <td>${item.id}</td>
+                                <td>${item.numero_serie}</td>
+                                <td>${item.potencia}</td>
+                                <td>${item.marca}</td>
+                                <td>${item.data_formulario}</td>
+                                <td>${item.responsavel}</td>
+                                <td>${item.destinado}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="footer">
+                    Gerado por ${req.user.nome} (${req.user.matricula}) em ${new Date().toLocaleString('pt-BR')}
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Gerar PDF com Playwright
+        const browser = await chromium.launch({ headless: true });
+        const page = await browser.newPage();
+
+        // Usar o HTML gerado
+        await page.setContent(htmlContent, {
+            waitUntil: 'networkidle'
+        });
+
+        // Configurações do PDF
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: {
+                top: '20mm',
+                right: '15mm',
+                bottom: '20mm',
+                left: '15mm'
+            }
+        });
+
+        await browser.close();
+
+        // Configurar resposta
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=Relatorio_Transformadores.pdf');
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF da tabela:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao gerar PDF',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
 module.exports = router;
