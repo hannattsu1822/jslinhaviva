@@ -152,6 +152,17 @@
             </div>
           </div>
 
+          <!-- BOTÃO GERAR PDF DOS FILTROS -->
+          <div class="d-flex justify-content-between mt-3">
+            <div id="contadorResultados">0 resultados encontrados</div>
+            <div>
+              <button id="btnGerarPDF" class="btn btn-pdf glass-btn">
+                <i class="fas fa-file-pdf me-2"></i>Gerar PDF
+              </button>
+            </div>
+            <div id="infoFiltros"></div>
+          </div>
+
           <!-- Botão de Voltar -->
           <div class="mt-4">
             <button onclick="window.location.href = '/transformadores'" class="btn btn-secondary glass-btn w-100">
@@ -162,6 +173,7 @@
       </div>
     </div>
   </div>
+
 
   <!-- Bootstrap Bundle com Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -275,26 +287,106 @@
       }
     }
 
-    // Função para formatar data
+    // Função para formatar data - VERSÃO ATUALIZADA
     function formatarData(dataString) {
       if (!dataString) return '-';
-      const dateObj = new Date(dataString);
 
-      if (isNaN(dateObj.getTime())) {
-        const dateMatch = dataString.match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (dateMatch) {
-          const [_, ano, mes, dia] = dateMatch;
-          return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
-        }
+      // Se já estiver no formato DD/MM/YYYY
+      if (typeof dataString === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dataString)) {
         return dataString;
       }
 
-      const dia = String(dateObj.getDate()).padStart(2, '0');
-      const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const ano = dateObj.getFullYear();
+      // Verificar formato ISO (YYYY-MM-DD)
+      if (typeof dataString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dataString)) {
+        const [ano, mes, dia] = dataString.split('-');
+        return `${dia}/${mes}/${ano}`;
+      }
 
-      return `${dia}/${mes}/${ano}`;
+      // Tentar parsear como objeto Date
+      const dateObj = new Date(dataString);
+      if (!isNaN(dateObj.getTime())) {
+        // Ajustar para fuso horário local
+        const dia = String(dateObj.getDate()).padStart(2, '0');
+        const mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const ano = dateObj.getFullYear();
+        return `${dia}/${mes}/${ano}`;
+      }
+
+      return dataString; // Fallback para o valor original
     }
+
+    // Função para gerar PDF da tabela filtrada
+    async function gerarPDFTabela() {
+      const btnPDF = document.getElementById('btnGerarPDF');
+      const originalHTML = btnPDF.innerHTML;
+      btnPDF.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+      btnPDF.disabled = true;
+
+      try {
+        // Obter os dados atualmente exibidos na tabela
+        const dados = [];
+        const rows = document.querySelectorAll('#resultadosBody tr:not(#semResultados)');
+
+        rows.forEach(row => {
+          dados.push({
+            id: row.cells[0].textContent,
+            numero_serie: row.cells[1].textContent,
+            potencia: row.cells[2].textContent,
+            marca: row.cells[3].textContent,
+            data_formulario: row.cells[4].textContent,
+            responsavel: row.cells[5].textContent,
+            destinado: row.cells[6].textContent
+          });
+        });
+
+        if (dados.length === 0) {
+          throw new Error('Nenhum dado para gerar PDF');
+        }
+
+        // Chamar a API para gerar o PDF
+        const response = await fetch('/api/gerar_pdf_tabela_transformadores', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            dados,
+            filtros: {
+              dataInicial: document.getElementById('dataInicial').value,
+              dataFinal: document.getElementById('dataFinal').value,
+              numero_serie: document.getElementById('numero_serie').value,
+              responsavel: document.getElementById('matricula_responsavel').value
+            }
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao gerar PDF');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        // Criar link para download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Relatorio_Transformadores_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+      } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        mostrarErro('Erro ao gerar PDF: ' + error.message);
+      } finally {
+        btnPDF.innerHTML = originalHTML;
+        btnPDF.disabled = false;
+      }
+    }
+
+    // Adicionar evento ao botão
+    document.getElementById('btnGerarPDF').addEventListener('click', gerarPDFTabela);
 
     // Função para gerar PDF diretamente
     async function gerarPDF(id) {
@@ -466,16 +558,31 @@
       exibirResultados(dados);
     });
 
-    // Inicialização da página
+    // Inicialização da página - VERSÃO ATUALIZADA
     document.addEventListener('DOMContentLoaded', () => {
       carregarResponsaveis();
 
-      const hoje = new Date().toISOString().split('T')[0];
-      document.getElementById('dataFinal').value = hoje;
+      // Obter data atual sem problemas de fuso horário
+      const hoje = new Date();
+      const hojeUTC = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()));
+      const hojeFormatada = hojeUTC.toISOString().split('T')[0];
 
-      const filtrosIniciais = { dataFinal: hoje };
+      document.getElementById('dataFinal').value = hojeFormatada;
+
+      // Carregar dados iniciais
+      const filtrosIniciais = {
+        dataFinal: hojeFormatada
+      };
+
       buscarTransformadores(filtrosIniciais)
-        .then(dados => exibirResultados(dados));
+        .then(dados => exibirResultados(dados))
+        .catch(err => {
+          console.error('Erro ao carregar dados iniciais:', err);
+          mostrarErro('Erro ao carregar dados iniciais');
+        });
+
+      // Debug (pode remover depois)
+      console.log("Data configurada no filtro:", hojeFormatada);
     });
   </script>
 </body>

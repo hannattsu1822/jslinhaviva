@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Troca de Óleo</title>
+    <title>Registro de Troca de Filtro Sky</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -116,7 +116,7 @@
                         <i class="fas fa-truck me-2"></i>Frota
                     </a>
                     <a href="/registro_oleo" class="menu-item active">
-                        <i class="fas fa-oil-can me-2"></i>Trocas de Óleo
+                        <i class="fa-solid fa-fill-drip me-2"></i>Trocas Sky
                     </a>
                 </nav>
 
@@ -134,7 +134,7 @@
                     <!-- Formulário de Registro -->
                     <div class="form-container">
                         <h2 class="form-title">
-                            <i class="fas fa-oil-can"></i>Registro de Troca de Óleo
+                            <i class="fa-solid fa-fill-drip"></i>Registro de Troca de Filtro Sky
                         </h2>
 
                         <form id="oleoForm">
@@ -373,30 +373,30 @@
                     historico.forEach(item => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td>${new Date(item.data_troca).toLocaleDateString('pt-BR')}</td>
-                            <td>${item.placa ? item.placa + ' - ' + item.modelo : 'N/A'}</td>
-                            <td>
-                                <div class="horimetro-info">
-                                    <div class="horimetro-item">
-                                        <span class="horimetro-label">Atual:</span>
-                                        <span class="horimetro-value">${item.horimetro}</span>
+                                <td>${new Date(item.data_troca).toLocaleDateString('pt-BR')}</td>
+                                <td>${item.placa ? item.placa + ' - ' + item.modelo : 'N/A'}</td>
+                                <td>
+                                    <div class="horimetro-info">
+                                        <div class="horimetro-item">
+                                            <span class="horimetro-label">Atual:</span>
+                                            <span class="horimetro-value">${item.horimetro}</span>
+                                        </div>
+                                        ${item.horimetro_ultima_troca ? `
+                                        <div class="horimetro-item">
+                                            <span class="horimetro-label">Última troca:</span>
+                                            <span class="horimetro-value">${item.horimetro_ultima_troca}</span>
+                                        </div>` : ''}
+                                        ${item.horimetro_proxima_troca ? `
+                                        <div class="horimetro-item proxima-troca">
+                                            <span class="horimetro-label">Próxima troca:</span>
+                                            <span class="horimetro-value">${item.horimetro_proxima_troca}</span>
+                                        </div>` : ''}
                                     </div>
-                                    ${item.horimetro_ultima_troca ? `
-                                    <div class="horimetro-item">
-                                        <span class="horimetro-label">Última troca:</span>
-                                        <span class="horimetro-value">${item.horimetro_ultima_troca}</span>
-                                    </div>` : ''}
-                                    ${item.horimetro_proxima_troca ? `
-                                    <div class="horimetro-item proxima-troca">
-                                        <span class="horimetro-label">Próxima troca:</span>
-                                        <span class="horimetro-value">${item.horimetro_proxima_troca}</span>
-                                    </div>` : ''}
-                                </div>
-                            </td>
-                            <td>${item.responsavel || 'N/A'}</td>
-                            <td>${new Date(item.created_at).toLocaleString('pt-BR')}</td>
-                            <td>${item.observacoes || '-'}</td>
-                        `;
+                                </td>
+                                <td>${item.responsavel || 'N/A'}</td>
+                                <td>${new Date(item.created_at).toLocaleString('pt-BR')}</td>
+                                <td>${item.observacoes || '-'}</td>
+                            `;
                         tbody.appendChild(row);
                     });
                 } else {
