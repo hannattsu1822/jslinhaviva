@@ -144,6 +144,17 @@
                                             <span class="detail-label">Desligamento</span>
                                             <div class="detail-value" id="servico-desligamento">-</div>
                                         </div>
+                                        <div class="col-md-6 mb-3" id="hora-inicio-container" style="display: none;">
+                                            <span class="detail-label">Hora de Início</span>
+                                            <div class="detail-value" id="servico-hora-inicio">-</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3" id="hora-fim-container" style="display: none;">
+                                            <span class="detail-label">Hora de Término</span>
+                                            <div class="detail-value" id="servico-hora-fim">-</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -346,7 +357,23 @@
                 document.getElementById('servico-responsavel').textContent =
                     data.responsavel_matricula ? `${data.responsavel_matricula} - ${data.responsavel_nome || 'Não informado'}` : 'Não informado';
                 document.getElementById('servico-data-prevista').textContent = formatarData(data.data_prevista_execucao);
-                document.getElementById('servico-desligamento').textContent = data.desligamento === 'SIM' ? 'Sim' : 'Não';
+
+                // Tratar desligamento e horários
+                const desligamentoElement = document.getElementById('servico-desligamento');
+                const horaInicioContainer = document.getElementById('hora-inicio-container');
+                const horaFimContainer = document.getElementById('hora-fim-container');
+
+                if (data.desligamento === 'SIM') {
+                    desligamentoElement.textContent = 'Sim';
+                    horaInicioContainer.style.display = 'block';
+                    horaFimContainer.style.display = 'block';
+                    document.getElementById('servico-hora-inicio').textContent = formatarHora(data.hora_inicio);
+                    document.getElementById('servico-hora-fim').textContent = formatarHora(data.hora_fim);
+                } else {
+                    desligamentoElement.textContent = 'Não';
+                    horaInicioContainer.style.display = 'none';
+                    horaFimContainer.style.display = 'none';
+                }
 
                 // Configurar status
                 const statusElement = document.getElementById('servico-status');
@@ -385,6 +412,35 @@
             } catch (error) {
                 console.error('Erro:', error);
                 mostrarErro(error.message);
+            }
+        }
+
+        function formatarHora(horaString) {
+            if (!horaString) return 'Não informado';
+            try {
+                // Assumindo que o formato é HH:MM:SS ou HH:MM
+                const partes = horaString.split(':');
+                return `${partes[0]}:${partes[1]}`; // Retorna apenas horas e minutos
+            } catch (e) {
+                console.error('Erro ao formatar hora:', e);
+                return horaString;
+            }
+        }
+
+        function formatarData(dataString) {
+            if (!dataString) return 'Não informado';
+            try {
+                const data = new Date(dataString);
+                return data.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                console.error('Erro ao formatar data:', e);
+                return dataString;
             }
         }
 
@@ -451,23 +507,6 @@
             };
 
             return icons[ext] || 'fa-file text-secondary';
-        }
-
-        function formatarData(dataString) {
-            if (!dataString) return 'Não informado';
-            try {
-                const data = new Date(dataString);
-                return data.toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (e) {
-                console.error('Erro ao formatar data:', e);
-                return dataString;
-            }
         }
 
         function mostrarErro(mensagem) {
