@@ -43,12 +43,29 @@
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="desligamento" class="form-label">Desligamento *</label>
-                            <select class="form-control" id="desligamento" name="desligamento" required>
+                            <select class="form-control" id="desligamento" name="desligamento" required
+                                onchange="toggleHorariosDesligamento()">
                                 <option value="SIM">SIM</option>
                                 <option value="NÃO">NÃO</option>
                             </select>
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="form-group" id="horaInicioGroup" style="display: none;">
+                            <label for="hora_inicio" class="form-label">Hora de Início *</label>
+                            <input type="time" class="form-control" id="hora_inicio" name="hora_inicio">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group" id="horaFimGroup" style="display: none;">
+                            <label for="hora_fim" class="form-label">Hora de Término *</label>
+                            <input type="time" class="form-control" id="hora_fim" name="hora_fim">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Linha 3 -->
+                <div class="row form-row">
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="subestacao" class="form-label">Subestação *</label>
@@ -61,16 +78,16 @@
                             <input type="text" class="form-control" id="alimentador" name="alimentador" required>
                         </div>
                     </div>
-                </div>
-
-                <!-- Linha 3 -->
-                <div class="row form-row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label for="chave_montante" class="form-label">Chave Montante *</label>
                             <input type="text" class="form-control" id="chave_montante" name="chave_montante" required>
                         </div>
                     </div>
+                </div>
+
+                <!-- Linha 4 -->
+                <div class="row form-row">
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="form-label">Responsável</label>
@@ -81,11 +98,7 @@
                                 value="pendente">
                         </div>
                     </div>
-                </div>
-
-                <!-- Linha 4 -->
-                <div class="row form-row">
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <div class="form-group">
                             <label for="maps" class="form-label">Link do Google Maps</label>
                             <div class="input-group">
@@ -135,6 +148,25 @@
         const fileInput = document.getElementById('anexos');
         const arquivosSelecionados = document.getElementById('arquivos-selecionados');
         const anexosContainer = document.getElementById('anexos-container');
+
+        // Função para mostrar/ocultar campos de horário
+        function toggleHorariosDesligamento() {
+            const desligamento = document.getElementById('desligamento').value;
+            const horaInicioGroup = document.getElementById('horaInicioGroup');
+            const horaFimGroup = document.getElementById('horaFimGroup');
+
+            if (desligamento === 'SIM') {
+                horaInicioGroup.style.display = 'block';
+                horaFimGroup.style.display = 'block';
+                document.getElementById('hora_inicio').required = true;
+                document.getElementById('hora_fim').required = true;
+            } else {
+                horaInicioGroup.style.display = 'none';
+                horaFimGroup.style.display = 'none';
+                document.getElementById('hora_inicio').required = false;
+                document.getElementById('hora_fim').required = false;
+            }
+        }
 
         // Drag and Drop
         uploadArea.addEventListener('dragover', (e) => {
@@ -209,6 +241,12 @@
             try {
                 const formData = new FormData(e.target);
 
+                // Validação adicional para horários de desligamento
+                const desligamento = document.getElementById('desligamento').value;
+                if (desligamento === 'SIM' && (!formData.get('hora_inicio') || !formData.get('hora_fim'))) {
+                    throw new Error('Horário de início e término são obrigatórios para desligamentos');
+                }
+
                 // Verificar tamanho dos arquivos
                 if (fileInput.files.length > 0) {
                     Array.from(fileInput.files).forEach(file => {
@@ -230,6 +268,7 @@
                     e.target.reset();
                     arquivosSelecionados.innerHTML = '';
                     anexosContainer.innerHTML = '';
+                    toggleHorariosDesligamento(); // Resetar visibilidade dos campos de horário
 
                     if (result.anexos && result.anexos.length > 0) {
                         const anexosTitle = document.createElement('h6');
@@ -270,6 +309,9 @@
                 btnSubmit.innerHTML = '<i class="fas fa-save me-2"></i>REGISTRAR SERVIÇO';
             }
         });
+
+        // Inicializar visibilidade dos campos de horário
+        toggleHorariosDesligamento();
     </script>
 </body>
 
