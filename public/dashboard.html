@@ -132,6 +132,34 @@
                 </div>
               </div>
             </div>
+
+            <!-- NOVO CARD: Fibra Óptica -->
+            <div class="col-md-6 col-lg-3">
+              <div class="card glass-card h-100" onclick="navigateTo('fibra')" style="position: relative;">
+                <div class="card-body d-flex align-items-center justify-content-center">
+                  <div class="text-center">
+                    <div class="icon-circle mx-auto mb-2" style="background-color: #9c27b0 !important;">
+                      <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Fibra Óptica</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- NOVO CARD: Inspeções de Redes -->
+            <div class="col-md-6 col-lg-3">
+              <div class="card glass-card h-100" onclick="navigateTo('inspecoes-redes')" style="position: relative;">
+                <div class="card-body d-flex align-items-center justify-content-center">
+                  <div class="text-center">
+                    <div class="icon-circle mx-auto mb-2" style="background-color: #ff5722 !important;">
+                      <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Inspeções de Redes</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -147,6 +175,20 @@
           <h4 class="mb-3">Acesso negado!</h4>
           <p>Você não tem permissão para acessar este recurso.</p>
           <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Em Desenvolvimento -->
+  <div id="development-modal" class="modal fade">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-modal">
+        <div class="modal-body text-center p-4">
+          <i class="fas fa-hammer text-warning mb-3" style="font-size: 3rem;"></i>
+          <h4 class="mb-3">Em Desenvolvimento!</h4>
+          <p>Este recurso está sendo construído e estará disponível em breve.</p>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
         </div>
       </div>
     </div>
@@ -190,6 +232,22 @@
 
     // Função para navegar e capturar erros de acesso
     async function navigateTo(page) {
+      // Lista de páginas existentes
+      const existingPages = [
+        'transformadores',
+        'subestacao',
+        'frota',
+        'auditoria',
+        'gestao-servicos'
+      ];
+
+      // Se a página não existir, mostra modal de desenvolvimento
+      if (!existingPages.includes(page)) {
+        const developmentModal = new bootstrap.Modal(document.getElementById('development-modal'));
+        developmentModal.show();
+        return;
+      }
+
       const url = `/${page}`;
       try {
         const response = await fetch(url, {
@@ -202,12 +260,9 @@
           window.location.href = url;
         } else if (response.status === 403) {
           accessDeniedModal.show();
-        } else {
-          accessDeniedModal.show();
         }
       } catch (error) {
         console.error('Erro na requisição:', error);
-        accessDeniedModal.show();
       }
     }
 
