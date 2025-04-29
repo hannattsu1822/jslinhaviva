@@ -19,13 +19,34 @@
             </a>
         </div>
 
-        <div class="card-form">
+        <!-- Modal de seleção de tipo de serviço -->
+        <div id="tipoServicoModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-4">
+                        <i class="fas fa-question-circle mb-3" style="font-size: 3rem; color: #2a5298;"></i>
+                        <h4 class="mb-3">Tipo de Serviço</h4>
+                        <p class="mb-4"></p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <button type="button" class="btn btn-danger" onclick="setEmergencial(true)">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Emergencial
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="setEmergencial(false)">
+                                <i class="fas fa-file-alt me-2"></i>Normal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-form" id="formContainer" style="display: none;">
             <form id="formServico" enctype="multipart/form-data">
-                <!-- Linha 1 -->
+                <!-- Linha 1 - Processo ou Emergencial -->
                 <div class="row form-row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="processo" class="form-label">Número do Processo *</label>
+                            <label for="processo" class="form-label" id="processoLabel">Número do Processo *</label>
                             <input type="text" class="form-control" id="processo" name="processo" required>
                         </div>
                     </div>
@@ -143,6 +164,34 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Mostrar modal ao carregar a página
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = new bootstrap.Modal(document.getElementById('tipoServicoModal'));
+            modal.show();
+        });
+
+        // Função para configurar o formulário como emergencial ou normal
+        function setEmergencial(isEmergencial) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('tipoServicoModal'));
+            modal.hide();
+
+            const processoInput = document.getElementById('processo');
+            const processoLabel = document.getElementById('processoLabel');
+            const formContainer = document.getElementById('formContainer');
+
+            if (isEmergencial) {
+                processoInput.value = 'EMERGENCIAL';
+                processoInput.readOnly = true;
+                processoLabel.innerHTML = 'Tipo de Serviço <span class="badge bg-danger">EMERGENCIAL</span>';
+            } else {
+                processoInput.placeholder = 'Digite o número do processo';
+                processoLabel.textContent = 'Número do Processo *';
+                processoInput.readOnly = false;
+            }
+
+            formContainer.style.display = 'block';
+        }
+
         // Elementos DOM
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('anexos');

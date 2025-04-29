@@ -255,23 +255,29 @@
                         const card = document.createElement('div');
                         card.className = 'card';
 
-                        // Garantir que todos os valores são inteiros
-                        const horimetroInspecao = parseInt(veiculo.horimetroInspecao) || 0;
+                        // Valores numéricos garantidos
                         const ultimaTroca = parseInt(veiculo.ultimaTroca) || 0;
-                        const horimetroAtual = horimetroInspecao;
-                        const proximaTroca = parseInt(veiculo.proximaTroca) || 0;
-                        const horasRestantes = Math.max(0, proximaTroca - horimetroAtual);
+                        const horimetroInspecao = parseInt(veiculo.horimetroInspecao) || 0;
+                        const proximaTroca = ultimaTroca + 300;
+                        const horasRestantes = proximaTroca - horimetroInspecao;
 
-                        // Calcular status (urgente, próximo, ok)
-                        const status = horimetroAtual >= proximaTroca ? 'urgent' :
-                            (horimetroAtual >= proximaTroca * 0.8 ? 'warning' : 'ok');
+                        // Lógica de status corrigida
+                        let status, statusText;
+                        if (horimetroInspecao >= proximaTroca) {
+                            status = 'urgent';
+                            statusText = 'ATRASADO';
+                        } else if (horasRestantes <= 60) { // Menos de 60h restantes
+                            status = 'warning';
+                            statusText = 'ATENÇÃO';
+                        } else {
+                            status = 'ok';
+                            statusText = 'EM DIA';
+                        }
 
                         card.innerHTML = `
                             <div class="card-header ${status}">
                                 <h3><i class="fas fa-truck me-2"></i>${veiculo.placa}</h3>
-                                <span class="badge ${status}">
-                                    ${status === 'urgent' ? 'URGENTE' : (status === 'warning' ? 'ATENÇÃO' : 'EM DIA')}
-                                </span>
+                                <span class="badge ${status}">${statusText}</span>
                             </div>
                             <div class="card-body">
                                 <div class="info-row">
@@ -280,24 +286,20 @@
                                 </div>
                                 <div class="horimetro-info">
                                     <div class="horimetro-item">
-                                        <span class="horimetro-label">Horímetro inspeção:</span>
-                                        <span class="horimetro-value">${horimetroInspecao} h</span>
-                                    </div>
-                                    <div class="horimetro-item">
                                         <span class="horimetro-label">Horímetro última troca:</span>
                                         <span class="horimetro-value">${ultimaTroca} h</span>
                                     </div>
                                     <div class="horimetro-item">
-                                        <span class="horimetro-label">Horímetro atual (total):</span>
-                                        <span class="horimetro-value">${horimetroAtual} h</span>
+                                        <span class="horimetro-label">Horímetro atual (inspeção):</span>
+                                        <span class="horimetro-value">${horimetroInspecao} h</span>
                                     </div>
                                     <div class="horimetro-item proxima-troca">
                                         <span class="horimetro-label">Próxima troca:</span>
                                         <span class="horimetro-value">${proximaTroca} h</span>
                                     </div>
                                     <div class="horimetro-item ${status}">
-                                        <span class="horimetro-label">Horas restantes:</span>
-                                        <span class="horimetro-value">${horasRestantes} h</span>
+                                        <span class="horimetro-label">${horimetroInspecao >= proximaTroca ? 'Horas em atraso:' : 'Horas restantes:'}</span>
+                                        <span class="horimetro-value">${Math.abs(horasRestantes)} h</span>
                                     </div>
                                 </div>
                             </div>
