@@ -314,3 +314,25 @@ select.form-control {
         padding: 15px;
     }
 }
+
+/* Estilos para o modal de tipo de serviço */
+#tipoServicoModal .modal-content {
+    border-radius: 10px;
+    border: none;
+}
+
+#tipoServicoModal .modal-body {
+    padding: 2rem;
+}
+
+#tipoServicoModal .btn {
+    min-width: 150px;
+    padding: 10px 20px;
+}
+
+/* Estilo para o badge de emergência */
+.badge.bg-danger {
+    font-size: 0.8em;
+    vertical-align: middle;
+    margin-left: 5px;
+}
