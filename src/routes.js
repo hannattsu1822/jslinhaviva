@@ -1455,7 +1455,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
         // 3. Lógica para processos emergenciais
         let processo;
         if (tipo_processo === 'Emergencial') {
-            // 3.1 Insert completo para evitar erros de campos obrigatórios
+            // 3.1 Insert com NULL para horas se desligamento = NÃO
             const [result] = await connection.query(
                 `INSERT INTO processos (
                     processo, tipo, data_prevista_execucao, desligamento,
@@ -1467,8 +1467,8 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                     'Emergencial',
                     data_prevista_execucao,
                     desligamento,
-                    hora_inicio,
-                    hora_fim,
+                    desligamento === 'SIM' ? hora_inicio : null, // Corrigido: NULL em vez de ''
+                    desligamento === 'SIM' ? hora_fim : null,    // Corrigido: NULL em vez de ''
                     subestacao,
                     alimentador || null,
                     chave_montante || null,
@@ -1484,7 +1484,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                 [processo, result.insertId]
             );
         } else {
-            // 4. Processos normais
+            // 4. Processos normais (já estava correto)
             processo = req.body.processo;
             if (!processo) {
                 limparArquivosTemporarios(req.files);
@@ -1505,8 +1505,8 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                     'Normal',
                     data_prevista_execucao,
                     desligamento,
-                    desligamento === 'SIM' ? hora_inicio : null,
-                    desligamento === 'SIM' ? hora_fim : null,
+                    desligamento === 'SIM' ? hora_inicio : null, // Já estava correto
+                    desligamento === 'SIM' ? hora_fim : null,    // Já estava correto
                     subestacao,
                     alimentador || null,
                     chave_montante || null,
@@ -1516,7 +1516,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             );
         }
 
-        // 5. Processamento de anexos
+        // 5. Processamento de anexos (mantido igual)
         if (req.files && req.files.length > 0) {
             const uploadDir = path.join(__dirname, '../upload_arquivos');
             const processoDir = path.join(uploadDir, processo.replace(/\//g, '-'));
@@ -1526,20 +1526,16 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             }
 
             for (const file of req.files) {
-                // 5.1 Validação de tamanho
                 if (file.size > 10 * 1024 * 1024) {
                     throw new Error(`Arquivo ${file.originalname} excede 10MB`);
                 }
 
-                // 5.2 Geração de nome único
                 const extensao = path.extname(file.originalname).toLowerCase();
                 const novoNome = `anexo_${Date.now()}${extensao}`;
                 const novoPath = path.join(processoDir, novoNome);
 
-                // 5.3 Movimentação do arquivo
                 fs.renameSync(file.path, novoPath);
 
-                // 5.4 Registro no banco
                 await connection.query(
                     `INSERT INTO processos_anexos (
                         processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo
@@ -1558,10 +1554,9 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             }
         }
 
-        // 6. Finalização
         await connection.commit();
 
-        // 7. Auditoria
+        // 6. Auditoria
         if (req.user?.matricula) {
             await registrarAuditoria(
                 req.user.matricula,
