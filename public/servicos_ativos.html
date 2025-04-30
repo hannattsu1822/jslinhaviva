@@ -96,13 +96,17 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label for="filtroSubestacao" class="form-label">Subestação</label>
-                                        <input type="text" class="form-control glass-input" id="filtroSubestacao"
-                                            placeholder="Filtrar por subestação...">
+                                        <select class="form-select glass-input" id="filtroSubestacao">
+                                            <option value="">Todas</option>
+                                            <!-- Opções serão preenchidas via JavaScript -->
+                                        </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label for="filtroAlimentador" class="form-label">Alimentador</label>
-                                        <input type="text" class="form-control glass-input" id="filtroAlimentador"
-                                            placeholder="Filtrar por alimentador...">
+                                        <label for="filtroEncarregado" class="form-label">Encarregado</label>
+                                        <select class="form-select glass-input" id="filtroEncarregado">
+                                            <option value="">Todos</option>
+                                            <!-- Opções serão preenchidas via JavaScript -->
+                                        </select>
                                     </div>
                                     <div class="col-md-3">
                                         <label for="filtroData" class="form-label">Data Prevista</label>
@@ -135,11 +139,6 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <nav aria-label="Navegação de páginas" class="mt-3">
-                                <ul class="pagination justify-content-center" id="paginacao">
-                                    <!-- Paginação será gerada aqui -->
-                                </ul>
-                            </nav>
                         </div>
                     </div>
                 </div>
@@ -231,7 +230,6 @@
         </div>
     </div>
 
-
     <!-- Toast Notification -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
         <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -247,8 +245,6 @@
     <script>
         // Variáveis globais
         let servicosData = [];
-        let currentPage = 1;
-        const itemsPerPage = 10;
         let currentServicoId = null;
         const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
         const concluirModal = new bootstrap.Modal(document.getElementById('concluirModal'));
@@ -291,6 +287,45 @@
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
 
+        // Carregar serviços ativos e filtros
+        async function carregarDadosIniciais() {
+            try {
+                // Carrega serviços ativos
+                await carregarServicosAtivos();
+
+                // Carrega subestações para o filtro
+                const responseSubestacoes = await fetch('/api/subestacoes');
+                if (responseSubestacoes.ok) {
+                    const subestacoes = await responseSubestacoes.json();
+                    const selectSubestacao = document.getElementById('filtroSubestacao');
+
+                    subestacoes.forEach(sub => {
+                        const option = document.createElement('option');
+                        option.value = sub.nome;
+                        option.textContent = sub.nome;
+                        selectSubestacao.appendChild(option);
+                    });
+                }
+
+                // Carrega encarregados para o filtro
+                const responseEncarregados = await fetch('/api/responsaveis_tecnicos');
+                if (responseEncarregados.ok) {
+                    const encarregados = await responseEncarregados.json();
+                    const selectEncarregado = document.getElementById('filtroEncarregado');
+
+                    encarregados.forEach(enc => {
+                        const option = document.createElement('option');
+                        option.value = enc.matricula;
+                        option.textContent = `${enc.matricula} - ${enc.nome}`;
+                        selectEncarregado.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados iniciais:', error);
+                showToast('Erro ao carregar dados iniciais', 'danger');
+            }
+        }
+
         // Carregar serviços ativos
         async function carregarServicosAtivos() {
             try {
@@ -306,8 +341,12 @@
                     throw new Error('Formato de dados inválido');
                 }
 
+                // Ordenar por data mais recente primeiro
+                servicosData.sort((a, b) => {
+                    return new Date(b.data_prevista_execucao) - new Date(a.data_prevista_execucao);
+                });
+
                 atualizarTabela();
-                atualizarPaginacao();
 
             } catch (error) {
                 console.error('Erro ao carregar serviços:', error);
@@ -322,23 +361,18 @@
 
             // Aplicar filtros
             const filtroProcesso = document.getElementById('filtroProcesso').value.toLowerCase();
-            const filtroSubestacao = document.getElementById('filtroSubestacao').value.toLowerCase();
-            const filtroAlimentador = document.getElementById('filtroAlimentador').value.toLowerCase();
+            const filtroSubestacao = document.getElementById('filtroSubestacao').value;
+            const filtroEncarregado = document.getElementById('filtroEncarregado').value;
             const filtroData = document.getElementById('filtroData').value;
 
             const servicosFiltrados = servicosData.filter(servico => {
-                return servico.processo.toLowerCase().includes(filtroProcesso) &&
-                    servico.subestacao.toLowerCase().includes(filtroSubestacao) &&
-                    (servico.alimentador ? servico.alimentador.toLowerCase().includes(filtroAlimentador) : true) &&
+                return (servico.prioridade === 'EMERGENCIAL' || servico.processo.toLowerCase().includes(filtroProcesso)) &&
+                    (filtroSubestacao === '' || servico.subestacao === filtroSubestacao) &&
+                    (filtroEncarregado === '' || servico.responsavel_matricula === filtroEncarregado) &&
                     (filtroData === '' || servico.data_prevista_execucao.includes(filtroData));
-            });
+            }).slice(0, 15); // Pegar apenas os 15 primeiros
 
-            // Paginação
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const servicosPagina = servicosFiltrados.slice(startIndex, endIndex);
-
-            if (servicosPagina.length === 0) {
+            if (servicosFiltrados.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="8" class="text-center py-4">
@@ -349,13 +383,18 @@
                 return;
             }
 
-            servicosPagina.forEach(servico => {
+            servicosFiltrados.forEach(servico => {
                 const tr = document.createElement('tr');
-                tr.className = 'glass-table-row';
+                tr.className = servico.prioridade === 'EMERGENCIAL' ? 'emergency-row' : 'glass-table-row';
                 tr.setAttribute('data-id', servico.id);
+
+                const processoDisplay = servico.prioridade === 'EMERGENCIAL' ?
+                    'EMERGENCIAL' :
+                    servico.processo;
+
                 tr.innerHTML = `
                     <td>${servico.id}</td>
-                    <td>${servico.processo}</td>
+                    <td>${processoDisplay}</td>
                     <td>${servico.subestacao}</td>
                     <td>${servico.alimentador || 'Não informado'}</td>
                     <td>${formatarData(servico.data_prevista_execucao)}</td>
@@ -408,16 +447,16 @@
                 // Preencher o corpo do modal existente
                 const modalBody = document.getElementById('modalResponsavelBody');
                 modalBody.innerHTML = `
-            <div class="mb-3">
-                <label for="selectResponsavel" class="form-label">Selecione o Responsável:</label>
-                <select class="form-select glass-input" id="selectResponsavel">
-                    <option value="">Selecione um responsável...</option>
-                    ${responsaveis.map(r =>
+                    <div class="mb-3">
+                        <label for="selectResponsavel" class="form-label">Selecione o Responsável:</label>
+                        <select class="form-select glass-input" id="selectResponsavel">
+                            <option value="">Selecione um responsável...</option>
+                            ${responsaveis.map(r =>
                     `<option value="${r.matricula}">${r.matricula} - ${r.nome}</option>`
                 ).join('')}
-                </select>
-            </div>
-        `;
+                        </select>
+                    </div>
+                `;
 
                 // Mostrar o modal existente
                 const modal = new bootstrap.Modal(document.getElementById('modalResponsavel'));
@@ -428,6 +467,7 @@
                 showToast('Erro ao carregar lista de responsáveis', 'danger');
             }
         }
+
         // Confirmar responsável
         async function confirmarResponsavel() {
             const select = document.getElementById('selectResponsavel');
@@ -460,43 +500,6 @@
                 console.error('Erro ao atribuir responsável:', error);
                 showToast('Erro ao atribuir responsável: ' + error.message, 'danger');
             }
-        }
-
-        // Atualizar paginação
-        function atualizarPaginacao() {
-            const paginacao = document.getElementById('paginacao');
-            paginacao.innerHTML = '';
-
-            const totalPages = Math.ceil(servicosData.length / itemsPerPage);
-
-            if (totalPages <= 1) return;
-
-            // Botão Anterior
-            const liPrev = document.createElement('li');
-            liPrev.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-            liPrev.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${currentPage - 1})">Anterior</a>`;
-            paginacao.appendChild(liPrev);
-
-            // Números das páginas
-            for (let i = 1; i <= totalPages; i++) {
-                const li = document.createElement('li');
-                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                li.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${i})">${i}</a>`;
-                paginacao.appendChild(li);
-            }
-
-            // Botão Próximo
-            const liNext = document.createElement('li');
-            liNext.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-            liNext.innerHTML = `<a class="page-link glass-btn" href="#" onclick="mudarPagina(${currentPage + 1})">Próximo</a>`;
-            paginacao.appendChild(liNext);
-        }
-
-        // Mudar página
-        function mudarPagina(page) {
-            currentPage = page;
-            atualizarTabela();
-            window.scrollTo(0, 0);
         }
 
         // Confirmar exclusão
@@ -615,9 +618,10 @@
         document.getElementById('confirmDelete').addEventListener('click', excluirServico);
         document.getElementById('confirmConcluir').addEventListener('click', finalizarServico);
 
+        // Listeners para filtros
         document.getElementById('filtroProcesso').addEventListener('input', atualizarTabela);
-        document.getElementById('filtroSubestacao').addEventListener('input', atualizarTabela);
-        document.getElementById('filtroAlimentador').addEventListener('input', atualizarTabela);
+        document.getElementById('filtroSubestacao').addEventListener('change', atualizarTabela);
+        document.getElementById('filtroEncarregado').addEventListener('change', atualizarTabela);
         document.getElementById('filtroData').addEventListener('change', atualizarTabela);
 
         // Configurar eventos para os botões de foto
@@ -707,7 +711,7 @@
         };
 
         // Inicialização
-        document.addEventListener('DOMContentLoaded', carregarServicosAtivos);
+        document.addEventListener('DOMContentLoaded', carregarDadosIniciais);
     </script>
 </body>
 
