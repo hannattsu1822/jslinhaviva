@@ -1421,8 +1421,9 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
     try {
         await connection.beginTransaction();
 
+        // 1. Extração e validação dos dados
         const {
-            processo,
+            tipo_processo,
             data_prevista_execucao,
             desligamento,
             hora_inicio,
@@ -1434,152 +1435,183 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             maps
         } = req.body;
 
-        // Validação dos campos obrigatórios
-        if (!processo || !data_prevista_execucao || !subestacao || !desligamento) {
-            if (req.files) {
-                req.files.forEach(file => {
-                    if (fs.existsSync(file.path)) {
-                        fs.unlinkSync(file.path);
-                    }
-                });
-            }
+        // 2. Validações obrigatórias
+        if (!data_prevista_execucao || !subestacao || !desligamento) {
+            limparArquivosTemporarios(req.files);
             return res.status(400).json({
                 success: false,
-                message: 'Processo, data prevista, subestação e desligamento são obrigatórios'
+                message: 'Data prevista, subestação e desligamento são obrigatórios'
             });
         }
 
-        // Validação adicional para horários de desligamento
         if (desligamento === 'SIM' && (!hora_inicio || !hora_fim)) {
-            if (req.files) {
-                req.files.forEach(file => {
-                    if (fs.existsSync(file.path)) {
-                        fs.unlinkSync(file.path);
-                    }
-                });
-            }
+            limparArquivosTemporarios(req.files);
             return res.status(400).json({
                 success: false,
-                message: 'Horário de início e término são obrigatórios para desligamentos'
+                message: 'Horários são obrigatórios para desligamentos'
             });
         }
 
-        // Inserir o processo principal
-        const [result] = await connection.query(
-            `INSERT INTO processos (
-                processo, 
-                data_prevista_execucao, 
-                desligamento, 
-                hora_inicio,
-                hora_fim,
-                subestacao, 
-                alimentador,
-                chave_montante, 
-                responsavel_matricula,
-                maps, 
-                status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
-            [
-                processo,
-                data_prevista_execucao,
-                desligamento,
-                desligamento === 'SIM' ? hora_inicio : null,
-                desligamento === 'SIM' ? hora_fim : null,
-                subestacao,
-                alimentador || null,
-                chave_montante || null,
-                responsavel_matricula || 'pendente',
-                maps || null
-            ]
-        );
+        // 3. Lógica para processos emergenciais
+        let processo;
+        if (tipo_processo === 'Emergencial') {
+            // 3.1 Insert completo para evitar erros de campos obrigatórios
+            const [result] = await connection.query(
+                `INSERT INTO processos (
+                    processo, tipo, data_prevista_execucao, desligamento,
+                    hora_inicio, hora_fim, subestacao, alimentador,
+                    chave_montante, responsavel_matricula, maps, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+                [
+                    'EMERGENCIAL', // Placeholder
+                    'Emergencial',
+                    data_prevista_execucao,
+                    desligamento,
+                    hora_inicio,
+                    hora_fim,
+                    subestacao,
+                    alimentador || null,
+                    chave_montante || null,
+                    responsavel_matricula || 'pendente',
+                    maps || null
+                ]
+            );
 
-        // Processar anexos se existirem
+            // 3.2 Atualiza com o ID gerado
+            processo = `EMERGENCIAL-${result.insertId}`;
+            await connection.query(
+                'UPDATE processos SET processo = ? WHERE id = ?',
+                [processo, result.insertId]
+            );
+        } else {
+            // 4. Processos normais
+            processo = req.body.processo;
+            if (!processo) {
+                limparArquivosTemporarios(req.files);
+                return res.status(400).json({
+                    success: false,
+                    message: 'Número do processo é obrigatório para serviços normais'
+                });
+            }
+
+            await connection.query(
+                `INSERT INTO processos (
+                    processo, tipo, data_prevista_execucao, desligamento,
+                    hora_inicio, hora_fim, subestacao, alimentador,
+                    chave_montante, responsavel_matricula, maps, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+                [
+                    processo,
+                    'Normal',
+                    data_prevista_execucao,
+                    desligamento,
+                    desligamento === 'SIM' ? hora_inicio : null,
+                    desligamento === 'SIM' ? hora_fim : null,
+                    subestacao,
+                    alimentador || null,
+                    chave_montante || null,
+                    responsavel_matricula || 'pendente',
+                    maps || null
+                ]
+            );
+        }
+
+        // 5. Processamento de anexos
         if (req.files && req.files.length > 0) {
             const uploadDir = path.join(__dirname, '../upload_arquivos');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
+            const processoDir = path.join(uploadDir, processo.replace(/\//g, '-'));
+
+            if (!fs.existsSync(processoDir)) {
+                fs.mkdirSync(processoDir, { recursive: true });
             }
 
             for (const file of req.files) {
-                const fileExtension = path.extname(file.originalname).toLowerCase();
-                const novoNome = `anexo_${result.insertId}_${Date.now()}${fileExtension}`;
-                const novoPath = path.join(uploadDir, novoNome);
-                const tipoAnexo = getTipoAnexo(file.originalname);
-
-                // Verificar tamanho do arquivo (máximo 10MB)
+                // 5.1 Validação de tamanho
                 if (file.size > 10 * 1024 * 1024) {
-                    throw new Error(`O arquivo ${file.originalname} excede o limite de 10MB`);
+                    throw new Error(`Arquivo ${file.originalname} excede 10MB`);
                 }
 
-                // Mover arquivo para o diretório permanente
+                // 5.2 Geração de nome único
+                const extensao = path.extname(file.originalname).toLowerCase();
+                const novoNome = `anexo_${Date.now()}${extensao}`;
+                const novoPath = path.join(processoDir, novoNome);
+
+                // 5.3 Movimentação do arquivo
                 fs.renameSync(file.path, novoPath);
 
-                // Inserir registro do anexo no banco de dados
+                // 5.4 Registro no banco
                 await connection.query(
                     `INSERT INTO processos_anexos (
-                        processo_id, 
-                        nome_original, 
-                        caminho_servidor, 
-                        tamanho,
-                        tipo_anexo
-                    ) VALUES (?, ?, ?, ?, ?)`,
+                        processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo
+                    ) VALUES (
+                        (SELECT id FROM processos WHERE processo = ? LIMIT 1),
+                        ?, ?, ?, ?
+                    )`,
                     [
-                        result.insertId,
+                        processo,
                         file.originalname,
-                        `/api/upload_arquivos/${novoNome}`,
+                        `/api/upload_arquivos/${processo.replace(/\//g, '-')}/${novoNome}`,
                         file.size,
-                        tipoAnexo
+                        ['jpg', 'jpeg', 'png'].includes(extensao.substring(1)) ? 'imagem' : 'documento'
                     ]
                 );
             }
         }
 
+        // 6. Finalização
         await connection.commit();
 
-        // Registrar auditoria apenas se houver usuário autenticado
+        // 7. Auditoria
         if (req.user?.matricula) {
             await registrarAuditoria(
                 req.user.matricula,
                 'Registro de Serviço',
-                `Novo serviço registrado: ${processo}`
+                `Serviço ${tipo_processo} registrado: ${processo}`
             );
         }
 
         res.status(201).json({
             success: true,
-            message: 'Serviço registrado com sucesso',
-            id: result.insertId,
-            anexos: req.files ? req.files.map(file => ({
-                nomeOriginal: file.originalname,
-                caminho: `/api/upload_arquivos/anexo_${result.insertId}_${Date.now()}${path.extname(file.originalname)}`,
-                tipo: getTipoAnexo(file.originalname)
-            })) : []
+            processo: processo,
+            tipo: tipo_processo
         });
 
     } catch (error) {
         await connection.rollback();
         console.error('Erro ao registrar serviço:', error);
-
-        // Limpar arquivos temporários em caso de erro
-        if (req.files) {
-            req.files.forEach(file => {
-                if (fs.existsSync(file.path)) {
-                    fs.unlinkSync(file.path);
-                }
-            });
-        }
+        limparArquivosTemporarios(req.files);
 
         res.status(500).json({
             success: false,
             message: 'Erro ao registrar serviço',
-            error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno no servidor'
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     } finally {
         connection.release();
     }
 });
 
+// Função auxiliar para limpar arquivos temporários
+function limparArquivosTemporarios(files) {
+    if (files) {
+        files.forEach(file => {
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+        });
+    }
+}
 
+// Função auxiliar para limpar arquivos temporários
+function limparArquivosTemporarios(files) {
+    if (files) {
+        files.forEach(file => {
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+        });
+    }
+}
 //filtrar
 router.get('/api/servicos', autenticar, async (req, res) => {
     try {
@@ -1599,7 +1631,11 @@ router.get('/api/servicos', autenticar, async (req, res) => {
                 p.status,
                 p.data_conclusao,
                 p.observacoes_conclusao,
-                u.nome as responsavel
+                u.nome as responsavel,
+                CASE 
+                    WHEN p.processo = 'EMERGENCIAL' THEN 'Emergencial'
+                    ELSE 'Normal'
+                END as tipo_processo
             FROM processos p
             LEFT JOIN users u ON p.responsavel_matricula = u.matricula
         `;
@@ -1783,27 +1819,39 @@ router.get('/api/servicos/contador', autenticar, async (req, res) => {
 });
 
 // Download/visualização de anexos
-router.get('/api/upload_arquivos/:filename', (req, res) => {
-    const filePath = path.join(__dirname, '../upload_arquivos', req.params.filename);
+router.get('/api/upload_arquivos/:processo/:filename', (req, res) => {
+    const { processo, filename } = req.params;
+    const filePath = path.join(
+        __dirname,
+        '../upload_arquivos',
+        processo.replace(/\//g, '-'),
+        filename
+    );
 
     if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: 'Arquivo não encontrado' });
+        return res.status(404).json({
+            success: false,
+            message: 'Arquivo não encontrado'
+        });
     }
 
-    const ext = path.extname(filePath).toLowerCase();
+    const ext = path.extname(filename).toLowerCase();
     const mimeTypes = {
-        '.pdf': 'application/pdf',
         '.jpg': 'image/jpeg',
         '.jpeg': 'image/jpeg',
-        '.png': 'image/png'
+        '.png': 'image/png',
+        '.pdf': 'application/pdf'
     };
 
-    const disposition = req.query.download === 'true' ? 'attachment' : 'inline';
     res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `${disposition}; filename="${req.params.filename}"`);
+
+    // Força download se especificado
+    if (req.query.download === 'true') {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    }
+
     fs.createReadStream(filePath).pipe(res);
 });
-
 // ==============================================
 // ROTAS PARA PÁGINAS (FRONTEND)
 // ==============================================
@@ -1935,80 +1983,104 @@ router.delete('/api/servicos/:id', autenticar, async (req, res) => {
     }
 });
 // Rota para concluir serviço com imagem
-// routes.js - Adicione esta rota modificada
-router.post('/api/servicos/:id/concluir', autenticar, upload.array('fotos_conclusao', 5), async (req, res) => {
+router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), autenticar, async (req, res) => {
     const connection = await promisePool.getConnection();
     try {
         await connection.beginTransaction();
-
         const { id } = req.params;
-        const { observacoes } = req.body;
+        const { observacoes, matricula_responsavel } = req.body;
 
-        // 1. Atualizar status do serviço
+        // Verifica se temos a matrícula do responsável
+        if (!matricula_responsavel && !req.user?.matricula) {
+            throw new Error('Matrícula do responsável não informada');
+        }
+
+        const matricula = matricula_responsavel || req.user.matricula;
+
+        // 1. Atualiza o status do serviço
         await connection.query(
-            `UPDATE processos SET 
-                status = 'concluido',
-                data_conclusao = CURRENT_DATE(),
-                observacoes_conclusao = ?
+            `UPDATE processos 
+             SET status = 'concluido', 
+                 data_conclusao = NOW(),
+                 observacoes_conclusao = ?,
+                 responsavel_matricula = ?
              WHERE id = ?`,
-            [observacoes || null, id]
+            [observacoes || null, matricula, id]
         );
 
-        // 2. Processar fotos de conclusão se existirem
-        if (req.files && req.files.length > 0) {
-            const uploadDir = path.join(__dirname, '../upload_arquivos');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
+        // 2. Processa os anexos se existirem
+        if (req.files?.length > 0) {
+            const [processo] = await connection.query(
+                'SELECT processo FROM processos WHERE id = ?',
+                [id]
+            );
+
+            const pastaProcesso = path.join(
+                __dirname,
+                '../upload_arquivos',
+                processo[0].processo.replace(/\//g, '-')
+            );
+
+            if (!fs.existsSync(pastaProcesso)) {
+                fs.mkdirSync(pastaProcesso, { recursive: true });
             }
 
-            for (let i = 0; i < req.files.length; i++) {
-                const file = req.files[i];
-                const fileExtension = path.extname(file.originalname).toLowerCase();
-                const novoNome = `conclusao_${id}_${Date.now()}_${i}${fileExtension}`;
-                const novoPath = path.join(uploadDir, novoNome);
+            for (const arquivo of req.files) {
+                const novoNome = `conclusao_${Date.now()}${path.extname(arquivo.originalname)}`;
+                const caminhoCompleto = path.join(pastaProcesso, novoNome);
 
-                fs.renameSync(file.path, novoPath);
+                fs.renameSync(arquivo.path, caminhoCompleto);
 
                 await connection.query(
                     `INSERT INTO processos_anexos (
-                        processo_id, 
-                        nome_original, 
-                        caminho_servidor, 
-                        tamanho,
-                        tipo_anexo
-                    ) VALUES (?, ?, ?, ?, 'foto_conclusao')`,
-                    [id, file.originalname, `/api/upload_arquivos/${novoNome}`, file.size]
+                        processo_id,
+                        nome_original,
+                        caminho_servidor,
+                        tipo_anexo,
+                        tamanho
+                    ) VALUES (?, ?, ?, ?, ?)`,
+                    [
+                        id,
+                        arquivo.originalname,
+                        `/api/upload_arquivos/${processo[0].processo.replace(/\//g, '-')}/${novoNome}`,
+                        getTipoAnexo(arquivo.originalname),
+                        arquivo.size
+                    ]
                 );
             }
         }
 
         await connection.commit();
 
-        // Registrar auditoria
+        // Registra auditoria com a matrícula disponível
         await registrarAuditoria(
-            req.user.matricula,
+            matricula,
             'Conclusão de Serviço',
-            `Serviço concluído - ID: ${id}`
+            `Serviço ${id} concluído`
         );
 
         res.json({
-            success: true,
-            message: 'Serviço concluído com sucesso'
+            sucesso: true,
+            mensagem: 'Serviço concluído com sucesso'
         });
 
-    } catch (error) {
+    } catch (erro) {
         await connection.rollback();
-        console.error('Erro ao concluir serviço:', error);
+        console.error('Erro ao concluir serviço:', erro);
+
+        // Limpa arquivos temporários
+        req.files?.forEach(arquivo => {
+            if (fs.existsSync(arquivo.path)) fs.unlinkSync(arquivo.path);
+        });
+
         res.status(500).json({
-            success: false,
-            message: 'Erro ao concluir serviço',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            sucesso: false,
+            mensagem: erro.message || 'Falha ao concluir serviço'
         });
     } finally {
         connection.release();
     }
 });
-
 router.get('/api/servicos_concluidos', autenticar, async (req, res) => {
     try {
         const { subestacao, responsavel, dataInicial, dataFinal } = req.query;
@@ -2277,4 +2349,30 @@ router.post('/api/gerar_pdf_tabela_transformadores', autenticar, async (req, res
         });
     }
 });
+
+
+
+router.get('/fibra', autenticar, verificarPermissaoPorCargo, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/fibra.html'));
+});
+
+router.get('/inspecoes-redes', autenticar, verificarPermissaoPorCargo, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/inspecoes_redes.html'));
+});
+
+
+
+// Adicione esta rota no arquivo routes.js
+router.get('/api/subestacoes', autenticar, async (req, res) => {
+    try {
+        const [rows] = await promisePool.query(
+            'SELECT DISTINCT subestacao as nome FROM processos WHERE subestacao IS NOT NULL AND subestacao != "" ORDER BY subestacao'
+        );
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error('Erro ao buscar subestações:', err);
+        res.status(500).json({ message: 'Erro ao buscar subestações!' });
+    }
+});
+
 module.exports = router;
