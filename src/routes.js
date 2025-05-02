@@ -1416,93 +1416,112 @@ const getTipoAnexo = (filename) => {
 };
 
 // Rota POST /api/servicos (substitua a existente por esta)
+// Rota POST /api/servicos (versão corrigida)
 router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
     const connection = await promisePool.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 1. Extração e validação dos dados
+        // 1. Extração e validação dos dados - CORREÇÃO: Usar req.body diretamente
         const {
-            tipo_processo,
+            processo, // Adicionado para processos normais
+            tipo_processo = 'Normal', // Valor padrão
             data_prevista_execucao,
             desligamento,
-            hora_inicio,
-            hora_fim,
+            hora_inicio = null, // Valores padrão
+            hora_fim = null,
             subestacao,
             alimentador,
             chave_montante,
-            responsavel_matricula,
+            responsavel_matricula = 'pendente',
             maps
         } = req.body;
 
-        // 2. Validações obrigatórias
+        // 2. Validações obrigatórias - CORREÇÃO: Mensagens mais claras
         if (!data_prevista_execucao || !subestacao || !desligamento) {
             limparArquivosTemporarios(req.files);
             return res.status(400).json({
                 success: false,
-                message: 'Data prevista, subestação e desligamento são obrigatórios'
+                message: 'Campos obrigatórios faltando: data_prevista_execucao, subestacao ou desligamento'
             });
         }
 
-        if (desligamento === 'SIM' && (!hora_inicio || !hora_fim)) {
-            limparArquivosTemporarios(req.files);
-            return res.status(400).json({
-                success: false,
-                message: 'Horários são obrigatórios para desligamentos'
-            });
+        // CORREÇÃO: Validação de horários apenas se desligamento for SIM
+        if (desligamento === 'SIM') {
+            if (!hora_inicio || !hora_fim) {
+                limparArquivosTemporarios(req.files);
+                return res.status(400).json({
+                    success: false,
+                    message: 'Para desligamentos, hora_inicio e hora_fim são obrigatórios'
+                });
+            }
         }
 
         // 3. Lógica para processos emergenciais
-        let processo;
+        let processoFinal;
         if (tipo_processo === 'Emergencial') {
-            // 3.1 Insert completo para evitar erros de campos obrigatórios
+            // CORREÇÃO: Insert simplificado com valores padrão
             const [result] = await connection.query(
-                `INSERT INTO processos (
-                    processo, tipo, data_prevista_execucao, desligamento,
-                    hora_inicio, hora_fim, subestacao, alimentador,
-                    chave_montante, responsavel_matricula, maps, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+                `INSERT INTO processos SET
+                    tipo = 'Emergencial',
+                    data_prevista_execucao = ?,
+                    desligamento = ?,
+                    hora_inicio = ?,
+                    hora_fim = ?,
+                    subestacao = ?,
+                    alimentador = ?,
+                    chave_montante = ?,
+                    responsavel_matricula = ?,
+                    maps = ?,
+                    status = 'ativo'`,
                 [
-                    'EMERGENCIAL', // Placeholder
-                    'Emergencial',
                     data_prevista_execucao,
                     desligamento,
-                    hora_inicio,
-                    hora_fim,
+                    desligamento === 'SIM' ? hora_inicio : null, // CORREÇÃO: Só insere hora se for desligamento
+                    desligamento === 'SIM' ? hora_fim : null,
                     subestacao,
                     alimentador || null,
                     chave_montante || null,
-                    responsavel_matricula || 'pendente',
+                    responsavel_matricula,
                     maps || null
                 ]
             );
 
-            // 3.2 Atualiza com o ID gerado
-            processo = `EMERGENCIAL-${result.insertId}`;
+            // Atualiza com o ID gerado
+            processoFinal = `EMERGENCIAL-${result.insertId}`;
             await connection.query(
                 'UPDATE processos SET processo = ? WHERE id = ?',
-                [processo, result.insertId]
+                [processoFinal, result.insertId]
             );
         } else {
-            // 4. Processos normais
-            processo = req.body.processo;
-            if (!processo) {
+            // 4. Processos normais - CORREÇÃO: Validação melhorada
+            if (!processo || typeof processo !== 'string' || processo.trim() === '') {
                 limparArquivosTemporarios(req.files);
                 return res.status(400).json({
                     success: false,
-                    message: 'Número do processo é obrigatório para serviços normais'
+                    message: 'Para serviços normais, o número do processo é obrigatório'
                 });
             }
 
+            processoFinal = processo.trim();
+
+            // CORREÇÃO: Insert simplificado
             await connection.query(
-                `INSERT INTO processos (
-                    processo, tipo, data_prevista_execucao, desligamento,
-                    hora_inicio, hora_fim, subestacao, alimentador,
-                    chave_montante, responsavel_matricula, maps, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+                `INSERT INTO processos SET
+                    processo = ?,
+                    tipo = 'Normal',
+                    data_prevista_execucao = ?,
+                    desligamento = ?,
+                    hora_inicio = ?,
+                    hora_fim = ?,
+                    subestacao = ?,
+                    alimentador = ?,
+                    chave_montante = ?,
+                    responsavel_matricula = ?,
+                    maps = ?,
+                    status = 'ativo'`,
                 [
-                    processo,
-                    'Normal',
+                    processoFinal,
                     data_prevista_execucao,
                     desligamento,
                     desligamento === 'SIM' ? hora_inicio : null,
@@ -1510,70 +1529,85 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                     subestacao,
                     alimentador || null,
                     chave_montante || null,
-                    responsavel_matricula || 'pendente',
+                    responsavel_matricula,
                     maps || null
                 ]
             );
         }
 
-        // 5. Processamento de anexos
+        // 5. Processamento de anexos - CORREÇÃO: Melhor tratamento de erros
         if (req.files && req.files.length > 0) {
-            const uploadDir = path.join(__dirname, '../upload_arquivos');
-            const processoDir = path.join(uploadDir, processo.replace(/\//g, '-'));
+            try {
+                const uploadDir = path.join(__dirname, '../upload_arquivos');
+                const processoDir = path.join(uploadDir, processoFinal.replace(/\//g, '-'));
 
-            if (!fs.existsSync(processoDir)) {
-                fs.mkdirSync(processoDir, { recursive: true });
-            }
-
-            for (const file of req.files) {
-                // 5.1 Validação de tamanho
-                if (file.size > 10 * 1024 * 1024) {
-                    throw new Error(`Arquivo ${file.originalname} excede 10MB`);
+                if (!fs.existsSync(processoDir)) {
+                    fs.mkdirSync(processoDir, { recursive: true });
                 }
 
-                // 5.2 Geração de nome único
-                const extensao = path.extname(file.originalname).toLowerCase();
-                const novoNome = `anexo_${Date.now()}${extensao}`;
-                const novoPath = path.join(processoDir, novoNome);
+                for (const file of req.files) {
+                    // Validação de tamanho
+                    if (file.size > 10 * 1024 * 1024) {
+                        throw new Error(`Arquivo ${file.originalname} excede 10MB`);
+                    }
 
-                // 5.3 Movimentação do arquivo
-                fs.renameSync(file.path, novoPath);
+                    const extensao = path.extname(file.originalname).toLowerCase();
+                    const novoNome = `anexo_${Date.now()}${extensao}`;
+                    const novoPath = path.join(processoDir, novoNome);
 
-                // 5.4 Registro no banco
-                await connection.query(
-                    `INSERT INTO processos_anexos (
-                        processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo
-                    ) VALUES (
-                        (SELECT id FROM processos WHERE processo = ? LIMIT 1),
-                        ?, ?, ?, ?
-                    )`,
-                    [
-                        processo,
-                        file.originalname,
-                        `/api/upload_arquivos/${processo.replace(/\//g, '-')}/${novoNome}`,
-                        file.size,
-                        ['jpg', 'jpeg', 'png'].includes(extensao.substring(1)) ? 'imagem' : 'documento'
-                    ]
-                );
+                    // CORREÇÃO: Usar fs.promises para operações assíncronas
+                    await fs.promises.rename(file.path, novoPath);
+
+                    await connection.query(
+                        `INSERT INTO processos_anexos (
+                            processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo
+                        ) VALUES (
+                            (SELECT id FROM processos WHERE processo = ? LIMIT 1),
+                            ?, ?, ?, ?
+                        )`,
+                        [
+                            processoFinal,
+                            file.originalname,
+                            `/api/upload_arquivos/${processoFinal.replace(/\//g, '-')}/${novoNome}`,
+                            file.size,
+                            ['jpg', 'jpeg', 'png'].includes(extensao.substring(1)) ? 'imagem' : 'documento'
+                        ]
+                    );
+                }
+            } catch (fileError) {
+                console.error('Erro ao processar anexos:', fileError);
+                await connection.rollback();
+                limparArquivosTemporarios(req.files);
+                
+                return res.status(500).json({
+                    success: false,
+                    message: 'Erro ao processar anexos',
+                    error: process.env.NODE_ENV === 'development' ? fileError.message : undefined
+                });
             }
         }
 
-        // 6. Finalização
         await connection.commit();
 
-        // 7. Auditoria
+        // Auditoria
         if (req.user?.matricula) {
-            await registrarAuditoria(
-                req.user.matricula,
-                'Registro de Serviço',
-                `Serviço ${tipo_processo} registrado: ${processo}`
-            );
+            try {
+                await registrarAuditoria(
+                    req.user.matricula,
+                    'Registro de Serviço',
+                    `Serviço ${tipo_processo} registrado: ${processoFinal}`
+                );
+            } catch (auditError) {
+                console.error('Erro na auditoria:', auditError);
+                // Não interrompe o fluxo por erro de auditoria
+            }
         }
 
         res.status(201).json({
             success: true,
-            processo: processo,
-            tipo: tipo_processo
+            processo: processoFinal,
+            tipo: tipo_processo,
+            anexos: req.files ? req.files.map(f => f.originalname) : []
         });
 
     } catch (error) {
@@ -1583,7 +1617,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
 
         res.status(500).json({
             success: false,
-            message: 'Erro ao registrar serviço',
+            message: 'Erro interno ao registrar serviço',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     } finally {
