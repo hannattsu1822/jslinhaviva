@@ -382,3 +382,17 @@ body {
   background-color: rgba(13, 110, 253, 0.1);
   border-color: rgba(13, 110, 253, 0.2);
 }
+
+
+.pagination .page-item.active .page-link {
+  background-color: #2a5298;
+  border-color: #2a5298;
+}
+
+.pagination .page-link {
+  color: #2a5298;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #6c757d;
+}
