@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Transformadores Reformados</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/trafos_reformados_importar.css">
+</head>
+
+<body>
+    <nav class="main-nav">
+        <div class="nav-content">
+            <a href="/trafos_reformados" class="back-link">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            <h1><i class="fas fa-file-import"></i> Importar Transformadores Reformados</h1>
+        </div>
+    </nav>
+
+    <div class="upload-container">
+        <div class="upload-card">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="file-upload-area" id="dropArea">
+                    <input type="file" id="fileInput" name="planilha" class="d-none" accept=".xlsx,.xls" required>
+                    <i class="fas fa-file-excel"></i>
+                    <h3>Arraste sua planilha aqui</h3>
+                    <p>ou</p>
+                    <button type="button" class="browse-btn">Selecione o arquivo</button>
+                    <div id="fileName" class="file-info">Nenhum arquivo selecionado</div>
+                </div>
+
+                <div class="requirements-box">
+                    <h5><i class="fas fa-info-circle"></i> Requisitos da Planilha</h5>
+                    <ul>
+                        <li>Formato Excel (.xlsx ou .xls)</li>
+                        <li>Colunas obrigatórias: ITEM, Nº DE SÉRIE, POT, FABRICANTE</li>
+                        <li>Máximo de 500 registros por importação</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="upload-btn" id="submitBtn">
+                    <i class="fas fa-upload"></i> Importar Planilha
+                </button>
+
+                <div id="messageArea" class="message-area"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.querySelector('.browse-btn');
+        const fileName = document.getElementById('fileName');
+        const dropArea = document.getElementById('dropArea');
+        const submitBtn = document.getElementById('submitBtn');
+        const messageArea = document.getElementById('messageArea');
+        const form = document.getElementById('uploadForm');
+
+        // Selecionar arquivo
+        browseBtn.addEventListener('click', () => fileInput.click());
+
+        // Atualizar nome do arquivo
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                fileName.textContent = e.target.files[0].name;
+                dropArea.classList.add('has-file');
+                clearMessage();
+            }
+        });
+
+        // Drag and drop
+        ['dragenter', 'dragover'].forEach(event => {
+            dropArea.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropArea.classList.add('dragging');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(event => {
+            dropArea.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('dragging');
+            });
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileInput.files = e.dataTransfer.files;
+            fileName.textContent = e.dataTransfer.files[0].name;
+            dropArea.classList.add('has-file');
+            clearMessage();
+        });
+
+        // Limpar mensagens
+        function clearMessage() {
+            messageArea.innerHTML = '';
+            messageArea.className = 'message-area';
+        }
+
+        // Mostrar mensagem de sucesso com detalhes
+        function showSuccess(result) {
+            messageArea.className = 'message-area success';
+
+            let successDetails = `
+                <div class="result-summary">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total processado:</span>
+                        <strong>${result.total}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Novos transformadores cadastrados:</span>
+                        <strong class="text-success">${result.imported}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Falhas na importação:</span>
+                        <strong class="text-danger">${result.failed}</strong>
+                    </div>
+                </div>
+            `;
+
+            // Seção para itens já cadastrados
+            let existingItemsSection = '';
+            if (result.duplicates_in_db?.length > 0) {
+                existingItemsSection = `
+                    <div class="detail-section">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-database text-warning me-2"></i>
+                            <h5 class="m-0">Transformadores já cadastrados</h5>
+                        </div>
+                        <div class="d-flex flex-wrap">
+                            ${result.duplicates_in_db.map(num => `
+                                <span class="serial-badge bg-warning-light">${num}</span>
+                            `).join('')}
+                        </div>
+                        <p class="info-text mt-2">
+                            <i class="fas fa-info-circle"></i> Estes transformadores já existiam no sistema e não foram modificados.
+                        </p>
+                    </div>
+                `;
+            }
+
+            // Seção para duplicatas na planilha
+            let duplicatesSheetSection = '';
+            if (result.duplicates_in_sheet?.length > 0) {
+                duplicatesSheetSection = `
+                    <div class="detail-section">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-copy text-danger me-2"></i>
+                            <h5 class="m-0">Números de série duplicados na planilha</h5>
+                        </div>
+                        <div class="d-flex flex-wrap">
+                            ${result.duplicates_in_sheet.map(num => `
+                                <span class="serial-badge bg-danger-light">${num}</span>
+                            `).join('')}
+                        </div>
+                        <p class="info-text mt-2">
+                            <i class="fas fa-info-circle"></i> Verifique os números de série repetidos na planilha.
+                        </p>
+                    </div>
+                `;
+            }
+
+            // Montar mensagem final
+            messageArea.innerHTML = `
+                <div class="message-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="message-content">
+                    <h4>Importação concluída com sucesso!</h4>
+                    ${successDetails}
+                    ${existingItemsSection}
+                    ${duplicatesSheetSection}
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                            <i class="fas fa-redo me-2"></i>Nova Importação
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="window.location.href='/transformadores_reformados'">
+                            <i class="fas fa-list me-2"></i>Ver Transformadores
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Mostrar mensagem de erro
+        function showError(message) {
+            messageArea.className = 'message-area error';
+            messageArea.innerHTML = `
+                <div class="message-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="message-content">
+                    <h4>Erro na Importação</h4>
+                    <p>${message}</p>
+                    <button type="button" class="btn btn-outline-danger mt-3" onclick="location.reload()">
+                        <i class="fas fa-redo me-2"></i>Tentar Novamente
+                    </button>
+                </div>
+            `;
+        }
+
+        // Enviar formulário
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processando...';
+            clearMessage();
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('/api/importar_trafos_reformados', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Erro ao processar a planilha');
+                }
+
+                showSuccess(result);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i> Importar Planilha';
+            }
+        });
+    </script>
+</body>
+
+</html>
