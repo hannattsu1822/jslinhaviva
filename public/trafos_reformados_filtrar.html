@@ -52,6 +52,46 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
         }
+
+        /* Estilo para o botão PDF */
+        .btn-pdf {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-pdf:hover {
+            background-color: #bb2d3b;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Estilo para o spinner de carregamento */
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 
@@ -163,11 +203,6 @@
                                         <i class="fas fa-filter me-2"></i>Filtrar
                                     </button>
                                 </div>
-                                <div class="col-12 mt-3">
-                                    <button onclick="gerarPDF()" class="btn btn-success glass-btn w-100">
-                                        <i class="fas fa-file-pdf me-2"></i>Gerar PDF
-                                    </button>
-                                </div>
                             </div>
                         </form>
                     </div>
@@ -197,6 +232,14 @@
                         <!-- Exibição simplificada -->
                         <div class="text-muted mt-3" id="paginationInfo">
                             Mostrando todos os itens
+                        </div>
+
+                        <!-- Botão de Gerar PDF (centralizado abaixo da tabela) -->
+                        <div class="d-flex justify-content-center mt-3">
+                            <button onclick="gerarPDF()" class="btn btn-pdf glass-btn" id="btnGerarPDF">
+                                <i class="fas fa-file-pdf me-2"></i>Gerar PDF
+                                <div class="loading-spinner" id="pdfSpinner"></div>
+                            </button>
                         </div>
                     </div>
 
@@ -632,7 +675,14 @@
 
         // Função para gerar PDF
         async function gerarPDF() {
+            const btn = document.getElementById('btnGerarPDF');
+            const spinner = document.getElementById('pdfSpinner');
+
             try {
+                // Mostrar spinner e desativar botão
+                btn.disabled = true;
+                spinner.style.display = 'inline-block';
+
                 // Obter valores dos filtros atuais
                 const status = document.getElementById('filterStatus').value;
                 const fabricante = document.getElementById('filterFabricante').value;
@@ -699,6 +749,10 @@
             } catch (error) {
                 console.error('Erro ao gerar PDF:', error);
                 alert('Erro ao gerar PDF: ' + error.message);
+            } finally {
+                // Ocultar spinner e reativar botão
+                btn.disabled = false;
+                spinner.style.display = 'none';
             }
         }
     </script>
