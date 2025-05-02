@@ -299,7 +299,7 @@
 
         fileInput.addEventListener('change', mostrarArquivosSelecionados);
 
-        // Envio do Formulário
+        // Envio do Formulário - CORREÇÃO APLICADA AQUI
         document.getElementById('formServico').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -309,9 +309,15 @@
 
             try {
                 const formData = new FormData(e.target);
+                
+                // CORREÇÃO: Remove campos de hora quando desligamento for "NÃO"
+                const desligamento = document.getElementById('desligamento').value;
+                if (desligamento === 'NÃO') {
+                    formData.delete('hora_inicio');
+                    formData.delete('hora_fim');
+                }
 
                 // Validação adicional para horários de desligamento
-                const desligamento = document.getElementById('desligamento').value;
                 if (desligamento === 'SIM' && (!formData.get('hora_inicio') || !formData.get('hora_fim'))) {
                     throw new Error('Horário de início e término são obrigatórios para desligamentos');
                 }
@@ -388,5 +394,4 @@
         toggleHorariosDesligamento();
     </script>
 </body>
-
 </html>
