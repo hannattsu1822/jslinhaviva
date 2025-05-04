@@ -3283,7 +3283,7 @@ router.delete('/api/turmas/:id', autenticar, verificarPermissaoPorCargo, async (
 
 router.post('/api/diarias', autenticar, async (req, res) => {
     const { data, processo, matricula } = req.body;
-    
+
     // Validações básicas
     if (!data || !processo || !matricula) {
         return res.status(400).json({ 
@@ -3296,7 +3296,7 @@ router.post('/api/diarias', autenticar, async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Primeiro verifica se o funcionário existe e obtém o nome
+        // 1. Verifica se o funcionário existe e obtém o nome
         const [funcionario] = await connection.query(
             'SELECT nome FROM turmas WHERE matricula = ?',
             [matricula]
@@ -3327,7 +3327,7 @@ router.post('/api/diarias', autenticar, async (req, res) => {
             });
         }
         
-        // 3. Insere a diária
+        // 3. Insere a diária (agora sem verificar o status do processo)
         const [result] = await connection.query(
             'INSERT INTO diarias (data, processo, matricula, nome) VALUES (?, ?, ?, ?)',
             [data, processo, matricula, funcionario[0].nome]
@@ -3376,11 +3376,8 @@ router.get('/api/diarias', autenticar, async (req, res) => {
                 d.processo,
                 d.matricula,
                 d.nome,
-                u.nome as responsavel,
                 t.turma_encarregado as turma
             FROM diarias d
-            JOIN processos p ON d.processo = p.processo
-            JOIN users u ON p.responsavel_matricula = u.matricula
             LEFT JOIN turmas t ON d.matricula = t.matricula
             WHERE 1=1
         `;
@@ -3420,7 +3417,6 @@ router.get('/api/diarias', autenticar, async (req, res) => {
         });
     }
 });
-
 router.delete('/api/diarias/:id', autenticar, async (req, res) => {
     const { id } = req.params;
     
@@ -3621,5 +3617,174 @@ router.get('/gestao-turmas', autenticar, (req, res) => {
     }
     
     res.sendFile(path.join(__dirname, '../public/gestao-turmas.html'));
+});
+
+
+
+// Adicione esta rota no arquivo routes.js
+router.post('/api/gerar_pdf_diarias', autenticar, async (req, res) => {
+    try {
+        const { diarias, filtros, usuario } = req.body;
+
+        // Verificação de segurança
+        if (!diarias || !Array.isArray(diarias)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Dados de diárias inválidos'
+            });
+        }
+
+        // HTML para o PDF com mais linhas por página
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <title>Relatório de Diárias</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 0;
+                        padding: 0;
+                        font-size: 10px;
+                    }
+                    .page {
+                        page-break-after: always;
+                        padding: 15mm;
+                    }
+                    .page:last-child {
+                        page-break-after: auto;
+                    }
+                    h1 { 
+                        color: #2a5298; 
+                        text-align: center;
+                        font-size: 14px;
+                        margin-bottom: 10px;
+                    }
+                    .header-info { 
+                        margin-bottom: 10px; 
+                        text-align: center;
+                        font-size: 10px;
+                    }
+                    .filters { 
+                        background-color: #f5f5f5; 
+                        padding: 5px; 
+                        border-radius: 3px; 
+                        margin-bottom: 10px;
+                        font-size: 9px;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-top: 10px;
+                        font-size: 9px;
+                    }
+                    th { 
+                        background-color: #2a5298; 
+                        color: white; 
+                        padding: 3px; 
+                        text-align: left; 
+                    }
+                    td { 
+                        padding: 3px; 
+                        border-bottom: 1px solid #ddd; 
+                    }
+                    .footer { 
+                        margin-top: 20px;
+                        font-size: 9px; 
+                        text-align: center;
+                    }
+                    .assinatura {
+                        margin-top: 60px;
+                        border-top: 1px solid #000;
+                        width: 60%;
+                        margin-left: auto;
+                        margin-right: auto;
+                        padding-top: 5px;
+                        text-align: center;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="page">
+                    <h1>Relatório de Diárias</h1>
+                    
+                    <div class="header-info">
+                        <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>
+                    </div>
+                    
+                    <div class="filters">
+                        <h3>Filtros Aplicados</h3>
+                        <p><strong>Turma:</strong> ${filtros.turma}</p>
+                        <p><strong>Período:</strong> ${filtros.dataInicial || ''} ${filtros.dataFinal ? 'até ' + filtros.dataFinal : ''}</p>
+                        <p><strong>Processo:</strong> ${filtros.processo}</p>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Turma</th>
+                                <th>Processo</th>
+                                <th>Matrícula</th>
+                                <th>Nome</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${diarias.map(diaria => `
+                                <tr>
+                                    <td>${diaria.data_formatada || new Date(diaria.data).toLocaleDateString('pt-BR')}</td>
+                                    <td>${diaria.turma || 'N/A'}</td>
+                                    <td>${diaria.processo}</td>
+                                    <td>${diaria.matricula}</td>
+                                    <td>${diaria.nome}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <div class="footer">
+                        <p>Total de diárias: ${diarias.length}</p>
+                        <div class="assinatura">
+                            <p>Gerado por: ${usuario.nome} (${usuario.matricula})</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Gerar PDF com Playwright
+        const browser = await chromium.launch({ headless: true });
+        const page = await browser.newPage();
+
+        await page.setContent(htmlContent, { waitUntil: 'networkidle' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: {
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
+            }
+        });
+
+        await browser.close();
+
+        // Responder com o PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=Relatorio_Diarias.pdf');
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        console.error('Erro ao gerar PDF de diárias:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao gerar PDF',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 });
 module.exports = router;
