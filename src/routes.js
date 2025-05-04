@@ -3189,4 +3189,437 @@ router.post('/api/gerar_pdf_trafos_reformados', autenticar, async (req, res) => 
 });
 
 
+router.get('/turmas_ativas', autenticar, verificarPermissaoPorCargo, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/turmas_ativas.html'));
+});
+
+// Rota para o arquivo JavaScript
+router.get('/scripts/turmas_ativas.js', autenticar, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/scripts/turmas_ativas.js'));
+});
+
+
+router.get('/api/turmas', autenticar, async (req, res) => {
+    try {
+        const [rows] = await promisePool.query('SELECT id, matricula, nome, cargo, turma_encarregado FROM turmas ORDER BY turma_encarregado');
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error('Erro ao buscar usuários das turmas:', err);
+        res.status(500).json({ 
+            message: 'Erro ao buscar usuários das turmas!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+// Rotas para gestão de turmas
+router.post('/api/turmas/adicionar', autenticar, verificarPermissaoPorCargo, async (req, res) => {
+    const { matricula, nome, cargo, turma_encarregado } = req.body;
+    
+    try {
+        // Verifica se o usuário já existe
+        const [existing] = await promisePool.query(
+            'SELECT * FROM turmas WHERE matricula = ?', 
+            [matricula]
+        );
+        
+        if (existing.length > 0) {
+            return res.status(400).json({ 
+                message: 'Já existe um usuário com esta matrícula!' 
+            });
+        }
+
+        // Insere novo membro
+        await promisePool.query(
+            'INSERT INTO turmas (matricula, nome, cargo, turma_encarregado) VALUES (?, ?, ?, ?)',
+            [matricula, nome, cargo, turma_encarregado]
+        );
+
+        res.status(201).json({ message: 'Membro adicionado com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao adicionar membro:', err);
+        res.status(500).json({ message: 'Erro ao adicionar membro!' });
+    }
+});
+
+router.put('/api/turmas/:id', autenticar, verificarPermissaoPorCargo, async (req, res) => {
+    const { id } = req.params;
+    const { turma_encarregado } = req.body;
+
+    try {
+        // Atualiza a turma
+        await promisePool.query(
+            'UPDATE turmas SET turma_encarregado = ? WHERE id = ?',
+            [turma_encarregado, id]
+        );
+
+        res.status(200).json({ message: 'Membro movido com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao mover membro:', err);
+        res.status(500).json({ message: 'Erro ao mover membro!' });
+    }
+});
+
+router.delete('/api/turmas/:id', autenticar, verificarPermissaoPorCargo, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Remove o membro
+        await promisePool.query(
+            'DELETE FROM turmas WHERE id = ?',
+            [id]
+        );
+
+        res.status(200).json({ message: 'Membro removido com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao remover membro:', err);
+        res.status(500).json({ message: 'Erro ao remover membro!' });
+    }
+});
+
+
+// Rotas para diárias
+
+
+router.post('/api/diarias', autenticar, async (req, res) => {
+    const { data, processo, matricula } = req.body;
+    
+    // Validações básicas
+    if (!data || !processo || !matricula) {
+        return res.status(400).json({ 
+            success: false,
+            message: 'Data, processo e matrícula são obrigatórios!' 
+        });
+    }
+
+    const connection = await promisePool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Primeiro verifica se o funcionário existe e obtém o nome
+        const [funcionario] = await connection.query(
+            'SELECT nome FROM turmas WHERE matricula = ?',
+            [matricula]
+        );
+        
+        if (funcionario.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ 
+                success: false,
+                message: 'Funcionário não encontrado na turma!' 
+            });
+        }
+
+        // 2. Verifica se já existe diária para este funcionário no mesmo dia e processo
+        const [existente] = await connection.query(
+            `SELECT id FROM diarias 
+             WHERE matricula = ? 
+             AND data = ? 
+             AND processo = ?`,
+            [matricula, data, processo]
+        );
+        
+        if (existente.length > 0) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                success: false,
+                message: 'Já existe diária para este funcionário no processo e data informados!' 
+            });
+        }
+        
+        // 3. Insere a diária
+        const [result] = await connection.query(
+            'INSERT INTO diarias (data, processo, matricula, nome) VALUES (?, ?, ?, ?)',
+            [data, processo, matricula, funcionario[0].nome]
+        );
+        
+        await connection.commit();
+        
+        res.status(201).json({ 
+            success: true,
+            message: 'Diária registrada com sucesso!',
+            id: result.insertId
+        });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Erro ao registrar diária:', err);
+        res.status(500).json({ 
+            success: false,
+            message: 'Erro ao registrar diária!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    } finally {
+        connection.release();
+    }
+});
+
+router.get('/api/turmas_disponiveis', autenticar, async (req, res) => {
+    try {
+        const [rows] = await promisePool.query(
+            'SELECT DISTINCT turma_encarregado FROM turmas WHERE turma_encarregado IS NOT NULL AND turma_encarregado != "" ORDER BY turma_encarregado'
+        );
+        res.status(200).json(rows.map(row => row.turma_encarregado));
+    } catch (err) {
+        console.error('Erro ao buscar turmas:', err);
+        res.status(500).json({ message: 'Erro ao buscar turmas!' });
+    }
+});
+
+router.get('/api/diarias', autenticar, async (req, res) => {
+    try {
+        const { turma, dataInicial, dataFinal, processo } = req.query;
+        
+        let query = `
+            SELECT 
+                d.id,
+                DATE_FORMAT(d.data, '%d/%m/%Y') as data_formatada,
+                d.processo,
+                d.matricula,
+                d.nome,
+                u.nome as responsavel,
+                t.turma_encarregado as turma
+            FROM diarias d
+            JOIN processos p ON d.processo = p.processo
+            JOIN users u ON p.responsavel_matricula = u.matricula
+            LEFT JOIN turmas t ON d.matricula = t.matricula
+            WHERE 1=1
+        `;
+        
+        const params = [];
+        
+        if (turma) {
+            query += ' AND t.turma_encarregado = ?';
+            params.push(turma);
+        }
+        
+        if (dataInicial && dataFinal) {
+            query += ' AND d.data BETWEEN ? AND ?';
+            params.push(dataInicial, dataFinal);
+        } else if (dataInicial) {
+            query += ' AND d.data >= ?';
+            params.push(dataInicial);
+        } else if (dataFinal) {
+            query += ' AND d.data <= ?';
+            params.push(dataFinal);
+        }
+        
+        if (processo) {
+            query += ' AND d.processo = ?';
+            params.push(processo);
+        }
+        
+        query += ' ORDER BY d.data DESC';
+        
+        const [rows] = await promisePool.query(query, params);
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error('Erro ao buscar diárias:', err);
+        res.status(500).json({ 
+            message: 'Erro ao buscar diárias!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+router.delete('/api/diarias/:id', autenticar, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const [result] = await promisePool.query(
+            'DELETE FROM diarias WHERE id = ?',
+            [id]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Diária não encontrada!' });
+        }
+        
+        await registrarAuditoria(
+            req.user.matricula,
+            'Remoção de Diária',
+            `Diária removida - ID: ${id}`
+        );
+        
+        res.status(200).json({ message: 'Diária removida com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao remover diária:', err);
+        res.status(500).json({ 
+            message: 'Erro ao remover diária!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+
+
+router.get('/api/funcionarios_por_turma/:turma', autenticar, async (req, res) => {
+    try {
+        const { turma } = req.params;
+        const [rows] = await promisePool.query(
+            'SELECT matricula, nome FROM turmas WHERE turma_encarregado = ? ORDER BY nome',
+            [turma]
+        );
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error('Erro ao buscar funcionários:', err);
+        res.status(500).json({ message: 'Erro ao buscar funcionários!' });
+    }
+});
+
+router.get('/api/processos_disponiveis', autenticar, async (req, res) => {
+    try {
+        const { data } = req.query;
+        
+        let query = `
+            SELECT DISTINCT processo 
+            FROM processos 
+            WHERE status IN ('ativo', 'concluido') 
+            AND processo IS NOT NULL
+        `;
+        
+        if (data) {
+            query += ` AND (
+                (status = 'ativo' AND data_prevista_execucao <= ?) OR
+                (status = 'concluido' AND data_conclusao <= ?)
+            )`;
+        }
+        
+        query += ' ORDER BY processo';
+        
+        const params = data ? [data, data] : [];
+        
+        const [rows] = await promisePool.query(query, params);
+        res.status(200).json(rows.map(row => row.processo));
+    } catch (err) {
+        console.error('Erro ao buscar processos:', err);
+        res.status(500).json({ message: 'Erro ao buscar processos!' });
+    }
+});
+
+
+router.get('/api/processos_por_turma_data', autenticar, async (req, res) => {
+    try {
+        const { turma, data } = req.query;
+        
+        if (!turma || !data) {
+            return res.status(400).json({ message: 'Turma e data são obrigatórios!' });
+        }
+
+        // Primeiro, buscar os membros da turma
+        const [membros] = await promisePool.query(
+            'SELECT matricula FROM turmas WHERE turma_encarregado = ?',
+            [turma]
+        );
+
+        if (membros.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        const matriculas = membros.map(m => m.matricula);
+
+        // Agora buscar processos onde o responsável está na turma
+        const query = `
+            SELECT DISTINCT p.processo
+            FROM processos p
+            JOIN turmas t ON p.responsavel_matricula = t.matricula
+            WHERE t.turma_encarregado = ?
+            AND p.status IN ('ativo', 'concluido')
+            ORDER BY p.processo
+        `;
+        
+        const [rows] = await promisePool.query(query, [turma]);
+        res.status(200).json(rows.map(row => row.processo));
+    } catch (err) {
+        console.error('Erro ao buscar processos por turma e data:', err);
+        res.status(500).json({ 
+            message: 'Erro ao buscar processos!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+
+router.get('/api/processos_por_responsavel', autenticar, async (req, res) => {
+    try {
+        const { matricula } = req.query;
+        
+        if (!matricula) {
+            return res.status(400).json({ message: 'Matrícula é obrigatória!' });
+        }
+
+        const query = `
+            SELECT processo
+            FROM processos
+            WHERE responsavel_matricula = ?
+            AND status IN ('ativo', 'concluido')
+            ORDER BY data_prevista_execucao DESC
+        `;
+        
+        const [rows] = await promisePool.query(query, [matricula]);
+        res.status(200).json(rows.map(row => row.processo));
+    } catch (err) {
+        console.error('Erro ao buscar processos por responsável:', err);
+        res.status(500).json({ 
+            message: 'Erro ao buscar processos!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+
+router.get('/api/processos_para_diarias', autenticar, async (req, res) => {
+    try {
+        const { turma, data } = req.query;
+        
+        if (!turma || !data) {
+            return res.status(400).json({ message: 'Turma e data são obrigatórios!' });
+        }
+
+        // 1. Buscar os membros da turma selecionada
+        const [membros] = await promisePool.query(
+            'SELECT matricula FROM turmas WHERE turma_encarregado = ?',
+            [turma]
+        );
+
+        if (membros.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // 2. Buscar processos onde:
+        // - O responsável está na turma selecionada
+        // - A data de conclusão é EXATAMENTE a data selecionada
+        // - O status é ativo ou concluído
+        const query = `
+            SELECT DISTINCT p.processo
+            FROM processos p
+            JOIN turmas t ON p.responsavel_matricula = t.matricula
+            WHERE t.turma_encarregado = ?
+            AND DATE(p.data_conclusao) = ?
+            AND p.status IN ('ativo', 'concluido')
+            ORDER BY p.processo
+        `;
+        
+        const [rows] = await promisePool.query(query, [turma, data]);
+        res.status(200).json(rows.map(row => row.processo));
+    } catch (err) {
+        console.error('Erro ao buscar processos para diárias:', err);
+        res.status(500).json({ 
+            message: 'Erro ao buscar processos!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+// Rota para página de diárias
+router.get('/diarias', autenticar, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/diarias.html'));
+});
+
+router.get('/gestao-turmas', autenticar, (req, res) => {
+    // Verifica se o usuário tem permissão para acessar (opcional)
+    if (!['Técnico', 'Engenheiro', 'Supervisor', 'ADMIN','Encarregado'].includes(req.user.cargo)) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    
+    res.sendFile(path.join(__dirname, '../public/gestao-turmas.html'));
+});
 module.exports = router;
