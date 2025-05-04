@@ -1,5 +1,6 @@
 // Variável para controlar listeners
 let listenersInitialized = false;
+let currentDiarias = []; // Armazena as diárias atualmente filtradas
 
 document.addEventListener('DOMContentLoaded', function() {
     if (!listenersInitialized) {
@@ -47,7 +48,7 @@ function handleTurmaChange() {
     } else {
         document.getElementById('funcionarioSelect').disabled = true;
         document.getElementById('funcionarioSelect').innerHTML = '<option value="">Selecione a Turma primeiro</option>';
-        document.getElementById('processoSelect').innerHTML = '<option value="">Selecione a Turma primeiro</option>';
+        document.getElementById('processosOptions').innerHTML = '';
     }
 }
 
@@ -94,6 +95,7 @@ function loadDiarias() {
                 </td>
             </tr>
         `;
+        currentDiarias = [];
         return;
     }
     
@@ -101,11 +103,16 @@ function loadDiarias() {
     
     const signal = ensureSingleLoad();
     
+    // Construa a URL corretamente
     let url = '/api/diarias?';
-    if (turma) url += `turma=${encodeURIComponent(turma)}&`;
-    if (dataInicial) url += `data_inicial=${dataInicial}&`;
-    if (dataFinal) url += `data_final=${dataFinal}&`;
-    if (processo) url += `processo=${encodeURIComponent(processo)}`;
+    const params = [];
+    
+    if (turma) params.push(`turma=${encodeURIComponent(turma)}`);
+    if (dataInicial) params.push(`dataInicial=${dataInicial}`);
+    if (dataFinal) params.push(`dataFinal=${dataFinal}`);
+    if (processo) params.push(`processo=${encodeURIComponent(processo)}`);
+    
+    url += params.join('&');
     
     tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>';
     
@@ -118,17 +125,19 @@ function loadDiarias() {
         signal: signal
     })
     .then(response => {
-        if (!response.ok) throw new Error('Erro na resposta do servidor');
+        if (!response.ok) {
+            throw new Error(`Erro na resposta do servidor: ${response.status}`);
+        }
         return response.json();
     })
     .then(data => {
-        if (!Array.isArray(data)) throw new Error('Dados inválidos recebidos');
+        if (!Array.isArray(data)) {
+            throw new Error('Dados inválidos recebidos');
+        }
         
-        const uniqueDiarias = data.filter((diaria, index, self) =>
-            index === self.findIndex(d => d.id === diaria.id)
-        );
+        currentDiarias = data;
         
-        if (uniqueDiarias.length === 0) {
+        if (data.length === 0) {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center text-muted py-4">
@@ -137,7 +146,7 @@ function loadDiarias() {
                 </tr>
             `;
         } else {
-            renderDiariasTable(uniqueDiarias);
+            renderDiariasTable(data);
         }
     })
     .catch(error => {
@@ -231,7 +240,7 @@ function addDiaria() {
         document.getElementById('addDiariaForm').reset();
         document.getElementById('funcionarioSelect').innerHTML = '<option value="">Selecione a Turma primeiro</option>';
         document.getElementById('funcionarioSelect').disabled = true;
-        document.getElementById('processoSelect').innerHTML = '<option value="">Selecione a Turma primeiro</option>';
+        document.getElementById('processosOptions').innerHTML = '';
         
         loadDiarias();
     })
@@ -318,7 +327,7 @@ function openAddModal() {
     document.getElementById('addDiariaForm').reset();
     document.getElementById('funcionarioSelect').disabled = true;
     document.getElementById('funcionarioSelect').innerHTML = '<option value="">Selecione a Turma primeiro</option>';
-    document.getElementById('processoSelect').innerHTML = '<option value="">Selecione a Turma primeiro</option>';
+    document.getElementById('processosOptions').innerHTML = '';
     document.getElementById('diariaData').valueAsDate = new Date();
     
     if (document.getElementById('turmaSelect').options.length <= 1) {
@@ -400,7 +409,7 @@ function loadFuncionariosPorTurma(turma) {
 function loadProcessosPorTurmaData(turma, data) {
     if (!turma || !data) return;
 
-    fetch(`/api/processos_para_diarias?turma=${encodeURIComponent(turma)}&data=${data}`, {
+    fetch(`/api/processos_por_turma_data?turma=${encodeURIComponent(turma)}&data=${data}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -412,28 +421,100 @@ function loadProcessosPorTurmaData(turma, data) {
         return response.json();
     })
     .then(processos => {
-        const selectProcesso = document.getElementById('processoSelect');
-        selectProcesso.innerHTML = '<option value="">Selecione o Processo...</option>';
+        const datalist = document.getElementById('processosOptions');
+        const filtroDatalist = document.getElementById('filtroProcessosOptions');
+        datalist.innerHTML = '';
+        filtroDatalist.innerHTML = '';
         
         if (processos.length === 0) {
-            selectProcesso.innerHTML = '<option value="">Nenhum processo encontrado para esta turma/data</option>';
             return;
         }
         
         processos.forEach(processo => {
             const option = document.createElement('option');
             option.value = processo;
-            option.textContent = processo;
-            selectProcesso.appendChild(option);
+            datalist.appendChild(option.cloneNode(true));
+            filtroDatalist.appendChild(option);
         });
     })
     .catch(error => {
         console.error('Erro ao carregar processos:', error);
-        document.getElementById('processoSelect').innerHTML = '<option value="">Erro ao carregar processos</option>';
     });
 }
 
+function exportToPDF() {
+    if (currentDiarias.length === 0) {
+        showAlert('Não há diárias para exportar. Aplique os filtros primeiro.', 'warning');
+        return;
+    }
+
+    const btnExport = document.getElementById('exportPdfBtn');
+    const originalText = btnExport.innerHTML;
+    btnExport.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Gerando PDF...';
+    btnExport.disabled = true;
+
+    // Obter os filtros aplicados
+    const turma = document.getElementById('filtroTurma').value || 'Todas';
+    const dataInicial = document.getElementById('filtroDataInicial').value || '';
+    const dataFinal = document.getElementById('filtroDataFinal').value || '';
+    const processo = document.getElementById('filtroProcesso').value || 'Todos';
+
+    // Verificar se currentDiarias é um array válido
+    if (!Array.isArray(currentDiarias)) {
+        console.error('currentDiarias não é um array válido:', currentDiarias);
+        showAlert('Erro ao preparar dados para o PDF', 'danger');
+        btnExport.innerHTML = originalText;
+        btnExport.disabled = false;
+        return;
+    }
+
+    // Preparar dados para o PDF
+    const dados = {
+        diarias: currentDiarias,
+        filtros: {
+            turma,
+            dataInicial,
+            dataFinal,
+            processo
+        },
+        usuario: JSON.parse(localStorage.getItem('user')) || { nome: 'Usuário', matricula: 'N/A' }
+    };
+
+    fetch('/api/gerar_pdf_diarias', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(dados)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao gerar PDF');
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Relatorio_Diarias_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    })
+    .catch(error => {
+        console.error('Erro ao exportar PDF:', error);
+        showAlert('Erro ao gerar PDF: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        btnExport.innerHTML = originalText;
+        btnExport.disabled = false;
+    });
+}
+
+// Expor funções globais
 window.openAddModal = openAddModal;
 window.loadDiarias = loadDiarias;
 window.confirmDelete = confirmDelete;
 window.deleteDiaria = deleteDiaria;
+window.exportToPDF = exportToPDF;
