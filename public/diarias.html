@@ -19,6 +19,9 @@
         .filter-card .card-body {
             position: relative;
         }
+        .btn-export {
+            margin-left: 10px;
+        }
     </style>
 </head>
 
@@ -93,9 +96,14 @@
                         <h1 class="page-title mb-0">
                             <i class="fas fa-money-bill-wave me-3"></i>Gestão de Diárias
                         </h1>
-                        <button id="addDiariaBtn" class="btn btn-primary" onclick="openAddModal()">
-                            <i class="fas fa-plus me-2"></i>Adicionar Diária
-                        </button>
+                        <div>
+                            <button id="addDiariaBtn" class="btn btn-primary" onclick="openAddModal()">
+                                <i class="fas fa-plus me-2"></i>Adicionar Diária
+                            </button>
+                            <button id="exportPdfBtn" class="btn btn-success btn-export" onclick="exportToPDF()">
+                                <i class="fas fa-file-pdf me-2"></i>Exportar PDF
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Filtros -->
@@ -124,9 +132,10 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label">Processo</label>
-                                        <select class="form-select" id="filtroProcesso">
-                                            <option value="">Todos</option>
-                                        </select>
+                                        <input list="filtroProcessosOptions" class="form-control" id="filtroProcesso">
+                                        <datalist id="filtroProcessosOptions">
+                                            <!-- Opções serão carregadas via JavaScript -->
+                                        </datalist>
                                     </div>
                                     <div class="col-md-12 d-flex justify-content-end">
                                         <button type="submit" class="btn btn-primary" id="filterButton">
@@ -197,9 +206,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Processo*</label>
-                            <select class="form-select" id="processoSelect" required>
-                                <option value="">Selecione a Turma primeiro</option>
-                            </select>
+                            <input list="processosOptions" class="form-control" id="processoSelect" required>
+                            <datalist id="processosOptions">
+                                <!-- Opções serão carregadas via JavaScript -->
+                            </datalist>
                         </div>
                     </div>
                     <div class="modal-footer">
