@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turmas Ativas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/turmas_ativas.css">
+</head>
+
+<body>
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-header text-center py-3">
+                    <div class="user-icon mb-2">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h5 class="user-name mb-1" id="user-name"></h5>
+                </div>
+
+                <div class="user-info p-3 mt-2 rounded">
+                    <div class="info-item mb-2">
+                        <i class="fas fa-id-card me-2"></i>
+                        <span id="user-matricula"></span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-briefcase me-2"></i>
+                        <span id="user-cargo"></span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <span id="current-date"></span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-clock me-2"></i>
+                        <span id="current-time"></span>
+                    </div>
+                </div>
+
+                <!-- Menu de Navegação -->
+                <nav class="sidebar-menu">
+                    <a href="/dashboard" class="menu-item">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a href="/transformadores" class="menu-item">
+                        <i class="fas fa-bolt me-2"></i>Transformadores
+                    </a>
+                    <a href="/subestacao" class="menu-item">
+                        <i class="fas fa-industry me-2"></i>Subestação
+                    </a>
+                    <a href="/frota" class="menu-item">
+                        <i class="fas fa-truck me-2"></i>Frota
+                    </a>
+                    <a href="/gestao-servicos" class="menu-item">
+                        <i class="fas fa-tools me-2"></i>Gestão de Serviços
+                    </a>
+                    <a href="/turmas_ativas" class="menu-item active">
+                        <i class="fas fa-users me-2"></i>Turmas Ativas
+                    </a>
+                </nav>
+
+                <!-- Botão Sair no rodapé -->
+                <div class="sidebar-footer">
+                    <button onclick="logout()" class="btn-logout">
+                        <i class="fas fa-sign-out-alt me-2"></i>Sair
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conteúdo Principal -->
+            <div class="main-content">
+                <div class="container py-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="page-title mb-0">
+                            <i class="fas fa-users me-3"></i>Turmas Ativas
+                        </h1>
+                        <button id="addMemberBtn" class="btn btn-primary" onclick="openAddModal()">
+                            <i class="fas fa-plus me-2"></i>Adicionar Membro
+                        </button>
+                    </div>
+
+                    <!-- Filtros -->
+                    <div class="card filter-card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filtros</h5>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Turma/Encarregado</label>
+                                    <select class="form-select" id="turmaFilter">
+                                        <option value="">Todos</option>
+                                        <!-- Opções serão preenchidas via JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Cargo</label>
+                                    <select class="form-select" id="cargoFilter">
+                                        <option value="">Todos</option>
+                                        <option value="Encarregado">Encarregado</option>
+                                        <option value="Eletricista">Eletricista</option>
+                                        <option value="Motorista">Motorista</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                                        <i class="fas fa-search me-2"></i>Aplicar Filtros
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mensagem de filtro obrigatório -->
+                    <div class="alert alert-info" id="filterAlert">
+                        <i class="fas fa-info-circle me-2"></i>Selecione ao menos um filtro para visualizar os membros.
+                    </div>
+
+                    <!-- Tabela de Turmas -->
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Matrícula</th>
+                                            <th>Nome</th>
+                                            <th>Cargo</th>
+                                            <th>Turma/Encarregado</th>
+                                            <th class="text-end">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="turmasTableBody">
+                                        <!-- Dados serão inseridos via JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para adicionar novo membro -->
+    <div class="modal fade" id="addMemberModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Adicionar Membro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addMemberForm">
+                        <div class="mb-3">
+                            <label class="form-label">Matrícula</label>
+                            <input type="text" class="form-control" name="matricula" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nome Completo</label>
+                            <input type="text" class="form-control" name="nome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cargo</label>
+                            <select class="form-select" name="cargo" required>
+                                <option value="">Selecione...</option>
+                                <option value="Encarregado">Encarregado</option>
+                                <option value="Eletricista">Eletricista</option>
+                                <option value="Motorista">Motorista</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Turma/Encarregado</label>
+                            <input type="text" class="form-control" name="turma_encarregado" placeholder="Opcional">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="addMember()">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar membro -->
+    <div class="modal fade" id="editMemberModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Editar Membro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editMemberId">
+                    <div class="mb-3">
+                        <label class="form-label">Membro:</label>
+                        <p id="editMemberName" class="form-control-plaintext"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Turma Atual:</label>
+                        <p id="editCurrentTurma" class="form-control-plaintext"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editNewTurma" class="form-label">Nova Turma:</label>
+                        <select id="editNewTurma" class="form-select">
+                            <option value="">Selecione uma turma</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEdit()">Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmModalTitle">Confirmação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" id="confirmModalBody">
+                    <!-- Conteúdo será inserido dinamicamente -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirmModalButton">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/turmas_ativas.js"></script>
+    <script>
+        // Recupera os dados do usuário do localStorage
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        // Atualiza a data e hora
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR');
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('pt-BR');
+        }
+
+        // Exibe as informações do usuário
+        if (user) {
+            document.getElementById('user-name').textContent = user.nome;
+            document.getElementById('user-matricula').textContent = `Matrícula: ${user.matricula}`;
+            document.getElementById('user-cargo').textContent = `Cargo: ${user.cargo}`;
+
+            // Atualiza data e hora a cada segundo
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        } else {
+            window.location.href = '/';
+        }
+
+        // Função para logout
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        // Função para abrir modal de adição
+        function openAddModal() {
+            const modal = new bootstrap.Modal(document.getElementById('addMemberModal'));
+            modal.show();
+        }
+    </script>
+</body>
+</html>

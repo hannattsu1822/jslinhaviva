@@ -133,7 +133,21 @@
               </div>
             </div>
 
-            <!-- NOVO CARD: Fibra Óptica -->
+            <!-- Card Gestão de Turmas -->
+            <div class="col-md-6 col-lg-3">
+              <div class="card glass-card h-100" onclick="navigateTo('gestao-turmas')" style="position: relative;">
+                <div class="card-body d-flex align-items-center justify-content-center">
+                  <div class="text-center">
+                    <div class="icon-circle bg-secondary mx-auto mb-2">
+                      <i class="fa-solid fa-people-arrows"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Gestão de Turmas</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Card Fibra Óptica -->
             <div class="col-md-6 col-lg-3">
               <div class="card glass-card h-100" onclick="navigateTo('fibra')" style="position: relative;">
                 <div class="card-body d-flex align-items-center justify-content-center">
@@ -147,7 +161,7 @@
               </div>
             </div>
 
-            <!-- NOVO CARD: Inspeções de Redes -->
+            <!-- Card Inspeções de Redes -->
             <div class="col-md-6 col-lg-3">
               <div class="card glass-card h-100" onclick="navigateTo('inspecoes-redes')" style="position: relative;">
                 <div class="card-body d-flex align-items-center justify-content-center">
@@ -165,7 +179,7 @@
       </div>
     </div>
   </div>
-
+  
   <!-- Modal de Acesso Negado -->
   <div id="access-denied-modal" class="modal fade">
     <div class="modal-dialog modal-dialog-centered">
@@ -230,19 +244,29 @@
     // Modal de acesso negado
     const accessDeniedModal = new bootstrap.Modal(document.getElementById('access-denied-modal'));
 
-    // Função para navegar e capturar erros de acesso
+    // Função para navegar e capturar erros de acesso - ATUALIZADA
     async function navigateTo(page) {
-      // Lista de páginas existentes
+      // Lista de páginas existentes - ATUALIZADA com as novas páginas
       const existingPages = [
         'transformadores',
         'subestacao',
         'frota',
         'auditoria',
-        'gestao-servicos'
+        'gestao-servicos',
+        'gestao-turmas', // Adicionado
+        'diarias',       // Adicionado
+        'turmas-ativas', // Adicionado
+        'fibra',         // Adicionado
+        'inspecoes-redes' // Adicionado
       ];
+
+      // Debug: Mostra no console qual página está tentando acessar
+      console.log(`Tentando navegar para: ${page}`);
+      console.log(`Páginas existentes: ${existingPages}`);
 
       // Se a página não existir, mostra modal de desenvolvimento
       if (!existingPages.includes(page)) {
+        console.log(`Página ${page} não encontrada na lista`);
         const developmentModal = new bootstrap.Modal(document.getElementById('development-modal'));
         developmentModal.show();
         return;
@@ -256,10 +280,16 @@
           credentials: 'include'
         });
 
+        console.log(`Resposta do servidor para ${url}:`, response.status);
+
         if (response.ok) {
           window.location.href = url;
         } else if (response.status === 403) {
           accessDeniedModal.show();
+        } else if (response.status === 404) {
+          console.log(`Página ${page} não encontrada no servidor`);
+          const developmentModal = new bootstrap.Modal(document.getElementById('development-modal'));
+          developmentModal.show();
         }
       } catch (error) {
         console.error('Erro na requisição:', error);
@@ -273,5 +303,4 @@
     }
   </script>
 </body>
-
 </html>
