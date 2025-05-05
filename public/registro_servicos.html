@@ -198,11 +198,12 @@
             const formContainer = document.getElementById('formContainer');
 
             if (isEmergencial) {
-                processoInput.value = 'Emergencial';
+                processoInput.value = 'EMERGENCIAL';
                 processoInput.readOnly = true;
                 tipoProcessoInput.value = 'Emergencial';
                 processoLabel.innerHTML = 'Tipo de Serviço <span class="badge bg-danger">Emergencial</span>';
             } else {
+                processoInput.value = '';
                 processoInput.placeholder = 'Digite o número do processo';
                 processoLabel.textContent = 'Número do Processo *';
                 processoInput.readOnly = false;
@@ -310,19 +311,27 @@
             try {
                 const formData = new FormData(e.target);
                 
-                // CORREÇÃO: Remove campos de hora quando desligamento for "NÃO"
+                // Adiciona campos que podem estar faltando
+                if (!formData.has('tipo_processo')) {
+                    formData.append('tipo_processo', document.getElementById('tipo_processo').value);
+                }
+                if (!formData.has('responsavel_matricula')) {
+                    formData.append('responsavel_matricula', 'pendente');
+                }
+
+                // Remove campos de hora se desligamento for NÃO
                 const desligamento = document.getElementById('desligamento').value;
                 if (desligamento === 'NÃO') {
                     formData.delete('hora_inicio');
                     formData.delete('hora_fim');
+                } else {
+                    // Valida horários se desligamento for SIM
+                    if (!formData.get('hora_inicio') || !formData.get('hora_fim')) {
+                        throw new Error('Horário de início e término são obrigatórios para desligamentos');
+                    }
                 }
 
-                // Validação adicional para horários de desligamento
-                if (desligamento === 'SIM' && (!formData.get('hora_inicio') || !formData.get('hora_fim'))) {
-                    throw new Error('Horário de início e término são obrigatórios para desligamentos');
-                }
-
-                // Verificar tamanho dos arquivos
+                // Validação de tamanho de arquivos
                 if (fileInput.files.length > 0) {
                     Array.from(fileInput.files).forEach(file => {
                         if (file.size > 10 * 1024 * 1024) {
@@ -336,54 +345,28 @@
                     body: formData
                 });
 
-                const result = await response.json();
-
-                if (response.ok) {
-                    alert('Serviço registrado com sucesso!');
-                    e.target.reset();
-                    arquivosSelecionados.innerHTML = '';
-                    anexosContainer.innerHTML = '';
-                    toggleHorariosDesligamento(); // Resetar visibilidade dos campos de horário
-
-                    if (result.anexos && result.anexos.length > 0) {
-                        const anexosTitle = document.createElement('h6');
-                        anexosTitle.className = 'mt-3';
-                        anexosTitle.textContent = 'Anexos enviados:';
-                        anexosContainer.appendChild(anexosTitle);
-
-                        result.anexos.forEach(anexo => {
-                            const anexoDiv = document.createElement('div');
-                            anexoDiv.className = 'd-flex align-items-center mb-2';
-
-                            const anexoLink = document.createElement('a');
-                            anexoLink.href = anexo.caminho;
-                            anexoLink.textContent = anexo.nomeOriginal;
-                            anexoLink.className = 'me-3';
-                            anexoLink.target = '_blank';
-
-                            const downloadBtn = document.createElement('button');
-                            downloadBtn.className = 'btn btn-sm btn-outline-secondary';
-                            downloadBtn.innerHTML = '<i class="fas fa-download me-1"></i>';
-                            downloadBtn.onclick = (e) => {
-                                e.preventDefault();
-                                window.open(`${anexo.caminho}?download=true`, '_blank');
-                            };
-
-                            anexoDiv.appendChild(anexoLink);
-                            anexoDiv.appendChild(downloadBtn);
-                            anexosContainer.appendChild(anexoDiv);
-                        });
-                    }
-
-                    // Redirecionar para a página de gestão após sucesso
-                    setTimeout(() => {
-                        window.location.href = '/gestao-servicos';
-                    }, 1500);
-                } else {
-                    throw new Error(result.message || 'Erro ao registrar serviço');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Erro ao registrar serviço');
                 }
+
+                const result = await response.json();
+                
+                // Sucesso
+                alert('Serviço registrado com sucesso!');
+                e.target.reset();
+                arquivosSelecionados.innerHTML = '';
+                anexosContainer.innerHTML = '';
+                toggleHorariosDesligamento();
+
+                // Redirecionar para a página de gestão após sucesso
+                setTimeout(() => {
+                    window.location.href = '/gestao-servicos';
+                }, 1500);
+
             } catch (error) {
-                alert(error.message);
+                console.error('Erro:', error);
+                alert(`Erro: ${error.message}`);
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = '<i class="fas fa-save me-2"></i>REGISTRAR SERVIÇO';
