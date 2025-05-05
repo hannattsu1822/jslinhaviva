@@ -1415,21 +1415,19 @@ const getTipoAnexo = (filename) => {
     return 'documento';
 };
 
-// Rota POST /api/servicos (substitua a existente por esta)
-// Rota POST /api/servicos (versão corrigida)
 // Rota POST /api/servicos (versão corrigida)
 router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
     const connection = await promisePool.getConnection();
     try {
         await connection.beginTransaction();
 
-        // 1. Extração e validação dos dados - CORREÇÃO: Usar req.body diretamente
+        // 1. Extração e validação dos dados
         const {
-            processo, // Adicionado para processos normais
-            tipo_processo = 'Normal', // Valor padrão
+            processo,
+            tipo_processo = 'Normal',
             data_prevista_execucao,
             desligamento,
-            hora_inicio = null, // Valores padrão
+            hora_inicio = null,
             hora_fim = null,
             subestacao,
             alimentador,
@@ -1438,7 +1436,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             maps
         } = req.body;
 
-        // 2. Validações obrigatórias - CORREÇÃO: Mensagens mais claras
+        // Validações obrigatórias
         if (!data_prevista_execucao || !subestacao || !desligamento) {
             limparArquivosTemporarios(req.files);
             return res.status(400).json({
@@ -1447,7 +1445,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             });
         }
 
-        // CORREÇÃO: Validação de horários apenas se desligamento for SIM
+        // Validação de horários apenas se desligamento for SIM
         if (desligamento === 'SIM') {
             if (!hora_inicio || !hora_fim) {
                 limparArquivosTemporarios(req.files);
@@ -1458,10 +1456,10 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             }
         }
 
-        // 3. Lógica para processos emergenciais
+        // Lógica para processos emergenciais
         let processoFinal;
         if (tipo_processo === 'Emergencial') {
-            // CORREÇÃO: Insert simplificado com valores padrão
+            // Insert para emergencial
             const [result] = await connection.query(
                 `INSERT INTO processos SET
                     tipo = 'Emergencial',
@@ -1478,7 +1476,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                 [
                     data_prevista_execucao,
                     desligamento,
-                    desligamento === 'SIM' ? hora_inicio : null, // CORREÇÃO: Só insere hora se for desligamento
+                    desligamento === 'SIM' ? hora_inicio : null,
                     desligamento === 'SIM' ? hora_fim : null,
                     subestacao,
                     alimentador || null,
@@ -1495,7 +1493,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
                 [processoFinal, result.insertId]
             );
         } else {
-            // 4. Processos normais - CORREÇÃO: Validação melhorada
+            // Processos normais
             if (!processo || typeof processo !== 'string' || processo.trim() === '') {
                 limparArquivosTemporarios(req.files);
                 return res.status(400).json({
@@ -1506,7 +1504,7 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
 
             processoFinal = processo.trim();
 
-            // CORREÇÃO: Insert simplificado
+            // Insert para normal
             await connection.query(
                 `INSERT INTO processos SET
                     processo = ?,
@@ -1536,79 +1534,66 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
             );
         }
 
-        // 5. Processamento de anexos - CORREÇÃO: Melhor tratamento de erros
+        // Processamento de anexos
+        const anexosInfo = [];
         if (req.files && req.files.length > 0) {
-            try {
-                const uploadDir = path.join(__dirname, '../upload_arquivos');
-                const processoDir = path.join(uploadDir, processoFinal.replace(/\//g, '-'));
+            const uploadDir = path.join(__dirname, '../upload_arquivos');
+            const processoDir = path.join(uploadDir, processoFinal.replace(/\//g, '-'));
 
-                if (!fs.existsSync(processoDir)) {
-                    fs.mkdirSync(processoDir, { recursive: true });
-                }
+            if (!fs.existsSync(processoDir)) {
+                fs.mkdirSync(processoDir, { recursive: true });
+            }
 
-                for (const file of req.files) {
-                    // Validação de tamanho
-                    if (file.size > 10 * 1024 * 1024) {
-                        throw new Error(`Arquivo ${file.originalname} excede 10MB`);
-                    }
+            for (const file of req.files) {
+                const extensao = path.extname(file.originalname).toLowerCase();
+                const novoNome = `anexo_${Date.now()}${extensao}`;
+                const novoPath = path.join(processoDir, novoNome);
 
-                    const extensao = path.extname(file.originalname).toLowerCase();
-                    const novoNome = `anexo_${Date.now()}${extensao}`;
-                    const novoPath = path.join(processoDir, novoNome);
+                await fs.promises.rename(file.path, novoPath);
 
-                    // CORREÇÃO: Usar fs.promises para operações assíncronas
-                    await fs.promises.rename(file.path, novoPath);
+                await connection.query(
+                    `INSERT INTO processos_anexos (
+                        processo_id, 
+                        nome_original, 
+                        caminho_servidor, 
+                        tamanho, 
+                        tipo_anexo
+                    ) VALUES (
+                        (SELECT id FROM processos WHERE processo = ? LIMIT 1),
+                        ?, ?, ?, ?
+                    )`,
+                    [
+                        processoFinal,
+                        file.originalname,
+                        `/api/upload_arquivos/${processoFinal.replace(/\//g, '-')}/${novoNome}`,
+                        file.size,
+                        ['jpg', 'jpeg', 'png'].includes(extensao.substring(1)) ? 'imagem' : 'documento'
+                    ]
+                );
 
-                    await connection.query(
-                        `INSERT INTO processos_anexos (
-                            processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo
-                        ) VALUES (
-                            (SELECT id FROM processos WHERE processo = ? LIMIT 1),
-                            ?, ?, ?, ?
-                        )`,
-                        [
-                            processoFinal,
-                            file.originalname,
-                            `/api/upload_arquivos/${processoFinal.replace(/\//g, '-')}/${novoNome}`,
-                            file.size,
-                            ['jpg', 'jpeg', 'png'].includes(extensao.substring(1)) ? 'imagem' : 'documento'
-                        ]
-                    );
-                }
-            } catch (fileError) {
-                console.error('Erro ao processar anexos:', fileError);
-                await connection.rollback();
-                limparArquivosTemporarios(req.files);
-                
-                return res.status(500).json({
-                    success: false,
-                    message: 'Erro ao processar anexos',
-                    error: process.env.NODE_ENV === 'development' ? fileError.message : undefined
+                anexosInfo.push({
+                    nomeOriginal: file.originalname,
+                    caminho: `/api/upload_arquivos/${processoFinal.replace(/\//g, '-')}/${novoNome}`
                 });
             }
         }
 
         await connection.commit();
 
-        // Auditoria
+        // Registrar auditoria
         if (req.user?.matricula) {
-            try {
-                await registrarAuditoria(
-                    req.user.matricula,
-                    'Registro de Serviço',
-                    `Serviço ${tipo_processo} registrado: ${processoFinal}`
-                );
-            } catch (auditError) {
-                console.error('Erro na auditoria:', auditError);
-                // Não interrompe o fluxo por erro de auditoria
-            }
+            await registrarAuditoria(
+                req.user.matricula,
+                'Registro de Serviço',
+                `Serviço ${tipo_processo} registrado: ${processoFinal}`
+            );
         }
 
         res.status(201).json({
             success: true,
             processo: processoFinal,
             tipo: tipo_processo,
-            anexos: req.files ? req.files.map(f => f.originalname) : []
+            anexos: anexosInfo
         });
 
     } catch (error) {
@@ -1637,16 +1622,7 @@ function limparArquivosTemporarios(files) {
     }
 }
 
-// Função auxiliar para limpar arquivos temporários
-function limparArquivosTemporarios(files) {
-    if (files) {
-        files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-            }
-        });
-    }
-}
+
 //filtrar
 router.get('/api/servicos', autenticar, async (req, res) => {
     try {
