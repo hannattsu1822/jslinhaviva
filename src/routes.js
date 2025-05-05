@@ -1417,6 +1417,7 @@ const getTipoAnexo = (filename) => {
 
 // Rota POST /api/servicos (substitua a existente por esta)
 // Rota POST /api/servicos (versão corrigida)
+// Rota POST /api/servicos (versão corrigida)
 router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
     const connection = await promisePool.getConnection();
     try {
@@ -1622,78 +1623,6 @@ router.post('/api/servicos', upload.array('anexos', 5), async (req, res) => {
         });
     } finally {
         connection.release();
-    }
-});
-
-// Função auxiliar para limpar arquivos temporários
-function limparArquivosTemporarios(files) {
-    if (files) {
-        files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-            }
-        });
-    }
-}
-
-// Função auxiliar para limpar arquivos temporários
-function limparArquivosTemporarios(files) {
-    if (files) {
-        files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-            }
-        });
-    }
-}
-//filtrar
-router.get('/api/servicos', autenticar, async (req, res) => {
-    try {
-        const { status } = req.query;
-
-        let query = `
-            SELECT 
-                p.id,
-                p.processo,
-                p.data_prevista_execucao,
-                p.desligamento,
-                p.subestacao,
-                p.alimentador,
-                p.chave_montante,
-                p.responsavel_matricula,
-                p.maps,
-                p.status,
-                p.data_conclusao,
-                p.observacoes_conclusao,
-                u.nome as responsavel,
-                CASE 
-                    WHEN p.processo = 'EMERGENCIAL' THEN 'Emergencial'
-                    ELSE 'Normal'
-                END as tipo_processo
-            FROM processos p
-            LEFT JOIN users u ON p.responsavel_matricula = u.matricula
-        `;
-
-        const params = [];
-
-        if (status) {
-            query += ' WHERE p.status = ?';
-            params.push(status);
-        }
-
-        query += ' ORDER BY p.data_prevista_execucao ASC';
-
-        const [servicos] = await promisePool.query(query, params);
-
-        res.status(200).json(servicos);
-
-    } catch (error) {
-        console.error('Erro ao buscar serviços:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erro ao buscar serviços',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
     }
 });
 
