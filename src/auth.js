@@ -107,7 +107,7 @@ function verificarPermissaoPorCargo(req, res, next) {
 // Função para verificar permissão geral
 function verificarPermissao(req, res, next) {
     const cargo = req.user.cargo;
-    const cargosPermitidos = ['Técnico', 'Engenheiro', 'Encarregado', 'ADMIN'];
+    const cargosPermitidos = ['Técnico', 'Engenheiro', 'Encarregado', 'ADMIN', 'Inspetor'];
 
     if (cargosPermitidos.includes(cargo)) {
         next();
