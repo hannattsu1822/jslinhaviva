@@ -3259,13 +3259,13 @@ router.delete('/api/turmas/:id', autenticar, verificarPermissaoPorCargo, async (
 
 
 router.post('/api/diarias', autenticar, async (req, res) => {
-    const { data, processo, matricula } = req.body;
+    const { data, processo, matricula, qs, qd } = req.body;
 
     // Validações básicas
-    if (!data || !processo || !matricula) {
+    if (!data || !processo || !matricula || (qs === undefined && qd === undefined)) {
         return res.status(400).json({ 
             success: false,
-            message: 'Data, processo e matrícula são obrigatórios!' 
+            message: 'Data, processo, matrícula e pelo menos um tipo (QS/QD) são obrigatórios!' 
         });
     }
 
@@ -3275,7 +3275,7 @@ router.post('/api/diarias', autenticar, async (req, res) => {
 
         // 1. Verifica se o funcionário existe e obtém o nome
         const [funcionario] = await connection.query(
-            'SELECT nome FROM turmas WHERE matricula = ?',
+            'SELECT nome, cargo FROM turmas WHERE matricula = ?',
             [matricula]
         );
         
@@ -3304,10 +3304,10 @@ router.post('/api/diarias', autenticar, async (req, res) => {
             });
         }
         
-        // 3. Insere a diária (agora sem verificar o status do processo)
+        // 3. Insere a diária com QS e QD
         const [result] = await connection.query(
-            'INSERT INTO diarias (data, processo, matricula, nome) VALUES (?, ?, ?, ?)',
-            [data, processo, matricula, funcionario[0].nome]
+            'INSERT INTO diarias (data, processo, matricula, nome, cargo, qs, qd) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [data, processo, matricula, funcionario[0].nome, funcionario[0].cargo, qs || false, qd || false]
         );
         
         await connection.commit();
@@ -3330,21 +3330,9 @@ router.post('/api/diarias', autenticar, async (req, res) => {
     }
 });
 
-router.get('/api/turmas_disponiveis', autenticar, async (req, res) => {
-    try {
-        const [rows] = await promisePool.query(
-            'SELECT DISTINCT turma_encarregado FROM turmas WHERE turma_encarregado IS NOT NULL AND turma_encarregado != "" ORDER BY turma_encarregado'
-        );
-        res.status(200).json(rows.map(row => row.turma_encarregado));
-    } catch (err) {
-        console.error('Erro ao buscar turmas:', err);
-        res.status(500).json({ message: 'Erro ao buscar turmas!' });
-    }
-});
-
 router.get('/api/diarias', autenticar, async (req, res) => {
     try {
-        const { turma, dataInicial, dataFinal, processo } = req.query;
+        const { turma, dataInicial, dataFinal, processo, qs, qd, ordenar } = req.query;
         
         let query = `
             SELECT 
@@ -3353,6 +3341,9 @@ router.get('/api/diarias', autenticar, async (req, res) => {
                 d.processo,
                 d.matricula,
                 d.nome,
+                d.cargo,
+                d.qs,
+                d.qd,
                 t.turma_encarregado as turma
             FROM diarias d
             LEFT JOIN turmas t ON d.matricula = t.matricula
@@ -3381,8 +3372,21 @@ router.get('/api/diarias', autenticar, async (req, res) => {
             query += ' AND d.processo = ?';
             params.push(processo);
         }
+
+        if (qs === 'true') {
+            query += ' AND d.qs = 1';
+        }
         
-        query += ' ORDER BY d.data DESC';
+        if (qd === 'true') {
+            query += ' AND d.qd = 1';
+        }
+        
+        // Modifica a ordenação baseada no parâmetro
+        if (ordenar === 'data_asc') {
+            query += ' ORDER BY d.data ASC, d.nome ASC';  // Data mais antiga primeiro, depois por nome
+        } else {
+            query += ' ORDER BY d.data DESC, d.nome ASC';  // Mantém o padrão como fallback
+        }
         
         const [rows] = await promisePool.query(query, params);
         res.status(200).json(rows);
@@ -3394,6 +3398,7 @@ router.get('/api/diarias', autenticar, async (req, res) => {
         });
     }
 });
+
 router.delete('/api/diarias/:id', autenticar, async (req, res) => {
     const { id } = req.params;
     
@@ -3540,78 +3545,11 @@ router.get('/api/processos_por_responsavel', autenticar, async (req, res) => {
 });
 
 
-router.get('/api/processos_para_diarias', autenticar, async (req, res) => {
-    try {
-        const { turma, data } = req.query;
-        
-        if (!turma || !data) {
-            return res.status(400).json({ message: 'Turma e data são obrigatórios!' });
-        }
-
-        // 1. Buscar os membros da turma selecionada
-        const [membros] = await promisePool.query(
-            'SELECT matricula FROM turmas WHERE turma_encarregado = ?',
-            [turma]
-        );
-
-        if (membros.length === 0) {
-            return res.status(200).json([]);
-        }
-
-        // 2. Buscar processos onde:
-        // - O responsável está na turma selecionada
-        // - A data de conclusão é EXATAMENTE a data selecionada
-        // - O status é ativo ou concluído
-        const query = `
-            SELECT DISTINCT p.processo
-            FROM processos p
-            JOIN turmas t ON p.responsavel_matricula = t.matricula
-            WHERE t.turma_encarregado = ?
-            AND DATE(p.data_conclusao) = ?
-            AND p.status IN ('ativo', 'concluido')
-            ORDER BY p.processo
-        `;
-        
-        const [rows] = await promisePool.query(query, [turma, data]);
-        res.status(200).json(rows.map(row => row.processo));
-    } catch (err) {
-        console.error('Erro ao buscar processos para diárias:', err);
-        res.status(500).json({ 
-            message: 'Erro ao buscar processos!',
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
-    }
-});
-// Rota para página de diárias
-router.get('/diarias', autenticar, (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/diarias.html'));
-});
-
-router.get('/gestao-turmas', autenticar, (req, res) => {
-    // Verifica se o usuário tem permissão para acessar (opcional)
-    if (!['Técnico', 'Engenheiro', 'Supervisor', 'ADMIN','Encarregado'].includes(req.user.cargo)) {
-        return res.status(403).json({ error: 'Acesso negado' });
-    }
-    
-    res.sendFile(path.join(__dirname, '../public/gestao-turmas.html'));
-});
-
-
-
-// Adicione esta rota no arquivo routes.js
 router.post('/api/gerar_pdf_diarias', autenticar, async (req, res) => {
     try {
         const { diarias, filtros, usuario } = req.body;
 
-        // Verificação de segurança
-        if (!diarias || !Array.isArray(diarias)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Dados de diárias inválidos'
-            });
-        }
-
-        // HTML para o PDF com mais linhas por página
+        // HTML para o PDF
         const htmlContent = `
             <!DOCTYPE html>
             <html lang="pt-BR">
@@ -3619,112 +3557,69 @@ router.post('/api/gerar_pdf_diarias', autenticar, async (req, res) => {
                 <meta charset="UTF-8">
                 <title>Relatório de Diárias</title>
                 <style>
-                    body { 
-                        font-family: Arial, sans-serif; 
-                        margin: 0;
-                        padding: 0;
-                        font-size: 10px;
-                    }
-                    .page {
-                        page-break-after: always;
-                        padding: 15mm;
-                    }
-                    .page:last-child {
-                        page-break-after: auto;
-                    }
-                    h1 { 
-                        color: #2a5298; 
-                        text-align: center;
-                        font-size: 14px;
-                        margin-bottom: 10px;
-                    }
-                    .header-info { 
-                        margin-bottom: 10px; 
-                        text-align: center;
-                        font-size: 10px;
-                    }
-                    .filters { 
-                        background-color: #f5f5f5; 
-                        padding: 5px; 
-                        border-radius: 3px; 
-                        margin-bottom: 10px;
-                        font-size: 9px;
-                    }
-                    table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                        margin-top: 10px;
-                        font-size: 9px;
-                    }
-                    th { 
-                        background-color: #2a5298; 
-                        color: white; 
-                        padding: 3px; 
-                        text-align: left; 
-                    }
-                    td { 
-                        padding: 3px; 
-                        border-bottom: 1px solid #ddd; 
-                    }
-                    .footer { 
-                        margin-top: 20px;
-                        font-size: 9px; 
-                        text-align: center;
-                    }
-                    .assinatura {
-                        margin-top: 60px;
-                        border-top: 1px solid #000;
-                        width: 60%;
-                        margin-left: auto;
-                        margin-right: auto;
-                        padding-top: 5px;
-                        text-align: center;
-                    }
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 10px; }
+                    h1 { color: #2a5298; text-align: center; font-size: 16px; margin-bottom: 10px; }
+                    .header-info { margin-bottom: 10px; text-align: center; font-size: 10px; }
+                    .filters { background-color: #f5f5f5; padding: 5px; border-radius: 3px; margin-bottom: 10px; font-size: 9px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
+                    th { background-color: #2a5298; color: white; padding: 3px; text-align: left; }
+                    td { padding: 3px; border-bottom: 1px solid #ddd; }
+                    .group-header { background-color: #e6f0ff; font-weight: bold; }
+                    .footer { margin-top: 20px; font-size: 9px; text-align: center; }
+                    .assinatura { margin-top: 60px; border-top: 1px solid #000; width: 60%; margin-left: auto; margin-right: auto; padding-top: 5px; text-align: center; }
+                    .text-center { text-align: center; }
                 </style>
             </head>
             <body>
-                <div class="page">
-                    <h1>Relatório de Diárias</h1>
-                    
-                    <div class="header-info">
-                        <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>
-                    </div>
-                    
-                    <div class="filters">
-                        <h3>Filtros Aplicados</h3>
-                        <p><strong>Turma:</strong> ${filtros.turma}</p>
-                        <p><strong>Período:</strong> ${filtros.dataInicial || ''} ${filtros.dataFinal ? 'até ' + filtros.dataFinal : ''}</p>
-                        <p><strong>Processo:</strong> ${filtros.processo}</p>
-                    </div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Turma</th>
-                                <th>Processo</th>
-                                <th>Matrícula</th>
-                                <th>Nome</th>
+                <h1>Relatório de Diárias</h1>
+                
+                <div class="header-info">
+                    <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>
+                </div>
+                
+                <div class="filters">
+                    <h3>Filtros Aplicados</h3>
+                    <p><strong>Turma:</strong> ${filtros.turma}</p>
+                    <p><strong>Período:</strong> ${filtros.dataInicial || ''} ${filtros.dataFinal ? 'até ' + filtros.dataFinal : ''}</p>
+                    <p><strong>Processo:</strong> ${filtros.processo}</p>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Matrícula</th>
+                            <th>Nome</th>
+                            <th>Função</th>
+                            <th>Data</th>
+                            <th>QS</th>
+                            <th>QD</th>
+                            <th>Processo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(diarias).map(([matricula, dados]) => `
+                            <tr class="group-header">
+                                <td colspan="7">${matricula} - ${dados.nome} (${dados.cargo || 'N/A'})</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            ${diarias.map(diaria => `
+                            ${dados.diarias.map(diaria => `
                                 <tr>
+                                    <td>${matricula}</td>
+                                    <td>${dados.nome}</td>
+                                    <td>${dados.cargo || 'N/A'}</td>
                                     <td>${diaria.data_formatada || new Date(diaria.data).toLocaleDateString('pt-BR')}</td>
-                                    <td>${diaria.turma || 'N/A'}</td>
+                                    <td class="text-center">${diaria.qs ? 'X' : ''}</td>
+                                    <td class="text-center">${diaria.qd ? 'X' : ''}</td>
                                     <td>${diaria.processo}</td>
-                                    <td>${diaria.matricula}</td>
-                                    <td>${diaria.nome}</td>
                                 </tr>
                             `).join('')}
-                        </tbody>
-                    </table>
-                    
-                    <div class="footer">
-                        <p>Total de diárias: ${diarias.length}</p>
-                        <div class="assinatura">
-                            <p>Gerado por: ${usuario.nome} (${usuario.matricula})</p>
-                        </div>
+                        `).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="footer">
+                    <p>Total de diárias: ${Object.values(diarias).reduce((acc, curr) => acc + curr.diarias.length, 0)}</p>
+                    <div class="assinatura">
+                        <p>Gerado por: ${usuario.nome} (${usuario.matricula})</p>
                     </div>
                 </div>
             </body>
@@ -3763,5 +3658,14 @@ router.post('/api/gerar_pdf_diarias', autenticar, async (req, res) => {
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
+});
+
+
+router.get('/diarias', autenticar, verificarPermissaoPorCargo, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/diarias.html'));
+});
+
+router.get('/gestao-turmas', autenticar, verificarPermissaoPorCargo, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/gestao-turmas.html'));
 });
 module.exports = router;
