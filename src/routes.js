@@ -3665,7 +3665,13 @@ router.get('/diarias', autenticar, verificarPermissaoPorCargo, (req, res) => {
     res.sendFile(path.join(__dirname, '../public/diarias.html'));
 });
 
-router.get('/gestao-turmas', autenticar, verificarPermissaoPorCargo, (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/gestao-turmas.html'));
+router.get('/gestao-turmas', autenticar, (req, res, next) => {
+    const cargosPermitidos = ['ADMIN', 'Gerente', 'Encarregado', 'Inspetor']; // ← Defina seus cargos aqui
+    if (cargosPermitidos.includes(req.user.cargo)) {
+        res.sendFile(path.join(__dirname, '../public/gestao-turmas.html'));
+    } else {
+        res.status(403).json({ message: 'Acesso negado!' });
+    }
 });
+
 module.exports = router;
