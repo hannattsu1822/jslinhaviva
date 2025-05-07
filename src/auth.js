@@ -81,7 +81,7 @@ function verificarPermissaoPorCargo(req, res, next) {
 
     const rotasPermitidas = {
         Motorista: ['/frota', '/checklist_veiculos'],
-        Inspetor: ['/transformadores', '/upload_transformadores', '/formulario_transformadores'],
+        Inspetor: ['*'],
         Técnico: ['*'],
         Engenheiro: ['*'],
         Encarregado: ['*'],
