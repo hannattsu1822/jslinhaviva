@@ -2000,7 +2000,7 @@ router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), au
     try {
         await connection.beginTransaction();
         const { id } = req.params;
-        const { observacoes, matricula_responsavel } = req.body;
+        const { observacoes, matricula_responsavel, data_conclusao } = req.body;
 
         // Verifica se temos a matrícula do responsável
         if (!matricula_responsavel && !req.user?.matricula) {
@@ -2009,15 +2009,20 @@ router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), au
 
         const matricula = matricula_responsavel || req.user.matricula;
 
-        // 1. Atualiza o status do serviço
+        // ✅ Aqui está o trecho atualizado
         await connection.query(
             `UPDATE processos 
              SET status = 'concluido', 
-                 data_conclusao = NOW(),
+                 data_conclusao = ?,
                  observacoes_conclusao = ?,
                  responsavel_matricula = ?
              WHERE id = ?`,
-            [observacoes || null, matricula, id]
+            [
+                data_conclusao || new Date().toISOString().split('T')[0], // usa só a data
+                observacoes || null,
+                matricula,
+                id
+            ]
         );
 
         // 2. Processa os anexos se existirem
@@ -2064,7 +2069,6 @@ router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), au
 
         await connection.commit();
 
-        // Registra auditoria com a matrícula disponível
         await registrarAuditoria(
             matricula,
             'Conclusão de Serviço',
@@ -2080,7 +2084,6 @@ router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), au
         await connection.rollback();
         console.error('Erro ao concluir serviço:', erro);
 
-        // Limpa arquivos temporários
         req.files?.forEach(arquivo => {
             if (fs.existsSync(arquivo.path)) fs.unlinkSync(arquivo.path);
         });
