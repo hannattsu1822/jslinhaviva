@@ -3669,7 +3669,7 @@ router.get('/diarias', autenticar, verificarPermissaoPorCargo, (req, res) => {
 });
 
 router.get('/gestao-turmas', autenticar, (req, res, next) => {
-    const cargosPermitidos = ['ADMIN', 'Gerente', 'Encarregado', 'Inspetor', 'Engenheiro']; // ← Defina seus cargos aqui
+    const cargosPermitidos = ['ADMIN', 'Gerente', 'Encarregado', 'Inspetor', 'Engenheiro', 'Técnico']; // ← Defina seus cargos aqui
     if (cargosPermitidos.includes(req.user.cargo)) {
         res.sendFile(path.join(__dirname, '../public/gestao-turmas.html'));
     } else {
