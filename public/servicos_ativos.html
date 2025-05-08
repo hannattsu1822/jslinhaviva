@@ -361,21 +361,29 @@
 
         // Atualizar tabela com os dados
         function atualizarTabela() {
-            const tbody = document.getElementById('tabela-servicos');
-            tbody.innerHTML = '';
+    const tbody = document.getElementById('tabela-servicos');
+    tbody.innerHTML = '';
 
-            // Aplicar filtros
-            const filtroProcesso = document.getElementById('filtroProcesso').value.toLowerCase();
-            const filtroSubestacao = document.getElementById('filtroSubestacao').value;
-            const filtroEncarregado = document.getElementById('filtroEncarregado').value;
-            const filtroData = document.getElementById('filtroData').value;
+    // Aplicar lógica para restringir visualização ao encarregado 2443
+    if (user && user.matricula === "2443") {
+        servicosData = servicosData.filter(s => s.responsavel_matricula === "2443");
+    }
 
-            const servicosFiltrados = servicosData.filter(servico => {
-                return (servico.prioridade === 'EMERGENCIAL' || servico.processo.toLowerCase().includes(filtroProcesso)) &&
-                    (filtroSubestacao === '' || servico.subestacao === filtroSubestacao) &&
-                    (filtroEncarregado === '' || servico.responsavel_matricula === filtroEncarregado) &&
-                    (filtroData === '' || servico.data_prevista_execucao.includes(filtroData));
-            }).slice(0, 15); // Pegar apenas os 15 primeiros
+    // Aplicar filtros
+    const filtroProcesso = document.getElementById('filtroProcesso').value.toLowerCase();
+    const filtroSubestacao = document.getElementById('filtroSubestacao').value;
+    const filtroEncarregado = document.getElementById('filtroEncarregado').value;
+    const filtroData = document.getElementById('filtroData').value;
+
+    const servicosFiltrados = servicosData.filter(servico => {
+        return (servico.prioridade === 'EMERGENCIAL' || servico.processo.toLowerCase().includes(filtroProcesso)) &&
+            (filtroSubestacao === '' || servico.subestacao === filtroSubestacao) &&
+            (filtroEncarregado === '' || servico.responsavel_matricula === filtroEncarregado) &&
+            (filtroData === '' || servico.data_prevista_execucao.includes(filtroData));
+    }).slice(0, 15);
+
+    // ...continua com a renderização da tabela
+
 
             if (servicosFiltrados.length === 0) {
                 tbody.innerHTML = `
