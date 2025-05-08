@@ -365,8 +365,8 @@
     tbody.innerHTML = '';
 
     // Aplicar lógica para restringir visualização ao encarregado 2443
-    if (user && user.matricula === "2443") {
-        servicosData = servicosData.filter(s => s.responsavel_matricula === "2443");
+    if (user && user.matricula && !['Engenheiro', 'Técnico', 'ADMIN','Inspetor'].includes(user.cargo)) {
+        servicosData = servicosData.filter(s => s.responsavel_matricula === user.matricula);
     }
 
     // Aplicar filtros
