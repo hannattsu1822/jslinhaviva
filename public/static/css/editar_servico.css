@@ -1,0 +1,134 @@
+:root {
+    --cor-primaria: #2a5298;
+    --cor-secundaria: #1e3c72;
+    --cor-fundo: #f8fafc;
+    --cor-texto: #2d3748;
+    --cor-texto-secundario: #4a5568;
+    --cor-borda: #e2e8f0;
+    --cor-fundo-card: #ffffff;
+}
+
+/* Estilos base (herdados de detalhes_servico.css) */
+.detail-card {
+    border-radius: 10px;
+    border-left: 4px solid var(--cor-primaria);
+    transition: all 0.3s ease;
+}
+
+.detail-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.detail-card .card-header {
+    background-color: rgba(42, 82, 152, 0.05);
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    color: var(--cor-primaria);
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--cor-texto-secundario);
+}
+
+.form-control, .form-select {
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--cor-borda);
+    transition: all 0.3s;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 0.25rem rgba(42, 82, 152, 0.25);
+}
+
+/* Anexos */
+.attachment-card {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.attachment-card:hover {
+    border-color: var(--cor-primaria);
+    transform: translateY(-2px);
+}
+
+.attachment-thumbnail {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.attachment-thumbnail i {
+    font-size: 2.5rem;
+    color: var(--cor-primaria);
+}
+
+/* Botões */
+.btn {
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background-color: var(--cor-primaria);
+    border-color: var(--cor-primaria);
+}
+
+.btn-primary:hover {
+    background-color: var(--cor-secundaria);
+    border-color: var(--cor-secundaria);
+    transform: translateY(-2px);
+}
+
+.btn-outline-secondary:hover {
+    transform: translateY(-2px);
+}
+
+/* Status badge */
+.status-badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 500;
+}
+
+.bg-success {
+    background-color: #28a745 !important;
+}
+
+.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+/* Transições para campos condicionais */
+#hora-inicio-container,
+#hora-fim-container,
+#conclusao-container,
+#data-conclusao-container {
+    transition: all 0.3s ease;
+}
+
+/* Ajustes para responsividade */
+@media (max-width: 768px) {
+    .detail-card {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-control, .form-select {
+        padding: 0.5rem;
+    }
+}
