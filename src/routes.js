@@ -1892,10 +1892,6 @@ router.get('/detalhes_servico', autenticar, (req, res) => {
     res.sendFile(path.join(__dirname, '../public/detalhes_servico.html'));
 });
 
-// Página de edição de serviço
-router.get('/editar_servico', autenticar, (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/editar_servico.html'));
-});
 
 // routes.js - Adicione esta rota
 router.get('/servicos_atribuidos', autenticar, (req, res) => {
@@ -3676,5 +3672,228 @@ router.get('/gestao-turmas', autenticar, (req, res, next) => {
         res.status(403).json({ message: 'Acesso negado!' });
     }
 });
+
+
+
+// edições servicos
+
+// Rota para abrir a página de edição (sem verificação de cargo)
+router.get('/editar_servico', autenticar, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/editar_servico.html'));
+});
+
+// Rota para buscar dados do serviço (sem verificação de cargo)
+// Rota PUT para editar serviço (mantendo tudo existente e adicionando validação de maps opcional)
+router.put('/api/servicos/:id', upload.array('anexos', 5), async (req, res) => {
+    const { id } = req.params;
+    const connection = await promisePool.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        // 1. Validar dados de entrada
+        const { 
+            subestacao, 
+            alimentador, 
+            chave_montante, 
+            desligamento, 
+            hora_inicio, 
+            hora_fim, 
+            maps 
+        } = req.body;
+
+        if (!subestacao) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Subestação é obrigatória' 
+            });
+        }
+
+        if (desligamento === 'SIM' && (!hora_inicio || !hora_fim)) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Horários são obrigatórios para desligamentos' 
+            });
+        }
+
+        // Validação do maps (opcional)
+        if (maps && !/^(https?:\/\/)?(www\.)?(google\.[a-z]+\/maps\/|maps\.google\.[a-z]+\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(maps)) {
+            await connection.rollback();
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Por favor, insira um link válido do Google Maps' 
+            });
+        }
+
+        // 2. Atualizar os dados principais do serviço
+        await connection.query(
+            `UPDATE processos SET
+                subestacao = ?,
+                alimentador = ?,
+                chave_montante = ?,
+                desligamento = ?,
+                hora_inicio = ?,
+                hora_fim = ?,
+                maps = ?
+             WHERE id = ?`,
+            [
+                subestacao,
+                alimentador || null,
+                chave_montante || null,
+                desligamento,
+                desligamento === 'SIM' ? hora_inicio : null,
+                desligamento === 'SIM' ? hora_fim : null,
+                maps || null,
+                id
+            ]
+        );
+
+        // 3. Processar novos anexos se existirem
+        if (req.files && req.files.length > 0) {
+            // Obter o processo para criar a pasta
+            const [processo] = await connection.query(
+                'SELECT processo FROM processos WHERE id = ?', 
+                [id]
+            );
+            
+            const processoNome = processo[0].processo.replace(/\//g, '-');
+            const uploadDir = path.join(__dirname, '../upload_arquivos', processoNome);
+            
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
+            for (const file of req.files) {
+                const extensao = path.extname(file.originalname);
+                const novoNome = `anexo_${Date.now()}${extensao}`;
+                const novoPath = path.join(uploadDir, novoNome);
+
+                await fs.promises.rename(file.path, novoPath);
+
+                // CORREÇÃO APLICADA AQUI - 'imagem' substituído por 'imagem_conclusao'
+                await connection.query(
+                    `INSERT INTO processos_anexos (
+                        processo_id,
+                        nome_original,
+                        caminho_servidor,
+                        tamanho,
+                        tipo_anexo
+                    ) VALUES (?, ?, ?, ?, ?)`,
+                    [
+                        id,
+                        file.originalname,
+                        `/api/upload_arquivos/${processoNome}/${novoNome}`,
+                        file.size,
+                        ['jpg', 'jpeg', 'png'].includes(extensao.toLowerCase().substring(1)) 
+                            ? 'imagem_conclusao'  // Valor corrigido
+                            : 'documento'
+                    ]
+                );
+            }
+        }
+
+        await connection.commit();
+        
+        // Registrar auditoria
+        await registrarAuditoria(
+            req.user?.matricula || 'Sistema',
+            'Edição de Serviço',
+            `Serviço ${id} editado - Campos alterados: ${Object.keys(req.body).join(', ')}`
+        );
+
+        // Retornar sucesso com mensagem para o frontend
+        res.json({ 
+            success: true, 
+            message: 'Serviço atualizado com sucesso!',
+            redirect: '/servicos_ativos'
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro ao atualizar serviço:', error);
+        
+        if (req.files) {
+            req.files.forEach(file => {
+                if (fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            });
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro ao atualizar serviço',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        connection.release();
+    }
+});
+// Rota DELETE para remover anexo
+router.delete('/api/servicos/:servicoId/anexos/:anexoId', autenticar, async (req, res) => {
+    const { servicoId, anexoId } = req.params;
+    const connection = await promisePool.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        // 1. Verificar se o anexo pertence ao serviço
+        const [anexo] = await connection.query(
+            `SELECT caminho_servidor 
+             FROM processos_anexos 
+             WHERE id = ? AND processo_id = ?`,
+            [anexoId, servicoId]
+        );
+        
+        if (anexo.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Anexo não encontrado ou não pertence a este serviço'
+            });
+        }
+        
+        // 2. Excluir arquivo físico
+        const caminhoRelativo = anexo[0].caminho_servidor.replace('/api/upload_arquivos/', '');
+        const caminhoFisico = path.join(__dirname, '../upload_arquivos', caminhoRelativo);
+        
+        if (fs.existsSync(caminhoFisico)) {
+            fs.unlinkSync(caminhoFisico);
+        }
+        
+        // 3. Excluir registro do banco
+        await connection.query(
+            'DELETE FROM processos_anexos WHERE id = ?',
+            [anexoId]
+        );
+        
+        await connection.commit();
+        
+        // Registrar auditoria
+        await registrarAuditoria(
+            req.user.matricula,
+            'Remoção de Anexo',
+            `Anexo removido - Serviço: ${servicoId}, Anexo: ${anexoId}`
+        );
+        
+        res.json({ 
+            success: true, 
+            message: 'Anexo removido com sucesso' 
+        });
+        
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro ao remover anexo:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro ao remover anexo',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 
 module.exports = router;
