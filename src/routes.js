@@ -3331,7 +3331,7 @@ router.post('/api/diarias', autenticar, async (req, res) => {
 
 router.get('/api/diarias', autenticar, async (req, res) => {
     try {
-        const { turma, dataInicial, dataFinal, processo, qs, qd, ordenar } = req.query;
+        const { turma, dataInicial, dataFinal, processo, matricula, qs, qd, ordenar } = req.query;
         
         let query = `
             SELECT 
@@ -3354,6 +3354,11 @@ router.get('/api/diarias', autenticar, async (req, res) => {
         if (turma) {
             query += ' AND t.turma_encarregado = ?';
             params.push(turma);
+        }
+        
+        if (matricula) {
+            query += ' AND d.matricula = ?';
+            params.push(matricula);
         }
         
         if (dataInicial && dataFinal) {
@@ -3393,35 +3398,6 @@ router.get('/api/diarias', autenticar, async (req, res) => {
         console.error('Erro ao buscar diárias:', err);
         res.status(500).json({ 
             message: 'Erro ao buscar diárias!',
-            error: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
-    }
-});
-
-router.delete('/api/diarias/:id', autenticar, async (req, res) => {
-    const { id } = req.params;
-    
-    try {
-        const [result] = await promisePool.query(
-            'DELETE FROM diarias WHERE id = ?',
-            [id]
-        );
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Diária não encontrada!' });
-        }
-        
-        await registrarAuditoria(
-            req.user.matricula,
-            'Remoção de Diária',
-            `Diária removida - ID: ${id}`
-        );
-        
-        res.status(200).json({ message: 'Diária removida com sucesso!' });
-    } catch (err) {
-        console.error('Erro ao remover diária:', err);
-        res.status(500).json({ 
-            message: 'Erro ao remover diária!',
             error: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
     }
