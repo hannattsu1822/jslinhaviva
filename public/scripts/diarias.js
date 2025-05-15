@@ -154,13 +154,14 @@ function loadDiarias() {
     const dataInicial = document.getElementById('filtroDataInicial').value;
     const dataFinal = document.getElementById('filtroDataFinal').value;
     const processo = document.getElementById('filtroProcesso').value;
+    const matricula = document.getElementById('filtroMatricula').value;
     const qs = document.getElementById('qsCheckbox').checked;
     const qd = document.getElementById('qdCheckbox').checked;
     
     const warningElement = document.getElementById('filterWarning');
     const tableBody = document.getElementById('diariasTableBody');
     
-    if (!turma && !dataInicial && !dataFinal && !processo && !qs && !qd) {
+    if (!turma && !dataInicial && !dataFinal && !processo && !matricula && !qs && !qd) {
         warningElement.style.display = 'block';
         tableBody.innerHTML = `
             <tr>
@@ -184,6 +185,7 @@ function loadDiarias() {
     if (dataInicial) params.push(`dataInicial=${dataInicial}`);
     if (dataFinal) params.push(`dataFinal=${dataFinal}`);
     if (processo) params.push(`processo=${encodeURIComponent(processo)}`);
+    if (matricula) params.push(`matricula=${encodeURIComponent(matricula)}`);
     if (qs) params.push(`qs=${qs}`);
     if (qd) params.push(`qd=${qd}`);
     
@@ -596,6 +598,7 @@ function exportToPDF() {
     const dataInicial = document.getElementById('filtroDataInicial').value || '';
     const dataFinal = document.getElementById('filtroDataFinal').value || '';
     const processo = document.getElementById('filtroProcesso').value || 'Todos';
+    const matricula = document.getElementById('filtroMatricula').value || 'Todas';
 
     const diariasAgrupadas = {};
     currentDiarias.forEach(diaria => {
@@ -615,7 +618,8 @@ function exportToPDF() {
             turma,
             dataInicial,
             dataFinal,
-            processo
+            processo,
+            matricula
         },
         usuario: JSON.parse(localStorage.getItem('user')) || { nome: 'Usuário', matricula: 'N/A' }
     };
