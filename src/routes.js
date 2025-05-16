@@ -2787,6 +2787,7 @@ router.get('/api/transformadores_reformados', autenticar, async (req, res) => {
 });
 
 // Rota para buscar um transformador específico
+// Rota para buscar um transformador específico (substituir a existente)
 router.get('/api/transformadores_reformados/:id', autenticar, async (req, res) => {
     try {
         const { id } = req.params;
@@ -2801,17 +2802,33 @@ router.get('/api/transformadores_reformados/:id', autenticar, async (req, res) =
             WHERE tr.id = ?
         `, [id]);
 
-        if (rows.length > 0) {
-            res.json({
-                success: true,
-                data: rows[0]
-            });
-        } else {
-            res.status(404).json({
+        if (rows.length === 0) {
+            return res.status(404).json({
                 success: false,
                 message: 'Transformador não encontrado'
             });
         }
+
+        const transformador = rows[0];
+        
+        // Buscar testes se o transformador foi reprovado
+        if (transformador.status_avaliacao === 'reprovado') {
+            const [testes] = await promisePool.query(`
+                SELECT * FROM trafos_testes 
+                WHERE numero_serie = ?
+                ORDER BY data_teste DESC
+                LIMIT 1
+            `, [transformador.numero_serie]);
+            
+            if (testes.length > 0) {
+                transformador.testes = testes[0];
+            }
+        }
+
+        res.json({
+            success: true,
+            data: transformador
+        });
     } catch (err) {
         console.error('Erro ao buscar transformador:', err);
         res.status(500).json({
@@ -2820,6 +2837,7 @@ router.get('/api/transformadores_reformados/:id', autenticar, async (req, res) =
         });
     }
 });
+
 
 // Rota para atualizar a avaliação
 router.put('/api/transformadores_reformados/:id/avaliar', autenticar, async (req, res) => {
@@ -2894,7 +2912,197 @@ router.put('/api/transformadores_reformados/:id/avaliar', autenticar, async (req
     }
 });
 
+// Rota para criar registro de testes (adicionar no final do arquivo)
+router.post('/api/trafos_testes', autenticar, async (req, res) => {
+    try {
+        const {
+            numero_serie,
+            testes_realizados,
+            valor_h1,
+            valor_h2,
+            valor_h3,
+            motivo_reprovacao,
+            tecnico_responsavel
+        } = req.body;
 
+        // Validar campos obrigatórios
+        if (!numero_serie || !motivo_reprovacao || !tecnico_responsavel) {
+            return res.status(400).json({
+                success: false,
+                message: 'Número de série, motivo da reprovação e técnico responsável são obrigatórios'
+            });
+        }
+
+        // Inserir no banco de dados
+        const [result] = await promisePool.query(`
+            INSERT INTO trafos_testes (
+                numero_serie,
+                testes_realizados,
+                valor_h1,
+                valor_h2,
+                valor_h3,
+                motivo_reprovacao,
+                tecnico_responsavel
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [
+            numero_serie,
+            testes_realizados,
+            valor_h1,
+            valor_h2,
+            valor_h3,
+            motivo_reprovacao,
+            tecnico_responsavel
+        ]);
+
+        res.json({
+            success: true,
+            message: 'Testes salvos com sucesso',
+            id: result.insertId
+        });
+
+    } catch (err) {
+        console.error('Erro ao salvar testes:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao salvar testes',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+// Rota para buscar testes de um transformador (adicionar no final do arquivo)
+router.get('/api/trafos_testes/:numero_serie', autenticar, async (req, res) => {
+    try {
+        const { numero_serie } = req.params;
+
+        const [rows] = await promisePool.query(`
+            SELECT * FROM trafos_testes 
+            WHERE numero_serie = ?
+            ORDER BY data_teste DESC
+        `, [numero_serie]);
+
+        res.json({
+            success: true,
+            data: rows
+        });
+
+    } catch (err) {
+        console.error('Erro ao buscar testes:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao buscar testes',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+// Rota corrigida para criar registro de testes
+router.post('/api/transformadores_reformados/:id/testes', autenticar, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            valor_h1,
+            valor_h2,
+            valor_h3,
+            motivo_reprovacao,
+            observacoes
+        } = req.body;
+
+        // Primeiro verifique se o transformador existe e obtenha o número de série
+        const [trafo] = await promisePool.query(
+            'SELECT numero_serie FROM trafos_reformados WHERE id = ?', 
+            [id]
+        );
+
+        if (trafo.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Transformador não encontrado'
+            });
+        }
+
+        const numero_serie = trafo[0].numero_serie;
+        const user = req.user;
+
+        // Inserir no banco de dados com a estrutura correta
+        const [result] = await promisePool.query(`
+            INSERT INTO trafos_testes (
+                numero_serie,
+                valor_h1,
+                valor_h2,
+                valor_h3,
+                motivo_reprovacao,
+                observacoes,
+                tecnico_responsavel
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [
+            numero_serie,
+            valor_h1 || null,
+            valor_h2 || null,
+            valor_h3 || null,
+            motivo_reprovacao,
+            observacoes,
+            user.matricula
+        ]);
+
+        res.json({
+            success: true,
+            message: 'Testes salvos com sucesso',
+            id: result.insertId
+        });
+
+    } catch (err) {
+        console.error('Erro ao salvar testes:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao salvar testes',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+// Rota para buscar testes de um transformador
+router.get('/api/transformadores_reformados/:id/testes', autenticar, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Primeiro obtenha o número de série do transformador
+        const [trafo] = await promisePool.query(
+            'SELECT numero_serie FROM trafos_reformados WHERE id = ?', 
+            [id]
+        );
+
+        if (trafo.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Transformador não encontrado'
+            });
+        }
+
+        const numero_serie = trafo[0].numero_serie;
+
+        // Busque os testes pelo número de série
+        const [rows] = await promisePool.query(`
+            SELECT * FROM trafos_testes 
+            WHERE numero_serie = ?
+            ORDER BY data_teste DESC
+            LIMIT 1
+        `, [numero_serie]);
+
+        res.json({
+            success: true,
+            data: rows.length > 0 ? rows[0] : null
+        });
+
+    } catch (err) {
+        console.error('Erro ao buscar testes:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao buscar testes',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
 router.get('/api/tecnicos_responsaveis_trafos_reformados', autenticar, async (req, res) => {
     try {
         const [rows] = await promisePool.query(`
@@ -3398,6 +3606,35 @@ router.get('/api/diarias', autenticar, async (req, res) => {
         console.error('Erro ao buscar diárias:', err);
         res.status(500).json({ 
             message: 'Erro ao buscar diárias!',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+router.delete('/api/diarias/:id', autenticar, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const [result] = await promisePool.query(
+            'DELETE FROM diarias WHERE id = ?',
+            [id]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Diária não encontrada!' });
+        }
+        
+        await registrarAuditoria(
+            req.user.matricula,
+            'Remoção de Diária',
+            `Diária removida - ID: ${id}`
+        );
+        
+        res.status(200).json({ message: 'Diária removida com sucesso!' });
+    } catch (err) {
+        console.error('Erro ao remover diária:', err);
+        res.status(500).json({ 
+            message: 'Erro ao remover diária!',
             error: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
     }
