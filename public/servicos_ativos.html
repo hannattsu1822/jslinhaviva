@@ -176,8 +176,14 @@
                 <div class="modal-body">
                     <form id="formConcluirServico">
                         <div class="mb-3">
-                            <label for="dataConclusao" class="form-label">Data de Conclusão</label>
-                            <input type="date" class="form-control glass-input" id="dataConclusao" required>
+                            <label for="dataConclusao" class="form-label">Data e Hora de Conclusão</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control glass-input" id="dataConclusao" required>
+                                <input type="time" class="form-control glass-input" id="horaConclusao" required>
+                                <button type="button" class="btn glass-btn" onclick="usarDataAtual()">
+                                    <i class="fas fa-clock me-1"></i> Usar agora
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="observacoesConclusao" class="form-label">Observações</label>
