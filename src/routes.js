@@ -4166,4 +4166,89 @@ router.delete('/api/servicos/:servicoId/anexos/:anexoId', autenticar, async (req
 });
 
 
+router.get('/mapa', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/mapa.html'));
+});
+
+// Rota para obter dados do mapa (alterada para GET)
+router.get('/inspecao/mapa', async (req, res) => {
+    try {
+        // Simulação de dados - substitua por sua consulta real
+        const [postes] = await promisePool.query(
+            `SELECT id, codigo, tipo, latitude, longitude, descricao
+             FROM postes_linha_viva 
+             WHERE ativo = 1`
+        );
+
+        // Se não houver dados, retorne um array vazio
+        if (!postes || postes.length === 0) {
+            return res.json({
+                type: "FeatureCollection",
+                features: []
+            });
+        }
+
+        const geoJSONData = geoJSON.parse(postes, {
+            Point: ['latitude', 'longitude'],
+            include: ['id', 'codigo', 'tipo', 'descricao']
+        });
+
+        res.json(geoJSONData);
+    } catch (error) {
+        console.error('Erro ao gerar GeoJSON:', error);
+        res.status(500).json({ 
+            erro: 'Erro ao carregar dados do mapa',
+            detalhes: error.message 
+        });
+    }
+});
+
+
+router.get('/api/arquivos-data', (req, res) => {
+    const dataPath = path.join(__dirname, '../public/data');
+    
+    // Verifica se a pasta existe
+    if (!fs.existsSync(dataPath)) {
+        return res.status(404).json({ error: 'Pasta data não encontrada' });
+    }
+    
+    fs.readdir(dataPath, (err, files) => {
+        if (err) {
+            console.error('Erro ao ler diretório data:', err);
+            return res.status(500).json({ error: 'Erro ao listar arquivos' });
+        }
+        
+        // Filtra apenas arquivos KMZ e GeoJSON
+        const arquivosValidos = files.filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ['.kmz', '.geojson'].includes(ext);
+        });
+        
+        if (arquivosValidos.length === 0) {
+            return res.status(404).json({ error: 'Nenhum arquivo KMZ ou GeoJSON encontrado' });
+        }
+        
+        res.json(arquivosValidos);
+    });
+});
+
+// Rota para servir arquivos individuais
+router.get('/data/:filename', (req, res) => {
+    const filePath = path.join(__dirname, '../public/data', req.params.filename);
+    
+    // Verifica se o arquivo existe
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Arquivo não encontrado' });
+    }
+    
+    // Verifica a extensão do arquivo
+    const ext = path.extname(filePath).toLowerCase();
+    if (!['.kmz', '.geojson'].includes(ext)) {
+        return res.status(403).json({ error: 'Tipo de arquivo não permitido' });
+    }
+    
+    res.sendFile(filePath);
+});
+
+
 module.exports = router;
