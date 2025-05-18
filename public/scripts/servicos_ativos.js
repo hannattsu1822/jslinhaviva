@@ -23,6 +23,18 @@ function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
+// Função para preencher data/hora atual
+function usarDataAtual() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+
+    const localDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const localTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    document.getElementById('dataConclusao').value = localDate;
+    document.getElementById('horaConclusao').value = localTime;
+}
+
 // Carregar serviços ativos e filtros
 async function carregarDadosIniciais() {
     try {
@@ -287,9 +299,8 @@ async function excluirServico() {
 // Concluir serviço
 function concluirServico(id) {
     currentServicoId = id;
-    // Define a data atual como padrão, mas permite edição
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('dataConclusao').value = today;
+    // Define a data e hora atuais como padrão
+    usarDataAtual();
     document.getElementById('observacoesConclusao').value = '';
     document.getElementById('fotosConclusao').value = '';
     document.getElementById('fotoCamera').value = '';
@@ -306,15 +317,23 @@ async function finalizarServico() {
         btnConcluir.disabled = true;
         btnConcluir.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
-        const dataConclusao = document.getElementById('dataConclusao').value;
+        const dataInput = document.getElementById('dataConclusao').value;
+        const horaInput = document.getElementById('horaConclusao').value;
         const observacoes = document.getElementById('observacoesConclusao').value;
         const fotosInput = document.getElementById('fotosConclusao');
         const formData = new FormData();
 
-        formData.append('data_conclusao', dataConclusao);
+        // Validação básica no frontend
+        if (!dataInput || !horaInput) {
+            throw new Error('Preencha data e hora de conclusão');
+        }
+
+        // Combina data e hora
+        const dataCompleta = `${dataInput}T${horaInput}:00`;
+        formData.append('data_conclusao', dataCompleta);
         formData.append('observacoes', observacoes);
 
-        // Adiciona cada foto ao FormData
+        // Adiciona fotos
         if (fotosInput.files.length > 0) {
             for (let i = 0; i < fotosInput.files.length; i++) {
                 formData.append('fotos_conclusao', fotosInput.files[i]);
@@ -326,22 +345,37 @@ async function finalizarServico() {
             body: formData
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Erro ao concluir serviço');
+        // Verifica se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(text || 'Resposta inválida do servidor');
         }
 
-        // Limpar formulário e fechar modal
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Erro ao concluir serviço');
+        }
+
+        // Limpeza e feedback
         document.getElementById('formConcluirServico').reset();
         document.getElementById('previewContainer').innerHTML = '';
-
-        showToast('Serviço concluído com sucesso!', 'success');
+        
+        showToast(data.message || 'Serviço concluído com sucesso!', 'success');
         concluirModal.hide();
         await carregarServicosAtivos();
 
     } catch (error) {
         console.error('Erro ao concluir serviço:', error);
-        showToast('Erro ao concluir serviço: ' + error.message, 'danger');
+        
+        // Mostra o erro completo do servidor se disponível
+        let errorMessage = error.message;
+        if (errorMessage.startsWith('<!DOCTYPE')) {
+            errorMessage = 'Erro interno no servidor ao concluir serviço';
+        }
+        
+        showToast(errorMessage, 'danger');
     } finally {
         btnConcluir.disabled = false;
         btnConcluir.innerHTML = originalText;
