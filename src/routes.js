@@ -1993,56 +1993,86 @@ router.delete('/api/servicos/:id', autenticar, async (req, res) => {
 // Rota para concluir serviço com imagem
 router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), autenticar, async (req, res) => {
     const connection = await promisePool.getConnection();
+    let filePaths = [];
+    
     try {
         await connection.beginTransaction();
         const { id } = req.params;
-        const { observacoes, matricula_responsavel, data_conclusao } = req.body;
+        const { observacoes } = req.body;
+        const matricula = req.user?.matricula;
 
-        // Verifica se temos a matrícula do responsável
-        if (!matricula_responsavel && !req.user?.matricula) {
-            throw new Error('Matrícula do responsável não informada');
+        // Validate required fields
+        if (!matricula) {
+            return res.status(400).json({
+                success: false,
+                message: 'Matrícula do responsável não encontrada'
+            });
         }
 
-        const matricula = matricula_responsavel || req.user.matricula;
+        // Usa a data e hora local do servidor corretamente
+        let dataHoraConclusao;
+        try {
+            const parsedDate = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            dataHoraConclusao = `${parsedDate.getFullYear()}-${pad(parsedDate.getMonth() + 1)}-${pad(parsedDate.getDate())} ${pad(parsedDate.getHours())}:${pad(parsedDate.getMinutes())}:${pad(parsedDate.getSeconds())}`;
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                message: 'Erro ao formatar data/hora de conclusão'
+            });
+        }
 
-        // ✅ Aqui está o trecho atualizado
-        await connection.query(
+        // Verify service exists
+        const [servicoExistente] = await connection.query(
+            'SELECT id, processo FROM processos WHERE id = ?',
+            [id]
+        );
+
+        if (servicoExistente.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Serviço não encontrado'
+            });
+        }
+
+        // Update service
+        const [result] = await connection.query(
             `UPDATE processos 
-             SET status = 'concluido', 
+             SET status = 'concluido',
                  data_conclusao = ?,
                  observacoes_conclusao = ?,
                  responsavel_matricula = ?
              WHERE id = ?`,
-            [
-                data_conclusao || new Date().toISOString().split('T')[0], // usa só a data
-                observacoes || null,
-                matricula,
-                id
-            ]
+            [dataHoraConclusao, observacoes || null, matricula, id]
         );
 
-        // 2. Processa os anexos se existirem
-        if (req.files?.length > 0) {
-            const [processo] = await connection.query(
-                'SELECT processo FROM processos WHERE id = ?',
-                [id]
-            );
+        if (result.affectedRows === 0) {
+            throw new Error('Nenhum serviço foi atualizado');
+        }
 
-            const pastaProcesso = path.join(
-                __dirname,
+        // Process uploaded files
+        if (req.files && req.files.length > 0) {
+            const processoDir = path.join(
+                __dirname, 
                 '../upload_arquivos',
-                processo[0].processo.replace(/\//g, '-')
+                servicoExistente[0].processo.replace(/\//g, '-')
             );
 
-            if (!fs.existsSync(pastaProcesso)) {
-                fs.mkdirSync(pastaProcesso, { recursive: true });
+            if (!fs.existsSync(processoDir)) {
+                fs.mkdirSync(processoDir, { recursive: true });
             }
 
-            for (const arquivo of req.files) {
-                const novoNome = `conclusao_${Date.now()}${path.extname(arquivo.originalname)}`;
-                const caminhoCompleto = path.join(pastaProcesso, novoNome);
+            for (const file of req.files) {
+                const fileExt = path.extname(file.originalname).toLowerCase();
+                const newFilename = `conclusao_${Date.now()}${fileExt}`;
+                const newPath = path.join(processoDir, newFilename);
 
-                fs.renameSync(arquivo.path, caminhoCompleto);
+                await fs.promises.rename(file.path, newPath);
+                filePaths.push(newPath);
+
+                // Determine file type based on ENUM options
+                const isImage = ['jpg', 'jpeg', 'png'].includes(fileExt.substring(1));
+                const tipoAnexo = isImage ? 'foto_conclusao' : 'documento';
 
                 await connection.query(
                     `INSERT INTO processos_anexos (
@@ -2054,10 +2084,10 @@ router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), au
                     ) VALUES (?, ?, ?, ?, ?)`,
                     [
                         id,
-                        arquivo.originalname,
-                        `/api/upload_arquivos/${processo[0].processo.replace(/\//g, '-')}/${novoNome}`,
-                        getTipoAnexo(arquivo.originalname),
-                        arquivo.size
+                        file.originalname,
+                        `/api/upload_arquivos/${servicoExistente[0].processo.replace(/\//g, '-')}/${newFilename}`,
+                        tipoAnexo,
+                        file.size
                     ]
                 );
             }
@@ -2065,33 +2095,60 @@ router.post('/api/servicos/:id/concluir', upload.array('fotos_conclusao', 5), au
 
         await connection.commit();
 
+        // Audit log
         await registrarAuditoria(
             matricula,
             'Conclusão de Serviço',
-            `Serviço ${id} concluído`
+            `Serviço ${id} concluído em ${dataHoraConclusao}`
         );
 
-        res.json({
-            sucesso: true,
-            mensagem: 'Serviço concluído com sucesso'
+        res.status(200).json({
+            success: true,
+            message: 'Serviço concluído com sucesso',
+            data_conclusao: dataHoraConclusao,
+            fotos: req.files?.length || 0
         });
 
-    } catch (erro) {
+    } catch (error) {
         await connection.rollback();
-        console.error('Erro ao concluir serviço:', erro);
-
-        req.files?.forEach(arquivo => {
-            if (fs.existsSync(arquivo.path)) fs.unlinkSync(arquivo.path);
+        
+        // Cleanup files
+        filePaths.forEach(filePath => {
+            try {
+                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } catch (cleanupError) {
+                console.error('Erro ao limpar arquivo:', cleanupError);
+            }
         });
 
+        if (req.files) {
+            req.files.forEach(file => {
+                try {
+                    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                } catch (cleanupError) {
+                    console.error('Erro ao limpar arquivo temporário:', cleanupError);
+                }
+            });
+        }
+
+        console.error('Erro na conclusão do serviço:', error);
+        
+        const errorMessage = error.code === 'WARN_DATA_TRUNCATED' || error.code === 'ER_TRUNCATED_WRONG_VALUE'
+            ? 'Tipo de arquivo não suportado. Use apenas documentos ou imagens (JPG/PNG).'
+            : process.env.NODE_ENV === 'development' 
+                ? error.message 
+                : 'Erro interno ao concluir serviço';
+        
         res.status(500).json({
-            sucesso: false,
-            mensagem: erro.message || 'Falha ao concluir serviço'
+            success: false,
+            message: errorMessage,
+            ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
         });
     } finally {
         connection.release();
     }
 });
+
 router.get('/api/servicos_concluidos', autenticar, async (req, res) => {
     try {
         const { subestacao, responsavel, dataInicial, dataFinal } = req.query;
