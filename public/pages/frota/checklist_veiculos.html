@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checklist de Veículos</title>
+    <link rel="stylesheet" href="/static/css/checklist.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="checklist-container">
+      <div class="checklist-header">
+        <h1><i class="fas fa-clipboard-check"></i> Checklist de Veículos</h1>
+        <p class="subtitle">Preencha todos os campos obrigatórios</p>
+      </div>
+
+      <form id="checklistForm" class="checklist-form">
+        <div class="form-section">
+          <h2><i class="fas fa-user"></i> Dados do Motorista</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="matricula">Matrícula</label>
+              <select id="matricula" name="matricula" required>
+                <option value="">Selecione a matrícula</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-car"></i> Dados do Veículo</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="placa">Placa</label>
+              <select id="placa" name="placa" required>
+                <option value="">Selecione a placa</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="data_inspecao">Data</label>
+              <input
+                type="date"
+                id="data_inspecao"
+                name="data_inspecao"
+                required
+              />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="km_atual">KM Atual</label>
+              <input
+                type="number"
+                id="km_atual"
+                name="km_atual"
+                required
+                min="0"
+              />
+            </div>
+            <div class="form-group">
+              <label for="horimetro">Horímetro</label>
+              <input
+                type="number"
+                id="horimetro"
+                name="horimetro"
+                required
+                min="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-tasks"></i> Itens de Verificação</h2>
+          <div id="checklist-items" class="checklist-items">
+            <p class="text-center">Carregando itens...</p>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-comment"></i> Observações</h2>
+          <div class="form-group full-width">
+            <textarea
+              id="observacoes"
+              name="observacoes"
+              rows="4"
+              placeholder="Adicione observações relevantes..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Salvar Inspeção
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="window.location.href='/frota'"
+          >
+            <i class="fas fa-arrow-left"></i> Voltar
+          </button>
+        </div>
+      </form>
+
+      <div id="mensagem" class="mensagem"></div>
+    </div>
+
+    <script src="/scripts/frota/checklist_veiculos.js"></script>
+  </body>
+</html>
