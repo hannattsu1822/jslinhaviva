@@ -1,12 +1,12 @@
 const express = require("express");
 const path = require("path");
 const { chromium } = require("playwright");
-const { promisePool } = require("../init");
+const { promisePool } = require("../init"); // Ajuste o caminho se necessário
 const {
   autenticar,
   verificarPermissaoPorCargo,
   registrarAuditoria,
-} = require("../auth");
+} = require("../auth"); // Ajuste o caminho se necessário
 
 const router = express.Router();
 
@@ -159,11 +159,9 @@ router.put(
       }
 
       if (fieldsToUpdate.length === 0) {
-        return res
-          .status(400)
-          .json({
-            message: "Nenhum campo válido para atualização especificado.",
-          });
+        return res.status(400).json({
+          message: "Nenhum campo válido para atualização especificado.",
+        });
       }
 
       query += fieldsToUpdate.join(", ") + " WHERE id = ?";
@@ -230,14 +228,48 @@ router.delete(
 );
 
 router.get(
-  "/api/funcionarios_por_turma/:turma_encarregado",
+  "/api/funcionarios_por_turma/:turma_encarregado_id",
   autenticar,
   async (req, res) => {
     try {
-      const { turma_encarregado } = req.params;
+      const { turma_encarregado_id } = req.params;
+      const privilegedRoles = [
+        "Tecnico",
+        "Engenheiro",
+        "ADMIN",
+        "Admin",
+        "Inspetor",
+      ];
+      let userTurmaEncarregado = null;
+
+      if (req.user && req.user.matricula) {
+        const [userTurmaDetails] = await promisePool.query(
+          "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+          [req.user.matricula]
+        );
+        if (userTurmaDetails.length > 0) {
+          userTurmaEncarregado = userTurmaDetails[0].turma_encarregado;
+        }
+      }
+
+      const isUserPrivileged =
+        privilegedRoles.includes(req.user.cargo) ||
+        userTurmaEncarregado === "2193";
+
+      if (
+        req.user.cargo === "Encarregado" &&
+        !isUserPrivileged &&
+        req.user.matricula.toString() !== turma_encarregado_id.toString()
+      ) {
+        return res.status(403).json({
+          message:
+            "Acesso negado: Supervisores não privilegiados só podem visualizar funcionários de sua própria turma.",
+        });
+      }
+
       const [rows] = await promisePool.query(
         "SELECT matricula, nome, cargo FROM turmas WHERE turma_encarregado = ? ORDER BY nome",
-        [turma_encarregado]
+        [turma_encarregado_id]
       );
       res.status(200).json(rows);
     } catch (err) {
@@ -306,19 +338,67 @@ router.post("/api/diarias", autenticar, async (req, res) => {
   }
 
   try {
-    const [funcionarios] = await promisePool.query(
-      "SELECT nome, cargo FROM turmas WHERE matricula = ? LIMIT 1",
+    const [targetFuncionarios] = await promisePool.query(
+      "SELECT nome, cargo, turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
       [matricula]
     );
 
-    if (funcionarios.length === 0) {
+    if (targetFuncionarios.length === 0) {
       return res.status(404).json({
-        message: `Funcionário com matrícula ${matricula} não encontrado para buscar nome e cargo.`,
+        message: `Funcionário com matrícula ${matricula} não encontrado na tabela de turmas.`,
+      });
+    }
+    const targetFuncionario = targetFuncionarios[0];
+
+    const privilegedRoles = [
+      "Tecnico",
+      "Engenheiro",
+      "ADMIN",
+      "Admin",
+      "Inspetor",
+    ];
+    let userTurmaEncarregadoOrigin = null;
+    if (req.user && req.user.matricula) {
+      const [userTurmaDetails] = await promisePool.query(
+        "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+        [req.user.matricula]
+      );
+      if (userTurmaDetails.length > 0) {
+        userTurmaEncarregadoOrigin = userTurmaDetails[0].turma_encarregado;
+      }
+    }
+    const isUserPrivileged =
+      privilegedRoles.includes(req.user.cargo) ||
+      userTurmaEncarregadoOrigin === "2193";
+
+    if (
+      req.user.cargo === "Encarregado" &&
+      !isUserPrivileged &&
+      req.user.matricula.toString() !==
+        targetFuncionario.turma_encarregado.toString()
+    ) {
+      return res.status(403).json({
+        message:
+          "Acesso negado: Supervisores não privilegiados só podem adicionar diárias para membros de sua própria turma.",
       });
     }
 
-    const nomeFuncionario = funcionarios[0].nome;
-    const cargoFuncionario = funcionarios[0].cargo;
+    const [existingDiarias] = await promisePool.query(
+      "SELECT id FROM diarias WHERE matricula = ? AND data = ? LIMIT 1",
+      [matricula, data]
+    );
+
+    if (existingDiarias.length > 0) {
+      const dataFormatada = new Date(data).toLocaleDateString("pt-BR", {
+        timeZone: "UTC",
+      });
+      return res.status(409).json({
+        message: `O funcionário ${targetFuncionario.nome} (matrícula: ${matricula}) já possui uma diária lançada para a data ${dataFormatada}. Não é permitido mais de uma diária por dia para o mesmo funcionário.`,
+      });
+    }
+
+    const nomeFuncionario = targetFuncionario.nome;
+    const cargoFuncionario = targetFuncionario.cargo;
 
     const [result] = await promisePool.query(
       "INSERT INTO diarias (data, processo, matricula, nome, cargo, qs, qd) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -365,54 +445,90 @@ router.post("/api/diarias", autenticar, async (req, res) => {
 router.get("/api/diarias", autenticar, async (req, res) => {
   try {
     let query =
-      "SELECT id, matricula, nome, cargo, data, processo, qs, qd FROM diarias WHERE 1=1";
+      "SELECT d.id, d.matricula, d.nome, d.cargo, d.data, d.processo, d.qs, d.qd FROM diarias d";
     const params = [];
+    const whereClauses = [];
+    let joinedTurmas = false;
 
-    if (req.query.turma) {
-      query +=
-        " AND matricula IN (SELECT matricula FROM turmas WHERE turma_encarregado = ?)";
+    const privilegedRoles = [
+      "Tecnico",
+      "Engenheiro",
+      "ADMIN",
+      "Admin",
+      "Inspetor",
+    ];
+    let userTurmaEncarregadoOrigin = null;
+    if (req.user && req.user.matricula) {
+      const [userTurmaDetails] = await promisePool.query(
+        "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+        [req.user.matricula]
+      );
+      if (userTurmaDetails.length > 0) {
+        userTurmaEncarregadoOrigin = userTurmaDetails[0].turma_encarregado;
+      }
+    }
+    const isUserPrivileged =
+      privilegedRoles.includes(req.user.cargo) ||
+      userTurmaEncarregadoOrigin === "2193";
+
+    if (req.user.cargo === "Encarregado" && !isUserPrivileged) {
+      if (!joinedTurmas) {
+        query += " JOIN turmas t ON d.matricula = t.matricula";
+        joinedTurmas = true;
+      }
+      whereClauses.push("t.turma_encarregado = ?");
+      params.push(req.user.matricula.toString());
+    } else if (req.query.turma) {
+      if (!joinedTurmas) {
+        query += " JOIN turmas t ON d.matricula = t.matricula";
+        joinedTurmas = true;
+      }
+      whereClauses.push("t.turma_encarregado = ?");
       params.push(req.query.turma);
     }
+
     if (req.query.matricula) {
-      query += " AND matricula LIKE ?";
+      whereClauses.push("d.matricula LIKE ?");
       params.push(`%${req.query.matricula}%`);
     }
     if (req.query.dataInicial) {
-      query += " AND data >= ?";
+      whereClauses.push("d.data >= ?");
       params.push(req.query.dataInicial);
     }
     if (req.query.dataFinal) {
-      query += " AND data <= ?";
+      whereClauses.push("d.data <= ?");
       params.push(req.query.dataFinal);
     }
     if (req.query.processo) {
-      query += " AND processo LIKE ?";
+      whereClauses.push("d.processo LIKE ?");
       params.push(`%${req.query.processo}%`);
     }
     if (req.query.qs === "true") {
-      query += " AND qs = 1";
+      whereClauses.push("d.qs = 1");
     }
     if (req.query.qd === "true") {
-      query += " AND qd = 1";
+      whereClauses.push("d.qd = 1");
+    }
+
+    if (whereClauses.length > 0) {
+      query += " WHERE " + whereClauses.join(" AND ");
+    } else {
+      query += " WHERE 1=1";
     }
 
     if (req.query.ordenar === "data_asc") {
-      query += " ORDER BY data ASC, matricula ASC";
-    } else if (req.query.ordenar === "data_desc") {
-      query += " ORDER BY data DESC, matricula ASC";
+      query += " ORDER BY d.matricula ASC, d.data ASC";
     } else {
-      query += " ORDER BY data DESC, matricula ASC";
+      query += " ORDER BY d.matricula ASC, d.data DESC";
     }
 
     const [rows] = await promisePool.query(query, params);
-
     const diariassFormatadas = rows.map((d) => ({
       ...d,
       data_formatada: new Date(d.data).toLocaleDateString("pt-BR", {
         timeZone: "UTC",
       }),
     }));
-
     res.status(200).json(diariassFormatadas);
   } catch (err) {
     console.error("Erro ao buscar diárias:", err);
@@ -483,7 +599,6 @@ router.delete("/api/diarias/:id", autenticar, async (req, res) => {
 router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
   try {
     const { diarias, filtros, usuario } = req.body;
-
     const htmlContent = `
             <!DOCTYPE html>
             <html lang="pt-BR">
@@ -506,11 +621,9 @@ router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
             </head>
             <body>
                 <h1>Relatório de Diárias</h1>
-                
                 <div class="header-info">
                     <p>Gerado em: ${new Date().toLocaleDateString("pt-BR")}</p>
                 </div>
-                
                 <div class="filters">
                     <h3>Filtros Aplicados</h3>
                     <p><strong>Turma:</strong> ${filtros.turma || "N/A"}</p>
@@ -520,8 +633,12 @@ router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
                     <p><strong>Processo:</strong> ${
                       filtros.processo || "N/A"
                     }</p>
+                    <p><strong>Matrícula:</strong> ${
+                      filtros.matricula || "N/A"
+                    }</p>
+                    <p><strong>QS:</strong> ${filtros.qs ? "Sim" : "Não"}</p>
+                    <p><strong>QD:</strong> ${filtros.qd ? "Sim" : "Não"}</p>
                 </div>
-                
                 <table>
                     <thead>
                         <tr>
@@ -538,42 +655,42 @@ router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
                         ${Object.entries(diarias)
                           .map(
                             ([matricula, dados]) => `
-                            <tr class="group-header">
-                                <td colspan="7">${matricula} - ${dados.nome} (${
-                              dados.cargo || "N/A"
-                            })</td>
-                            </tr>
-                            ${dados.diarias
-                              .map(
-                                (diaria) => `
-                                <tr>
-                                    <td>${matricula}</td>
-                                    <td>${dados.nome}</td>
-                                    <td>${dados.cargo || "N/A"}</td>
-                                    <td>${
-                                      diaria.data_formatada ||
-                                      new Date(diaria.data).toLocaleDateString(
-                                        "pt-BR",
-                                        { timeZone: "UTC" }
-                                      )
-                                    }</td>
-                                    <td class="text-center">${
-                                      diaria.qs ? "X" : ""
-                                    }</td>
-                                    <td class="text-center">${
-                                      diaria.qd ? "X" : ""
-                                    }</td>
-                                    <td>${diaria.processo}</td>
+                                <tr class="group-header">
+                                    <td colspan="7">${matricula} - ${
+                              dados.nome
+                            } (${dados.cargo || "N/A"})</td>
                                 </tr>
+                                ${dados.diarias
+                                  .map(
+                                    (diaria) => `
+                                    <tr>
+                                        <td>${matricula}</td>
+                                        <td>${dados.nome}</td>
+                                        <td>${dados.cargo || "N/A"}</td>
+                                        <td>${
+                                          diaria.data_formatada ||
+                                          new Date(
+                                            diaria.data
+                                          ).toLocaleDateString("pt-BR", {
+                                            timeZone: "UTC",
+                                          })
+                                        }</td>
+                                        <td class="text-center">${
+                                          diaria.qs ? "X" : ""
+                                        }</td>
+                                        <td class="text-center">${
+                                          diaria.qd ? "X" : ""
+                                        }</td>
+                                        <td>${diaria.processo}</td>
+                                    </tr>
+                                `
+                                  )
+                                  .join("")}
                             `
-                              )
-                              .join("")}
-                        `
                           )
                           .join("")}
                     </tbody>
                 </table>
-                
                 <div class="footer">
                     <p>Total de diárias: ${Object.values(diarias).reduce(
                       (acc, curr) => acc + curr.diarias.length,
@@ -598,12 +715,7 @@ router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: {
-        top: "10mm",
-        right: "10mm",
-        bottom: "10mm",
-        left: "10mm",
-      },
+      margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
     });
     await browser.close();
 
@@ -620,6 +732,30 @@ router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
       message: "Erro ao gerar PDF",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
+  }
+});
+
+router.get("/api/user-team-details", autenticar, async (req, res) => {
+  try {
+    if (!req.user || !req.user.matricula) {
+      return res.status(400).json({
+        message: "Matrícula do usuário não encontrada na requisição.",
+      });
+    }
+    const [userTurmaEntry] = await promisePool.query(
+      "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+      [req.user.matricula]
+    );
+    if (userTurmaEntry.length > 0) {
+      res.json({ turma_encarregado: userTurmaEntry[0].turma_encarregado });
+    } else {
+      res.json({ turma_encarregado: null });
+    }
+  } catch (error) {
+    console.error("Erro ao buscar detalhes da turma do usuário:", error);
+    res
+      .status(500)
+      .json({ message: "Erro interno ao processar a solicitação." });
   }
 });
 
