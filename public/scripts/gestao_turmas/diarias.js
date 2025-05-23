@@ -4,6 +4,7 @@ let currentDiarias = [];
 let diariaFetchController = null;
 let listenersInitialized = false;
 let user = null;
+let currentUserIsPrivileged = false;
 
 function showAlert(message, type = "success", duration = 3000) {
   const toastLiveEl = document.getElementById("liveToast");
@@ -162,13 +163,17 @@ function loadDiarias() {
 
   if (!tableBody || !warningElement) return;
 
-  const turma = turmaEl ? turmaEl.value : "";
+  let turma = turmaEl ? turmaEl.value : "";
   const dataInicial = dataInicialEl ? dataInicialEl.value : "";
   const dataFinal = dataFinalEl ? dataFinalEl.value : "";
   const processo = processoEl ? processoEl.value : "";
   const matricula = matriculaEl ? matriculaEl.value : "";
   const qs = qsCheckbox ? qsCheckbox.checked : false;
   const qd = qdCheckbox ? qdCheckbox.checked : false;
+
+  if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
+    turma = user.matricula;
+  }
 
   if (
     !turma &&
@@ -239,24 +244,33 @@ function renderDiariasTable(diarias) {
   tableBody.innerHTML = "";
 
   diarias.sort((a, b) => {
+    const matriculaComp = (a.matricula || "").localeCompare(b.matricula || "");
+    if (matriculaComp !== 0) {
+      return matriculaComp;
+    }
     const dateA = new Date(a.data);
     const dateB = new Date(b.data);
-    if (dateA < dateB) return -1;
-    if (dateA > dateB) return 1;
-    return (a.matricula || "").localeCompare(b.matricula || "");
+    return dateA - dateB;
   });
 
   let currentMatricula = null;
   diarias.forEach((diaria) => {
     if (currentMatricula !== diaria.matricula) {
-      if (currentMatricula !== null) {
-        const dividerRow = document.createElement("tr");
-        dividerRow.innerHTML =
-          '<td colspan="8" style="background-color: #f0f0f0; height: 3px; padding:0;"></td>';
-        tableBody.appendChild(dividerRow);
-      }
       currentMatricula = diaria.matricula;
+      const groupHeaderRow = document.createElement("tr");
+      groupHeaderRow.className = "diaria-group-header";
+      groupHeaderRow.style.backgroundColor = "var(--light-blue-diarias)";
+      groupHeaderRow.style.color = "var(--primary-blue-diarias)";
+      groupHeaderRow.style.fontWeight = "bold";
+      groupHeaderRow.innerHTML = `
+        <td colspan="3">Funcionário: ${diaria.nome || "N/A"} (${
+        diaria.matricula || "N/A"
+      }) - Cargo: ${diaria.cargo || "N/A"}</td>
+        <td colspan="5"></td>
+      `;
+      tableBody.appendChild(groupHeaderRow);
     }
+
     const row = document.createElement("tr");
     const dataFormatada =
       diaria.data_formatada ||
@@ -391,13 +405,19 @@ async function addDiaria() {
         results
           .filter((r) => r.error)
           .forEach((err) =>
-            console.error("Falha ao adicionar diária:", err.message)
+            console.error(
+              `Falha ao adicionar diária (Status: ${err.status}): ${err.message}`
+            )
           );
       }
 
       showAlert(
         message || "Operação finalizada.",
-        successCount > 0 ? "success" : errorCount > 0 ? "danger" : "info"
+        successCount > 0 && errorCount === 0
+          ? "success"
+          : errorCount > 0 && successCount === 0
+          ? "danger"
+          : "warning"
       );
 
       if (successCount > 0) {
@@ -497,24 +517,50 @@ window.openAddModal = function () {
   const funcionariosContainer = document.getElementById(
     "funcionariosCheckboxContainer"
   );
-  if (funcionariosContainer) {
-    funcionariosContainer.innerHTML =
-      '<small class="text-muted">Selecione uma turma para listar os funcionários.</small>';
+  const turmaSelect = document.getElementById("turmaSelect");
+  const diariaDataInput = document.getElementById("diariaData");
+
+  if (diariaDataInput)
+    diariaDataInput.value = new Date().toISOString().split("T")[0];
+
+  if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
+    if (turmaSelect) {
+      turmaSelect.value = user.matricula;
+      turmaSelect.disabled = true;
+      if (funcionariosContainer) {
+        loadFuncionariosPorTurma(user.matricula, funcionariosContainer);
+      }
+    }
+  } else {
+    if (turmaSelect) {
+      turmaSelect.disabled = false;
+      turmaSelect.value = "";
+    }
+    if (funcionariosContainer) {
+      funcionariosContainer.innerHTML =
+        '<small class="text-muted">Selecione uma turma para listar os funcionários.</small>';
+    }
+  }
+
+  if (
+    turmaSelect &&
+    turmaSelect.options.length <= 1 &&
+    !(user && user.cargo === "Encarregado" && !currentUserIsPrivileged)
+  ) {
+    loadTurmasDisponiveis();
+  } else if (
+    turmaSelect &&
+    turmaSelect.options.length > 0 &&
+    user &&
+    user.cargo === "Encarregado" &&
+    !currentUserIsPrivileged &&
+    turmaSelect.value !== user.matricula.toString()
+  ) {
+    loadTurmasDisponiveis();
   }
 
   const procOpt = document.getElementById("processosOptions");
   if (procOpt) procOpt.innerHTML = "";
-
-  const diariaDataInput = document.getElementById("diariaData");
-  if (diariaDataInput)
-    diariaDataInput.value = new Date().toISOString().split("T")[0];
-
-  const turmaSelect = document.getElementById("turmaSelect");
-  if (turmaSelect && turmaSelect.options.length <= 1) {
-    loadTurmasDisponiveis();
-  } else if (turmaSelect) {
-    turmaSelect.value = ""; // Reseta a seleção da turma
-  }
 
   const bsModal = bootstrap.Modal.getOrCreateInstance(modalElement);
   bsModal.show();
@@ -530,28 +576,66 @@ async function loadTurmasDisponiveis() {
       },
     });
     if (!response.ok) throw new Error("Erro ao carregar turmas");
-    const turmas = await response.json();
-    const turmasUnicas = [
-      ...new Set(turmas.map((t) => t.turma_encarregado)),
+    const turmasData = await response.json();
+    let turmasUnicas = [
+      ...new Set(turmasData.map((t) => t.turma_encarregado)),
     ].filter(Boolean);
 
     const selectTurmaModal = document.getElementById("turmaSelect");
     const filtroTurmaSelect = document.getElementById("filtroTurma");
 
-    if (selectTurmaModal)
-      selectTurmaModal.innerHTML =
-        '<option value="">Selecione a Turma...</option>';
-    if (filtroTurmaSelect)
-      filtroTurmaSelect.innerHTML = '<option value="">Todas</option>';
+    if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
+      const encarregadoTurmaIdentificador = user.matricula.toString();
 
-    turmasUnicas.forEach((turma) => {
-      const option = document.createElement("option");
-      option.value = turma;
-      option.textContent = turma;
-      if (selectTurmaModal)
-        selectTurmaModal.appendChild(option.cloneNode(true));
-      if (filtroTurmaSelect) filtroTurmaSelect.appendChild(option);
-    });
+      if (filtroTurmaSelect) {
+        filtroTurmaSelect.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = encarregadoTurmaIdentificador;
+        option.textContent = user.nome;
+        filtroTurmaSelect.appendChild(option);
+        filtroTurmaSelect.value = encarregadoTurmaIdentificador;
+        filtroTurmaSelect.disabled = true;
+      }
+
+      if (selectTurmaModal) {
+        selectTurmaModal.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = encarregadoTurmaIdentificador;
+        option.textContent = user.nome;
+        selectTurmaModal.appendChild(option);
+        selectTurmaModal.value = encarregadoTurmaIdentificador;
+        selectTurmaModal.disabled = true;
+        const funcionariosContainer = document.getElementById(
+          "funcionariosCheckboxContainer"
+        );
+        if (funcionariosContainer) {
+          loadFuncionariosPorTurma(
+            encarregadoTurmaIdentificador,
+            funcionariosContainer
+          );
+        }
+      }
+    } else {
+      if (selectTurmaModal) {
+        selectTurmaModal.innerHTML =
+          '<option value="">Selecione a Turma...</option>';
+        selectTurmaModal.disabled = false;
+      }
+      if (filtroTurmaSelect) {
+        filtroTurmaSelect.innerHTML = '<option value="">Todas</option>';
+        filtroTurmaSelect.disabled = false;
+      }
+
+      turmasUnicas.forEach((turma) => {
+        const option = document.createElement("option");
+        option.value = turma;
+        option.textContent = turma;
+        if (selectTurmaModal)
+          selectTurmaModal.appendChild(option.cloneNode(true));
+        if (filtroTurmaSelect)
+          filtroTurmaSelect.appendChild(option.cloneNode(true));
+      });
+    }
   } catch (error) {
     console.error("Erro ao carregar turmas:", error);
     showAlert("Erro ao carregar turmas: " + error.message, "danger");
@@ -593,8 +677,44 @@ window.navigateTo = async function (pageNameOrUrl) {
   }
 };
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
   user = JSON.parse(localStorage.getItem("user"));
+  let userTurmaEncarregado = null;
+
+  if (user && user.matricula) {
+    try {
+      const response = await fetch(`/api/user-team-details`);
+      if (response.ok) {
+        const details = await response.json();
+        userTurmaEncarregado = details.turma_encarregado
+          ? details.turma_encarregado.toString()
+          : null;
+      } else {
+        console.error(
+          "Falha ao buscar detalhes da turma do usuário.",
+          response.statusText
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao buscar detalhes da turma do usuário:", error);
+    }
+  }
+
+  if (user) {
+    const privilegedRoles = [
+      "Tecnico",
+      "Engenheiro",
+      "ADMIN",
+      "Admin",
+      "Inspetor",
+    ];
+    if (
+      privilegedRoles.includes(user.cargo) ||
+      userTurmaEncarregado === "2193"
+    ) {
+      currentUserIsPrivileged = true;
+    }
+  }
 
   if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
     const admEl = document.getElementById("access-denied-modal");
@@ -609,7 +729,7 @@ document.addEventListener("DOMContentLoaded", function () {
     listenersInitialized = true;
   }
 
-  loadTurmasDisponiveis();
+  await loadTurmasDisponiveis();
   loadProcessosNoFiltro();
 
   const today = new Date().toISOString().split("T")[0];
@@ -630,6 +750,13 @@ document.addEventListener("DOMContentLoaded", function () {
             </td>
         </tr>
     `;
+  }
+
+  if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
+    const filtroTurmaEl = document.getElementById("filtroTurma");
+    if (filtroTurmaEl && filtroTurmaEl.value === user.matricula.toString()) {
+      loadDiarias();
+    }
   }
 
   const tooltipTriggerList = Array.from(
