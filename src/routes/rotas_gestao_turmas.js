@@ -1,12 +1,12 @@
 const express = require("express");
 const path = require("path");
 const { chromium } = require("playwright");
-const { promisePool } = require("../init"); // Ajuste o caminho se necessário
+const { promisePool } = require("../init");
 const {
   autenticar,
   verificarPermissaoPorCargo,
   registrarAuditoria,
-} = require("../auth"); // Ajuste o caminho se necessário
+} = require("../auth");
 
 const router = express.Router();
 
@@ -254,12 +254,14 @@ router.get(
 
       const isUserPrivileged =
         privilegedRoles.includes(req.user.cargo) ||
-        userTurmaEncarregado === "2193";
+        (userTurmaEncarregado && userTurmaEncarregado.toString() === "2193");
 
       if (
         req.user.cargo === "Encarregado" &&
         !isUserPrivileged &&
-        req.user.matricula.toString() !== turma_encarregado_id.toString()
+        (userTurmaEncarregado
+          ? userTurmaEncarregado.toString()
+          : req.user.matricula.toString()) !== turma_encarregado_id.toString()
       ) {
         return res.status(403).json({
           message:
@@ -299,7 +301,7 @@ router.get(
         `SELECT DISTINCT processo
        FROM diarias
        WHERE matricula = ?
-         AND processo IS NOT NULL AND processo != '' 
+         AND processo IS NOT NULL AND processo != ''
        ORDER BY data DESC
        LIMIT 5`,
         [matricula]
@@ -317,7 +319,8 @@ router.get(
 
 router.post("/api/diarias", autenticar, async (req, res) => {
   const { data, processo, matricula, qs, qd } = req.body;
-  const usuarioAuditoria = req.user.matricula;
+  const loggedInUserMatricula = req.user.matricula;
+  const loggedInUserCargo = req.user.cargo;
 
   if (
     !data ||
@@ -325,30 +328,33 @@ router.post("/api/diarias", autenticar, async (req, res) => {
     !matricula ||
     (qs === undefined && qd === undefined)
   ) {
-    return res.status(400).json({
-      message:
-        "Campos obrigatórios não fornecidos: data, processo, matrícula e tipo de diária (QS/QD).",
-    });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Campos obrigatórios não fornecidos: data, processo, matrícula e tipo de diária (QS/QD).",
+      });
   }
-
   if (qs === false && qd === false) {
-    return res.status(400).json({
-      message: "Pelo menos um tipo de diária (QS ou QD) deve ser selecionado.",
-    });
+    return res
+      .status(400)
+      .json({
+        message:
+          "Pelo menos um tipo de diária (QS ou QD) deve ser selecionado.",
+      });
   }
 
   try {
-    const [targetFuncionarios] = await promisePool.query(
-      "SELECT nome, cargo, turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
-      [matricula]
-    );
-
-    if (targetFuncionarios.length === 0) {
-      return res.status(404).json({
-        message: `Funcionário com matrícula ${matricula} não encontrado na tabela de turmas.`,
-      });
+    let loggedInUserTeamId = null;
+    if (loggedInUserMatricula) {
+      const [userTurmaDetails] = await promisePool.query(
+        "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+        [loggedInUserMatricula]
+      );
+      if (userTurmaDetails.length > 0) {
+        loggedInUserTeamId = userTurmaDetails[0].turma_encarregado;
+      }
     }
-    const targetFuncionario = targetFuncionarios[0];
 
     const privilegedRoles = [
       "Tecnico",
@@ -357,30 +363,53 @@ router.post("/api/diarias", autenticar, async (req, res) => {
       "Admin",
       "Inspetor",
     ];
-    let userTurmaEncarregadoOrigin = null;
-    if (req.user && req.user.matricula) {
-      const [userTurmaDetails] = await promisePool.query(
-        "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
-        [req.user.matricula]
-      );
-      if (userTurmaDetails.length > 0) {
-        userTurmaEncarregadoOrigin = userTurmaDetails[0].turma_encarregado;
-      }
-    }
-    const isUserPrivileged =
-      privilegedRoles.includes(req.user.cargo) ||
-      userTurmaEncarregadoOrigin === "2193";
+    const isGenerallyPrivileged =
+      privilegedRoles.includes(loggedInUserCargo) ||
+      (loggedInUserTeamId && loggedInUserTeamId.toString() === "2193");
 
-    if (
-      req.user.cargo === "Encarregado" &&
-      !isUserPrivileged &&
-      req.user.matricula.toString() !==
-        targetFuncionario.turma_encarregado.toString()
-    ) {
-      return res.status(403).json({
-        message:
-          "Acesso negado: Supervisores não privilegiados só podem adicionar diárias para membros de sua própria turma.",
-      });
+    let canProceed = false;
+    let permissionErrorMessage =
+      "Acesso negado. Você não tem permissão para realizar esta ação.";
+
+    const [targetEmployeeRows] = await promisePool.query(
+      "SELECT nome, cargo, turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+      [matricula]
+    );
+
+    if (targetEmployeeRows.length === 0) {
+      return res
+        .status(404)
+        .json({
+          message: `Funcionário alvo (matrícula: ${matricula}) não encontrado na tabela de turmas.`,
+        });
+    }
+    const targetFuncionario = targetEmployeeRows[0];
+
+    if (isGenerallyPrivileged) {
+      canProceed = true;
+    } else if (loggedInUserCargo === "Encarregado") {
+      if (!loggedInUserTeamId) {
+        permissionErrorMessage =
+          "Acesso negado: Seu usuário Encarregado não está associado a uma turma para gerenciar.";
+      } else {
+        const targetEmployeeTeamId = targetFuncionario.turma_encarregado;
+        if (
+          targetEmployeeTeamId &&
+          targetEmployeeTeamId.toString() === loggedInUserTeamId.toString()
+        ) {
+          canProceed = true;
+        } else {
+          permissionErrorMessage =
+            "Acesso negado: Encarregados não privilegiados só podem adicionar diárias para membros de sua própria turma.";
+        }
+      }
+    } else {
+      permissionErrorMessage =
+        "Acesso negado: Seu cargo não permite adicionar diárias.";
+    }
+
+    if (!canProceed) {
+      return res.status(403).json({ message: permissionErrorMessage });
     }
 
     const [existingDiarias] = await promisePool.query(
@@ -397,17 +426,14 @@ router.post("/api/diarias", autenticar, async (req, res) => {
       });
     }
 
-    const nomeFuncionario = targetFuncionario.nome;
-    const cargoFuncionario = targetFuncionario.cargo;
-
     const [result] = await promisePool.query(
       "INSERT INTO diarias (data, processo, matricula, nome, cargo, qs, qd) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [
         data,
         processo,
         matricula,
-        nomeFuncionario,
-        cargoFuncionario,
+        targetFuncionario.nome,
+        targetFuncionario.cargo,
         qs || false,
         qd || false,
       ]
@@ -415,14 +441,16 @@ router.post("/api/diarias", autenticar, async (req, res) => {
 
     if (result.affectedRows > 0) {
       await registrarAuditoria(
-        usuarioAuditoria,
+        loggedInUserMatricula,
         "Adicionar Diária",
-        `Matrícula Func: ${matricula}, Nome: ${nomeFuncionario}, Processo: ${processo}, Data: ${data}, ID Diaria: ${result.insertId}`
+        `Matrícula Func: ${matricula}, Nome: ${targetFuncionario.nome}, Processo: ${processo}, Data: ${data}, ID Diaria: ${result.insertId}`
       );
-      res.status(201).json({
-        message: "Diária adicionada com sucesso!",
-        id: result.insertId,
-      });
+      res
+        .status(201)
+        .json({
+          message: "Diária adicionada com sucesso!",
+          id: result.insertId,
+        });
     } else {
       throw new Error("Nenhuma linha afetada ao inserir a diária.");
     }
@@ -469,7 +497,8 @@ router.get("/api/diarias", autenticar, async (req, res) => {
     }
     const isUserPrivileged =
       privilegedRoles.includes(req.user.cargo) ||
-      userTurmaEncarregadoOrigin === "2193";
+      (userTurmaEncarregadoOrigin &&
+        userTurmaEncarregadoOrigin.toString() === "2193");
 
     if (req.user.cargo === "Encarregado" && !isUserPrivileged) {
       if (!joinedTurmas) {
@@ -477,7 +506,7 @@ router.get("/api/diarias", autenticar, async (req, res) => {
         joinedTurmas = true;
       }
       whereClauses.push("t.turma_encarregado = ?");
-      params.push(req.user.matricula.toString());
+      params.push(userTurmaEncarregadoOrigin || req.user.matricula.toString());
     } else if (req.query.turma) {
       if (!joinedTurmas) {
         query += " JOIN turmas t ON d.matricula = t.matricula";
