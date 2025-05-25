@@ -5,6 +5,7 @@ let diariaFetchController = null;
 let listenersInitialized = false;
 let user = null;
 let currentUserIsPrivileged = false;
+let userTurmaEncarregado = null;
 
 function showAlert(message, type = "success", duration = 3000) {
   const toastLiveEl = document.getElementById("liveToast");
@@ -171,8 +172,13 @@ function loadDiarias() {
   const qs = qsCheckbox ? qsCheckbox.checked : false;
   const qd = qdCheckbox ? qdCheckbox.checked : false;
 
-  if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
-    turma = user.matricula;
+  if (
+    user &&
+    user.cargo === "Encarregado" &&
+    !currentUserIsPrivileged &&
+    userTurmaEncarregado
+  ) {
+    turma = userTurmaEncarregado;
   }
 
   if (
@@ -292,7 +298,7 @@ function renderDiariasTable(diarias) {
       <td class="text-end">
         <button onclick="window.confirmDelete(${diaria.id}, '${String(
       diaria.nome || ""
-    ).replace(/'/g, "\\'")}')" 
+    ).replace(/'/g, "\\'")}')"
             class="btn btn-sm btn-outline-danger" title="Remover diária">
             <i class="fas fa-trash-alt"></i>
         </button>
@@ -514,49 +520,45 @@ window.openAddModal = function () {
   const addForm = document.getElementById("addDiariaForm");
   if (addForm) addForm.reset();
 
+  const turmaSelectEl = document.getElementById("turmaSelect");
   const funcionariosContainer = document.getElementById(
     "funcionariosCheckboxContainer"
   );
-  const turmaSelect = document.getElementById("turmaSelect");
   const diariaDataInput = document.getElementById("diariaData");
 
-  if (diariaDataInput)
+  if (diariaDataInput) {
     diariaDataInput.value = new Date().toISOString().split("T")[0];
+  }
 
   if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
-    if (turmaSelect) {
-      turmaSelect.value = user.matricula;
-      turmaSelect.disabled = true;
-      if (funcionariosContainer) {
-        loadFuncionariosPorTurma(user.matricula, funcionariosContainer);
+    if (turmaSelectEl) {
+      if (userTurmaEncarregado) {
+        turmaSelectEl.value = userTurmaEncarregado;
+        turmaSelectEl.disabled = true;
+        if (funcionariosContainer) {
+          loadFuncionariosPorTurma(userTurmaEncarregado, funcionariosContainer);
+        }
+      } else {
+        showAlert(
+          "Sua turma não foi identificada. Não é possível adicionar diária.",
+          "danger"
+        );
+        if (funcionariosContainer) {
+          funcionariosContainer.innerHTML =
+            '<small class="text-danger">Turma do encarregado não configurada.</small>';
+        }
+        return;
       }
     }
   } else {
-    if (turmaSelect) {
-      turmaSelect.disabled = false;
-      turmaSelect.value = "";
+    if (turmaSelectEl) {
+      turmaSelectEl.disabled = false;
+      turmaSelectEl.value = "";
     }
     if (funcionariosContainer) {
       funcionariosContainer.innerHTML =
         '<small class="text-muted">Selecione uma turma para listar os funcionários.</small>';
     }
-  }
-
-  if (
-    turmaSelect &&
-    turmaSelect.options.length <= 1 &&
-    !(user && user.cargo === "Encarregado" && !currentUserIsPrivileged)
-  ) {
-    loadTurmasDisponiveis();
-  } else if (
-    turmaSelect &&
-    turmaSelect.options.length > 0 &&
-    user &&
-    user.cargo === "Encarregado" &&
-    !currentUserIsPrivileged &&
-    turmaSelect.value !== user.matricula.toString()
-  ) {
-    loadTurmasDisponiveis();
   }
 
   const procOpt = document.getElementById("processosOptions");
@@ -577,43 +579,64 @@ async function loadTurmasDisponiveis() {
     });
     if (!response.ok) throw new Error("Erro ao carregar turmas");
     const turmasData = await response.json();
-    let turmasUnicas = [
-      ...new Set(turmasData.map((t) => t.turma_encarregado)),
-    ].filter(Boolean);
+    let turmasUnicas = [...new Set(turmasData.map((t) => t.turma_encarregado))]
+      .filter(Boolean)
+      .map(String);
 
     const selectTurmaModal = document.getElementById("turmaSelect");
     const filtroTurmaSelect = document.getElementById("filtroTurma");
 
     if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
-      const encarregadoTurmaIdentificador = user.matricula.toString();
+      const encarregadoTurmaId = userTurmaEncarregado;
 
-      if (filtroTurmaSelect) {
-        filtroTurmaSelect.innerHTML = "";
-        const option = document.createElement("option");
-        option.value = encarregadoTurmaIdentificador;
-        option.textContent = user.nome;
-        filtroTurmaSelect.appendChild(option);
-        filtroTurmaSelect.value = encarregadoTurmaIdentificador;
-        filtroTurmaSelect.disabled = true;
-      }
-
-      if (selectTurmaModal) {
-        selectTurmaModal.innerHTML = "";
-        const option = document.createElement("option");
-        option.value = encarregadoTurmaIdentificador;
-        option.textContent = user.nome;
-        selectTurmaModal.appendChild(option);
-        selectTurmaModal.value = encarregadoTurmaIdentificador;
-        selectTurmaModal.disabled = true;
-        const funcionariosContainer = document.getElementById(
-          "funcionariosCheckboxContainer"
+      if (encarregadoTurmaId && user) {
+        let supervisorNomeForDisplay = encarregadoTurmaId;
+        const supervisorUserObject = turmasData.find(
+          (item) =>
+            item.matricula &&
+            item.matricula.toString() === encarregadoTurmaId.toString()
         );
-        if (funcionariosContainer) {
-          loadFuncionariosPorTurma(
-            encarregadoTurmaIdentificador,
-            funcionariosContainer
-          );
+
+        if (supervisorUserObject && supervisorUserObject.nome) {
+          supervisorNomeForDisplay = supervisorUserObject.nome;
+        } else if (
+          encarregadoTurmaId.toString() === user.matricula.toString() &&
+          user.nome
+        ) {
+          supervisorNomeForDisplay = user.nome;
         }
+        const displayTurmaName = `Turma ${supervisorNomeForDisplay}`;
+
+        if (filtroTurmaSelect) {
+          filtroTurmaSelect.innerHTML = "";
+          const option = document.createElement("option");
+          option.value = encarregadoTurmaId;
+          option.textContent = displayTurmaName;
+          filtroTurmaSelect.appendChild(option);
+          filtroTurmaSelect.value = encarregadoTurmaId;
+          filtroTurmaSelect.disabled = true;
+        }
+
+        if (selectTurmaModal) {
+          selectTurmaModal.innerHTML = "";
+          const option = document.createElement("option");
+          option.value = encarregadoTurmaId;
+          option.textContent = displayTurmaName;
+          selectTurmaModal.appendChild(option);
+          selectTurmaModal.value = encarregadoTurmaId;
+          selectTurmaModal.disabled = true;
+        }
+      } else {
+        const errorMsg = "Turma do encarregado não identificada.";
+        if (filtroTurmaSelect) {
+          filtroTurmaSelect.innerHTML = `<option value="">${errorMsg}</option>`;
+          filtroTurmaSelect.disabled = true;
+        }
+        if (selectTurmaModal) {
+          selectTurmaModal.innerHTML = `<option value="">${errorMsg}</option>`;
+          selectTurmaModal.disabled = true;
+        }
+        console.warn(errorMsg);
       }
     } else {
       if (selectTurmaModal) {
@@ -626,10 +649,22 @@ async function loadTurmasDisponiveis() {
         filtroTurmaSelect.disabled = false;
       }
 
-      turmasUnicas.forEach((turma) => {
+      const turmaDisplayNames = {};
+      turmasUnicas.forEach((supervisorMatricula) => {
+        const supervisorEntry = turmasData.find(
+          (item) =>
+            item.matricula && item.matricula.toString() === supervisorMatricula
+        );
+        if (supervisorEntry && supervisorEntry.nome) {
+          turmaDisplayNames[supervisorMatricula] = supervisorEntry.nome;
+        }
+      });
+
+      turmasUnicas.forEach((turmaId) => {
         const option = document.createElement("option");
-        option.value = turma;
-        option.textContent = turma;
+        option.value = turmaId;
+        const displayName = turmaDisplayNames[turmaId] || turmaId;
+        option.textContent = `Turma ${displayName}`;
         if (selectTurmaModal)
           selectTurmaModal.appendChild(option.cloneNode(true));
         if (filtroTurmaSelect)
@@ -638,10 +673,13 @@ async function loadTurmasDisponiveis() {
     }
   } catch (error) {
     console.error("Erro ao carregar turmas:", error);
-    showAlert("Erro ao carregar turmas: " + error.message, "danger");
     const selectTurmaModal = document.getElementById("turmaSelect");
     if (selectTurmaModal)
       selectTurmaModal.innerHTML =
+        '<option value="">Erro ao carregar turmas</option>';
+    const filtroTurmaSelect = document.getElementById("filtroTurma");
+    if (filtroTurmaSelect)
+      filtroTurmaSelect.innerHTML =
         '<option value="">Erro ao carregar turmas</option>';
   }
 }
@@ -679,11 +717,16 @@ window.navigateTo = async function (pageNameOrUrl) {
 
 document.addEventListener("DOMContentLoaded", async function () {
   user = JSON.parse(localStorage.getItem("user"));
-  let userTurmaEncarregado = null;
 
   if (user && user.matricula) {
     try {
-      const response = await fetch(`/api/user-team-details`);
+      const response = await fetch(`/api/user-team-details`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       if (response.ok) {
         const details = await response.json();
         userTurmaEncarregado = details.turma_encarregado
@@ -694,9 +737,11 @@ document.addEventListener("DOMContentLoaded", async function () {
           "Falha ao buscar detalhes da turma do usuário.",
           response.statusText
         );
+        userTurmaEncarregado = null;
       }
     } catch (error) {
       console.error("Erro ao buscar detalhes da turma do usuário:", error);
+      userTurmaEncarregado = null;
     }
   }
 
@@ -710,7 +755,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     ];
     if (
       privilegedRoles.includes(user.cargo) ||
-      userTurmaEncarregado === "2193"
+      (userTurmaEncarregado && userTurmaEncarregado === "2193")
     ) {
       currentUserIsPrivileged = true;
     }
@@ -754,8 +799,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   if (user && user.cargo === "Encarregado" && !currentUserIsPrivileged) {
     const filtroTurmaEl = document.getElementById("filtroTurma");
-    if (filtroTurmaEl && filtroTurmaEl.value === user.matricula.toString()) {
+    if (
+      filtroTurmaEl &&
+      userTurmaEncarregado &&
+      filtroTurmaEl.value === userTurmaEncarregado
+    ) {
       loadDiarias();
+    } else if (filtroTurmaEl && userTurmaEncarregado) {
+      filtroTurmaEl.value = userTurmaEncarregado;
     }
   }
 
@@ -792,7 +843,10 @@ window.exportToPDF = async function () {
     const filtroQdCheckbox = document.getElementById("qdCheckbox");
 
     const filtros = {
-      turma: filtroTurmaEl ? filtroTurmaEl.value : "Todas",
+      turma: filtroTurmaEl
+        ? filtroTurmaEl.options[filtroTurmaEl.selectedIndex]?.textContent ||
+          filtroTurmaEl.value
+        : "Todas",
       dataInicial: filtroDataInicialEl ? filtroDataInicialEl.value : "",
       dataFinal: filtroDataFinalEl ? filtroDataFinalEl.value : "",
       processo: filtroProcessoEl ? filtroProcessoEl.value : "Todos",
