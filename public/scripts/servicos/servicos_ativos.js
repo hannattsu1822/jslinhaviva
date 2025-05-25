@@ -1,24 +1,20 @@
-// public/scripts/servicos/servicos_ativos.js
-
 let servicosData = [];
 let currentServicoId = null;
 let confirmModalInstance;
 let concluirModalInstance;
-let liveToastInstance; // Declarada globalmente no script
+let liveToastInstance;
 let modalResponsavelInstance;
 let accessDeniedModalInstance;
 let developmentModalInstance;
 let user = null;
 
-// Função para mostrar notificação (Toast)
 function showToast(message, type = "success") {
-  const toastLiveEl = document.getElementById("liveToast"); // Obtém o elemento toda vez ou garante que liveToastInstance está pronta
+  const toastLiveEl = document.getElementById("liveToast");
   if (!toastLiveEl) {
     console.error("Elemento #liveToast não encontrado no DOM.");
     return;
   }
 
-  // Inicializa a instância do Toast se ainda não foi e o elemento existe
   if (
     !liveToastInstance &&
     typeof bootstrap !== "undefined" &&
@@ -32,8 +28,7 @@ function showToast(message, type = "success") {
     toastBody.textContent = message;
   }
 
-  // Reset classes e define a cor do background
-  toastLiveEl.className = "toast align-items-center"; // Bootstrap 5.2+ para centralizar
+  toastLiveEl.className = "toast align-items-center";
   if (type === "success") {
     toastLiveEl.classList.add("text-bg-success", "border-0");
   } else if (type === "danger") {
@@ -41,7 +36,7 @@ function showToast(message, type = "success") {
   } else if (type === "warning") {
     toastLiveEl.classList.add("text-bg-warning", "border-0");
   } else {
-    toastLiveEl.classList.add("text-bg-secondary", "border-0"); // Um fallback
+    toastLiveEl.classList.add("text-bg-secondary", "border-0");
   }
 
   if (liveToastInstance) {
@@ -176,7 +171,7 @@ function atualizarTabela() {
     })
     .slice(0, 15);
   if (servicosFiltrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4"><i class="fas fa-info-circle me-2"></i>Nenhum serviço encontrado com os filtros aplicados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4"><i class="fas fa-info-circle me-2"></i>Nenhum serviço encontrado com os filtros aplicados.</td></tr>`;
     return;
   }
   servicosFiltrados.forEach((servico) => {
@@ -188,6 +183,23 @@ function atualizarTabela() {
     tr.setAttribute("data-id", servico.id);
     const processoDisplay =
       servico.prioridade === "EMERGENCIAL" ? "EMERGENCIAL" : servico.processo;
+
+    let aprButtonHtml = "";
+    if (servico.tem_apr) {
+      aprButtonHtml = `
+            <a href="/apr-servico-form?servicoId=${servico.id}&mode=view" class="btn btn-sm glass-btn btn-success me-1" title="Visualizar APR">
+                <i class="fas fa-eye"></i>
+            </a>
+            <a href="/api/servicos/${servico.id}/apr/pdf" target="_blank" class="btn btn-sm glass-btn btn-secondary" title="Gerar PDF da APR">
+                <i class="fas fa-file-pdf"></i>
+            </a>`;
+    } else {
+      aprButtonHtml = `
+            <a href="/apr-servico-form?servicoId=${servico.id}" class="btn btn-sm glass-btn btn-warning" title="Preencher APR">
+                <i class="fas fa-file-medical-alt"></i>
+            </a>`;
+    }
+
     tr.innerHTML = `
       <td>${servico.id}</td>
       <td>${processoDisplay}</td>
@@ -199,18 +211,21 @@ function atualizarTabela() {
           ? '<span class="badge bg-warning text-dark">Pendente</span>'
           : (servico.responsavel_matricula || "N/A") +
             " - " +
-            (servico.responsavel || servico.responsavel_nome || "Não Atribuído")
+            (servico.responsavel_nome || "Não Atribuído")
       }</td>
       <td>${
         servico.desligamento === "SIM"
           ? '<span class="badge bg-danger">Sim</span>'
           : '<span class="badge bg-success">Não</span>'
       }</td>
-      <td class="text-center">
+      <td class="text-center table-actions">
+        ${aprButtonHtml}
+      </td>
+      <td class="text-center table-actions">
         <div class="btn-group" role="group">
           <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
             servico.id
-          }')" title="Visualizar"><i class="fas fa-eye"></i></button>
+          }')" title="Visualizar Detalhes"><i class="fas fa-eye"></i></button>
           <button class="btn btn-sm glass-btn btn-primary me-1" onclick="selecionarResponsavel(${
             servico.id
           })" title="Selecionar Responsável"><i class="fas fa-user-edit"></i></button>
@@ -397,7 +412,7 @@ async function finalizarServico() {
 function formatarData(dataString) {
   if (!dataString) return "Não informado";
   const data = new Date(dataString);
-  if (isNaN(data.getTime())) return "Data inválida"; // Checa se a data é válida
+  if (isNaN(data.getTime())) return "Data inválida";
   const dia = String(data.getUTCDate()).padStart(2, "0");
   const mes = String(data.getUTCMonth() + 1).padStart(2, "0");
   const ano = data.getUTCFullYear();
@@ -459,7 +474,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (concluirModalEl)
       concluirModalInstance = new bootstrap.Modal(concluirModalEl);
 
-    const toastLiveEl = document.getElementById("liveToast"); // Mover para cá para garantir que bootstrap está carregado
+    const toastLiveEl = document.getElementById("liveToast");
     if (toastLiveEl) liveToastInstance = new bootstrap.Toast(toastLiveEl);
 
     const modalResponsavelEl = document.getElementById("modalResponsavel");
@@ -547,7 +562,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (this.files.length > 5) {
         showToast("Máximo de 5 fotos permitidas!", "danger");
-        this.value = ""; // Limpa a seleção de arquivos
+        this.value = "";
         return;
       }
 
