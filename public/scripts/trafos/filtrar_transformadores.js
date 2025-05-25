@@ -13,10 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const devmEl = document.getElementById("development-modal");
     if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
-  } else {
-    console.warn(
-      "Filtrar Transformadores Script: Bootstrap JS não carregado ou bootstrap.Modal não está definido."
-    );
   }
 
   carregarResponsaveis();
@@ -34,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
   buscarTransformadores(filtrosIniciais)
     .then((dados) => exibirResultados(dados))
     .catch((err) => {
-      console.error("Erro ao carregar dados iniciais:", err);
       mostrarErro("Erro ao carregar dados iniciais");
     });
 
@@ -105,7 +100,6 @@ window.navigateTo = async function (pageName) {
       else alert("Recurso não encontrado ou em desenvolvimento.");
     }
   } catch (error) {
-    console.error("Erro na requisição (navigateTo):", error);
     if (developmentModalInstance) developmentModalInstance.show();
     else alert("Erro de rede ou falha na navegação.");
   }
@@ -128,7 +122,6 @@ async function carregarResponsaveis() {
       select.appendChild(option);
     });
   } catch (error) {
-    console.error("Erro ao carregar responsáveis:", error);
     mostrarErro("Erro ao carregar lista de responsáveis técnicos");
   }
 }
@@ -173,7 +166,6 @@ async function buscarTransformadores(filtros) {
     const data = await response.json();
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error("Erro na requisição buscarTransformadores:", error);
     mostrarErro("Erro ao buscar transformadores: " + error.message);
     return [];
   } finally {
@@ -198,9 +190,9 @@ function formatarData(dataString) {
   }
   const dateObj = new Date(dataString);
   if (!isNaN(dateObj.getTime())) {
-    const dia = String(dateObj.getDate()).padStart(2, "0");
-    const mes = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const ano = dateObj.getFullYear();
+    const dia = String(dateObj.getUTCDate()).padStart(2, "0");
+    const mes = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+    const ano = dateObj.getUTCFullYear();
     return `${dia}/${mes}/${ano}`;
   }
   return dataString;
@@ -259,7 +251,6 @@ async function gerarPDFTabela() {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   } catch (error) {
-    console.error("Erro ao gerar PDF da tabela:", error);
     mostrarErro("Erro ao gerar PDF da tabela: " + error.message);
   } finally {
     btnPDF.innerHTML = originalHTML;
@@ -276,18 +267,35 @@ async function gerarPDF(id) {
   try {
     const response = await fetch(`/api/gerar_pdf/${id}`);
     if (!response.ok) {
-      throw new Error("Erro ao gerar PDF do item");
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Erro ao gerar PDF do item" }));
+      throw new Error(errorData.message || "Erro ao gerar PDF do item");
     }
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const contentDisposition = response.headers.get("Content-Disposition");
+
     let filename = `transformador_${id}.pdf`;
+    let filenameExtracted = null;
+
     if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-      if (filenameMatch && filenameMatch[1]) {
-        filename = filenameMatch[1];
+      const filenameQuotedMatch =
+        contentDisposition.match(/filename="([^"]+)"/);
+
+      if (filenameQuotedMatch && filenameQuotedMatch[1]) {
+        filenameExtracted = filenameQuotedMatch[1];
+      } else {
+        const fallbackMatch = contentDisposition.match(/filename=([^;]+)/);
+        if (fallbackMatch && fallbackMatch[1]) {
+          filenameExtracted = fallbackMatch[1].trim().replace(/^"|"$/g, "");
+        }
+      }
+      if (filenameExtracted) {
+        filename = filenameExtracted;
       }
     }
+
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
@@ -296,7 +304,6 @@ async function gerarPDF(id) {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   } catch (error) {
-    console.error("Erro ao gerar PDF do item:", error);
     mostrarErro("Erro ao gerar PDF do item: " + error.message);
   } finally {
     btnPDF.innerHTML = originalHTML;
@@ -421,7 +428,6 @@ async function excluirTransformador(id) {
       exibirResultados(dados);
       alert("Checklist de transformador excluído com sucesso!");
     } catch (error) {
-      console.error("Erro ao excluir transformador:", error);
       mostrarErro(error.message || "Erro ao excluir checklist");
     } finally {
       toggleLoading(false);
