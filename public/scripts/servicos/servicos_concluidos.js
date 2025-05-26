@@ -115,7 +115,7 @@ function debounce(func, wait) {
 async function carregarServicosConcluidos() {
   try {
     mostrarNotificacao("Carregando serviços concluídos...", "info", 2000);
-    const response = await fetch("/api/servicos?status=concluido");
+    const response = await fetch("/api/servicos?status=concluido"); // This endpoint already provides tem_apr
     if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
     const data = await response.json();
     if (!Array.isArray(data))
@@ -183,11 +183,6 @@ function obterServicosFiltrados() {
     const alimentador = servico.alimentador?.toString().toLowerCase() || "";
     const dataConclusao = servico.data_conclusao || "";
 
-    // Lógica de filtro para usuário específico (se necessário, similar ao servicos_ativos.js)
-    // if (user && user.matricula && !["Engenheiro", "Técnico", "ADMIN", "Inspetor"].includes(user.cargo)) {
-    //   if (servico.responsavel_matricula !== user.matricula) return false;
-    // }
-
     return (
       processo.includes(filtroProcesso) &&
       subestacao.includes(filtroSubestacao) &&
@@ -213,10 +208,25 @@ function atualizarTabela() {
     const endIndex = startIndex + itemsPerPage;
     const servicosPagina = servicosFiltrados.slice(startIndex, endIndex);
     if (servicosPagina.length === 0) {
-      elementos.tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4"><i class="fas fa-info-circle me-2"></i>Nenhum serviço concluído encontrado com os filtros aplicados.</td></tr>`;
+      elementos.tabela.innerHTML = `<tr><td colspan="8" class="text-center py-4"><i class="fas fa-info-circle me-2"></i>Nenhum serviço concluído encontrado com os filtros aplicados.</td></tr>`; // Updated colspan
     } else {
       servicosPagina.forEach((servico) => {
         const tr = document.createElement("tr");
+
+        let aprButtonHtml = '<span class="badge bg-secondary">N/A</span>'; // Default if no APR or not applicable for concluded
+        if (servico.tem_apr) {
+          // Check if tem_apr is true
+          aprButtonHtml = `
+            <div class="btn-group" role="group">
+              <button class="btn btn-sm glass-btn btn-info me-1" onclick="window.navigateTo('/apr-servico-form?servicoId=${servico.id}&mode=view')" title="Visualizar APR">
+                  <i class="fas fa-eye"></i>
+              </button>
+              <button class="btn btn-sm glass-btn btn-outline-secondary" onclick="window.open('/api/servicos/${servico.id}/apr/pdf', '_blank')" title="Gerar PDF da APR">
+                  <i class="fas fa-file-pdf"></i>
+              </button>
+            </div>`;
+        }
+
         tr.innerHTML = `
           <td>${servico.id || "N/A"}</td>
           <td>${servico.processo || "Não informado"}</td>
@@ -229,11 +239,12 @@ function atualizarTabela() {
               : "") +
             (servico.responsavel_nome || servico.responsavel || "Não informado")
           }</td>
+          <td class="text-center">${aprButtonHtml}</td> 
           <td class="text-center">
             <div class="btn-group" role="group">
               <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
                 servico.id
-              }')" title="Visualizar"><i class="fas fa-eye"></i></button>
+              }')" title="Visualizar Detalhes"><i class="fas fa-eye"></i></button>
               <button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${
                 servico.id
               })" title="Retornar para Ativos"><i class="fas fa-undo"></i></button>
@@ -433,6 +444,7 @@ window.reativarServico = async function (id) {
 
 // Função navigateTo padronizada para os links da sidebar
 window.navigateTo = async function (pageNameOrUrl) {
+  //
   let urlToNavigate = pageNameOrUrl;
   if (!pageNameOrUrl.startsWith("/") && !pageNameOrUrl.startsWith("http")) {
     urlToNavigate = `/${pageNameOrUrl}`;
@@ -464,7 +476,7 @@ window.navigateTo = async function (pageNameOrUrl) {
 };
 
 document.addEventListener("DOMContentLoaded", function () {
-  user = JSON.parse(localStorage.getItem("user")); // Pega o usuário para lógica de filtro, se houver
+  user = JSON.parse(localStorage.getItem("user"));
   inicializarElementos();
   configurarEventListeners();
   carregarServicosConcluidos();
