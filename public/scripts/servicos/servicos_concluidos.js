@@ -1,7 +1,5 @@
-// public/scripts/servicos/servicos_concluidos.js
-
 const elementos = {
-  toastEl: null, // Renomeado para evitar conflito com a instância
+  toastEl: null,
   toastInstance: null,
   tabela: null,
   paginacao: null,
@@ -17,9 +15,7 @@ const elementos = {
 let servicosData = [];
 let currentPage = 1;
 const itemsPerPage = 10;
-let user = null; // Para armazenar dados do usuário
-
-// Variáveis para modais padrão (usados por navigateTo)
+let user = null;
 let accessDeniedModalInstance;
 let developmentModalInstance;
 
@@ -47,11 +43,9 @@ function inicializarElementos() {
     if (!elementos.contador)
       throw new Error("Elemento contador-servicos não encontrado");
 
-    // Inicializa modais padrão
     if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
       const admEl = document.getElementById("access-denied-modal");
       if (admEl) accessDeniedModalInstance = new bootstrap.Modal(admEl);
-
       const devmEl = document.getElementById("development-modal");
       if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
     }
@@ -115,7 +109,7 @@ function debounce(func, wait) {
 async function carregarServicosConcluidos() {
   try {
     mostrarNotificacao("Carregando serviços concluídos...", "info", 2000);
-    const response = await fetch("/api/servicos?status=concluido"); // This endpoint already provides tem_apr
+    const response = await fetch("/api/servicos?status=concluido");
     if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
     const data = await response.json();
     if (!Array.isArray(data))
@@ -136,9 +130,6 @@ async function carregarServicosConcluidos() {
 function mostrarNotificacao(mensagem, tipo = "success", duracao = 3000) {
   try {
     if (!elementos.toastInstance || !elementos.toastEl) {
-      console.warn(
-        "Instância do Toast ou elemento não encontrado para notificação."
-      );
       return;
     }
     const toastBody = elementos.toastEl.querySelector(".toast-body");
@@ -157,7 +148,6 @@ function mostrarNotificacao(mensagem, tipo = "success", duracao = 3000) {
         toastHeader.style.backgroundColor = "";
       }
       elementos.toastInstance.show();
-      // Esconder automaticamente se não for danger
       if (tipo !== "danger" && duracao > 0) {
         setTimeout(() => {
           if (elementos.toastInstance) elementos.toastInstance.hide();
@@ -182,7 +172,6 @@ function obterServicosFiltrados() {
     const subestacao = servico.subestacao?.toString().toLowerCase() || "";
     const alimentador = servico.alimentador?.toString().toLowerCase() || "";
     const dataConclusao = servico.data_conclusao || "";
-
     return (
       processo.includes(filtroProcesso) &&
       subestacao.includes(filtroSubestacao) &&
@@ -208,25 +197,10 @@ function atualizarTabela() {
     const endIndex = startIndex + itemsPerPage;
     const servicosPagina = servicosFiltrados.slice(startIndex, endIndex);
     if (servicosPagina.length === 0) {
-      elementos.tabela.innerHTML = `<tr><td colspan="8" class="text-center py-4"><i class="fas fa-info-circle me-2"></i>Nenhum serviço concluído encontrado com os filtros aplicados.</td></tr>`; // Updated colspan
+      elementos.tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço concluído encontrado.</td></tr>`;
     } else {
       servicosPagina.forEach((servico) => {
         const tr = document.createElement("tr");
-
-        let aprButtonHtml = '<span class="badge bg-secondary">N/A</span>'; // Default if no APR or not applicable for concluded
-        if (servico.tem_apr) {
-          // Check if tem_apr is true
-          aprButtonHtml = `
-            <div class="btn-group" role="group">
-              <button class="btn btn-sm glass-btn btn-info me-1" onclick="window.navigateTo('/apr-servico-form?servicoId=${servico.id}&mode=view')" title="Visualizar APR">
-                  <i class="fas fa-eye"></i>
-              </button>
-              <button class="btn btn-sm glass-btn btn-outline-secondary" onclick="window.open('/api/servicos/${servico.id}/apr/pdf', '_blank')" title="Gerar PDF da APR">
-                  <i class="fas fa-file-pdf"></i>
-              </button>
-            </div>`;
-        }
-
         tr.innerHTML = `
           <td>${servico.id || "N/A"}</td>
           <td>${servico.processo || "Não informado"}</td>
@@ -239,15 +213,17 @@ function atualizarTabela() {
               : "") +
             (servico.responsavel_nome || servico.responsavel || "Não informado")
           }</td>
-          <td class="text-center">${aprButtonHtml}</td> 
           <td class="text-center">
             <div class="btn-group" role="group">
               <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
                 servico.id
-              }')" title="Visualizar Detalhes"><i class="fas fa-eye"></i></button>
+              }')" title="Visualizar"><span class="material-symbols-outlined">visibility</span></button>
+              <button class="btn btn-sm glass-btn btn-info me-1" onclick="solicitarConsolidacaoPDFs(${
+                servico.id
+              })" title="Consolidar PDFs Anexos"><span class="material-symbols-outlined">merge_type</span></button>
               <button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${
                 servico.id
-              })" title="Retornar para Ativos"><i class="fas fa-undo"></i></button>
+              })" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>
             </div>
           </td>`;
         elementos.tabela.appendChild(tr);
@@ -336,7 +312,6 @@ function atualizarPaginacao() {
 }
 
 window.mudarPagina = function (page) {
-  // Exposta globalmente
   try {
     const servicosFiltrados = obterServicosFiltrados();
     const totalPages = Math.ceil(servicosFiltrados.length / itemsPerPage);
@@ -370,35 +345,35 @@ function formatarData(dataString) {
     if (!dataString) return "Não informado";
     const data = new Date(dataString);
     if (isNaN(data.getTime())) {
-      const parts = dataString.split(/[\s/:\-T]+/); // Atualizado para incluir T e -
+      const parts = dataString.split(/[\s/:\-T]+/);
       if (parts.length >= 3) {
-        // YYYY, MM, DD
         const year = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10) - 1;
         const day = parseInt(parts[2], 10);
         let hours = 0,
-          minutes = 0,
-          seconds = 0;
+          minutes = 0;
         if (parts.length >= 5) {
-          // HH, MM
           hours = parseInt(parts[3], 10);
           minutes = parseInt(parts[4], 10);
         }
-        if (parts.length >= 6) {
-          // SS
-          seconds = parseInt(parts[5], 10);
-        }
-        const testDate = new Date(year, month, day, hours, minutes, seconds);
+        const testDate = new Date(Date.UTC(year, month, day, hours, minutes));
         if (!isNaN(testDate.getTime())) {
-          return testDate
-            .toLocaleString("pt-BR", {
+          return (
+            testDate.toLocaleDateString("pt-BR", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-            .replace(",", ""); // Remove vírgula entre data e hora
+              timeZone: "UTC",
+            }) +
+            (parts.length >= 5
+              ? " " +
+                testDate.toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZone: "UTC",
+                })
+              : "")
+          );
         }
       }
       return "Data inválida";
@@ -410,6 +385,7 @@ function formatarData(dataString) {
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "UTC",
       })
       .replace(",", "");
   } catch (error) {
@@ -419,7 +395,6 @@ function formatarData(dataString) {
 }
 
 window.reativarServico = async function (id) {
-  // Exposta globalmente
   try {
     if (!confirm("Deseja realmente retornar este serviço para ativos?")) return;
     mostrarNotificacao("Reativando serviço...", "info");
@@ -442,9 +417,24 @@ window.reativarServico = async function (id) {
   }
 };
 
-// Função navigateTo padronizada para os links da sidebar
+window.solicitarConsolidacaoPDFs = function (servicoId) {
+  mostrarNotificacao(
+    "Processando consolidação de PDFs... Isso pode levar um momento.",
+    "info",
+    5000
+  );
+  const downloadUrl = `/api/servicos/${servicoId}/consolidar-pdfs`;
+
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.setAttribute("download", "");
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 window.navigateTo = async function (pageNameOrUrl) {
-  //
   let urlToNavigate = pageNameOrUrl;
   if (!pageNameOrUrl.startsWith("/") && !pageNameOrUrl.startsWith("http")) {
     urlToNavigate = `/${pageNameOrUrl}`;
@@ -466,10 +456,13 @@ window.navigateTo = async function (pageNameOrUrl) {
       if (developmentModalInstance) developmentModalInstance.show();
       else alert("Página não encontrada ou em desenvolvimento.");
     } else {
+      const errorText = await response.text();
+      console.error("Erro ao navegar:", response.status, errorText);
       if (developmentModalInstance) developmentModalInstance.show();
       else alert("Erro ao tentar acessar a página.");
     }
   } catch (error) {
+    console.error("Erro de rede ou falha na navegação:", error);
     if (developmentModalInstance) developmentModalInstance.show();
     else alert("Erro de rede ou falha na navegação.");
   }

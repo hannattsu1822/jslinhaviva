@@ -1,9 +1,22 @@
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func.apply(this, args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 let servicosData = [];
 let currentServicoId = null;
 let confirmModalInstance;
 let concluirModalInstance;
 let liveToastInstance;
 let modalResponsavelInstance;
+let aprUploadModalInstance;
 let accessDeniedModalInstance;
 let developmentModalInstance;
 let user = null;
@@ -11,10 +24,8 @@ let user = null;
 function showToast(message, type = "success") {
   const toastLiveEl = document.getElementById("liveToast");
   if (!toastLiveEl) {
-    console.error("Elemento #liveToast não encontrado no DOM.");
     return;
   }
-
   if (
     !liveToastInstance &&
     typeof bootstrap !== "undefined" &&
@@ -22,12 +33,10 @@ function showToast(message, type = "success") {
   ) {
     liveToastInstance = new bootstrap.Toast(toastLiveEl);
   }
-
   const toastBody = toastLiveEl.querySelector(".toast-body");
   if (toastBody) {
     toastBody.textContent = message;
   }
-
   toastLiveEl.className = "toast align-items-center";
   if (type === "success") {
     toastLiveEl.classList.add("text-bg-success", "border-0");
@@ -38,13 +47,8 @@ function showToast(message, type = "success") {
   } else {
     toastLiveEl.classList.add("text-bg-secondary", "border-0");
   }
-
   if (liveToastInstance) {
     liveToastInstance.show();
-  } else {
-    console.error(
-      "Instância do Toast não pôde ser criada/encontrada para #liveToast."
-    );
   }
 }
 
@@ -91,14 +95,14 @@ async function carregarDadosIniciais() {
         encarregados.forEach((enc) => {
           const option = document.createElement("option");
           option.value = enc.matricula;
-          option.textContent = `${enc.matricula} - ${enc.nome}`;
+          option.textContent = enc.nome;
           selectEncarregado.appendChild(option);
         });
       }
     }
   } catch (error) {
     console.error("Erro ao carregar dados iniciais:", error);
-    showToast("Erro ao carregar dados iniciais", "danger");
+    showToast("Erro ao carregar dados iniciais: " + error.message, "danger");
   }
 }
 
@@ -106,11 +110,15 @@ async function carregarServicosAtivos() {
   try {
     const response = await fetch("/api/servicos?status=ativo");
     if (!response.ok) {
-      throw new Error("Erro ao carregar serviços");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
     }
     servicosData = await response.json();
     if (!Array.isArray(servicosData)) {
-      throw new Error("Formato de dados inválido");
+      console.error("Formato de dados de serviços inválido:", servicosData);
+      throw new Error(
+        "Formato de dados de serviços inválido recebido do servidor."
+      );
     }
     servicosData.sort(
       (a, b) =>
@@ -118,29 +126,45 @@ async function carregarServicosAtivos() {
     );
     atualizarTabela();
   } catch (error) {
-    console.error("Erro ao carregar serviços:", error);
-    showToast("Erro ao carregar serviços: " + error.message, "danger");
+    console.error("Erro ao carregar serviços ativos:", error);
+    showToast("Erro ao carregar serviços ativos: " + error.message, "danger");
+    const tbody = document.getElementById("tabela-servicos");
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
+    }
   }
 }
 
 function atualizarTabela() {
   const tbody = document.getElementById("tabela-servicos");
-  if (!tbody) return;
+  if (!tbody) {
+    return;
+  }
   tbody.innerHTML = "";
   let dadosParaFiltrar = [...servicosData];
+
   if (
     user &&
     user.matricula &&
-    !["Engenheiro", "Técnico", "ADMIN", "Inspetor"].includes(user.cargo)
+    ![
+      "Engenheiro",
+      "Técnico",
+      "ADMIN",
+      "Inspetor",
+      "Gerente",
+      "Supervisor",
+    ].includes(user.cargo)
   ) {
     dadosParaFiltrar = dadosParaFiltrar.filter(
       (s) => s.responsavel_matricula === user.matricula
     );
   }
+
   const filtroProcessoInput = document.getElementById("filtroProcesso");
   const filtroSubestacaoSelect = document.getElementById("filtroSubestacao");
   const filtroEncarregadoSelect = document.getElementById("filtroEncarregado");
   const filtroDataInput = document.getElementById("filtroData");
+
   const filtroProcesso = filtroProcessoInput
     ? filtroProcessoInput.value.toLowerCase()
     : "";
@@ -151,13 +175,14 @@ function atualizarTabela() {
     ? filtroEncarregadoSelect.value
     : "";
   const filtroData = filtroDataInput ? filtroDataInput.value : "";
+
   const servicosFiltrados = dadosParaFiltrar
     .filter((servico) => {
       const processoMatch =
         filtroProcesso === "" ||
         (servico.processo &&
-          servico.processo.toLowerCase().includes(filtroProcesso)) ||
-        servico.prioridade === "EMERGENCIAL";
+          String(servico.processo).toLowerCase().includes(filtroProcesso)) ||
+        String(servico.tipo_processo).toLowerCase() === "emergencial";
       const subestacaoMatch =
         filtroSubestacao === "" || servico.subestacao === filtroSubestacao;
       const encarregadoMatch =
@@ -166,43 +191,55 @@ function atualizarTabela() {
       const dataMatch =
         filtroData === "" ||
         (servico.data_prevista_execucao &&
-          servico.data_prevista_execucao.includes(filtroData));
+          String(servico.data_prevista_execucao).includes(filtroData));
       return processoMatch && subestacaoMatch && encarregadoMatch && dataMatch;
     })
     .slice(0, 15);
+
   if (servicosFiltrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4"><i class="fas fa-info-circle me-2"></i>Nenhum serviço encontrado com os filtros aplicados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço ativo encontrado.</td></tr>`;
     return;
   }
+
   servicosFiltrados.forEach((servico) => {
     const tr = document.createElement("tr");
     tr.className =
-      servico.prioridade === "EMERGENCIAL"
+      String(servico.tipo_processo).toLowerCase() === "emergencial"
         ? "emergency-row"
         : "glass-table-row";
     tr.setAttribute("data-id", servico.id);
     const processoDisplay =
-      servico.prioridade === "EMERGENCIAL" ? "EMERGENCIAL" : servico.processo;
+      String(servico.tipo_processo).toLowerCase() === "emergencial"
+        ? "EMERGENCIAL"
+        : servico.processo;
 
     let aprButtonHtml = "";
-    if (servico.tem_apr) {
+    if (servico.caminho_apr_anexo) {
       aprButtonHtml = `
-            <a href="/apr-servico-form?servicoId=${servico.id}&mode=view" class="btn btn-sm glass-btn btn-success me-1" title="Visualizar APR">
-                <i class="fas fa-eye"></i>
-            </a>
-            <a href="/api/servicos/${servico.id}/apr/pdf" target="_blank" class="btn btn-sm glass-btn btn-secondary" title="Gerar PDF da APR">
-                <i class="fas fa-file-pdf"></i>
-            </a>`;
+            <div class="d-flex flex-column align-items-center">
+                <a href="${
+                  servico.caminho_apr_anexo
+                }?download=true" target="_blank" class="btn btn-sm glass-btn btn-success mb-1 w-100" title="Ver/Baixar APR: ${
+        servico.nome_original_apr_anexo || ""
+      }">
+                    <span class="material-symbols-outlined">description</span> Ver
+                </a>
+                <button class="btn btn-sm glass-btn btn-warning w-100" onclick="abrirModalUploadAPR(${
+                  servico.id
+                })" title="Substituir APR">
+                    <span class="material-symbols-outlined">upload_file</span> Subst.
+                </button>
+            </div>`;
     } else {
       aprButtonHtml = `
-            <a href="/apr-servico-form?servicoId=${servico.id}" class="btn btn-sm glass-btn btn-warning" title="Preencher APR">
-                <i class="fas fa-file-medical-alt"></i>
-            </a>`;
+            <button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR">
+                <span class="material-symbols-outlined">attach_file</span> Anexar
+            </button>`;
     }
 
     tr.innerHTML = `
       <td>${servico.id}</td>
-      <td>${processoDisplay}</td>
+      <td>${processoDisplay || "N/A"}</td>
       <td>${servico.subestacao || "N/A"}</td>
       <td>${servico.alimentador || "N/A"}</td>
       <td>${formatarData(servico.data_prevista_execucao)}</td>
@@ -218,27 +255,139 @@ function atualizarTabela() {
           ? '<span class="badge bg-danger">Sim</span>'
           : '<span class="badge bg-success">Não</span>'
       }</td>
-      <td class="text-center table-actions">
-        ${aprButtonHtml}
-      </td>
+      <td class="text-center table-actions apr-actions">${aprButtonHtml}</td>
       <td class="text-center table-actions">
         <div class="btn-group" role="group">
           <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
             servico.id
-          }')" title="Visualizar Detalhes"><i class="fas fa-eye"></i></button>
+          }')" title="Visualizar Detalhes"><span class="material-symbols-outlined">visibility</span></button>
           <button class="btn btn-sm glass-btn btn-primary me-1" onclick="selecionarResponsavel(${
             servico.id
-          })" title="Selecionar Responsável"><i class="fas fa-user-edit"></i></button>
+          })" title="Selecionar Responsável"><span class="material-symbols-outlined">manage_accounts</span></button>
           <button class="btn btn-sm glass-btn btn-success me-1" onclick="concluirServico(${
             servico.id
-          })" title="Concluir Serviço"><i class="fas fa-check-circle"></i></button>
+          })" title="Concluir Serviço"><span class="material-symbols-outlined">task_alt</span></button>
           <button class="btn btn-sm glass-btn btn-danger" onclick="confirmarExclusao(${
             servico.id
-          })" title="Excluir Serviço"><i class="fas fa-trash"></i></button>
+          })" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>
         </div>
       </td>`;
     tbody.appendChild(tr);
   });
+}
+
+window.abrirModalUploadAPR = function (servicoId) {
+  currentServicoId = servicoId;
+  const aprServicoIdInput = document.getElementById("aprServicoId");
+  const aprFileInput = document.getElementById("aprFile");
+  const aprUploadProgress = document.getElementById("aprUploadProgress");
+  const progressBar = aprUploadProgress
+    ? aprUploadProgress.querySelector(".progress-bar")
+    : null;
+
+  if (aprServicoIdInput) aprServicoIdInput.value = servicoId;
+  if (aprFileInput) aprFileInput.value = "";
+  if (aprUploadProgress) aprUploadProgress.style.display = "none";
+  if (progressBar) {
+    progressBar.style.width = "0%";
+    progressBar.textContent = "0%";
+    progressBar.classList.remove("bg-success", "bg-danger");
+  }
+
+  if (aprUploadModalInstance) {
+    aprUploadModalInstance.show();
+  }
+};
+
+async function submeterArquivoAPR() {
+  const aprFile = document.getElementById("aprFile").files[0];
+  const servicoId = document.getElementById("aprServicoId").value;
+  const aprUploadProgress = document.getElementById("aprUploadProgress");
+  const progressBar = aprUploadProgress
+    ? aprUploadProgress.querySelector(".progress-bar")
+    : null;
+  const btnConfirmarUploadAPR = document.getElementById(
+    "btnConfirmarUploadAPR"
+  );
+
+  if (!aprFile) {
+    showToast("Por favor, selecione um arquivo para a APR.", "warning");
+    return;
+  }
+  if (aprFile.size > 10 * 1024 * 1024) {
+    showToast("O arquivo excede o limite de 10MB.", "danger");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("apr_file", aprFile);
+
+  if (btnConfirmarUploadAPR) {
+    btnConfirmarUploadAPR.disabled = true;
+    btnConfirmarUploadAPR.innerHTML =
+      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+  }
+  if (aprUploadProgress) aprUploadProgress.style.display = "flex";
+  if (progressBar) {
+    progressBar.style.width = "0%";
+    progressBar.textContent = "0%";
+    progressBar.classList.remove("bg-success", "bg-danger");
+  }
+
+  let progressInterval;
+  try {
+    let progress = 0;
+    if (progressBar) {
+      progressInterval = setInterval(() => {
+        progress += 20;
+        progressBar.style.width = Math.min(progress, 100) + "%";
+        progressBar.textContent = Math.min(progress, 100) + "%";
+        if (progress >= 100) clearInterval(progressInterval);
+      }, 150);
+    }
+
+    const response = await fetch(`/api/servicos/${servicoId}/upload-apr`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (progressInterval) clearInterval(progressInterval);
+
+    if (!response.ok) {
+      if (progressBar) progressBar.classList.add("bg-danger");
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Erro ao enviar APR." }));
+      throw new Error(errorData.message);
+    }
+
+    if (progressBar) {
+      progressBar.style.width = "100%";
+      progressBar.textContent = "Concluído!";
+      progressBar.classList.add("bg-success");
+    }
+
+    const result = await response.json();
+    showToast(result.message || "APR enviada com sucesso!", "success");
+
+    setTimeout(() => {
+      if (aprUploadModalInstance) aprUploadModalInstance.hide();
+      carregarServicosAtivos();
+    }, 1000);
+  } catch (error) {
+    if (progressInterval) clearInterval(progressInterval);
+    if (progressBar) {
+      progressBar.textContent = "Falha!";
+      progressBar.classList.add("bg-danger");
+    }
+    showToast("Erro ao enviar APR: " + error.message, "danger");
+    if (aprUploadProgress) aprUploadProgress.style.display = "none";
+  } finally {
+    if (btnConfirmarUploadAPR) {
+      btnConfirmarUploadAPR.disabled = false;
+      btnConfirmarUploadAPR.innerHTML = "Enviar APR";
+    }
+  }
 }
 
 window.selecionarResponsavel = async function (servicoId) {
@@ -260,7 +409,7 @@ window.selecionarResponsavel = async function (servicoId) {
                     ${responsaveis
                       .map(
                         (r) =>
-                          `<option value="${r.matricula}">${r.matricula} - ${r.nome}</option>`
+                          `<option value="${r.matricula}">${r.nome}</option>`
                       )
                       .join("")}
                 </select>
@@ -269,7 +418,10 @@ window.selecionarResponsavel = async function (servicoId) {
     if (modalResponsavelInstance) modalResponsavelInstance.show();
   } catch (error) {
     console.error("Erro ao carregar responsáveis:", error);
-    showToast("Erro ao carregar lista de responsáveis", "danger");
+    showToast(
+      "Erro ao carregar lista de responsáveis: " + error.message,
+      "danger"
+    );
   }
 };
 
@@ -314,7 +466,8 @@ async function excluirServico() {
   const originalText = btnDelete.innerHTML;
   try {
     btnDelete.disabled = true;
-    btnDelete.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+    btnDelete.innerHTML =
+      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Excluindo...';
     const response = await fetch(`/api/servicos/${currentServicoId}`, {
       method: "DELETE",
     });
@@ -329,8 +482,10 @@ async function excluirServico() {
     console.error("Erro ao excluir serviço:", error);
     showToast("Erro ao excluir serviço: " + error.message, "danger");
   } finally {
-    btnDelete.disabled = false;
-    btnDelete.innerHTML = originalText;
+    if (btnDelete) {
+      btnDelete.disabled = false;
+      btnDelete.innerHTML = originalText;
+    }
   }
 }
 
@@ -357,7 +512,7 @@ async function finalizarServico() {
   try {
     btnConcluir.disabled = true;
     btnConcluir.innerHTML =
-      '<i class="fas fa-spinner fa-spin"></i> Processando...';
+      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
     const dataInput = document.getElementById("dataConclusao").value;
     const horaInput = document.getElementById("horaConclusao").value;
     const observacoes = document.getElementById("observacoesConclusao").value;
@@ -404,19 +559,26 @@ async function finalizarServico() {
       errorMessage = "Erro interno no servidor ao concluir serviço";
     showToast(errorMessage, "danger");
   } finally {
-    btnConcluir.disabled = false;
-    btnConcluir.innerHTML = originalText;
+    if (btnConcluir) {
+      btnConcluir.disabled = false;
+      btnConcluir.innerHTML = originalText;
+    }
   }
 }
 
 function formatarData(dataString) {
   if (!dataString) return "Não informado";
-  const data = new Date(dataString);
-  if (isNaN(data.getTime())) return "Data inválida";
-  const dia = String(data.getUTCDate()).padStart(2, "0");
-  const mes = String(data.getUTCMonth() + 1).padStart(2, "0");
-  const ano = data.getUTCFullYear();
-  return `${dia}/${mes}/${ano}`;
+  try {
+    const data = new Date(dataString);
+    if (isNaN(data.getTime())) return "Data inválida";
+    const dia = String(data.getUTCDate()).padStart(2, "0");
+    const mes = String(data.getUTCMonth() + 1).padStart(2, "0");
+    const ano = data.getUTCFullYear();
+    return `${dia}/${mes}/${ano}`;
+  } catch (e) {
+    console.error("Erro ao formatar data:", dataString, e);
+    return "Data inválida";
+  }
 }
 
 window.removerFotoPreview = function (index) {
@@ -453,10 +615,13 @@ window.navigateTo = async function (pageNameOrUrl) {
       if (developmentModalInstance) developmentModalInstance.show();
       else alert("Página não encontrada ou em desenvolvimento.");
     } else {
+      const errorText = await response.text();
+      console.error("Erro ao navegar:", response.status, errorText);
       if (developmentModalInstance) developmentModalInstance.show();
       else alert("Erro ao tentar acessar a página.");
     }
   } catch (error) {
+    console.error("Erro de rede ou falha na navegação:", error);
     if (developmentModalInstance) developmentModalInstance.show();
     else alert("Erro de rede ou falha na navegação.");
   }
@@ -465,95 +630,90 @@ window.navigateTo = async function (pageNameOrUrl) {
 document.addEventListener("DOMContentLoaded", function () {
   user = JSON.parse(localStorage.getItem("user"));
 
-  if (typeof bootstrap !== "undefined") {
+  if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
     const confirmModalEl = document.getElementById("confirmModal");
     if (confirmModalEl)
       confirmModalInstance = new bootstrap.Modal(confirmModalEl);
-
     const concluirModalEl = document.getElementById("concluirModal");
     if (concluirModalEl)
       concluirModalInstance = new bootstrap.Modal(concluirModalEl);
-
     const toastLiveEl = document.getElementById("liveToast");
     if (toastLiveEl) liveToastInstance = new bootstrap.Toast(toastLiveEl);
-
     const modalResponsavelEl = document.getElementById("modalResponsavel");
     if (modalResponsavelEl)
       modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
-
+    const aprUploadModalEl = document.getElementById("aprUploadModal");
+    if (aprUploadModalEl)
+      aprUploadModalInstance = new bootstrap.Modal(aprUploadModalEl);
     const admEl = document.getElementById("access-denied-modal");
     if (admEl) accessDeniedModalInstance = new bootstrap.Modal(admEl);
-
     const devmEl = document.getElementById("development-modal");
     if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
-  } else {
-    console.error(
-      "Bootstrap não está carregado. Modais e Toast não funcionarão."
-    );
   }
 
   const confirmDeleteBtn = document.getElementById("confirmDelete");
   if (confirmDeleteBtn)
     confirmDeleteBtn.addEventListener("click", excluirServico);
-
   const confirmConcluirBtn = document.getElementById("confirmConcluir");
   if (confirmConcluirBtn)
     confirmConcluirBtn.addEventListener("click", finalizarServico);
+  const btnConfirmarUploadAPR = document.getElementById(
+    "btnConfirmarUploadAPR"
+  );
+  if (btnConfirmarUploadAPR)
+    btnConfirmarUploadAPR.addEventListener("click", submeterArquivoAPR);
 
   const filtroProcessoInput = document.getElementById("filtroProcesso");
   if (filtroProcessoInput)
-    filtroProcessoInput.addEventListener("input", atualizarTabela);
-
+    filtroProcessoInput.addEventListener(
+      "input",
+      debounce(atualizarTabela, 300)
+    );
   const filtroSubestacaoSelect = document.getElementById("filtroSubestacao");
   if (filtroSubestacaoSelect)
     filtroSubestacaoSelect.addEventListener("change", atualizarTabela);
-
   const filtroEncarregadoSelect = document.getElementById("filtroEncarregado");
   if (filtroEncarregadoSelect)
     filtroEncarregadoSelect.addEventListener("change", atualizarTabela);
-
   const filtroDataInput = document.getElementById("filtroData");
   if (filtroDataInput)
     filtroDataInput.addEventListener("change", atualizarTabela);
 
   const btnTirarFoto = document.getElementById("btnTirarFoto");
-  if (btnTirarFoto) {
+  const btnAdicionarFotos = document.getElementById("btnAdicionarFotos");
+  const fotosConclusaoInputGlobal = document.getElementById("fotosConclusao");
+  const fotoCameraInputGlobal = document.getElementById("fotoCamera");
+
+  if (btnTirarFoto && (fotosConclusaoInputGlobal || fotoCameraInputGlobal)) {
     btnTirarFoto.addEventListener("click", function () {
-      if (isMobileDevice()) {
-        const fotoCameraInput = document.getElementById("fotoCamera");
-        if (fotoCameraInput) fotoCameraInput.click();
-      } else {
-        const fotosConclusaoInput = document.getElementById("fotosConclusao");
-        if (fotosConclusaoInput) fotosConclusaoInput.click();
+      if (isMobileDevice() && fotoCameraInputGlobal) {
+        fotoCameraInputGlobal.click();
+      } else if (fotosConclusaoInputGlobal) {
+        fotosConclusaoInputGlobal.click();
       }
     });
   }
-
-  const btnAdicionarFotos = document.getElementById("btnAdicionarFotos");
-  const fotosConclusaoInputGlobal = document.getElementById("fotosConclusao");
   if (btnAdicionarFotos && fotosConclusaoInputGlobal) {
     btnAdicionarFotos.addEventListener("click", function () {
       fotosConclusaoInputGlobal.click();
     });
   }
-
-  const fotoCameraInputGlobal = document.getElementById("fotoCamera");
   if (fotoCameraInputGlobal && fotosConclusaoInputGlobal) {
     fotoCameraInputGlobal.addEventListener("change", function (e) {
       if (this.files.length > 0) {
         const dataTransfer = new DataTransfer();
-        for (let i = 0; i < fotosConclusaoInputGlobal.files.length; i++) {
-          dataTransfer.items.add(fotosConclusaoInputGlobal.files[i]);
-        }
+        Array.from(fotosConclusaoInputGlobal.files).forEach((file) =>
+          dataTransfer.items.add(file)
+        );
         dataTransfer.items.add(this.files[0]);
         fotosConclusaoInputGlobal.files = dataTransfer.files;
-        const event = new Event("change", { bubbles: true });
-        fotosConclusaoInputGlobal.dispatchEvent(event);
+        fotosConclusaoInputGlobal.dispatchEvent(
+          new Event("change", { bubbles: true })
+        );
         this.value = "";
       }
     });
   }
-
   if (fotosConclusaoInputGlobal) {
     fotosConclusaoInputGlobal.addEventListener("change", function (e) {
       const previewContainer = document.getElementById("previewContainer");
@@ -573,16 +733,16 @@ document.addEventListener("DOMContentLoaded", function () {
             const col = document.createElement("div");
             col.className = "col-6 col-md-4 col-lg-3 mb-2";
             col.innerHTML = `
-                            <div class="preview-item position-relative">
-                                <img src="${
-                                  event.target.result
-                                }" alt="Preview ${
+                                <div class="preview-item position-relative">
+                                    <img src="${
+                                      event.target.result
+                                    }" alt="Preview ${
               index + 1
             }" class="img-fluid rounded">
-                                <button type="button" class="btn-remove position-absolute top-0 end-0 btn btn-sm btn-danger m-1" onclick="removerFotoPreview(${index})" style="line-height: 1; padding: 0.1rem 0.3rem;">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>`;
+                                    <button type="button" class="btn-remove position-absolute top-0 end-0 btn btn-sm btn-danger m-1" onclick="removerFotoPreview(${index})" style="line-height: 1; padding: 0.1rem 0.3rem;">
+                                        <span class="material-symbols-outlined" style="font-size: 0.8em;">close</span>
+                                    </button>
+                                </div>`;
             previewContainer.appendChild(col);
           };
           reader.readAsDataURL(file);
@@ -590,6 +750,5 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
-
   carregarDadosIniciais();
 });
