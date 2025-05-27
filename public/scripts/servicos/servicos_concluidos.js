@@ -165,19 +165,65 @@ function obterServicosFiltrados() {
     elementos.filtros.subestacao?.value.toLowerCase() || "";
   const filtroAlimentador =
     elementos.filtros.alimentador?.value.toLowerCase() || "";
-  const filtroData = elementos.filtros.data?.value || "";
+  const filtroDataSelecionada = elementos.filtros.data?.value || "";
 
   return servicosData.filter((servico) => {
     const processo = servico.processo?.toString().toLowerCase() || "";
     const subestacao = servico.subestacao?.toString().toLowerCase() || "";
     const alimentador = servico.alimentador?.toString().toLowerCase() || "";
-    const dataConclusao = servico.data_conclusao || "";
+
+    let matchesData = true;
+    if (filtroDataSelecionada && servico.data_conclusao) {
+      try {
+        let dataConclusaoObj;
+        if (servico.data_conclusao.includes("T")) {
+          dataConclusaoObj = new Date(servico.data_conclusao);
+        } else {
+          const dataComT = servico.data_conclusao.replace(" ", "T");
+          dataConclusaoObj = new Date(dataComT);
+          if (isNaN(dataConclusaoObj.getTime())) {
+            dataConclusaoObj = new Date(servico.data_conclusao);
+          }
+        }
+
+        if (!isNaN(dataConclusaoObj.getTime())) {
+          const formatter = new Intl.DateTimeFormat("en-CA", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            timeZone: "America/Sao_Paulo",
+          });
+
+          const parts = formatter.formatToParts(dataConclusaoObj);
+          let year, month, day;
+          parts.forEach((part) => {
+            if (part.type === "year") year = part.value;
+            else if (part.type === "month") month = part.value;
+            else if (part.type === "day") day = part.value;
+          });
+
+          const dataConclusaoLocalFormatada = `${year}-${month}-${day}`;
+          matchesData = dataConclusaoLocalFormatada === filtroDataSelecionada;
+        } else {
+          matchesData = false;
+        }
+      } catch (e) {
+        console.error(
+          "Erro ao parsear ou formatar data de conclusão para filtro:",
+          servico.data_conclusao,
+          e
+        );
+        matchesData = false;
+      }
+    } else if (filtroDataSelecionada && !servico.data_conclusao) {
+      matchesData = false;
+    }
+
     return (
       processo.includes(filtroProcesso) &&
       subestacao.includes(filtroSubestacao) &&
       alimentador.includes(filtroAlimentador) &&
-      (filtroData === "" ||
-        (dataConclusao && dataConclusao.startsWith(filtroData)))
+      matchesData
     );
   });
 }
@@ -343,7 +389,18 @@ window.mudarPagina = function (page) {
 function formatarData(dataString) {
   try {
     if (!dataString) return "Não informado";
-    const data = new Date(dataString);
+
+    let data;
+    if (dataString.includes("T")) {
+      data = new Date(dataString);
+    } else {
+      const dataComT = dataString.replace(" ", "T");
+      data = new Date(dataComT);
+      if (isNaN(data.getTime())) {
+        data = new Date(dataString);
+      }
+    }
+
     if (isNaN(data.getTime())) {
       const parts = dataString.split(/[\s/:\-T]+/);
       if (parts.length >= 3) {
@@ -351,33 +408,37 @@ function formatarData(dataString) {
         const month = parseInt(parts[1], 10) - 1;
         const day = parseInt(parts[2], 10);
         let hours = 0,
-          minutes = 0;
+          minutes = 0,
+          seconds = 0;
+
         if (parts.length >= 5) {
-          hours = parseInt(parts[3], 10);
-          minutes = parseInt(parts[4], 10);
+          hours = parseInt(parts[3], 10) || 0;
+          minutes = parseInt(parts[4], 10) || 0;
         }
-        const testDate = new Date(Date.UTC(year, month, day, hours, minutes));
-        if (!isNaN(testDate.getTime())) {
-          return (
-            testDate.toLocaleDateString("pt-BR", {
+        if (parts.length >= 6) {
+          seconds = parseInt(parts[5], 10) || 0;
+        }
+
+        const utcDate = new Date(
+          Date.UTC(year, month, day, hours, minutes, seconds)
+        );
+        if (!isNaN(utcDate.getTime())) {
+          return utcDate
+            .toLocaleString("pt-BR", {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
-              timeZone: "UTC",
-            }) +
-            (parts.length >= 5
-              ? " " +
-                testDate.toLocaleTimeString("pt-BR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  timeZone: "UTC",
-                })
-              : "")
-          );
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "America/Sao_Paulo",
+            })
+            .replace(",", "");
         }
       }
+      console.warn("Data inválida recebida para formatação:", dataString);
       return "Data inválida";
     }
+
     return data
       .toLocaleString("pt-BR", {
         day: "2-digit",
@@ -385,7 +446,7 @@ function formatarData(dataString) {
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
-        timeZone: "UTC",
+        timeZone: "America/Sao_Paulo",
       })
       .replace(",", "");
   } catch (error) {
