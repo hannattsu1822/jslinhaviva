@@ -18,6 +18,8 @@ const itemsPerPage = 10;
 let user = null;
 let accessDeniedModalInstance;
 let developmentModalInstance;
+let currentServicoId = null;
+let aprUploadModalInstance;
 
 function inicializarElementos() {
   try {
@@ -48,6 +50,9 @@ function inicializarElementos() {
       if (admEl) accessDeniedModalInstance = new bootstrap.Modal(admEl);
       const devmEl = document.getElementById("development-modal");
       if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
+      const aprUploadModalEl = document.getElementById("aprUploadModal");
+      if (aprUploadModalEl)
+        aprUploadModalInstance = new bootstrap.Modal(aprUploadModalEl);
     }
   } catch (error) {
     console.error("Erro na inicialização dos elementos:", error);
@@ -83,6 +88,12 @@ function configurarEventListeners() {
         "change",
         aplicarFiltrosEAtualizar
       );
+    }
+    const btnConfirmarUploadAPR = document.getElementById(
+      "btnConfirmarUploadAPR"
+    );
+    if (btnConfirmarUploadAPR) {
+      btnConfirmarUploadAPR.addEventListener("click", submeterArquivoAPR);
     }
   } catch (error) {
     console.error("Erro ao configurar event listeners:", error);
@@ -242,11 +253,37 @@ function atualizarTabela() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const servicosPagina = servicosFiltrados.slice(startIndex, endIndex);
+
     if (servicosPagina.length === 0) {
-      elementos.tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço concluído encontrado.</td></tr>`;
+      elementos.tabela.innerHTML = `<tr><td colspan="8" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço concluído encontrado.</td></tr>`;
     } else {
       servicosPagina.forEach((servico) => {
         const tr = document.createElement("tr");
+
+        let aprButtonHtml = "";
+        if (servico.caminho_apr_anexo) {
+          aprButtonHtml = `
+            <div class="d-flex flex-column align-items-center">
+                <a href="${
+                  servico.caminho_apr_anexo
+                }?download=true" target="_blank" class="btn btn-sm glass-btn btn-success mb-1 w-100" title="Ver/Baixar APR: ${
+            servico.nome_original_apr_anexo || ""
+          }">
+                    <span class="material-symbols-outlined">description</span> Ver
+                </a>
+                <button class="btn btn-sm glass-btn btn-warning w-100" onclick="abrirModalUploadAPR(${
+                  servico.id
+                })" title="Substituir APR">
+                    <span class="material-symbols-outlined">upload_file</span> Subst.
+                </button>
+            </div>`;
+        } else {
+          aprButtonHtml = `
+            <button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR">
+                <span class="material-symbols-outlined">attach_file</span> Anexar
+            </button>`;
+        }
+
         tr.innerHTML = `
           <td>${servico.id || "N/A"}</td>
           <td>${servico.processo || "Não informado"}</td>
@@ -259,6 +296,7 @@ function atualizarTabela() {
               : "") +
             (servico.responsavel_nome || servico.responsavel || "Não informado")
           }</td>
+          <td class="text-center table-actions apr-actions">${aprButtonHtml}</td>
           <td class="text-center">
             <div class="btn-group" role="group">
               <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
@@ -494,6 +532,123 @@ window.solicitarConsolidacaoPDFs = function (servicoId) {
   link.click();
   document.body.removeChild(link);
 };
+
+window.abrirModalUploadAPR = function (servicoId) {
+  currentServicoId = servicoId;
+  const aprServicoIdInput = document.getElementById("aprServicoId");
+  const aprFileInput = document.getElementById("aprFile");
+  const aprUploadProgress = document.getElementById("aprUploadProgress");
+  const progressBar = aprUploadProgress
+    ? aprUploadProgress.querySelector(".progress-bar")
+    : null;
+
+  if (aprServicoIdInput) aprServicoIdInput.value = servicoId;
+  if (aprFileInput) aprFileInput.value = "";
+  if (aprUploadProgress) aprUploadProgress.style.display = "none";
+  if (progressBar) {
+    progressBar.style.width = "0%";
+    progressBar.textContent = "0%";
+    progressBar.classList.remove("bg-success", "bg-danger");
+  }
+
+  if (aprUploadModalInstance) {
+    aprUploadModalInstance.show();
+  }
+};
+
+async function submeterArquivoAPR() {
+  const aprFile = document.getElementById("aprFile").files[0];
+  const servicoId = document.getElementById("aprServicoId").value;
+  const aprUploadProgress = document.getElementById("aprUploadProgress");
+  const progressBar = aprUploadProgress
+    ? aprUploadProgress.querySelector(".progress-bar")
+    : null;
+  const btnConfirmarUploadAPR = document.getElementById(
+    "btnConfirmarUploadAPR"
+  );
+
+  if (!aprFile) {
+    mostrarNotificacao(
+      "Por favor, selecione um arquivo para a APR.",
+      "warning"
+    );
+    return;
+  }
+  if (aprFile.size > 10 * 1024 * 1024) {
+    mostrarNotificacao("O arquivo excede o limite de 10MB.", "danger");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("apr_file", aprFile);
+
+  if (btnConfirmarUploadAPR) {
+    btnConfirmarUploadAPR.disabled = true;
+    btnConfirmarUploadAPR.innerHTML =
+      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
+  }
+  if (aprUploadProgress) aprUploadProgress.style.display = "flex";
+  if (progressBar) {
+    progressBar.style.width = "0%";
+    progressBar.textContent = "0%";
+    progressBar.classList.remove("bg-success", "bg-danger");
+  }
+
+  let progressInterval;
+  try {
+    let progress = 0;
+    if (progressBar) {
+      progressInterval = setInterval(() => {
+        progress += 20;
+        progressBar.style.width = Math.min(progress, 100) + "%";
+        progressBar.textContent = Math.min(progress, 100) + "%";
+        if (progress >= 100) clearInterval(progressInterval);
+      }, 150);
+    }
+
+    const response = await fetch(`/api/servicos/${servicoId}/upload-apr`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (progressInterval) clearInterval(progressInterval);
+
+    if (!response.ok) {
+      if (progressBar) progressBar.classList.add("bg-danger");
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Erro ao enviar APR." }));
+      throw new Error(errorData.message);
+    }
+
+    if (progressBar) {
+      progressBar.style.width = "100%";
+      progressBar.textContent = "Concluído!";
+      progressBar.classList.add("bg-success");
+    }
+
+    const result = await response.json();
+    mostrarNotificacao(result.message || "APR enviada com sucesso!", "success");
+
+    setTimeout(() => {
+      if (aprUploadModalInstance) aprUploadModalInstance.hide();
+      carregarServicosConcluidos();
+    }, 1000);
+  } catch (error) {
+    if (progressInterval) clearInterval(progressInterval);
+    if (progressBar) {
+      progressBar.textContent = "Falha!";
+      progressBar.classList.add("bg-danger");
+    }
+    mostrarNotificacao("Erro ao enviar APR: " + error.message, "danger");
+    if (aprUploadProgress) aprUploadProgress.style.display = "none";
+  } finally {
+    if (btnConfirmarUploadAPR) {
+      btnConfirmarUploadAPR.disabled = false;
+      btnConfirmarUploadAPR.innerHTML = "Enviar APR";
+    }
+  }
+}
 
 window.navigateTo = async function (pageNameOrUrl) {
   let urlToNavigate = pageNameOrUrl;
