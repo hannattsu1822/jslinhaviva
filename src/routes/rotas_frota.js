@@ -26,6 +26,62 @@ router.get(
 );
 
 router.get(
+  "/frota_controle",
+  autenticar,
+  verificarPermissaoPorCargo,
+  (req, res) => {
+    res.sendFile(
+      path.join(__dirname, "../../public/pages/frota/frota_controle.html") //  <-- CORRIGIDO para 'frota' com 't' latino
+    );
+  }
+);
+
+router.get(
+  "/frota_motoristas_cadastro",
+  autenticar,
+  verificarPermissaoPorCargo,
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/frota/frota_motoristas_cadastro.html"
+      )
+    );
+  }
+);
+
+router.get(
+  "/frota_estoque_cadastro",
+  autenticar,
+  verificarPermissaoPorCargo,
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/frota/frota_estoque_cadastro.html"
+      )
+    );
+  }
+);
+
+router.get(
+  "/frota_veiculos_cadastro",
+  autenticar,
+  verificarPermissaoPorCargo,
+  (req, res) => {
+    try {
+      const filePath = path.join(
+        __dirname, // Diretório do arquivo de rota atual
+        "../../public/pages/frota/frota_veiculos_cadastro.html" // Caminho corrigido
+      );
+      res.sendFile(filePath);
+    } catch (error) {
+      console.error("Erro ao tentar servir o arquivo:", error);
+      res.status(500).send("Erro ao carregar a página.");
+    }
+  }
+);
+router.get(
   "/filtrar_veiculos",
   autenticar,
   verificarPermissaoPorCargo,
@@ -103,6 +159,26 @@ router.get("/api/placas", autenticar, async (req, res) => {
   }
 });
 
+router.get("/api/veiculos_controle", autenticar, async (req, res) => {
+  try {
+    const { placa } = req.query;
+    let query =
+      "SELECT id, placa, modelo AS nome, situacao, tipo_veiculo, ano_fabricacao, DATE_FORMAT(data_aquisicao, '%Y-%m-%d') as data_aquisicao, cor FROM veiculos WHERE 1=1";
+    const values = [];
+
+    if (placa) {
+      query += ` AND placa LIKE ?`;
+      values.push(`%${placa}%`);
+    }
+    query += " ORDER BY modelo ASC";
+    const [rows] = await promisePool.query(query, values);
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error("Erro ao buscar veículos:", err);
+    res.status(500).json({ message: "Erro ao buscar veículos!" });
+  }
+});
+
 router.get("/api/inspecoes", autenticar, async (req, res) => {
   try {
     const [rows] = await promisePool.query(
@@ -152,7 +228,6 @@ router.post("/api/salvar_inspecao", autenticar, async (req, res) => {
       .status(400)
       .json({ message: "KM atual e horímetro devem ser valores positivos!" });
   }
-
   try {
     const campos = [
       "matricula",
@@ -208,12 +283,10 @@ router.post("/api/salvar_inspecao", autenticar, async (req, res) => {
       "capas",
       "nivel_oleo_sky",
     ];
-
     const placeholders = campos.map(() => "?").join(", ");
     const values = campos.map((campo) =>
       req.body[campo] !== undefined ? req.body[campo] : null
     );
-
     const query = `INSERT INTO inspecoes (${campos.join(
       ", "
     )}) VALUES (${placeholders})`;
@@ -240,7 +313,7 @@ router.post("/api/filtrar_inspecoes", autenticar, async (req, res) => {
       values.push(placa);
     }
     if (matricula) {
-      query += ` AND matricula = ?`; // Corrigido de matricula_motorista para matricula se o campo no BD for matricula
+      query += ` AND matricula = ?`;
       values.push(matricula);
     }
     if (dataInicial && dataFinal) {
@@ -325,7 +398,6 @@ router.post("/api/editar_inspecao/:id", autenticar, async (req, res) => {
       .status(400)
       .json({ message: "KM atual e horímetro devem ser valores positivos!" });
   }
-
   try {
     const camposParaAtualizar = {
       placa,
@@ -336,13 +408,11 @@ router.post("/api/editar_inspecao/:id", autenticar, async (req, res) => {
       observacoes: observacoes || null,
       ...checklistFields,
     };
-
     for (const key in camposParaAtualizar) {
       if (camposParaAtualizar[key] === undefined) {
         delete camposParaAtualizar[key];
       }
     }
-
     const camposNomes = Object.keys(camposParaAtualizar);
     const setClauses = camposNomes.map((campo) => `${campo} = ?`).join(", ");
     const values = camposNomes.map((campo) => camposParaAtualizar[campo]);
@@ -350,10 +420,8 @@ router.post("/api/editar_inspecao/:id", autenticar, async (req, res) => {
     if (camposNomes.length === 0) {
       return res.status(400).json({ message: "Nenhum dado para atualizar!" });
     }
-
     const query = `UPDATE inspecoes SET ${setClauses} WHERE id = ?`;
     values.push(id);
-
     const [result] = await promisePool.query(query, values);
 
     if (result.affectedRows > 0) {
@@ -437,7 +505,6 @@ router.post("/api/registrar_oleo", autenticar, async (req, res) => {
       "SELECT horimetro FROM trocas_oleo WHERE veiculo_id = ? ORDER BY data_troca DESC LIMIT 1",
       [veiculo_id]
     );
-
     const horimetroInspecao = ultimaInspecao[0]?.horimetro || 0;
     const horimetroUltimaTroca = ultimaTrocaOleo[0]?.horimetro || 0;
 
@@ -446,9 +513,7 @@ router.post("/api/registrar_oleo", autenticar, async (req, res) => {
         message: `O horímetro informado (${horimetro}) deve ser maior ou igual ao último registrado para troca de óleo (${horimetroUltimaTroca})`,
       });
     }
-
     const horimetroProximaTroca = Math.floor(parseFloat(horimetro) + 300);
-
     const query = `INSERT INTO trocas_oleo (veiculo_id, responsavel_id, data_troca, horimetro, observacoes) VALUES (?, ?, ?, ?, ?)`;
     const values = [
       veiculo_id,
@@ -547,12 +612,10 @@ router.get("/api/proxima_troca_oleo", autenticar, async (req, res) => {
           `SELECT FLOOR(horimetro) as horimetro FROM trocas_oleo WHERE veiculo_id = ? ORDER BY data_troca DESC, id DESC LIMIT 1`,
           [id]
         );
-
         const horimetroInspecao = inspecao[0]?.horimetro || 0;
         const ultimaTroca = troca[0]?.horimetro || 0;
         const horimetroAtual = horimetroInspecao;
         const proximaTroca = ultimaTroca + 300;
-
         return {
           id,
           placa,
@@ -591,7 +654,6 @@ router.get("/api/gerar_pdf_veiculos/:id", async (req, res) => {
       "_"
     );
     const nomeArquivo = `inspecao_${id}_${placaFormatada}.pdf`;
-
     const browser = await chromium.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -600,21 +662,13 @@ router.get("/api/gerar_pdf_veiculos/:id", async (req, res) => {
     const url = `${req.protocol}://${req.get(
       "host"
     )}/relatorio_publico_veiculos?id=${id}`;
-
     await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
-
     const headerFooterStyle = `font-family: 'Poppins', Arial, sans-serif; font-size: 9px; color: #333; width: 100%;`;
-    const primaryColorForHeader = "#004494"; // Substitua pela sua cor primária exata
-
+    const primaryColorForHeader = "#004494";
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: {
-        top: "40mm",
-        right: "10mm",
-        bottom: "25mm",
-        left: "10mm",
-      },
+      margin: { top: "40mm", right: "10mm", bottom: "25mm", left: "10mm" },
       displayHeaderFooter: true,
       headerTemplate: `
         <div style="${headerFooterStyle} padding: 0 10mm; height: 30mm; display: flex; flex-direction: column; justify-content: center; align-items: center; border-bottom: 1px solid #ddd;">
@@ -630,7 +684,6 @@ router.get("/api/gerar_pdf_veiculos/:id", async (req, res) => {
       `,
     });
     await browser.close();
-
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -669,13 +722,11 @@ router.get("/api/inspecoes_publico/:id", async (req, res) => {
 router.delete("/api/trocas_oleo/:id", autenticar, async (req, res) => {
   const { id } = req.params;
   const matriculaUsuario = req.user ? req.user.matricula : "SYSTEM_UNKNOWN";
-
   if (!id || isNaN(parseInt(id))) {
     return res
       .status(400)
       .json({ message: "ID do registro inválido ou não fornecido!" });
   }
-
   try {
     const [recordInfo] = await promisePool.query(
       "SELECT v.placa FROM trocas_oleo t LEFT JOIN veiculos v ON t.veiculo_id = v.id WHERE t.id = ?",
@@ -683,12 +734,10 @@ router.delete("/api/trocas_oleo/:id", autenticar, async (req, res) => {
     );
     const placa =
       recordInfo.length > 0 && recordInfo[0] ? recordInfo[0].placa : "N/A";
-
     const [result] = await promisePool.query(
       "DELETE FROM trocas_oleo WHERE id = ?",
       [id]
     );
-
     if (result.affectedRows > 0) {
       await registrarAuditoria(
         matriculaUsuario,
@@ -709,6 +758,355 @@ router.delete("/api/trocas_oleo/:id", autenticar, async (req, res) => {
       message:
         "Erro interno do servidor ao tentar excluir registro de troca de óleo.",
     });
+  }
+});
+
+router.get("/api/frota_inventario", autenticar, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT id, codigo, placa, nome, situacao, tipo_veiculo, ano_fabricacao, DATE_FORMAT(data_aquisicao, '%d/%m/%Y') as data_aquisicao, cor, descricao FROM frota_inventario ORDER BY nome ASC"
+    );
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error("Erro ao buscar veículos do inventário:", err);
+    res.status(500).json({ message: "Erro ao buscar veículos do inventário!" });
+  }
+});
+
+router.post("/api/frota_inventario", autenticar, async (req, res) => {
+  const {
+    codigo,
+    placa,
+    nome,
+    situacao,
+    tipo_veiculo,
+    descricao,
+    ano_fabricacao,
+    data_aquisicao,
+    cor,
+  } = req.body;
+  const matriculaUsuario = req.user.matricula;
+
+  if (!placa || !nome || !situacao || !tipo_veiculo || !data_aquisicao) {
+    return res
+      .status(400)
+      .json({ message: "Campos obrigatórios estão faltando!" });
+  }
+  try {
+    const query = `
+      INSERT INTO frota_inventario 
+      (codigo, placa, nome, situacao, tipo_veiculo, descricao, ano_fabricacao, data_aquisicao, cor) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [result] = await promisePool.query(query, [
+      codigo || null,
+      placa,
+      nome,
+      situacao,
+      tipo_veiculo,
+      descricao || null,
+      ano_fabricacao || null,
+      data_aquisicao,
+      cor || null,
+    ]);
+    await registrarAuditoria(
+      matriculaUsuario,
+      "Cadastro de Veículo",
+      `Veículo placa: ${placa}, nome: ${nome} cadastrado.`
+    );
+    res.status(201).json({
+      message: "Veículo cadastrado com sucesso!",
+      id: result.insertId,
+    });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res
+        .status(409)
+        .json({ message: "Placa ou código já cadastrado." });
+    }
+    console.error("Erro ao cadastrar veículo:", err);
+    res.status(500).json({ message: "Erro interno ao cadastrar o veículo." });
+  }
+});
+
+router.delete("/api/frota_inventario/:id", autenticar, async (req, res) => {
+  const { id } = req.params;
+  const matriculaUsuario = req.user.matricula;
+  try {
+    const [veiculo] = await promisePool.query(
+      "SELECT placa FROM frota_inventario WHERE id = ?",
+      [id]
+    );
+    if (veiculo.length === 0) {
+      return res.status(404).json({ message: "Veículo não encontrado." });
+    }
+    const placa = veiculo[0].placa;
+    const [result] = await promisePool.query(
+      "DELETE FROM frota_inventario WHERE id = ?",
+      [id]
+    );
+    if (result.affectedRows > 0) {
+      await registrarAuditoria(
+        matriculaUsuario,
+        "Exclusão de Veículo",
+        `Veículo com ID: ${id} e Placa: ${placa} foi excluído.`
+      );
+      res.status(200).json({ message: "Veículo excluído com sucesso!" });
+    } else {
+      res.status(404).json({ message: "Veículo não encontrado." });
+    }
+  } catch (err) {
+    console.error("Erro ao excluir veículo:", err);
+    res.status(500).json({ message: "Erro ao excluir veículo." });
+  }
+});
+
+router.get("/api/frota/motoristas_crud", autenticar, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT id, matricula, nome FROM frota_motorista ORDER BY nome ASC"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao buscar motoristas (CRUD):", err);
+    res.status(500).json({ message: "Erro interno ao buscar motoristas." });
+  }
+});
+
+router.post("/api/frota/motoristas_crud", autenticar, async (req, res) => {
+  const { matricula, nome } = req.body;
+  const usuarioLogadoMatricula = req.user.matricula;
+  if (!matricula || !nome) {
+    return res
+      .status(400)
+      .json({ message: "Matrícula e nome são obrigatórios." });
+  }
+  try {
+    const [existing] = await promisePool.query(
+      "SELECT id FROM frota_motorista WHERE matricula = ?",
+      [matricula]
+    );
+    if (existing.length > 0) {
+      return res
+        .status(409)
+        .json({ message: "Matrícula já cadastrada para outro motorista." });
+    }
+    const sql = "INSERT INTO frota_motorista (matricula, nome) VALUES (?, ?)";
+    const [result] = await promisePool.query(sql, [matricula, nome]);
+    if (result.affectedRows === 1) {
+      const novoMotoristaId = result.insertId;
+      await registrarAuditoria(
+        usuarioLogadoMatricula,
+        "CADASTRO_MOTORISTA_CRUD",
+        `Motorista ID ${novoMotoristaId} (Matrícula: ${matricula}, Nome: ${nome}) cadastrado via CRUD.`
+      );
+      res.status(201).json({
+        message: "Motorista cadastrado com sucesso!",
+        id: novoMotoristaId,
+      });
+    } else {
+      throw new Error("Nenhuma linha afetada, falha ao inserir motorista.");
+    }
+  } catch (err) {
+    console.error("Erro ao cadastrar motorista (CRUD):", err);
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "Matrícula já cadastrada." });
+    }
+    res.status(500).json({ message: "Erro interno ao cadastrar motorista." });
+  }
+});
+
+router.delete(
+  "/api/frota/motoristas_crud/:id",
+  autenticar,
+  async (req, res) => {
+    const { id } = req.params;
+    const usuarioLogadoMatricula = req.user.matricula;
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "ID do motorista é obrigatório." });
+    }
+    let connection;
+    try {
+      connection = await promisePool.getConnection();
+      await connection.beginTransaction();
+      const [motoristas] = await connection.query(
+        "SELECT matricula, nome FROM frota_motorista WHERE id = ?",
+        [id]
+      );
+      const motoristaParaAuditoria = motoristas[0];
+      const [result] = await connection.query(
+        "DELETE FROM frota_motorista WHERE id = ?",
+        [id]
+      );
+      if (result.affectedRows === 1) {
+        if (motoristaParaAuditoria) {
+          await registrarAuditoria(
+            usuarioLogadoMatricula,
+            "EXCLUSAO_MOTORISTA_CRUD",
+            `Motorista ID ${id} (Matrícula: ${motoristaParaAuditoria.matricula}, Nome: ${motoristaParaAuditoria.nome}) excluído via CRUD.`,
+            connection
+          );
+        } else {
+          await registrarAuditoria(
+            usuarioLogadoMatricula,
+            "EXCLUSAO_MOTORISTA_CRUD",
+            `Motorista ID ${id} excluído via CRUD (dados não puderam ser recuperados para auditoria detalhada).`,
+            connection
+          );
+        }
+        await connection.commit();
+        res.json({ message: "Motorista excluído com sucesso." });
+      } else {
+        await connection.rollback();
+        res.status(404).json({ message: "Motorista não encontrado." });
+      }
+    } catch (err) {
+      if (connection) await connection.rollback();
+      console.error("Erro ao excluir motorista (CRUD):", err);
+      res.status(500).json({ message: "Erro interno ao excluir motorista." });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.get("/api/frota/estoque_crud", autenticar, async (req, res) => {
+  try {
+    let query = "SELECT id, cod, nome, unid FROM frota_pçs";
+    const queryParams = [];
+    const conditions = [];
+
+    if (req.query.cod) {
+      conditions.push("cod LIKE ?");
+      queryParams.push(`${req.query.cod}%`); // Busca por códigos que começam com o digitado
+    }
+    if (req.query.nome) {
+      conditions.push("nome LIKE ?");
+      queryParams.push(`%${req.query.nome}%`); // Busca por nomes que contêm o digitado
+    }
+
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+    query += " ORDER BY nome ASC";
+
+    // Log para depuração no backend (opcional)
+    // console.log("Executando query de estoque:", query, queryParams);
+
+    const [rows] = await promisePool.query(query, queryParams);
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao buscar itens de estoque (CRUD):", err);
+    res
+      .status(500)
+      .json({ message: "Erro interno ao buscar itens de estoque." });
+  }
+});
+router.post("/api/frota/estoque_crud", autenticar, async (req, res) => {
+  const { cod, nome, unid } = req.body;
+  const usuarioLogadoMatricula = req.user.matricula;
+
+  if (!cod || !nome) {
+    return res
+      .status(400)
+      .json({ message: "Código e Nome da peça são obrigatórios." });
+  }
+
+  try {
+    const [existing] = await promisePool.query(
+      "SELECT id FROM frota_pçs WHERE cod = ?",
+      [cod]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "Código da peça já cadastrado." });
+    }
+
+    const sql = "INSERT INTO frota_pçs (cod, nome, unid) VALUES (?, ?, ?)";
+    const [result] = await promisePool.query(sql, [cod, nome, unid || null]);
+
+    if (result.affectedRows === 1) {
+      const novoItemId = result.insertId;
+      await registrarAuditoria(
+        usuarioLogadoMatricula,
+        "CADASTRO_PECA_ESTOQUE",
+        `Peça ID ${novoItemId} (Código: ${cod}, Nome: ${nome}) cadastrada no estoque.`
+      );
+      res.status(201).json({
+        message: "Peça cadastrada no estoque com sucesso!",
+        id: novoItemId,
+      });
+    } else {
+      throw new Error(
+        "Nenhuma linha afetada, falha ao inserir peça no estoque."
+      );
+    }
+  } catch (err) {
+    console.error("Erro ao cadastrar peça no estoque (CRUD):", err);
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "Código da peça já cadastrado." });
+    }
+    res
+      .status(500)
+      .json({ message: "Erro interno ao cadastrar peça no estoque." });
+  }
+});
+
+router.delete("/api/frota/estoque_crud/:id", autenticar, async (req, res) => {
+  const { id } = req.params;
+  const usuarioLogadoMatricula = req.user.matricula;
+
+  if (!id) {
+    return res.status(400).json({ message: "ID da peça é obrigatório." });
+  }
+
+  let connection;
+  try {
+    connection = await promisePool.getConnection();
+    await connection.beginTransaction();
+
+    const [pecas] = await connection.query(
+      "SELECT cod, nome FROM frota_pçs WHERE id = ?",
+      [id]
+    );
+    const pecaParaAuditoria = pecas[0];
+
+    const [result] = await connection.query(
+      "DELETE FROM frota_pçs WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 1) {
+      if (pecaParaAuditoria) {
+        await registrarAuditoria(
+          usuarioLogadoMatricula,
+          "EXCLUSAO_PECA_ESTOQUE",
+          `Peça ID ${id} (Código: ${pecaParaAuditoria.cod}, Nome: ${pecaParaAuditoria.nome}) excluída do estoque.`,
+          connection
+        );
+      } else {
+        await registrarAuditoria(
+          usuarioLogadoMatricula,
+          "EXCLUSAO_PECA_ESTOQUE",
+          `Peça ID ${id} excluída do estoque (dados não puderam ser recuperados para auditoria detalhada).`,
+          connection
+        );
+      }
+      await connection.commit();
+      res.json({ message: "Peça excluída do estoque com sucesso." });
+    } else {
+      await connection.rollback();
+      res.status(404).json({ message: "Peça não encontrada no estoque." });
+    }
+  } catch (err) {
+    if (connection) await connection.rollback();
+    console.error("Erro ao excluir peça do estoque (CRUD):", err);
+    res
+      .status(500)
+      .json({ message: "Erro interno ao excluir peça do estoque." });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
