@@ -210,13 +210,11 @@ router.post(
           limparArquivosTemporarios(req.files);
           await connection.rollback();
           connection.release();
-          return res
-            .status(400)
-            .json({
-              success: false,
-              message:
-                "Para serviços normais, o número do processo é obrigatório",
-            });
+          return res.status(400).json({
+            success: false,
+            message:
+              "Para serviços normais, o número do processo é obrigatório",
+          });
         }
         processoParaAuditoria = processo.trim();
         const [result] = await connection.query(
@@ -303,14 +301,12 @@ router.post(
       await connection.rollback();
       console.error("Erro ao registrar serviço:", error);
       limparArquivosTemporarios(req.files);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erro interno ao registrar serviço",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+      res.status(500).json({
+        success: false,
+        message: "Erro interno ao registrar serviço",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -345,14 +341,11 @@ router.get("/api/servicos", autenticar, async (req, res) => {
     res.status(200).json(servicos);
   } catch (error) {
     console.error("Erro ao buscar serviços:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Erro ao buscar serviços",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Erro ao buscar serviços",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 });
 
@@ -387,14 +380,11 @@ router.get("/api/servicos/:id", autenticar, async (req, res) => {
     res.status(200).json({ success: true, data: resultado });
   } catch (error) {
     console.error("Erro ao buscar detalhes do serviço:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Erro ao buscar detalhes do serviço",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Erro ao buscar detalhes do serviço",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   } finally {
     if (connection) connection.release();
   }
@@ -432,12 +422,10 @@ router.put(
         limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Horários são obrigatórios para desligamentos",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Horários são obrigatórios para desligamentos",
+        });
       }
       if (
         maps &&
@@ -448,12 +436,10 @@ router.put(
         limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Por favor, insira um link válido do Google Maps",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Por favor, insira um link válido do Google Maps",
+        });
       }
 
       await connection.query(
@@ -524,14 +510,12 @@ router.put(
       await connection.rollback();
       console.error("Erro ao atualizar serviço:", error);
       limparArquivosTemporarios(req.files);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erro ao atualizar serviço",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+      res.status(500).json({
+        success: false,
+        message: "Erro ao atualizar serviço",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -580,13 +564,11 @@ router.post(
         await connection.rollback();
         connection.release();
         console.error(`Arquivo temporário não encontrado: ${file.path}`);
-        return res
-          .status(500)
-          .json({
-            success: false,
-            message:
-              "Erro no processamento do arquivo, arquivo temporário não encontrado.",
-          });
+        return res.status(500).json({
+          success: false,
+          message:
+            "Erro no processamento do arquivo, arquivo temporário não encontrado.",
+        });
       }
       await fsPromises.rename(file.path, caminhoCompletoNovoArquivoAPR);
 
@@ -626,12 +608,10 @@ router.post(
       if (req.file && req.file.path && fs.existsSync(req.file.path)) {
         limparArquivosTemporarios(req.file);
       }
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: `Erro interno ao fazer upload da APR: ${error.message}`,
-        });
+      res.status(500).json({
+        success: false,
+        message: `Erro interno ao fazer upload da APR: ${error.message}`,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -727,14 +707,11 @@ router.delete("/api/servicos/:id", autenticar, async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error("Erro ao excluir serviço:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Erro ao excluir serviço",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Erro ao excluir serviço",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   } finally {
     if (connection) connection.release();
   }
@@ -757,23 +734,19 @@ router.post(
         limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Matrícula do responsável não encontrada",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Matrícula do responsável não encontrada",
+        });
       }
       if (!dataConclusao || !horaConclusao) {
         limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Data e Hora de Conclusão são obrigatórias.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Data e Hora de Conclusão são obrigatórias.",
+        });
       }
       const dataHoraConclusao = `${dataConclusao} ${horaConclusao}:00`;
 
@@ -834,14 +807,12 @@ router.post(
         "Conclusão de Serviço",
         `Serviço ${servicoId} (${servicoExistente.processo}) concluído em ${dataHoraConclusao}`
       );
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Serviço concluído com sucesso",
-          data_conclusao: dataHoraConclusao,
-          fotos: req.files?.length || 0,
-        });
+      res.status(200).json({
+        success: true,
+        message: "Serviço concluído com sucesso",
+        data_conclusao: dataHoraConclusao,
+        fotos: req.files?.length || 0,
+      });
     } catch (error) {
       await connection.rollback();
       filePathsParaLimpeza.forEach((filePath) => {
@@ -860,18 +831,16 @@ router.post(
         req.files.filter((f) => !filePathsParaLimpeza.includes(f.path))
       );
       console.error("Erro ao concluir serviço:", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erro interno ao concluir serviço",
-          error:
-            process.env.NODE_ENV === "development"
-              ? error.message
-              : error.code === "WARN_DATA_TRUNCATED"
-              ? "Tipo de anexo inválido."
-              : undefined,
-        });
+      res.status(500).json({
+        success: false,
+        message: "Erro interno ao concluir serviço",
+        error:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : error.code === "WARN_DATA_TRUNCATED"
+            ? "Tipo de anexo inválido."
+            : undefined,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -949,12 +918,10 @@ router.delete(
       if (anexo.length === 0) {
         await connection.rollback();
         connection.release();
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: "Anexo não encontrado ou não pertence a este serviço",
-          });
+        return res.status(404).json({
+          success: false,
+          message: "Anexo não encontrado ou não pertence a este serviço",
+        });
       }
       const caminhoRelativo = anexo[0].caminho_servidor.replace(
         "/api/upload_arquivos/",
@@ -979,14 +946,12 @@ router.delete(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao remover anexo:", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erro ao remover anexo",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+      res.status(500).json({
+        success: false,
+        message: "Erro ao remover anexo",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1017,7 +982,7 @@ router.get("/api/encarregados", autenticar, async (req, res) => {
   const connection = await promisePool.getConnection();
   try {
     const [rows] = await connection.query(
-      "SELECT DISTINCT matricula, nome FROM users WHERE cargo = 'Encarregado' ORDER BY nome"
+      "SELECT DISTINCT matricula, nome FROM users WHERE cargo IN ('Encarregado', 'Engenheiro', 'Técnico', 'ADM', 'ADMIN') ORDER BY nome"
     );
     res.status(200).json(rows);
   } catch (err) {
@@ -1047,12 +1012,10 @@ router.patch("/api/servicos/:id/responsavel", autenticar, async (req, res) => {
   const { id } = req.params;
   const { responsavel_matricula } = req.body;
   if (!responsavel_matricula) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Matrícula do responsável é obrigatória.",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Matrícula do responsável é obrigatória.",
+    });
   }
   const connection = await promisePool.getConnection();
   try {
@@ -1073,14 +1036,11 @@ router.patch("/api/servicos/:id/responsavel", autenticar, async (req, res) => {
     res.json({ success: true, message: "Responsável atualizado com sucesso." });
   } catch (error) {
     console.error("Erro ao atualizar responsável:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Erro ao atualizar responsável",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Erro ao atualizar responsável",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   } finally {
     if (connection) connection.release();
   }
@@ -1118,12 +1078,10 @@ router.get(
 
       if (anexos.length === 0) {
         connection.release();
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: "Nenhum anexo PDF encontrado para este serviço.",
-          });
+        return res.status(404).json({
+          success: false,
+          message: "Nenhum anexo PDF encontrado para este serviço.",
+        });
       }
 
       const mergedPdfDoc = await PDFDocument.create();
@@ -1166,12 +1124,10 @@ router.get(
 
       if (pdfsMergedCount === 0) {
         connection.release();
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: "Nenhum PDF válido pôde ser processado ou encontrado.",
-          });
+        return res.status(404).json({
+          success: false,
+          message: "Nenhum PDF válido pôde ser processado ou encontrado.",
+        });
       }
 
       const mergedPdfBytes = await mergedPdfDoc.save();
@@ -1188,13 +1144,11 @@ router.get(
     } catch (error) {
       console.error("Erro ao consolidar PDFs:", error);
       if (!res.headersSent) {
-        res
-          .status(500)
-          .json({
-            success: false,
-            message: "Erro interno ao consolidar PDFs.",
-            error: error.message,
-          });
+        res.status(500).json({
+          success: false,
+          message: "Erro interno ao consolidar PDFs.",
+          error: error.message,
+        });
       }
     } finally {
       if (connection) connection.release();
