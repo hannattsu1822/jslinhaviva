@@ -266,7 +266,7 @@ function atualizarTabela() {
             <div class="d-flex flex-column align-items-center">
                 <a href="${
                   servico.caminho_apr_anexo
-                }?download=true" target="_blank" class="btn btn-sm glass-btn btn-success mb-1 w-100" title="Ver/Baixar APR: ${
+                }" target="_blank" class="btn btn-sm glass-btn btn-success mb-1 w-100" title="Ver APR: ${
             servico.nome_original_apr_anexo || ""
           }">
                     <span class="material-symbols-outlined">description</span> Ver
