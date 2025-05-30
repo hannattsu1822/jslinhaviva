@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestão de Veículos</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/frota_veiculos_cadastro.css" />
+    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
+    <link rel="stylesheet" href="/static/css/toast.css" />
+  </head>
+  <body>
+    <div class="sidebar">
+      <div class="sidebar-header text-center pt-3 pb-2">
+        <i
+          class="material-icons user-icon"
+          style="font-size: 4.5rem; color: rgba(255, 255, 255, 0.95)"
+          >account_circle</i
+        >
+        <h5
+          id="user-name"
+          class="text-white mt-1 mb-0"
+          style="font-weight: 500"
+        >
+          Carregando...
+        </h5>
+      </div>
+      <div
+        class="user-details-block px-3 py-2 mx-2 mb-2"
+        style="
+          background: rgba(0, 0, 0, 0.15);
+          border-radius: 6px;
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 0.85rem;
+        "
+      >
+        <p class="mb-1 d-flex align-items-center">
+          <i class="material-icons me-2" style="font-size: 1.1rem">badge</i>
+          Matrícula: <span id="user-matricula" class="ms-1">Carregando...</span>
+        </p>
+        <p class="mb-0 d-flex align-items-center">
+          <i class="material-icons me-2" style="font-size: 1.1rem"
+            >work_outline</i
+          >
+          Cargo: <span id="user-cargo" class="ms-1">Carregando...</span>
+        </p>
+        <p class="mt-2 mb-1 d-flex align-items-center">
+          <i class="material-icons me-2" style="font-size: 1.1rem">event</i>
+          <span id="current-date">--/--/----</span>
+        </p>
+        <p class="mb-0 d-flex align-items-center">
+          <i class="material-icons me-2" style="font-size: 1.1rem">schedule</i>
+          <span id="current-time">--:--:--</span>
+        </p>
+      </div>
+      <ul class="list-unstyled components flex-grow-1 px-1">
+        <li>
+          <a href="/"><i class="material-icons">home</i> Início</a>
+        </li>
+        <li>
+          <a href="/dashboard"
+            ><i class="material-icons">dashboard</i> Dashboard</a
+          >
+        </li>
+        <li>
+          <a href="/frota"
+            ><i class="material-icons">directions_car</i> Frota</a
+          >
+        </li>
+        <li>
+          <a href="/frota_controle"
+            ><i class="material-icons">settings_applications</i> Controle da
+            Frota</a
+          >
+        </li>
+      </ul>
+      <div class="sidebar-footer text-center py-3 px-2 mt-auto">
+        <button
+          id="logoutButton"
+          class="btn btn-danger w-100 d-flex align-items-center justify-content-center"
+        >
+          <i class="material-icons me-2">logout</i>Sair
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="container-fluid">
+        <h1 class="page-title">Consulta e Gestão de Veículos</h1>
+        <p class="lead text-muted mb-4">
+          Filtre, consulte e gerencie os veículos da frota.
+        </p>
+
+        <div class="d-flex justify-content-end mb-3">
+          <button
+            class="btn btn-primary"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#formCollapse"
+            aria-expanded="false"
+            aria-controls="formCollapse"
+          >
+            <i class="material-icons me-2">add_circle_outline</i>Cadastrar Novo
+            Veículo
+          </button>
+        </div>
+
+        <div class="collapse mb-4" id="formCollapse">
+          <div class="card card-body">
+            <h5 class="card-title mb-3">Dados do Novo Veículo</h5>
+            <form id="vehicleForm">
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="placa" class="form-label">Placa *</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="placa"
+                    required
+                    maxlength="10"
+                  />
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="nome" class="form-label">Nome/Modelo *</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="nome"
+                    required
+                    maxlength="255"
+                  />
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="codigo" class="form-label"
+                    >Código (Opcional)</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="codigo"
+                    maxlength="50"
+                  />
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="tipo_veiculo" class="form-label"
+                    >Tipo de Veículo *</label
+                  >
+                  <select class="form-select" id="tipo_veiculo" required>
+                    <option value="" selected disabled>Selecione...</option>
+                    <option value="Carro">Carro</option>
+                    <option value="Caminhonete">Caminhonete</option>
+                    <option value="Caminhão">Caminhão</option>
+                    <option value="Máquina">Máquina</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="situacao" class="form-label">Situação *</label>
+                  <select class="form-select" id="situacao" required>
+                    <option value="Ativo" selected>Ativo</option>
+                    <option value="Inativo">Inativo</option>
+                    <option value="Manutenção">Manutenção</option>
+                  </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="data_aquisicao" class="form-label"
+                    >Data de Aquisição *</label
+                  >
+                  <input
+                    type="date"
+                    class="form-control"
+                    id="data_aquisicao"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="ano_fabricacao" class="form-label"
+                    >Ano de Fabricação</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="ano_fabricacao"
+                    maxlength="10"
+                  />
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="cor" class="form-label">Cor</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="cor"
+                    maxlength="30"
+                  />
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-12 mb-3">
+                  <label for="descricao" class="form-label">Descrição</label>
+                  <textarea
+                    class="form-control"
+                    id="descricao"
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-success">
+                <i class="material-icons me-2">save</i>Salvar Veículo
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-toggle="collapse"
+                data-bs-target="#formCollapse"
+              >
+                <i class="material-icons me-2">close</i>Fechar
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="material-icons me-2">filter_alt</i>Filtros de Pesquisa
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3 mb-3">
+                <label for="filterId" class="form-label">ID</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filterId"
+                  placeholder="Filtrar por ID..."
+                />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="filterCodigo" class="form-label">Código</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filterCodigo"
+                  placeholder="Filtrar por Código..."
+                />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="filterPlaca" class="form-label">Placa</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filterPlaca"
+                  placeholder="Filtrar por Placa..."
+                />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="filterNome" class="form-label">Nome/Modelo</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filterNome"
+                  placeholder="Filtrar por Nome..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="material-icons me-2">list_alt</i>Veículos Cadastrados
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Placa</th>
+                    <th>Nome/Modelo</th>
+                    <th>Data de Aquisição</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="vehicleTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div
+        id="liveToast"
+        class="toast"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <div class="toast-header">
+          <strong class="me-auto" id="toastTitle"></strong>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="toast-body" id="toastBody"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/frota/frota_veiculos_cadastro.js"></script>
+  </body>
+</html>
