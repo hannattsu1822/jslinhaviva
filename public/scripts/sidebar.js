@@ -66,6 +66,15 @@ function updateDateTimeSidebar() {
 
 document.addEventListener("DOMContentLoaded", function () {
   console.log("Padrão (sidebar.js): DOMContentLoaded disparado.");
+
+  // *** CORREÇÃO APLICADA AQUI ***
+  // Adiciona o evento de clique ao botão de logout para chamar a função logout.
+  const logoutButton = document.getElementById("logoutButton");
+  if (logoutButton) {
+    logoutButton.addEventListener("click", logout);
+  }
+  // *** FIM DA CORREÇÃO ***
+
   const user = JSON.parse(localStorage.getItem("user"));
 
   if (user) {
@@ -81,12 +90,12 @@ document.addEventListener("DOMContentLoaded", function () {
       userNameElement.textContent = user.nome || "Usuário Desconhecido";
     }
     if (userMatriculaElement) {
-      userMatriculaElement.textContent = `Matrícula: ${
-        user.matricula || "N/A"
-      }`;
+      // O HTML já tem "Matrícula:", então só precisamos do valor.
+      userMatriculaElement.textContent = user.matricula || "N/A";
     }
     if (userCargoElement) {
-      userCargoElement.textContent = `Cargo: ${user.cargo || "N/A"}`;
+      // O HTML já tem "Cargo:", então só precisamos do valor.
+      userCargoElement.textContent = user.cargo || "N/A";
     }
 
     updateDateTimeSidebar();
