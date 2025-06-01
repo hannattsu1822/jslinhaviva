@@ -3,8 +3,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const itensEstoqueTableBody = document.getElementById(
     "itensEstoqueTableBody"
   );
-  const toastEl = document.getElementById("liveToast");
-  const bsToast = new bootstrap.Toast(toastEl);
+  const toastContainer = document.getElementById("toastContainer");
+
+  const toggleFormBtn = document.getElementById("toggleFormBtn");
+  const formContainer = document.getElementById("formContainer");
+  const closeFormBtn = document.getElementById("closeFormBtn");
 
   const filterId = document.getElementById("filterId");
   const filterCod = document.getElementById("filterCod");
@@ -14,31 +17,35 @@ document.addEventListener("DOMContentLoaded", function () {
   const nomeInputForm = document.getElementById("nome");
   const unidInputForm = document.getElementById("unid");
 
-  const formCollapseEl = document.getElementById("formCollapse");
-  const formCollapse = formCollapseEl
-    ? new bootstrap.Collapse(formCollapseEl, { toggle: false })
-    : null;
-
   let searchTimeout = null;
 
+  if (toggleFormBtn) {
+    toggleFormBtn.addEventListener("click", () => {
+      formContainer.classList.toggle("hidden");
+    });
+  }
+  if (closeFormBtn) {
+    closeFormBtn.addEventListener("click", () => {
+      formContainer.classList.add("hidden");
+    });
+  }
+
   function showToast(title, message, isError = false) {
-    const toastTitle = document.getElementById("toastTitle");
-    const toastBody = document.getElementById("toastBody");
-    toastTitle.textContent = title;
-    toastBody.textContent = message;
-    toastEl.classList.remove("bg-success", "bg-danger", "text-white");
-    if (isError) {
-      toastEl.classList.add("bg-danger", "text-white");
-    } else {
-      toastEl.classList.add("bg-success", "text-white");
-    }
-    bsToast.show();
+    const toast = document.createElement("div");
+    toast.className = `toast ${isError ? "error" : "success"}`;
+    toast.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>`;
+    toastContainer.appendChild(toast);
+    setTimeout(() => toast.classList.add("show"), 10);
+    setTimeout(() => {
+      toast.classList.remove("show");
+      toast.addEventListener("transitionend", () => toast.remove());
+    }, 5000);
   }
 
   async function loadItensEstoque(queryParams = "") {
     try {
       itensEstoqueTableBody.innerHTML =
-        '<tr><td colspan="5" class="text-center">Buscando peças...</td></tr>';
+        '<tr><td colspan="5" style="text-align: center;">Buscando peças...</td></tr>';
       const response = await fetch(`/api/frota/estoque_crud${queryParams}`);
       if (!response.ok) {
         const errorData = await response
@@ -46,49 +53,46 @@ document.addEventListener("DOMContentLoaded", function () {
           .catch(() => ({ message: "Erro ao carregar itens do estoque." }));
         throw new Error(errorData.message);
       }
-
       const itens = await response.json();
       itensEstoqueTableBody.innerHTML = "";
-
       if (itens.length === 0) {
-        if (queryParams && queryParams !== "?") {
-          itensEstoqueTableBody.innerHTML =
-            '<tr><td colspan="5" class="text-center">Nenhuma peça encontrada com os critérios fornecidos.</td></tr>';
-        } else {
-          itensEstoqueTableBody.innerHTML =
-            '<tr><td colspan="5" class="text-center">Utilize os filtros para buscar as peças.</td></tr>';
-        }
+        const message =
+          queryParams && queryParams !== "?"
+            ? "Nenhuma peça encontrada com os critérios fornecidos."
+            : "Utilize os filtros para buscar as peças.";
+        itensEstoqueTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">${message}</td></tr>`;
         return;
       }
-
       itens.forEach((item) => {
         const row = document.createElement("tr");
         row.innerHTML = `
-              <td>${item.id}</td>
-              <td>${item.cod || ""}</td>
-              <td>${item.nome || ""}</td>
-              <td>${item.unid || ""}</td>
-              <td>
-                <button class="btn btn-sm btn-info view-btn me-1" data-id="${
-                  item.id
-                }" data-cod="${item.cod}" data-nome="${item.nome}" data-unid="${
+                    <td>${item.id}</td>
+                    <td>${item.cod || ""}</td>
+                    <td>${item.nome || ""}</td>
+                    <td>${item.unid || ""}</td>
+                    <td class="actions">
+                         <button class="btn btn-info view-btn" data-id="${
+                           item.id
+                         }" data-cod="${item.cod}" data-nome="${
+          item.nome
+        }" data-unid="${
           item.unid || ""
         }" title="Visualizar/Preencher Formulário">
-                  <i class="material-icons">search</i>
-                </button>
-                <button class="btn btn-sm btn-danger delete-btn" data-id="${
-                  item.id
-                }" title="Excluir Peça">
-                  <i class="material-icons">delete</i>
-                </button>
-              </td>
-            `;
+                            <i class="material-icons">search</i>
+                        </button>
+                        <button class="btn btn-danger delete-btn" data-id="${
+                          item.id
+                        }" title="Excluir Peça">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    </td>
+                `;
         itensEstoqueTableBody.appendChild(row);
       });
     } catch (error) {
-      console.error("Erro ao carregar itens do estoque:", error);
+      console.error("Erro ao carregar itens:", error);
       itensEstoqueTableBody.innerHTML =
-        '<tr><td colspan="5" class="text-center">Erro ao carregar peças. Tente novamente.</td></tr>';
+        '<tr><td colspan="5" style="text-align: center;">Erro ao carregar peças. Tente novamente.</td></tr>';
       showToast(
         "Erro ao Carregar",
         error.message || "Não foi possível carregar a lista de peças.",
@@ -97,72 +101,34 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function preencherFormularioComItem(cod, nome, unid) {
-    if (codInputForm) codInputForm.value = cod;
-    if (nomeInputForm) nomeInputForm.value = nome;
-    if (unidInputForm) unidInputForm.value = unid;
-
-    if (formCollapse && !formCollapseEl.classList.contains("show")) {
-      formCollapse.show();
-    }
-    if (codInputForm) codInputForm.focus();
-  }
-
   function handleDynamicSearch() {
     clearTimeout(searchTimeout);
     const codValue = filterCod.value.trim();
     const nomeValue = filterNome.value.trim();
-
     if (codValue.length < 1 && nomeValue.length < 1) {
-      // Limpa a tabela se ambos os filtros estiverem muito curtos ou vazios
       itensEstoqueTableBody.innerHTML =
-        '<tr><td colspan="5" class="text-center">Utilize os filtros para buscar as peças (mínimo 1 caractere).</td></tr>';
+        '<tr><td colspan="5" style="text-align: center;">Utilize os filtros para buscar as peças.</td></tr>';
       return;
     }
-
     searchTimeout = setTimeout(() => {
       const params = new URLSearchParams();
-      if (codValue) {
-        params.append("cod", codValue);
-      }
-      if (nomeValue) {
-        params.append("nome", nomeValue);
-      }
+      if (codValue) params.append("cod", codValue);
+      if (nomeValue) params.append("nome", nomeValue);
       loadItensEstoque("?" + params.toString());
-    }, 500); // 500ms de delay
+    }, 500);
   }
 
   if (filterCod) filterCod.addEventListener("input", handleDynamicSearch);
   if (filterNome) filterNome.addEventListener("input", handleDynamicSearch);
-
-  // Filtro por ID permanece client-side ou pode ser adaptado
   if (filterId) {
     filterId.addEventListener("keyup", () => {
       const idValue = filterId.value.toLowerCase();
       const rows = itensEstoqueTableBody.getElementsByTagName("tr");
-      let found = false;
       for (const row of rows) {
-        if (row.cells.length > 0 && !row.querySelector('td[colspan="5"]')) {
+        if (row.cells.length > 0) {
           const idCell = row.cells[0].textContent.toLowerCase();
-          const shouldShow = idCell.includes(idValue);
-          row.style.display = shouldShow ? "" : "none";
-          if (shouldShow) found = true;
+          row.style.display = idCell.includes(idValue) ? "" : "none";
         }
-      }
-      if (
-        !found &&
-        idValue !== "" &&
-        !itensEstoqueTableBody.querySelector('td[colspan="5"]')
-      ) {
-        // Poderia adicionar uma mensagem "ID não encontrado nos resultados atuais"
-      } else if (
-        itensEstoqueTableBody.querySelector('td[colspan="5"]') &&
-        idValue === ""
-      ) {
-        // Se limpou o filtro de ID e a tabela está vazia, mostra a mensagem padrão
-        itensEstoqueTableBody.querySelector(
-          'td[colspan="5"]'
-        ).parentElement.style.display = "";
       }
     });
   }
@@ -191,14 +157,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const result = await response.json();
         if (response.ok) {
-          showToast(
-            "Sucesso",
-            result.message || "Peça salva no estoque com sucesso!"
-          );
+          showToast("Sucesso", result.message || "Peça salva com sucesso!");
           itemEstoqueForm.reset();
-          if (formCollapse) formCollapse.hide();
-          if (filterCod) filterCod.value = itemData.cod; // Preenche o filtro com o código salvo
-          handleDynamicSearch(); // Recarrega a lista, o novo item deve aparecer
+          formContainer.classList.add("hidden");
+          if (filterCod) filterCod.value = itemData.cod;
+          handleDynamicSearch();
         } else {
           throw new Error(
             result.message || "Erro desconhecido ao salvar peça."
@@ -211,11 +174,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  function preencherFormularioComItem(cod, nome, unid) {
+    if (codInputForm) codInputForm.value = cod;
+    if (nomeInputForm) nomeInputForm.value = nome;
+    if (unidInputForm) unidInputForm.value = unid;
+    if (formContainer.classList.contains("hidden")) {
+      formContainer.classList.remove("hidden");
+    }
+    if (codInputForm) codInputForm.focus();
+  }
+
   if (itensEstoqueTableBody) {
     itensEstoqueTableBody.addEventListener("click", async function (event) {
       const deleteButton = event.target.closest(".delete-btn");
       const viewButton = event.target.closest(".view-btn");
-
       if (deleteButton) {
         const itemId = deleteButton.dataset.id;
         if (confirm("Tem certeza que deseja excluir esta peça do estoque?")) {
@@ -227,14 +199,14 @@ document.addEventListener("DOMContentLoaded", function () {
             if (response.ok) {
               showToast(
                 "Sucesso",
-                result.message || "Peça excluída do estoque com sucesso!"
+                result.message || "Peça excluída com sucesso!"
               );
               deleteButton.closest("tr").remove();
               if (
                 itensEstoqueTableBody.getElementsByTagName("tr").length === 0
               ) {
                 itensEstoqueTableBody.innerHTML =
-                  '<tr><td colspan="5" class="text-center">Nenhuma peça encontrada.</td></tr>';
+                  '<tr><td colspan="5" style="text-align: center;">Nenhuma peça encontrada.</td></tr>';
               }
             } else {
               throw new Error(
@@ -257,5 +229,5 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   itensEstoqueTableBody.innerHTML =
-    '<tr><td colspan="5" class="text-center">Utilize os filtros para buscar as peças.</td></tr>';
+    '<tr><td colspan="5" style="text-align: center;">Utilize os filtros para buscar as peças.</td></tr>';
 });

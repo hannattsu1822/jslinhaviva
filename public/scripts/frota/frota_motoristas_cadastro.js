@@ -1,32 +1,37 @@
 document.addEventListener("DOMContentLoaded", function () {
   const driverForm = document.getElementById("driverForm");
   const driverTableBody = document.getElementById("driverTableBody");
-  const toastEl = document.getElementById("liveToast");
-  const bsToast = new bootstrap.Toast(toastEl);
+  const toastContainer = document.getElementById("toastContainer");
+
+  const toggleFormBtn = document.getElementById("toggleFormBtn");
+  const formContainer = document.getElementById("formContainer");
+  const closeFormBtn = document.getElementById("closeFormBtn");
 
   const filterId = document.getElementById("filterId");
   const filterMatricula = document.getElementById("filterMatricula");
   const filterNome = document.getElementById("filterNome");
 
-  const formCollapseEl = document.getElementById("formCollapse");
-  const formCollapse = formCollapseEl
-    ? new bootstrap.Collapse(formCollapseEl, { toggle: false })
-    : null;
+  if (toggleFormBtn) {
+    toggleFormBtn.addEventListener("click", () => {
+      formContainer.classList.toggle("hidden");
+    });
+  }
+  if (closeFormBtn) {
+    closeFormBtn.addEventListener("click", () => {
+      formContainer.classList.add("hidden");
+    });
+  }
 
   function showToast(title, message, isError = false) {
-    const toastTitle = document.getElementById("toastTitle");
-    const toastBody = document.getElementById("toastBody");
-
-    toastTitle.textContent = title;
-    toastBody.textContent = message;
-
-    toastEl.classList.remove("bg-success", "bg-danger", "text-white");
-    if (isError) {
-      toastEl.classList.add("bg-danger", "text-white");
-    } else {
-      toastEl.classList.add("bg-success", "text-white");
-    }
-    bsToast.show();
+    const toast = document.createElement("div");
+    toast.className = `toast ${isError ? "error" : "success"}`;
+    toast.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>`;
+    toastContainer.appendChild(toast);
+    setTimeout(() => toast.classList.add("show"), 10);
+    setTimeout(() => {
+      toast.classList.remove("show");
+      toast.addEventListener("transitionend", () => toast.remove());
+    }, 5000);
   }
 
   async function loadDrivers() {
@@ -38,30 +43,28 @@ document.addEventListener("DOMContentLoaded", function () {
           .catch(() => ({ message: "Erro ao carregar motoristas." }));
         throw new Error(errorData.message);
       }
-
       const drivers = await response.json();
       driverTableBody.innerHTML = "";
-
       if (drivers.length === 0) {
         driverTableBody.innerHTML =
-          '<tr><td colspan="4" class="text-center">Nenhum motorista cadastrado.</td></tr>';
+          '<tr><td colspan="5" style="text-align: center;">Nenhum motorista cadastrado.</td></tr>';
         return;
       }
-
       drivers.forEach((driver) => {
         const row = document.createElement("tr");
         row.innerHTML = `
-                <td>${driver.id}</td>
-                <td>${driver.matricula || ""}</td>
-                <td>${driver.nome || ""}</td>
-                <td>
-                  <button class="btn btn-sm btn-danger delete-btn" data-id="${
-                    driver.id
-                  }" title="Excluir">
-                    <i class="material-icons">delete</i>
-                  </button>
-                </td>
-              `;
+                    <td>${driver.id}</td>
+                    <td>${driver.matricula || ""}</td>
+                    <td>${driver.nome || ""}</td>
+                    <td>${driver.situacao || "Ativo"}</td>
+                    <td class="actions">
+                        <button class="btn btn-danger delete-btn" data-id="${
+                          driver.id
+                        }" title="Excluir">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    </td>
+                `;
         driverTableBody.appendChild(row);
       });
     } catch (error) {
@@ -78,27 +81,18 @@ document.addEventListener("DOMContentLoaded", function () {
     const idValue = filterId.value.toLowerCase();
     const matriculaValue = filterMatricula.value.toLowerCase();
     const nomeValue = filterNome.value.toLowerCase();
-
     const rows = driverTableBody.getElementsByTagName("tr");
-
     for (const row of rows) {
-      if (row.cells.length < 3 || row.querySelector('td[colspan="4"]')) {
-        if (rows.length === 1 && row.querySelector('td[colspan="4"]')) {
-          row.style.display = "";
-        }
-        continue;
+      if (row.cells.length > 1) {
+        const idCell = row.cells[0].textContent.toLowerCase();
+        const matriculaCell = row.cells[1].textContent.toLowerCase();
+        const nomeCell = row.cells[2].textContent.toLowerCase();
+        const showRow =
+          idCell.includes(idValue) &&
+          matriculaCell.includes(matriculaValue) &&
+          nomeCell.includes(nomeValue);
+        row.style.display = showRow ? "" : "none";
       }
-
-      const idCell = row.cells[0].textContent.toLowerCase();
-      const matriculaCell = row.cells[1].textContent.toLowerCase();
-      const nomeCell = row.cells[2].textContent.toLowerCase();
-
-      const showRow =
-        idCell.includes(idValue) &&
-        matriculaCell.includes(matriculaValue) &&
-        nomeCell.includes(nomeValue);
-
-      row.style.display = showRow ? "" : "none";
     }
   }
 
@@ -109,13 +103,10 @@ document.addEventListener("DOMContentLoaded", function () {
   if (driverForm) {
     driverForm.addEventListener("submit", async function (event) {
       event.preventDefault();
-
-      const matriculaInput = document.getElementById("matricula");
-      const nomeInput = document.getElementById("nome");
-
       const driverData = {
-        matricula: matriculaInput.value.trim(),
-        nome: nomeInput.value.trim(),
+        matricula: document.getElementById("matricula").value.trim(),
+        nome: document.getElementById("nome").value.trim(),
+        situacao: document.getElementById("situacao").value,
       };
 
       if (!driverData.matricula || !driverData.nome) {
@@ -133,18 +124,14 @@ document.addEventListener("DOMContentLoaded", function () {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(driverData),
         });
-
         const result = await response.json();
-
         if (response.ok) {
           showToast(
             "Sucesso",
             result.message || "Motorista salvo com sucesso!"
           );
           driverForm.reset();
-          if (formCollapse) {
-            formCollapse.hide();
-          }
+          formContainer.classList.add("hidden");
           loadDrivers();
         } else {
           throw new Error(
@@ -163,7 +150,6 @@ document.addEventListener("DOMContentLoaded", function () {
       const deleteButton = event.target.closest(".delete-btn");
       if (deleteButton) {
         const driverId = deleteButton.dataset.id;
-
         if (confirm("Tem certeza que deseja excluir este motorista?")) {
           try {
             const response = await fetch(
