@@ -5,257 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestão de Motoristas</title>
     <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet"
     />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/static/css/frota_veiculos_cadastro.css" />
-    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
-    <link rel="stylesheet" href="/static/css/toast.css" />
+    <link rel="stylesheet" href="/static/css/frota_styles.css" />
   </head>
   <body>
-    <div class="sidebar">
-      <div class="sidebar-header text-center pt-3 pb-2">
-        <i
-          class="material-icons user-icon"
-          style="font-size: 4.5rem; color: rgba(255, 255, 255, 0.95)"
-          >account_circle</i
-        >
-        <h5
-          id="user-name"
-          class="text-white mt-1 mb-0"
-          style="font-weight: 500"
-        >
-          Carregando...
-        </h5>
-      </div>
-      <div
-        class="user-details-block px-3 py-2 mx-2 mb-2"
-        style="
-          background: rgba(0, 0, 0, 0.15);
-          border-radius: 6px;
-          color: rgba(255, 255, 255, 0.85);
-          font-size: 0.85rem;
-        "
-      >
-        <p class="mb-1 d-flex align-items-center">
-          <i class="material-icons me-2" style="font-size: 1.1rem">badge</i>
-          Matrícula: <span id="user-matricula" class="ms-1">Carregando...</span>
-        </p>
-        <p class="mb-0 d-flex align-items-center">
-          <i class="material-icons me-2" style="font-size: 1.1rem"
-            >work_outline</i
-          >
-          Cargo: <span id="user-cargo" class="ms-1">Carregando...</span>
-        </p>
-        <p class="mt-2 mb-1 d-flex align-items-center">
-          <i class="material-icons me-2" style="font-size: 1.1rem">event</i>
-          <span id="current-date">--/--/----</span>
-        </p>
-        <p class="mb-0 d-flex align-items-center">
-          <i class="material-icons me-2" style="font-size: 1.1rem">schedule</i>
-          <span id="current-time">--:--:--</span>
-        </p>
-      </div>
-      <ul class="list-unstyled components flex-grow-1 px-1">
-        <li>
-          <a href="/"><i class="material-icons">home</i> Início</a>
-        </li>
-        <li>
-          <a href="/dashboard"
-            ><i class="material-icons">dashboard</i> Dashboard</a
-          >
-        </li>
-        <li>
-          <a href="/frota"
-            ><i class="material-icons">directions_car</i> Frota</a
-          >
-        </li>
-        <li>
-          <a href="/frota_controle"
-            ><i class="material-icons">settings_applications</i> Controle da
-            Frota</a
-          >
-        </li>
-      </ul>
-      <div class="sidebar-footer text-center py-3 px-2 mt-auto">
-        <button
-          id="logoutButton"
-          class="btn btn-danger w-100 d-flex align-items-center justify-content-center"
-        >
-          <i class="material-icons me-2">logout</i>Sair
-        </button>
-      </div>
-    </div>
+    <header class="main-header">
+      <div class="logo">Gestão de Motoristas</div>
+      <nav class="main-nav">
+        <a href="/frota_controle">Voltar ao Controle</a>
+        <a href="/">Início</a>
+      </nav>
+    </header>
 
-    <div class="content">
-      <div class="container-fluid">
+    <main class="container">
+      <div class="page-header">
         <h1 class="page-title">Consulta e Gestão de Motoristas</h1>
-        <p class="lead text-muted mb-4">
+        <p class="page-subtitle">
           Filtre, consulte e gerencie os motoristas da frota.
         </p>
+      </div>
 
-        <div class="d-flex justify-content-end mb-3">
-          <button
-            class="btn btn-primary"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#formCollapse"
-            aria-expanded="false"
-            aria-controls="formCollapse"
-          >
-            <i class="material-icons me-2">add_circle_outline</i>Cadastrar Novo
-            Motorista
-          </button>
-        </div>
+      <div class="form-toggle-button">
+        <button class="btn btn-primary" id="toggleFormBtn">
+          Cadastrar Novo Motorista
+        </button>
+      </div>
 
-        <div class="collapse mb-4" id="formCollapse">
-          <div class="card card-body">
-            <h5 class="card-title mb-3">Dados do Novo Motorista</h5>
+      <div id="formContainer" class="form-container hidden">
+        <section class="card-section">
+          <div class="card-header">Dados do Novo Motorista</div>
+          <div class="card-content">
             <form id="driverForm">
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label for="matricula" class="form-label">Matrícula *</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="matricula"
-                    required
-                    maxlength="50"
-                  />
+              <div class="form-grid form-grid-2-col">
+                <div class="form-group">
+                  <label for="matricula">Matrícula *</label>
+                  <input type="text" id="matricula" required maxlength="50" />
                 </div>
-                <div class="col-md-6 mb-3">
-                  <label for="nome" class="form-label">Nome Completo *</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="nome"
-                    required
-                    maxlength="255"
-                  />
+                <div class="form-group">
+                  <label for="nome">Nome Completo *</label>
+                  <input type="text" id="nome" required maxlength="255" />
                 </div>
-              </div>
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label for="situacao" class="form-label">Situação *</label>
-                  <select class="form-select" id="situacao" required>
+                <div class="form-group">
+                  <label for="situacao">Situação *</label>
+                  <select id="situacao" required>
                     <option value="Ativo" selected>Ativo</option>
                     <option value="Inativo">Inativo</option>
                   </select>
                 </div>
               </div>
-              <button type="submit" class="btn btn-success">
-                <i class="material-icons me-2">save</i>Salvar Motorista
-              </button>
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-toggle="collapse"
-                data-bs-target="#formCollapse"
-              >
-                <i class="material-icons me-2">close</i>Fechar
-              </button>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-success">
+                  Salvar Motorista
+                </button>
+                <button
+                  type="button"
+                  id="closeFormBtn"
+                  class="btn btn-secondary"
+                >
+                  Fechar
+                </button>
+              </div>
             </form>
           </div>
-        </div>
-
-        <div class="card mb-4">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="material-icons me-2">filter_alt</i>Filtros de Pesquisa
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-4 mb-3">
-                <label for="filterId" class="form-label">ID</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="filterId"
-                  placeholder="Filtrar por ID..."
-                />
-              </div>
-              <div class="col-md-4 mb-3">
-                <label for="filterMatricula" class="form-label"
-                  >Matrícula</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="filterMatricula"
-                  placeholder="Filtrar por Matrícula..."
-                />
-              </div>
-              <div class="col-md-4 mb-3">
-                <label for="filterNome" class="form-label">Nome</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="filterNome"
-                  placeholder="Filtrar por Nome..."
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="material-icons me-2">list_alt</i>Motoristas Cadastrados
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-striped table-hover">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Matrícula</th>
-                    <th>Nome</th>
-                    <th>Situação</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="driverTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
-    </div>
 
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-      <div
-        id="liveToast"
-        class="toast"
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true"
-      >
-        <div class="toast-header">
-          <strong class="me-auto" id="toastTitle"></strong>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="toast"
-            aria-label="Close"
-          ></button>
+      <section class="card-section">
+        <div class="card-header">Filtros de Pesquisa</div>
+        <div class="card-content">
+          <form class="form-grid form-grid-3-col">
+            <div class="form-group">
+              <label for="filterId">ID</label>
+              <input
+                type="text"
+                id="filterId"
+                placeholder="Filtrar por ID..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="filterMatricula">Matrícula</label>
+              <input
+                type="text"
+                id="filterMatricula"
+                placeholder="Filtrar por Matrícula..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="filterNome">Nome</label>
+              <input
+                type="text"
+                id="filterNome"
+                placeholder="Filtrar por Nome..."
+              />
+            </div>
+          </form>
         </div>
-        <div class="toast-body" id="toastBody"></div>
-      </div>
-    </div>
+      </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/scripts/sidebar.js"></script>
+      <section class="card-section">
+        <div class="card-header">Motoristas Cadastrados</div>
+        <div class="card-content">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Matrícula</th>
+                  <th>Nome</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="driverTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toastContainer" class="toast-container"></div>
     <script src="/scripts/frota/frota_motoristas_cadastro.js"></script>
   </body>
 </html>
