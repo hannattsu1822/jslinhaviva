@@ -255,7 +255,7 @@ function atualizarTabela() {
     const servicosPagina = servicosFiltrados.slice(startIndex, endIndex);
 
     if (servicosPagina.length === 0) {
-      elementos.tabela.innerHTML = `<tr><td colspan="8" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço concluído encontrado.</td></tr>`;
+      elementos.tabela.innerHTML = `<tr><td colspan="9" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço concluído encontrado.</td></tr>`;
     } else {
       servicosPagina.forEach((servico) => {
         const tr = document.createElement("tr");
@@ -297,6 +297,7 @@ function atualizarTabela() {
             (servico.responsavel_nome || servico.responsavel || "Não informado")
           }</td>
           <td class="text-center table-actions apr-actions">${aprButtonHtml}</td>
+          <td>${servico.ordem_obra || "N/A"}</td>
           <td class="text-center">
             <div class="btn-group" role="group">
               <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${

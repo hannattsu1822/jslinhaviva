@@ -125,6 +125,10 @@ async function carregarDetalhesServico() {
       data.alimentador || "Não informado";
     document.getElementById("servico-chave-montante").textContent =
       data.chave_montante || "Não informado";
+    // <<< LINHA ADICIONADA PARA ORDEM DE OBRA >>>
+    document.getElementById("servico-ordem-obra").textContent =
+      data.ordem_obra || "Não especificada";
+
     document.getElementById("servico-responsavel").textContent =
       data.responsavel_matricula && data.responsavel_matricula !== "pendente"
         ? `${data.responsavel_matricula} - ${

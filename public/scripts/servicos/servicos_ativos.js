@@ -130,7 +130,7 @@ async function carregarServicosAtivos() {
     showToast("Erro ao carregar serviços ativos: " + error.message, "danger");
     const tbody = document.getElementById("tabela-servicos");
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
     }
   }
 }
@@ -197,7 +197,7 @@ function atualizarTabela() {
     .slice(0, 15);
 
   if (servicosFiltrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço ativo encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço ativo encontrado.</td></tr>`;
     return;
   }
 
@@ -256,6 +256,7 @@ function atualizarTabela() {
           : '<span class="badge bg-success">Não</span>'
       }</td>
       <td class="text-center table-actions apr-actions">${aprButtonHtml}</td>
+      <td>${servico.ordem_obra || "N/A"}</td>
       <td class="text-center table-actions">
         <div class="btn-group" role="group">
           <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${

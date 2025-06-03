@@ -3,16 +3,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const servicoId = urlParams.get("id");
 
-  const servicoIdInput = document.getElementById("servicoId"); // Assumindo que você tem <input type="hidden" id="servicoId"> no form
+  const servicoIdInput = document.getElementById("servicoId");
   if (servicoIdInput) servicoIdInput.value = servicoId;
 
   if (!servicoId) {
     alert("ID do serviço não especificado");
-    window.location.href = "/servicos_ativos"; // Ou para onde for mais apropriado
+    window.location.href = "/servicos_ativos";
     return;
   }
 
   await carregarDadosServico(servicoId);
+  await carregarResponsaveis(); // Carregar a lista de responsáveis
 
   const desligamentoSelect = document.getElementById("desligamento");
   if (desligamentoSelect) {
@@ -33,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (horaFimInput) horaFimInput.removeAttribute("required");
       }
     });
-    desligamentoSelect.dispatchEvent(new Event("change")); // Estado inicial
+    desligamentoSelect.dispatchEvent(new Event("change"));
   }
 
   const novosAnexosInput = document.getElementById("novosAnexos");
@@ -88,14 +89,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Atualiza o href do botão "Cancelar" para voltar para os detalhes do serviço específico
   const cancelButton = document.querySelector(
     ".form-header .btn-outline-secondary"
-  ); // Selecionando o botão Cancelar/Voltar no header do form
+  );
   if (cancelButton) {
     cancelButton.href = `/detalhes_servico?id=${servicoId}`;
   }
 });
+
+async function carregarResponsaveis() {
+  const selectResponsavel = document.getElementById("servico-responsavel");
+  if (!selectResponsavel) return;
+
+  try {
+    const response = await fetch("/api/encarregados");
+    if (!response.ok) {
+      throw new Error("Falha ao carregar responsáveis");
+    }
+    const responsaveis = await response.json();
+
+    // Guardar o valor atual antes de limpar as opções
+    const valorAtual = selectResponsavel.value;
+    selectResponsavel.innerHTML =
+      '<option value="">Selecione um responsável...</option>'; // Limpa e adiciona a opção padrão
+
+    responsaveis.forEach((resp) => {
+      const option = document.createElement("option");
+      option.value = resp.matricula;
+      option.textContent = `${resp.nome} (${resp.matricula})`;
+      selectResponsavel.appendChild(option);
+    });
+
+    // Restaurar o valor se ele ainda existir na nova lista ou se for 'pendente'
+    if (valorAtual) {
+      if (
+        Array.from(selectResponsavel.options).some(
+          (opt) => opt.value === valorAtual
+        )
+      ) {
+        selectResponsavel.value = valorAtual;
+      } else if (valorAtual === "pendente") {
+        // Se era pendente e não há mais opção "pendente" explícita, manter como vazio/selecione
+        selectResponsavel.value = "";
+      }
+    }
+  } catch (error) {
+    console.error("Erro ao carregar responsáveis:", error);
+    selectResponsavel.innerHTML = '<option value="">Erro ao carregar</option>';
+  }
+}
 
 function validarMaps(url) {
   if (!url || url.trim() === "") return true;
@@ -110,7 +152,6 @@ function validarMaps(url) {
 
 function validarMapsCampo(input) {
   const url = input.value.trim();
-  // Tenta encontrar o elemento de feedback relativo ao input
   const feedbackEl =
     input.parentElement.querySelector(".invalid-feedback") ||
     input.nextElementSibling;
@@ -132,14 +173,13 @@ async function carregarDadosServico(servicoId) {
   try {
     const response = await fetch(`/api/servicos/${servicoId}`);
     if (!response.ok) {
-      const errorText = await response.text(); // Pega o texto para ver se é JSON ou HTML
+      const errorText = await response.text();
       console.error("Erro raw do servidor:", errorText);
       let errorMsg = "Erro ao carregar dados do serviço";
       try {
         const errorData = JSON.parse(errorText);
         errorMsg = errorData.message || errorMsg;
       } catch (e) {
-        // Não era JSON, usa o status ou texto
         errorMsg = `Erro ${response.status}: ${response.statusText}`;
       }
       throw new Error(errorMsg);
@@ -157,7 +197,21 @@ async function carregarDadosServico(servicoId) {
     document.getElementById("desligamento").value = data.desligamento || "NAO";
     document.getElementById("maps").value = data.maps || "";
 
-    // Para campos de data/hora, é importante formatar para o input type="time" e type="date"
+    // <<< LINHA ADICIONADA PARA PREENCHER ORDEM DE OBRA >>>
+    document.getElementById("ordem_obra").value = data.ordem_obra || "";
+
+    // Carregar e definir responsável
+    const selectResponsavel = document.getElementById("servico-responsavel");
+    if (selectResponsavel) {
+      // Espera carregarResponsaveis ter populado o select
+      await carregarResponsaveis(); // Garante que as opções estejam lá
+      if (data.responsavel_matricula) {
+        selectResponsavel.value = data.responsavel_matricula;
+      } else {
+        selectResponsavel.value = "pendente"; // Ou "" se 'pendente' não for uma opção válida explícita
+      }
+    }
+
     const desligamentoSelect = document.getElementById("desligamento");
     if (data.desligamento === "SIM") {
       const horariosContainer = document.getElementById("horariosContainer");
@@ -194,7 +248,6 @@ function preencherAnexosAtuais(anexos) {
   anexos.forEach((anexo) => {
     const anexoElement = document.createElement("div");
     anexoElement.className = "attachment-item";
-    // No seu `rotas_gestao_servicos.js`, a API retorna `anexo.nomeOriginal` e `anexo.caminho`
     const nomeDoAnexo = anexo.nomeOriginal || "arquivo";
     const caminhoDoAnexo =
       anexo.caminho && anexo.caminho.startsWith("/")
@@ -204,7 +257,7 @@ function preencherAnexosAtuais(anexos) {
     anexoElement.innerHTML = `
             <button type="button" class="remove-attachment" data-anexoid="${
               anexo.id
-            }" title="Remover este anexo">&times;</button>
+            }" title="Remover este anexo">×</button>
             <div class="text-center">
                 <i class="fas ${getFileIcon(nomeDoAnexo)} fa-2x mb-1"></i>
                 <div class="small text-truncate" title="${nomeDoAnexo}">${nomeDoAnexo}</div>
@@ -320,12 +373,18 @@ async function salvarAlteracoes(servicoId) {
   );
   formData.append("maps", document.getElementById("maps").value.trim());
 
+  // <<< LINHA ADICIONADA PARA ENVIAR ORDEM DE OBRA >>>
+  formData.append("ordem_obra", document.getElementById("ordem_obra").value);
+
   const selectResponsavel = document.getElementById("servico-responsavel");
-  // Se houver um select para responsável e ele tiver um valor, adicione ao formData.
-  // No HTML original não há um select para editar o responsável, então este campo não será enviado
-  // a menos que você adicione o <select id="servico-responsavel"> ao form.
   if (selectResponsavel && selectResponsavel.value) {
     formData.append("responsavel_matricula", selectResponsavel.value);
+  } else {
+    // Garante que, se nenhum responsável for selecionado (e o campo estiver presente),
+    // seja enviado um valor padrão, como 'pendente', ou deixe de enviar se a API trata isso.
+    // Se o campo de responsável não é editável aqui, esta lógica pode ser removida.
+    // Mas como o select é populado, é bom tratar o caso de 'nada selecionado'.
+    formData.append("responsavel_matricula", "pendente"); // Ou como a API espera um valor default
   }
 
   if (document.getElementById("desligamento").value === "SIM") {
@@ -353,11 +412,10 @@ async function salvarAlteracoes(servicoId) {
   if (novosAnexosInput && novosAnexosInput.files.length > 0) {
     for (let i = 0; i < novosAnexosInput.files.length; i++) {
       if (novosAnexosInput.files[i].size > 10 * 1024 * 1024) {
-        // Validação de tamanho aqui
         alert(
           `O arquivo ${novosAnexosInput.files[i].name} excede o limite de 10MB e não será enviado.`
         );
-        continue; // Pula este arquivo
+        continue;
       }
       formData.append("anexos", novosAnexosInput.files[i]);
     }
