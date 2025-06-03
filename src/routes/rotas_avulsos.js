@@ -324,7 +324,7 @@ router.get("/api/bas/user-info", autenticar, async (req, res) => {
 router.get("/api/bas/processos-construcao", autenticar, async (req, res) => {
   try {
     const query = `
-      SELECT id, processo, data, TIME_FORMAT(horas, '%H:%i') as horas
+      SELECT id, processo, data, TIME_FORMAT(horas, '%H:%i:%s') as horas 
       FROM bas_process ORDER BY data DESC, processo ASC;`;
     const [rows] = await promisePool.query(query);
     res.json(
@@ -344,14 +344,14 @@ router.get("/api/bas/processos-construcao", autenticar, async (req, res) => {
 router.get("/api/bas/processos-linhaviva", autenticar, async (req, res) => {
   try {
     const query = `
-      SELECT id, processo, data_prevista_execucao as data, TIME_FORMAT(TIMEDIFF(hora_fim, hora_inicio), '%H:%i') as horas
-      FROM processos WHERE (tipo IS NULL OR tipo != 'Emergencial') ORDER BY data_prevista_execucao DESC, processo ASC;`; // Adicionado filtro de emergencial
+      SELECT id, processo, data_prevista_execucao as data, TIME_FORMAT(TIMEDIFF(hora_fim, hora_inicio), '%H:%i:%s') as horas
+      FROM processos WHERE (tipo IS NULL OR tipo != 'Emergencial') ORDER BY data_prevista_execucao DESC, processo ASC;`;
     const [rows] = await promisePool.query(query);
     res.json(
       rows.map((r) => ({
         ...r,
         data: r.data ? new Date(r.data).toISOString().split("T")[0] : null,
-        horas: r.horas || "00:00",
+        horas: r.horas || "00:00:00",
       }))
     );
   } catch (error) {
@@ -495,8 +495,7 @@ router.post(
       const [processRows] = await connection.execute(
         `SELECT 
            processo, 
-           data,
-           TIME_FORMAT(horas, '%H:%i') as horas_formatadas
+           data
          FROM bas_process 
          WHERE data BETWEEN ? AND ? 
          ORDER BY data, id`,
@@ -507,7 +506,15 @@ router.post(
         return res.status(200).send("");
       }
 
+      const horasPossiveisConstrucao = [
+        "01:00:00",
+        "02:00:00",
+        "03:00:00",
+        "04:00:00",
+      ];
       let txtContent = "";
+      const espacamento = "   ";
+
       for (const proc of processRows) {
         const processoSemBarra = String(proc.processo || "").replace(/\//g, "");
 
@@ -517,12 +524,15 @@ router.post(
         }
         const dia = String(dataObj.getUTCDate()).padStart(2, "0");
         const mes = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
-        const ano = dataObj.getUTCFullYear();
+        const ano = String(dataObj.getUTCFullYear()).slice(-2);
         const dataFormatadaParaTxt = `${dia}/${mes}/${ano}`;
 
-        const horasFormatadasParaTxt = proc.horas_formatadas;
+        const horasParaTxt =
+          horasPossiveisConstrucao[
+            Math.floor(Math.random() * horasPossiveisConstrucao.length)
+          ];
 
-        txtContent += `${personIdParaRelatorio} ${processoSemBarra} ${razao} ${dataFormatadaParaTxt} ${horasFormatadasParaTxt}\n`;
+        txtContent += `${personIdParaRelatorio}${espacamento}${processoSemBarra}${espacamento}${razao}${espacamento}${dataFormatadaParaTxt}${espacamento}${horasParaTxt}\n`;
       }
 
       const dataInicioObj = new Date(dataInicio + "T00:00:00Z");
@@ -549,11 +559,11 @@ router.post(
 
       await registrarAuditoria(
         usuarioLogadoMatricula,
-        "Geração Relatório TXT BAS",
+        "Geração Relatório TXT BAS Construção",
         `Relatório TXT "${nomeArquivo}" gerado para matrícula ${matricula} (colaborador: ${userInfo.nome}), person_id: ${personIdParaRelatorio}, razão ${razao}, período ${dataInicio} a ${dataFim}. Total de ${processRows.length} processos.`
       );
     } catch (error) {
-      console.error("Erro ao gerar relatório TXT BAS:", error);
+      console.error("Erro ao gerar relatório TXT BAS Construção:", error);
       if (!res.headersSent) {
         res.status(500).json({
           message: `Erro interno no servidor: ${error.message}`,
@@ -623,14 +633,20 @@ router.post(
         return res.status(200).send("");
       }
 
-      const horasPossiveis = ["01:00", "02:00", "03:00", "04:00"];
+      const horasPossiveis = ["01:00:00", "02:00:00", "03:00:00", "04:00:00"];
       let txtContent = "";
+      const espacamento = "   ";
 
       for (const proc of processRows) {
-        const processoFormatado = String(proc.processo || "").replace(
-          /\//g,
-          ""
-        );
+        let processoOriginal = String(proc.processo || "");
+        let processoFormatadoParaTxt = "";
+
+        const match = processoOriginal.match(/^(\d+)\/(\d{1,2})/);
+        if (match) {
+          processoFormatadoParaTxt = match[1] + match[2];
+        } else {
+          processoFormatadoParaTxt = processoOriginal.replace(/\//g, "");
+        }
 
         const dataConclusao = proc.data_conclusao;
         let dataFormatadaParaTxt = "N/A";
@@ -639,19 +655,19 @@ router.post(
           if (String(dataConclusao).length === 10) {
             dataObj.setUTCHours(dataObj.getUTCHours() + 3);
           } else if (dataConclusao instanceof Date) {
-            // Se necessário, ajuste para DATETIME aqui também, mas geralmente getUTCDate funciona.
+            // Ajuste de fuso para DATETIME se necessário
           }
 
           const dia = String(dataObj.getUTCDate()).padStart(2, "0");
           const mes = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
-          const ano = dataObj.getUTCFullYear();
+          const ano = String(dataObj.getUTCFullYear()).slice(-2);
           dataFormatadaParaTxt = `${dia}/${mes}/${ano}`;
         }
 
         const horasRandomizadasParaTxt =
           horasPossiveis[Math.floor(Math.random() * horasPossiveis.length)];
 
-        txtContent += `${personIdParaRelatorio} ${processoFormatado} ${razao} ${dataFormatadaParaTxt} ${horasRandomizadasParaTxt}\n`;
+        txtContent += `${personIdParaRelatorio}${espacamento}${processoFormatadoParaTxt}${espacamento}${razao}${espacamento}${dataFormatadaParaTxt}${espacamento}${horasRandomizadasParaTxt}\n`;
       }
 
       const dataInicioObj = new Date(dataInicio + "T00:00:00Z");
