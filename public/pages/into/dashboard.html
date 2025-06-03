@@ -141,6 +141,15 @@
               Redes
             </a>
           </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('avulsos-dashboard');"
+              class="nav-link"
+            >
+              <i class="fas fa-hand-sparkles fa-fw me-2"></i>Avulsos
+            </a>
+          </li>
         </ul>
       </nav>
 
@@ -300,6 +309,26 @@
               </div>
             </div>
           </div>
+          <div class="col-md-6 col-lg-3">
+            <div
+              class="card glass-card h-100"
+              onclick="navigateTo('avulsos-dashboard')"
+            >
+              <div
+                class="card-body d-flex align-items-center justify-content-center"
+              >
+                <div class="text-center">
+                  <div
+                    class="icon-circle mx-auto mb-2"
+                    style="background-color: #607d8b !important"
+                  >
+                    <i class="fas fa-hand-sparkles"></i>
+                  </div>
+                  <h3 class="card-title mb-0">Avulsos</h3>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -393,6 +422,7 @@
             "gestao-turmas",
             "fibra-optica",
             "inspecoes-redes",
+            "avulsos-dashboard",
           ];
 
           if (!existingPages.includes(page)) {
@@ -416,7 +446,7 @@
 
           const url = `/${page}`;
           try {
-            const response = await fetch(url);
+            const response = await fetch(url, { method: "HEAD" });
             if (response.ok) {
               window.location.href = url;
             } else if (response.status === 403) {
@@ -424,6 +454,14 @@
                 accessDeniedModalInstance.show();
               } else {
                 alert("Acesso negado (modal não carregado).");
+              }
+            } else if (response.status === 404) {
+              if (developmentModalInstance) {
+                developmentModalInstance.show();
+              } else {
+                alert(
+                  "Página não encontrada ou em desenvolvimento (modal não carregado)."
+                );
               }
             } else {
               if (developmentModalInstance) {
