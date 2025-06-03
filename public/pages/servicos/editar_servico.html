@@ -180,8 +180,7 @@
         </div>
 
         <form id="editarServicoForm" enctype="multipart/form-data">
-          <input type="hidden" id="servicoId" />
-
+          <input type="hidden" id="servicoId" name="servicoId" />
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="subestacao" class="form-label">Subestação *</label>
@@ -269,6 +268,18 @@
               </select>
             </div>
             <div class="col-md-6">
+              <label for="ordem_obra" class="form-label">Ordem de Obra</label>
+              <select class="form-select" id="ordem_obra" name="ordem_obra">
+                <option value="">Nenhuma</option>
+                <option value="ODI">ODI</option>
+                <option value="ODD">ODD</option>
+                <option value="ODS">ODS</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-12">
               <label for="maps" class="form-label">Link do Google Maps</label>
               <input
                 type="url"

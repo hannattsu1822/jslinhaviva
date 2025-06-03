@@ -20,7 +20,6 @@
       href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined"
       rel="stylesheet"
     />
-    {/* ADICIONADO/CONFIRMADO */}
     <link rel="stylesheet" href="/static/css/servicos_ativos.css" />
     <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
@@ -247,12 +246,13 @@
                     <th>Responsável</th>
                     <th>Desligamento</th>
                     <th>APR</th>
+                    <th>Ordem</th>
                     <th class="text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody id="tabela-servicos">
                   <tr>
-                    <td colspan="9" class="text-center py-5">
+                    <td colspan="10" class="text-center py-5">
                       Carregando serviços...
                     </td>
                   </tr>
@@ -266,6 +266,7 @@
 
     <div class="main-content-overlay"></div>
 
+    {/* Modais permanecem os mesmos */}
     <div
       class="modal fade"
       id="aprUploadModal"
