@@ -152,6 +152,7 @@ router.post(
         chave_montante,
         responsavel_matricula = "pendente",
         maps,
+        ordem_obra, // <<< ADICIONADO
       } = req.body;
 
       if (!data_prevista_execucao || !subestacao || !desligamento) {
@@ -180,8 +181,8 @@ router.post(
 
       if (tipo_processo === "Emergencial") {
         const [result] = await connection.query(
-          `INSERT INTO processos (tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+          `INSERT INTO processos (tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
           [
             tipo_processo,
             data_prevista_execucao,
@@ -193,6 +194,7 @@ router.post(
             chave_montante || null,
             responsavel_matricula,
             maps || null,
+            ordem_obra || null, // <<< ADICIONADO
           ]
         );
         insertedId = result.insertId;
@@ -218,8 +220,8 @@ router.post(
         }
         processoParaAuditoria = processo.trim();
         const [result] = await connection.query(
-          `INSERT INTO processos (processo, tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+          `INSERT INTO processos (processo, tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
           [
             processoParaAuditoria,
             tipo_processo,
@@ -232,6 +234,7 @@ router.post(
             chave_montante || null,
             responsavel_matricula,
             maps || null,
+            ordem_obra || null, // <<< ADICIONADO
           ]
         );
         insertedId = result.insertId;
@@ -322,6 +325,7 @@ router.get("/api/servicos", autenticar, async (req, res) => {
                 p.subestacao, p.alimentador, p.chave_montante, 
                 p.responsavel_matricula, p.maps, p.status, p.data_conclusao, 
                 p.observacoes_conclusao, u.nome as responsavel_nome,
+                p.ordem_obra, -- <<< ADICIONADO
                 CASE 
                     WHEN p.tipo = 'Emergencial' THEN 'Emergencial'
                     ELSE 'Normal'
@@ -408,6 +412,7 @@ router.put(
         hora_fim,
         maps,
         responsavel_matricula,
+        ordem_obra, // <<< ADICIONADO
       } = req.body;
 
       if (!subestacao) {
@@ -444,7 +449,7 @@ router.put(
 
       await connection.query(
         `UPDATE processos SET subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
-             hora_inicio = ?, hora_fim = ?, maps = ?, responsavel_matricula = ? WHERE id = ?`,
+             hora_inicio = ?, hora_fim = ?, maps = ?, responsavel_matricula = ?, ordem_obra = ? WHERE id = ?`,
         [
           subestacao,
           alimentador || null,
@@ -454,6 +459,7 @@ router.put(
           desligamento === "SIM" ? hora_fim : null,
           maps || null,
           responsavel_matricula || "pendente",
+          ordem_obra || null, // <<< ADICIONADO
           servicoId,
         ]
       );
