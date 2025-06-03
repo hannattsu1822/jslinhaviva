@@ -1,183 +1,150 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
+const XLSX = require("xlsx");
 const { autenticar, registrarAuditoria } = require("../auth");
 const { promisePool } = require("../init");
 
 const router = express.Router();
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// Rota para servir a página HTML do formulário de horas extras
-router.get("/autorizacao-horas-extras", autenticar, (req, res) => {
+router.get("/avulsos-dashboard", autenticar, (req, res) =>
+  res.sendFile(
+    path.join(__dirname, "../../public/pages/avulsos/dashboard_avulsos.html")
+  )
+);
+
+router.get("/autorizacao-horas-extras", autenticar, (req, res) =>
   res.sendFile(
     path.join(
       __dirname,
       "../../public/pages/avulsos/autorizacao_horas_extras.html"
     )
+  )
+);
+
+router.get("/bas_cadastro", autenticar, (req, res) => {
+  const p = path.join(
+    __dirname,
+    "../../public/pages/avulsos/bas_cadastro.html"
   );
+  if (fs.existsSync(p)) res.sendFile(p);
+  else res.status(404).send("Página de cadastro de BAS não encontrada.");
 });
 
-// NOVO: Rota para buscar turmas (identificadores únicos de turma_encarregado)
+router.get("/hora_extra_cadastro", autenticar, (req, res) => {
+  const p = path.join(
+    __dirname,
+    "../../public/pages/avulsos/hora_extra_cadastro.html"
+  );
+  if (fs.existsSync(p)) res.sendFile(p);
+  else res.status(404).send("Página de cadastro de Hora Extra não encontrada.");
+});
+
+router.get("/bas-importar-dados-pagina", autenticar, (req, res) =>
+  res.sendFile(
+    path.join(__dirname, "../../public/pages/avulsos/bas_importar_dados.html")
+  )
+);
+
+router.get("/gerar-formulario-bas-construcao", autenticar, (req, res) =>
+  res.sendFile(
+    path.join(
+      __dirname,
+      "../../public/pages/avulsos/gerar_formulario_bas_construcao.html"
+    )
+  )
+);
+
+router.get("/gerar-formulario-bas-linhaviva", autenticar, (req, res) =>
+  res.sendFile(
+    path.join(
+      __dirname,
+      "../../public/pages/avulsos/gerar_formulario_bas_linhaviva.html"
+    )
+  )
+);
+
+router.get("/gerar-formulario-txt-bas", autenticar, (req, res) =>
+  res.sendFile(
+    path.join(
+      __dirname,
+      "../../public/pages/avulsos/gerar_formulario_txt_bas.html"
+    )
+  )
+);
+
+router.get("/gerar-formulario-txt-bas-linhaviva", autenticar, (req, res) =>
+  res.sendFile(
+    path.join(
+      __dirname,
+      "../../public/pages/avulsos/gerar_formulario_txt_bas_linhaviva.html"
+    )
+  )
+);
+
 router.get("/api/avulsos/turmas-encarregados", autenticar, async (req, res) => {
   try {
-    // Seleciona distintos 'turma_encarregado' e também busca o nome do encarregado na tabela 'users'
-    // Isso assume que 'turma_encarregado' é uma matrícula que existe na tabela 'users'
     const query = `
             SELECT DISTINCT t.turma_encarregado, u.nome as nome_encarregado
-            FROM turmas t
-            LEFT JOIN users u ON t.turma_encarregado = u.matricula
-            ORDER BY t.turma_encarregado ASC
+            FROM sua_tabela_de_turmas t 
+            JOIN users u ON t.turma_encarregado = u.matricula
+            ORDER BY u.nome;
         `;
     const [rows] = await promisePool.query(query);
     res.json(rows);
-  } catch (err) {
-    console.error("Erro ao buscar turmas/encarregados:", err);
-    res.status(500).json({ message: "Erro ao buscar dados das turmas." });
+  } catch (error) {
+    console.error("Erro ao buscar turmas e encarregados:", error);
+    res.status(500).json({ message: "Erro interno ao buscar dados." });
   }
 });
 
-// NOVO: Rota para buscar empregados de uma turma específica
-router.get(
-  "/api/avulsos/turmas/:turma_encarregado_id/empregados",
-  autenticar,
-  async (req, res) => {
-    const { turma_encarregado_id } = req.params;
-    if (!turma_encarregado_id) {
-      return res
-        .status(400)
-        .json({ message: "ID da turma do encarregado é obrigatório." });
-    }
-    try {
-      const [rows] = await promisePool.query(
-        "SELECT matricula, nome, cargo FROM turmas WHERE turma_encarregado = ? ORDER BY nome ASC",
-        [turma_encarregado_id]
-      );
-      res.json(rows);
-    } catch (err) {
-      console.error(
-        `Erro ao buscar empregados para turma ${turma_encarregado_id}:`,
-        err
-      );
-      res.status(500).json({ message: "Erro ao buscar empregados da turma." });
-    }
-  }
-);
-
-// Rota para lidar com a submissão do formulário de horas extras (POST)
-// (O código desta rota permanece o mesmo que na resposta anterior, mas certifique-se que os campos
-// matricula, nomeEmpregado, setor são corretamente obtidos do req.body, que agora são preenchidos pelo modal)
 router.post(
-  "/api/avulsos/autorizacao-horas-extras",
+  "/api/avulsos/solicitacao-horas-extras",
   autenticar,
   async (req, res) => {
-    const {
-      matricula,
-      nomeEmpregado,
-      setor,
-      mesAno,
-      dataSolicitacao,
-      detalhes,
-    } = req.body;
-    const matriculaUsuarioLogado = req.user.matricula;
-
-    if (
-      !matricula ||
-      !nomeEmpregado ||
-      !setor ||
-      !mesAno ||
-      !dataSolicitacao ||
-      !detalhes ||
-      !Array.isArray(detalhes) ||
-      detalhes.length === 0
-    ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Dados incompletos ou inválidos. Certifique-se de que um empregado foi selecionado e todos os campos obrigatórios estão preenchidos.",
-        });
-    }
-
-    // Validação adicional para os detalhes
-    for (const detalhe of detalhes) {
-      if (
-        !detalhe.dia ||
-        !detalhe.inicioRealizado ||
-        !detalhe.terminoRealizado ||
-        !detalhe.motivo ||
-        !detalhe.qtdeHoras
-      ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Todos os campos obrigatórios para cada detalhe de hora extra (Dia, Início/Fim Realizado, Quantidade, Motivo) devem ser preenchidos.",
-          });
-      }
-      // Converta qtdeHoras para número para evitar problemas
-      detalhe.qtdeHoras = parseFloat(detalhe.qtdeHoras);
-      if (isNaN(detalhe.qtdeHoras) || detalhe.qtdeHoras <= 0) {
-        // Permite 0 se for intencional, mas geralmente > 0
-        // return res.status(400).json({ message: 'A quantidade de horas deve ser um número positivo.' });
-      }
-    }
-
-    let connection;
+    const connection = await promisePool.getConnection();
     try {
-      connection = await promisePool.getConnection();
+      const { matricula, nomeEmpregado, mesAno, servicos } = req.body;
+      if (
+        !matricula ||
+        !nomeEmpregado ||
+        !mesAno ||
+        !servicos ||
+        !Array.isArray(servicos) ||
+        servicos.length === 0
+      ) {
+        return res.status(400).json({
+          message: "Dados incompletos para solicitação de horas extras.",
+        });
+      }
       await connection.beginTransaction();
-
-      const [resultAutorizacao] = await connection.query(
-        `INSERT INTO autorizacoes_horas_extras (matricula_empregado, nome_empregado, setor_empregado, mes_referencia, data_solicitacao, status, matricula_solicitante)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          matricula,
-          nomeEmpregado,
-          setor,
-          mesAno,
-          dataSolicitacao,
-          "Pendente Aprovação",
-          matriculaUsuarioLogado,
-        ]
+      const [autorizacaoResult] = await connection.execute(
+        "INSERT INTO autorizacoes_horas_extras (matricula_empregado, nome_empregado, mes_referencia, status_aprovacao) VALUES (?, ?, ?, ?)",
+        [matricula, nomeEmpregado, mesAno, "PENDENTE"]
       );
-      const autorizacaoId = resultAutorizacao.insertId;
-
-      for (const detalhe of detalhes) {
-        await connection.query(
-          `INSERT INTO detalhes_horas_extras (autorizacao_id, dia, hora_inicio_prevista, hora_termino_prevista, hora_inicio_realizada, hora_termino_realizada, quantidade_horas, motivo, autorizado_previamente, pagar, compensar, visto_gerente)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            autorizacaoId,
-            detalhe.dia,
-            detalhe.inicioPrevisto || null,
-            detalhe.terminoPrevisto || null,
-            detalhe.inicioRealizado,
-            detalhe.terminoRealizado,
-            detalhe.qtdeHoras, // Já é float
-            detalhe.motivo,
-            detalhe.autorizadoPreviamente,
-            !!detalhe.pagar,
-            !!detalhe.compensar,
-            detalhe.vistoGerente || null,
-          ]
+      const autorizacaoId = autorizacaoResult.insertId;
+      for (const servico of servicos) {
+        await connection.execute(
+          "INSERT INTO servicos_horas_extras (autorizacao_id, data_servico, descricao_servico, horas_solicitadas) VALUES (?, ?, ?, ?)",
+          [autorizacaoId, servico.data, servico.descricao, servico.horas]
         );
       }
-
-      await registrarAuditoria(
-        matriculaUsuarioLogado,
-        "SOLICITACAO_HORA_EXTRA",
-        `Solicitação de H.E. para ${nomeEmpregado} (ID: ${autorizacaoId}) referente a ${mesAno}`,
-        connection
-      );
-
       await connection.commit();
-      res
-        .status(201)
-        .json({
-          message: "Solicitação de horas extras enviada com sucesso!",
-          id: autorizacaoId,
-        });
+      await registrarAuditoria(
+        req.user.matricula,
+        "Solicitação Horas Extras",
+        `Solicitação para ${nomeEmpregado} (ID: ${autorizacaoId}) enviada.`
+      );
+      res.status(201).json({
+        message: "Solicitação de horas extras enviada com sucesso!",
+        id: autorizacaoId,
+      });
     } catch (error) {
       if (connection) await connection.rollback();
-      console.error("Erro ao salvar solicitação de horas extras:", error);
+      console.error("Erro ao processar solicitação de horas extras:", error);
       let userMessage = "Erro interno no servidor ao processar a solicitação.";
       if (
         error.code === "ER_NO_REFERENCED_ROW_2" ||
@@ -196,9 +163,535 @@ router.post(
         userMessage =
           "Erro de dados: Valor inválido para um dos campos numéricos ou de data.";
       }
-      res.status(500).json({ message: userMessage, details: error.message }); // Para dev, pode ser útil error.message
+      res.status(500).json({ message: userMessage });
     } finally {
       if (connection) connection.release();
+    }
+  }
+);
+
+router.post(
+  "/api/bas/importar-dados-processos",
+  autenticar,
+  upload.single("csvFile"),
+  async (req, res) => {
+    if (!req.file)
+      return res
+        .status(400)
+        .json({ message: "Nenhum arquivo de planilha foi enviado." });
+    if (!req.body.planilhaTipo)
+      return res
+        .status(400)
+        .json({ message: "O tipo de planilha é obrigatório." });
+    const { planilhaTipo } = req.body;
+    const connection = await promisePool.getConnection();
+    const NOME_COLUNA_COMENTARIOS = "PrimeiroDeComentários";
+    try {
+      const workbook = XLSX.read(req.file.buffer, {
+        type: "buffer",
+        cellDates: true,
+      });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName)
+        return res
+          .status(400)
+          .json({ message: "A planilha enviada está vazia ou corrompida." });
+      const worksheet = workbook.Sheets[sheetName];
+      const dataAsArray = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        blankrows: false,
+      });
+      if (dataAsArray.length < 2)
+        return res.status(400).json({
+          message:
+            "A planilha não contém dados válidos ou está sem cabeçalhos.",
+        });
+      const headers = dataAsArray[0].map((header) => String(header).trim());
+      const dataRows = dataAsArray.slice(1);
+      const indiceComentarios = headers.indexOf(NOME_COLUNA_COMENTARIOS);
+      const indiceIdProcessoVisual = headers.indexOf("IDPROCESSO_VISUAL");
+      const indicePrevisaoExecucao = headers.indexOf("Previsão execução");
+      const indiceProcessoLegado = headers.indexOf("Processo");
+      const indiceDataLegado = headers.indexOf("Data");
+      if (
+        planilhaTipo === "programacao_obras" &&
+        (indiceIdProcessoVisual === -1 || indicePrevisaoExecucao === -1)
+      ) {
+        return res.status(400).json({
+          message:
+            "Cabeçalhos 'IDPROCESSO_VISUAL' ou 'Previsão execução' não encontrados.",
+        });
+      }
+      if (
+        planilhaTipo === "desligamento_programado" &&
+        (indiceProcessoLegado === -1 || indiceDataLegado === -1)
+      ) {
+        return res.status(400).json({
+          message: "Cabeçalhos 'Processo' ou 'Data' não encontrados.",
+        });
+      }
+      await connection.beginTransaction();
+      let importedCount = 0,
+        skippedEnergizada = 0,
+        skippedDuplicata = 0;
+      const horasPossiveis = ["01:00:00", "02:00:00", "03:00:00", "04:00:00"];
+      for (const row of dataRows) {
+        if (planilhaTipo === "programacao_obras" && indiceComentarios !== -1) {
+          if (
+            row.length <= indiceComentarios ||
+            !String(row[indiceComentarios] || "")
+              .toLowerCase()
+              .includes("energizada")
+          ) {
+            skippedEnergizada++;
+            continue;
+          }
+        }
+        let processoValue, dataValue;
+        if (planilhaTipo === "programacao_obras") {
+          processoValue = row[indiceIdProcessoVisual];
+          dataValue = row[indicePrevisaoExecucao];
+        } else if (planilhaTipo === "desligamento_programado") {
+          processoValue = row[indiceProcessoLegado];
+          dataValue = row[indiceDataLegado];
+        } else {
+          await connection.rollback();
+          return res
+            .status(400)
+            .json({ message: "Tipo de planilha desconhecido." });
+        }
+        if (!processoValue || !dataValue) continue;
+        const dataDoProcesso = new Date(dataValue);
+        if (isNaN(dataDoProcesso.getTime())) continue;
+        const dataSql = `${dataDoProcesso.getFullYear()}-${String(
+          dataDoProcesso.getMonth() + 1
+        ).padStart(2, "0")}-${String(dataDoProcesso.getDate()).padStart(
+          2,
+          "0"
+        )}`;
+        const [existingProcess] = await connection.execute(
+          "SELECT id FROM bas_process WHERE processo = ? AND data = ?",
+          [String(processoValue).substring(0, 50), dataSql]
+        );
+        if (existingProcess.length > 0) {
+          skippedDuplicata++;
+          continue;
+        }
+        const horasAleatorias =
+          horasPossiveis[Math.floor(Math.random() * horasPossiveis.length)];
+        await connection.execute(
+          `INSERT INTO bas_process (processo, data, horas) VALUES (?, ?, ?)`,
+          [String(processoValue).substring(0, 50), dataSql, horasAleatorias]
+        );
+        importedCount++;
+      }
+      await connection.commit();
+      await registrarAuditoria(
+        req.user.matricula,
+        "Importação BAS Processos",
+        `${importedCount} registros importados via ${planilhaTipo}.`
+      );
+      res.status(200).json({
+        message: `${importedCount} registros importados. ${skippedEnergizada} não processadas. ${skippedDuplicata} duplicatas.`,
+      });
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error("Erro ao importar dados de processos BAS:", error);
+      res.status(500).json({ message: `Erro interno: ${error.message}` });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.get("/api/bas/user-info", autenticar, async (req, res) => {
+  const { matricula } = req.query;
+  if (!matricula)
+    return res.status(400).json({ message: "Matrícula é obrigatória." });
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT nome, cargo FROM users WHERE matricula = ?",
+      [matricula]
+    );
+    if (rows.length > 0) res.json(rows[0]);
+    else res.status(404).json({ message: "Usuário não encontrado." });
+  } catch (error) {
+    console.error("Erro API /user-info:", error);
+    res.status(500).json({ message: "Erro interno servidor." });
+  }
+});
+
+router.get("/api/bas/processos-construcao", autenticar, async (req, res) => {
+  try {
+    const query = `
+      SELECT id, processo, data, TIME_FORMAT(horas, '%H:%i') as horas
+      FROM bas_process ORDER BY data DESC, processo ASC;`;
+    const [rows] = await promisePool.query(query);
+    res.json(
+      rows.map((r) => ({
+        ...r,
+        data: r.data ? new Date(r.data).toISOString().split("T")[0] : null,
+      }))
+    );
+  } catch (error) {
+    console.error("Erro API /processos-construcao:", error);
+    res
+      .status(500)
+      .json({ message: "Erro ao buscar processos de Construção." });
+  }
+});
+
+router.get("/api/bas/processos-linhaviva", autenticar, async (req, res) => {
+  try {
+    const query = `
+      SELECT id, processo, data_prevista_execucao as data, TIME_FORMAT(TIMEDIFF(hora_fim, hora_inicio), '%H:%i') as horas
+      FROM processos WHERE (tipo IS NULL OR tipo != 'Emergencial') ORDER BY data_prevista_execucao DESC, processo ASC;`; // Adicionado filtro de emergencial
+    const [rows] = await promisePool.query(query);
+    res.json(
+      rows.map((r) => ({
+        ...r,
+        data: r.data ? new Date(r.data).toISOString().split("T")[0] : null,
+        horas: r.horas || "00:00",
+      }))
+    );
+  } catch (error) {
+    console.error("Erro API /processos-linhaviva:", error);
+    res
+      .status(500)
+      .json({ message: "Erro ao buscar processos de Linha Viva." });
+  }
+});
+
+router.post("/api/bas/salvar-bas-cadastro", autenticar, async (req, res) => {
+  const { idBasProcesso, matriculaResponsavel, setor, colaboradores } =
+    req.body;
+  const connection = await promisePool.getConnection();
+  try {
+    if (
+      !idBasProcesso ||
+      !matriculaResponsavel ||
+      !setor ||
+      !Array.isArray(colaboradores) ||
+      colaboradores.length === 0
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Dados incompletos para o cadastro do BAS." });
+    }
+    await connection.beginTransaction();
+    const [processoResult] = await connection.execute(
+      "SELECT id, processo FROM bas_process WHERE id = ?",
+      [idBasProcesso]
+    );
+    if (processoResult.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Processo BAS não encontrado." });
+    }
+    const basProcessoDetalhes = processoResult[0];
+    const [responsavelInfo] = await connection.execute(
+      "SELECT nome, cargo FROM users WHERE matricula = ?",
+      [matriculaResponsavel]
+    );
+    if (responsavelInfo.length === 0) {
+      await connection.rollback();
+      return res
+        .status(404)
+        .json({ message: "Matrícula do responsável não encontrada." });
+    }
+
+    await connection.execute(
+      "INSERT IGNORE INTO bas_users (person_id, matricula, nome, cargo) VALUES (?, ?, ?, ?)",
+      [
+        String(idBasProcesso),
+        matriculaResponsavel,
+        responsavelInfo[0].nome,
+        responsavelInfo[0].cargo || null,
+      ]
+    );
+
+    for (const user of colaboradores) {
+      const [colaboradorDetails] = await connection.execute(
+        "SELECT nome, cargo FROM users WHERE matricula = ?",
+        [user.matricula]
+      );
+      if (colaboradorDetails.length > 0) {
+        await connection.execute(
+          "INSERT IGNORE INTO bas_users (person_id, matricula, nome, cargo) VALUES (?, ?, ?, ?)",
+          [
+            String(idBasProcesso),
+            user.matricula,
+            colaboradorDetails[0].nome,
+            colaboradorDetails[0].cargo || null,
+          ]
+        );
+      } else {
+        console.warn(
+          `Matrícula ${user.matricula} (colaborador) não encontrada. Pulando.`
+        );
+      }
+    }
+    await registrarAuditoria(
+      req.user.matricula,
+      "Cadastro BAS",
+      `BAS para processo ${basProcessoDetalhes.processo} (ID ${idBasProcesso}) salvo.`
+    );
+    await connection.commit();
+    res.status(200).json({
+      message: "BAS cadastrado e colaboradores associados com sucesso!",
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Erro ao salvar cadastro BAS:", error);
+    if (error.code === "ER_DUP_ENTRY")
+      res
+        .status(409)
+        .json({ message: "Colaborador já associado a este BAS de processo." });
+    else res.status(500).json({ message: `Erro interno: ${error.message}` });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+router.post(
+  "/api/bas/gerar-relatorio-processos-txt",
+  autenticar,
+  async (req, res) => {
+    const { matricula, razao, dataInicio, dataFim } = req.body;
+    const usuarioLogadoMatricula = req.user.matricula;
+
+    if (!matricula || !razao || !dataInicio || !dataFim) {
+      return res.status(400).json({
+        message:
+          "Matrícula, razão e período (data de início e fim) são obrigatórios.",
+      });
+    }
+
+    let connection;
+    try {
+      connection = await promisePool.getConnection();
+
+      const [userRows] = await connection.execute(
+        "SELECT person_id, nome FROM bas_users WHERE matricula = ? LIMIT 1",
+        [matricula]
+      );
+
+      if (userRows.length === 0) {
+        return res.status(404).json({
+          message: `Usuário com matrícula ${matricula} não encontrado na tabela bas_users.`,
+        });
+      }
+      const userInfo = userRows[0];
+      const personIdParaRelatorio = userInfo.person_id;
+      const nomeUsuarioParaArquivo = userInfo.nome
+        .replace(/[^a-zA-Z0-9_]/g, "_")
+        .substring(0, 30);
+
+      if (!personIdParaRelatorio) {
+        return res.status(404).json({
+          message: `O usuário com matrícula ${matricula} não possui um person_id definido na tabela bas_users.`,
+        });
+      }
+
+      const [processRows] = await connection.execute(
+        `SELECT 
+           processo, 
+           data,
+           TIME_FORMAT(horas, '%H:%i') as horas_formatadas
+         FROM bas_process 
+         WHERE data BETWEEN ? AND ? 
+         ORDER BY data, id`,
+        [dataInicio, dataFim]
+      );
+
+      if (processRows.length === 0) {
+        return res.status(200).send("");
+      }
+
+      let txtContent = "";
+      for (const proc of processRows) {
+        const processoSemBarra = String(proc.processo || "").replace(/\//g, "");
+
+        const dataObj = new Date(proc.data);
+        if (String(proc.data).length === 10) {
+          dataObj.setUTCHours(dataObj.getUTCHours() + 3);
+        }
+        const dia = String(dataObj.getUTCDate()).padStart(2, "0");
+        const mes = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
+        const ano = dataObj.getUTCFullYear();
+        const dataFormatadaParaTxt = `${dia}/${mes}/${ano}`;
+
+        const horasFormatadasParaTxt = proc.horas_formatadas;
+
+        txtContent += `${personIdParaRelatorio} ${processoSemBarra} ${razao} ${dataFormatadaParaTxt} ${horasFormatadasParaTxt}\n`;
+      }
+
+      const dataInicioObj = new Date(dataInicio + "T00:00:00Z");
+      const dataFimObj = new Date(dataFim + "T00:00:00Z");
+
+      const formatarDataParaNomeArquivo = (dtObj) => {
+        const d = String(dtObj.getUTCDate()).padStart(2, "0");
+        const m = String(dtObj.getUTCMonth() + 1).padStart(2, "0");
+        const a = dtObj.getUTCFullYear();
+        return `${d}-${m}-${a}`;
+      };
+
+      const periodoNomeArquivo = `${formatarDataParaNomeArquivo(
+        dataInicioObj
+      )}_a_${formatarDataParaNomeArquivo(dataFimObj)}`;
+      const nomeArquivo = `${nomeUsuarioParaArquivo}_${matricula}_${periodoNomeArquivo}.txt`;
+
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=${nomeArquivo}`
+      );
+      res.send(txtContent);
+
+      await registrarAuditoria(
+        usuarioLogadoMatricula,
+        "Geração Relatório TXT BAS",
+        `Relatório TXT "${nomeArquivo}" gerado para matrícula ${matricula} (colaborador: ${userInfo.nome}), person_id: ${personIdParaRelatorio}, razão ${razao}, período ${dataInicio} a ${dataFim}. Total de ${processRows.length} processos.`
+      );
+    } catch (error) {
+      console.error("Erro ao gerar relatório TXT BAS:", error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          message: `Erro interno no servidor: ${error.message}`,
+        });
+      }
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  }
+);
+
+router.post(
+  "/api/bas/gerar-relatorio-processos-txt-linhaviva",
+  autenticar,
+  async (req, res) => {
+    const { matricula, razao, dataInicio, dataFim } = req.body;
+    const usuarioLogadoMatricula = req.user.matricula;
+
+    if (!matricula || !razao || !dataInicio || !dataFim) {
+      return res.status(400).json({
+        message:
+          "Matrícula, razão e período (data de início e fim) são obrigatórios.",
+      });
+    }
+
+    let connection;
+    try {
+      connection = await promisePool.getConnection();
+
+      const [userRows] = await connection.execute(
+        "SELECT person_id, nome FROM bas_users WHERE matricula = ? LIMIT 1",
+        [matricula]
+      );
+
+      if (userRows.length === 0) {
+        return res.status(404).json({
+          message: `Usuário com matrícula ${matricula} não encontrado na tabela bas_users.`,
+        });
+      }
+      const userInfo = userRows[0];
+      const personIdParaRelatorio = userInfo.person_id;
+      const nomeUsuarioParaArquivo = userInfo.nome
+        .replace(/[^a-zA-Z0-9_]/g, "_")
+        .substring(0, 30);
+
+      if (!personIdParaRelatorio) {
+        return res.status(404).json({
+          message: `O usuário com matrícula ${matricula} não possui um person_id definido na tabela bas_users.`,
+        });
+      }
+
+      const [processRows] = await connection.execute(
+        `SELECT 
+           processo, 
+           data_conclusao
+         FROM processos 
+         WHERE 
+           data_conclusao BETWEEN ? AND ? AND
+           (tipo IS NULL OR tipo != 'Emergencial') 
+         ORDER BY data_conclusao, id`,
+        [dataInicio, dataFim]
+      );
+
+      if (processRows.length === 0) {
+        return res.status(200).send("");
+      }
+
+      const horasPossiveis = ["01:00", "02:00", "03:00", "04:00"];
+      let txtContent = "";
+
+      for (const proc of processRows) {
+        const processoFormatado = String(proc.processo || "").replace(
+          /\//g,
+          ""
+        );
+
+        const dataConclusao = proc.data_conclusao;
+        let dataFormatadaParaTxt = "N/A";
+        if (dataConclusao) {
+          const dataObj = new Date(dataConclusao);
+          if (String(dataConclusao).length === 10) {
+            dataObj.setUTCHours(dataObj.getUTCHours() + 3);
+          } else if (dataConclusao instanceof Date) {
+            // Se necessário, ajuste para DATETIME aqui também, mas geralmente getUTCDate funciona.
+          }
+
+          const dia = String(dataObj.getUTCDate()).padStart(2, "0");
+          const mes = String(dataObj.getUTCMonth() + 1).padStart(2, "0");
+          const ano = dataObj.getUTCFullYear();
+          dataFormatadaParaTxt = `${dia}/${mes}/${ano}`;
+        }
+
+        const horasRandomizadasParaTxt =
+          horasPossiveis[Math.floor(Math.random() * horasPossiveis.length)];
+
+        txtContent += `${personIdParaRelatorio} ${processoFormatado} ${razao} ${dataFormatadaParaTxt} ${horasRandomizadasParaTxt}\n`;
+      }
+
+      const dataInicioObj = new Date(dataInicio + "T00:00:00Z");
+      const dataFimObj = new Date(dataFim + "T00:00:00Z");
+
+      const formatarDataParaNomeArquivo = (dtObj) => {
+        const d = String(dtObj.getUTCDate()).padStart(2, "0");
+        const m = String(dtObj.getUTCMonth() + 1).padStart(2, "0");
+        const a = dtObj.getUTCFullYear();
+        return `${d}-${m}-${a}`;
+      };
+
+      const periodoNomeArquivo = `${formatarDataParaNomeArquivo(
+        dataInicioObj
+      )}_a_${formatarDataParaNomeArquivo(dataFimObj)}`;
+      const nomeArquivo = `${nomeUsuarioParaArquivo}_${matricula}_${periodoNomeArquivo}_LINHAVIVA.txt`;
+
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=${nomeArquivo}`
+      );
+      res.send(txtContent);
+
+      await registrarAuditoria(
+        usuarioLogadoMatricula,
+        "Geração Relatório TXT BAS Linha Viva",
+        `Relatório TXT "${nomeArquivo}" gerado para matrícula ${matricula}, person_id: ${personIdParaRelatorio}, razão ${razao}, período ${dataInicio} a ${dataFim}. Total de ${processRows.length} processos.`
+      );
+    } catch (error) {
+      console.error("Erro ao gerar relatório TXT BAS Linha Viva:", error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          message: `Erro interno no servidor: ${error.message}`,
+        });
+      }
+    } finally {
+      if (connection) {
+        connection.release();
+      }
     }
   }
 );
