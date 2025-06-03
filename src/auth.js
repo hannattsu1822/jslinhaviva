@@ -83,7 +83,8 @@ function verificarPermissaoPorCargo(req, res, next) {
     Encarregado: ["*"],
     ADM: ["*"],
     ADMIN: ["*"],
-    Construção: ["/avulsos-dashboard", "/gerar-formulario-txt-bas", "/gerar-formulario-bas-linhaviva", "/bas-importar-dados-pagina" ]
+    Construção: ["/avulsos-dashboard", "/gerar-formulario-txt-bas", "/gerar-formulario-bas-linhaviva", "/bas-importar-dados-pagina" ],
+    Transporte: ["/frota", "/frota", "frota_controle", "/frota_veiculos_cadastro", "/frota_motoristas_cadastro", "/frota_estoque_cadastro"]
   };
 
   const rotasPermitidasUsuario = rotasPermitidas[cargo] || [];
