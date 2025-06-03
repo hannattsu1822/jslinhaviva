@@ -345,7 +345,9 @@ router.get("/api/bas/processos-linhaviva", autenticar, async (req, res) => {
   try {
     const query = `
       SELECT id, processo, data_prevista_execucao as data, TIME_FORMAT(TIMEDIFF(hora_fim, hora_inicio), '%H:%i:%s') as horas
-      FROM processos WHERE (tipo IS NULL OR tipo != 'Emergencial') ORDER BY data_prevista_execucao DESC, processo ASC;`;
+      FROM processos 
+      WHERE (tipo IS NULL OR tipo != 'Emergencial') AND ordem_obra = 'ODI' 
+      ORDER BY data_prevista_execucao DESC, processo ASC;`;
     const [rows] = await promisePool.query(query);
     res.json(
       rows.map((r) => ({
@@ -624,7 +626,8 @@ router.post(
          FROM processos 
          WHERE 
            data_conclusao BETWEEN ? AND ? AND
-           (tipo IS NULL OR tipo != 'Emergencial') 
+           (tipo IS NULL OR tipo != 'Emergencial') AND
+           ordem_obra = 'ODI'
          ORDER BY data_conclusao, id`,
         [dataInicio, dataFim]
       );
