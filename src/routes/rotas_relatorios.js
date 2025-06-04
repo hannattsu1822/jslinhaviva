@@ -1,17 +1,22 @@
 const express = require("express");
-const path = require("path"); // Adicione esta linha se ainda não estiver lá
+const path = require("path");
 const { promisePool } = require("../init");
 const { autenticar } = require("../auth");
 
 const router = express.Router();
 
-// Helper para adicionar filtros de período e responsável às queries
-function adicionarFiltros(queryBase, params, queryParams) {
+function adicionarFiltrosGlobais(
+  queryBase,
+  params,
+  queryParams,
+  aplicarFiltroStatusPadrao = true
+) {
   let query = queryBase;
   const condicoes = [];
+  let whereClauseExists = query.toUpperCase().includes(" WHERE ");
 
   if (queryParams.inicio && queryParams.fim) {
-    condicoes.push("DATE(p.data_conclusao) BETWEEN ? AND ?"); // Usar DATE() para ignorar a parte da hora
+    condicoes.push("DATE(p.data_conclusao) BETWEEN ? AND ?");
     params.push(queryParams.inicio, queryParams.fim);
   } else if (queryParams.inicio) {
     condicoes.push("DATE(p.data_conclusao) >= ?");
@@ -21,34 +26,32 @@ function adicionarFiltros(queryBase, params, queryParams) {
     params.push(queryParams.fim);
   }
 
-  if (queryParams.responsavel_matricula) {
-    condicoes.push("p.responsavel_matricula = ?");
-    params.push(queryParams.responsavel_matricula);
-  }
-
-  if (queryParams.status_final) {
-    if (queryParams.status_final === "finalizado") {
-      // 'finalizado' significa ambos
+  if (aplicarFiltroStatusPadrao) {
+    if (queryParams.status_final) {
+      if (queryParams.status_final === "finalizado") {
+        condicoes.push("p.status IN ('concluido', 'nao_concluido')");
+      } else if (
+        queryParams.status_final === "concluido" ||
+        queryParams.status_final === "nao_concluido"
+      ) {
+        condicoes.push("p.status = ?");
+        params.push(queryParams.status_final);
+      }
+    } else {
       condicoes.push("p.status IN ('concluido', 'nao_concluido')");
-    } else if (
-      queryParams.status_final === "concluido" ||
-      queryParams.status_final === "nao_concluido"
-    ) {
-      condicoes.push("p.status = ?");
-      params.push(queryParams.status_final);
     }
-  } else {
-    // Default para 'concluido' e 'nao_concluido' se nenhum status específico for pedido
-    condicoes.push("p.status IN ('concluido', 'nao_concluido')");
   }
 
   if (condicoes.length > 0) {
-    query += " WHERE " + condicoes.join(" AND ");
+    if (whereClauseExists) {
+      query += " AND " + condicoes.join(" AND ");
+    } else {
+      query += " WHERE " + condicoes.join(" AND ");
+    }
   }
   return query;
 }
 
-// Rota para Serviços por Encarregado
 router.get(
   "/api/relatorios/servicos-por-encarregado",
   autenticar,
@@ -61,18 +64,13 @@ router.get(
             JOIN users u ON p.responsavel_matricula = u.matricula
         `;
 
-      sql = adicionarFiltros(sql, params, req.query);
-      // Para "serviços por encarregado", o status default deve ser finalizado
-      if (
-        !req.query.status_final &&
-        !sql.includes("p.status IN ('concluido', 'nao_concluido')") &&
-        !sql.includes("p.status = ?")
-      ) {
-        if (sql.includes("WHERE")) {
-          sql += " AND p.status IN ('concluido', 'nao_concluido')";
-        } else {
-          sql += " WHERE p.status IN ('concluido', 'nao_concluido')";
-        }
+      sql = adicionarFiltrosGlobais(sql, params, req.query);
+
+      if (req.query.responsavel_matricula) {
+        sql +=
+          (sql.toUpperCase().includes(" WHERE ") ? " AND " : " WHERE ") +
+          "p.responsavel_matricula = ?";
+        params.push(req.query.responsavel_matricula);
       }
 
       sql +=
@@ -90,7 +88,6 @@ router.get(
   }
 );
 
-// Rota para Serviços por Desligamento
 router.get(
   "/api/relatorios/servicos-por-desligamento",
   autenticar,
@@ -101,17 +98,12 @@ router.get(
             SELECT p.desligamento, COUNT(p.id) as total_servicos
             FROM processos p
         `;
-      sql = adicionarFiltros(sql, params, req.query);
-      if (
-        !req.query.status_final &&
-        !sql.includes("p.status IN ('concluido', 'nao_concluido')") &&
-        !sql.includes("p.status = ?")
-      ) {
-        if (sql.includes("WHERE")) {
-          sql += " AND p.status IN ('concluido', 'nao_concluido')";
-        } else {
-          sql += " WHERE p.status IN ('concluido', 'nao_concluido')";
-        }
+      sql = adicionarFiltrosGlobais(sql, params, req.query);
+      if (req.query.responsavel_matricula) {
+        sql +=
+          (sql.toUpperCase().includes(" WHERE ") ? " AND " : " WHERE ") +
+          "p.responsavel_matricula = ?";
+        params.push(req.query.responsavel_matricula);
       }
       sql += " GROUP BY p.desligamento";
 
@@ -127,54 +119,35 @@ router.get(
   }
 );
 
-// Rota para Serviços por Mês (para um ano específico, considera apenas concluídos com data_conclusao)
 router.get(
   "/api/relatorios/servicos-concluidos-por-mes",
   autenticar,
   async (req, res) => {
     try {
-      const ano = req.query.ano || new Date().getFullYear(); // Default para o ano atual
-      const params = [ano];
-      let sql = `
-            SELECT MONTH(p.data_conclusao) as mes, COUNT(p.id) as total_servicos
-            FROM processos p
-            WHERE p.status = 'concluido' AND YEAR(p.data_conclusao) = ?
-        `;
+      const ano = req.query.ano || new Date().getFullYear();
+      const params = [];
 
-      // Adiciona outros filtros (exceto status e data, já tratados)
-      const queryParamsSemStatusData = { ...req.query };
-      delete queryParamsSemStatusData.status_final;
-      delete queryParamsSemStatusData.inicio;
-      delete queryParamsSemStatusData.fim;
-      delete queryParamsSemStatusData.ano;
-
-      // Temporariamente remover o ano dos params para não duplicar na func. adicionarFiltros
-      const paramsBase = [];
-      const sqlBase = `
+      let sqlBase = `
             SELECT MONTH(p.data_conclusao) as mes, COUNT(p.id) as total_servicos
             FROM processos p
         `;
+
       let whereConditions =
         "p.status = 'concluido' AND YEAR(p.data_conclusao) = ?";
+      params.push(ano);
 
-      const condicoesAdicionais = [];
-      if (queryParamsSemStatusData.responsavel_matricula) {
-        condicoesAdicionais.push("p.responsavel_matricula = ?");
-        paramsBase.push(queryParamsSemStatusData.responsavel_matricula);
+      if (req.query.responsavel_matricula) {
+        whereConditions += " AND p.responsavel_matricula = ?";
+        params.push(req.query.responsavel_matricula);
       }
 
-      if (condicoesAdicionais.length > 0) {
-        whereConditions += " AND " + condicoesAdicionais.join(" AND ");
-      }
-
-      sql =
+      const sql =
         sqlBase +
         " WHERE " +
         whereConditions +
         " GROUP BY MONTH(p.data_conclusao) ORDER BY mes ASC";
-      const finalParams = [ano, ...paramsBase];
 
-      const [rows] = await promisePool.query(sql, finalParams);
+      const [rows] = await promisePool.query(sql, params);
       res.json(rows);
     } catch (error) {
       console.error(
@@ -186,7 +159,6 @@ router.get(
   }
 );
 
-// Rota para Status de Finalização
 router.get(
   "/api/relatorios/status-finalizacao",
   autenticar,
@@ -197,9 +169,13 @@ router.get(
             SELECT p.status, COUNT(p.id) as total_servicos
             FROM processos p
         `;
-      // Para este gráfico, o filtro de status é o mais importante e já é p.status IN ('concluido', 'nao_concluido')
-      // pela lógica do adicionarFiltros se nenhum status específico for passado
-      sql = adicionarFiltros(sql, params, req.query);
+      sql = adicionarFiltrosGlobais(sql, params, req.query);
+      if (req.query.responsavel_matricula) {
+        sql +=
+          (sql.toUpperCase().includes(" WHERE ") ? " AND " : " WHERE ") +
+          "p.responsavel_matricula = ?";
+        params.push(req.query.responsavel_matricula);
+      }
       sql += " GROUP BY p.status";
 
       const [rows] = await promisePool.query(sql, params);
@@ -216,7 +192,7 @@ router.get(
 
 router.get("/relatorios-servicos", autenticar, (req, res) => {
   res.sendFile(
-    path.join(__dirname, "../../public/pages/servicos/relatorios_servicos.html") // Ajuste o caminho aqui
+    path.join(__dirname, "../../public/pages/servicos/relatorios_servicos.html")
   );
 });
 
