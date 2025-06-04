@@ -119,7 +119,7 @@ function debounce(func, wait) {
 
 async function carregarServicosConcluidos() {
   try {
-    mostrarNotificacao("Carregando serviços concluídos...", "info", 2000);
+    mostrarNotificacao("Carregando serviços finalizados...", "info", 2000);
     const response = await fetch("/api/servicos?status=concluido");
     if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
     const data = await response.json();
@@ -132,7 +132,7 @@ async function carregarServicosConcluidos() {
   } catch (error) {
     console.error("Erro ao carregar serviços:", error);
     mostrarNotificacao(
-      "Erro ao carregar serviços concluídos: " + error.message,
+      "Erro ao carregar serviços finalizados: " + error.message,
       "danger"
     );
   }
@@ -184,50 +184,53 @@ function obterServicosFiltrados() {
     const alimentador = servico.alimentador?.toString().toLowerCase() || "";
 
     let matchesData = true;
-    if (filtroDataSelecionada && servico.data_conclusao) {
-      try {
-        let dataConclusaoObj;
-        if (servico.data_conclusao.includes("T")) {
-          dataConclusaoObj = new Date(servico.data_conclusao);
-        } else {
-          const dataComT = servico.data_conclusao.replace(" ", "T");
-          dataConclusaoObj = new Date(dataComT);
-          if (isNaN(dataConclusaoObj.getTime())) {
+    if (filtroDataSelecionada) {
+      if (servico.status === "concluido" && servico.data_conclusao) {
+        try {
+          let dataConclusaoObj;
+          if (servico.data_conclusao.includes("T")) {
             dataConclusaoObj = new Date(servico.data_conclusao);
+          } else {
+            const dataComT = servico.data_conclusao.replace(" ", "T");
+            dataConclusaoObj = new Date(dataComT);
+            if (isNaN(dataConclusaoObj.getTime())) {
+              dataConclusaoObj = new Date(servico.data_conclusao);
+            }
           }
-        }
 
-        if (!isNaN(dataConclusaoObj.getTime())) {
-          const formatter = new Intl.DateTimeFormat("en-CA", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            timeZone: "America/Sao_Paulo",
-          });
+          if (!isNaN(dataConclusaoObj.getTime())) {
+            const formatter = new Intl.DateTimeFormat("en-CA", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              timeZone: "America/Sao_Paulo",
+            });
 
-          const parts = formatter.formatToParts(dataConclusaoObj);
-          let year, month, day;
-          parts.forEach((part) => {
-            if (part.type === "year") year = part.value;
-            else if (part.type === "month") month = part.value;
-            else if (part.type === "day") day = part.value;
-          });
-
-          const dataConclusaoLocalFormatada = `${year}-${month}-${day}`;
-          matchesData = dataConclusaoLocalFormatada === filtroDataSelecionada;
-        } else {
+            const parts = formatter.formatToParts(dataConclusaoObj);
+            let year, month, day;
+            parts.forEach((part) => {
+              if (part.type === "year") year = part.value;
+              else if (part.type === "month") month = part.value;
+              else if (part.type === "day") day = part.value;
+            });
+            const dataConclusaoLocalFormatada = `${year}-${month}-${day}`;
+            matchesData = dataConclusaoLocalFormatada === filtroDataSelecionada;
+          } else {
+            matchesData = false;
+          }
+        } catch (e) {
+          console.error(
+            "Erro ao parsear ou formatar data de conclusão para filtro:",
+            servico.data_conclusao,
+            e
+          );
           matchesData = false;
         }
-      } catch (e) {
-        console.error(
-          "Erro ao parsear ou formatar data de conclusão para filtro:",
-          servico.data_conclusao,
-          e
-        );
+      } else if (servico.status === "nao_concluido") {
+        matchesData = true;
+      } else {
         matchesData = false;
       }
-    } else if (filtroDataSelecionada && !servico.data_conclusao) {
-      matchesData = false;
     }
 
     return (
@@ -255,10 +258,13 @@ function atualizarTabela() {
     const servicosPagina = servicosFiltrados.slice(startIndex, endIndex);
 
     if (servicosPagina.length === 0) {
-      elementos.tabela.innerHTML = `<tr><td colspan="9" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço concluído encontrado.</td></tr>`;
+      elementos.tabela.innerHTML = `<tr><td colspan="10" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço finalizado encontrado.</td></tr>`;
     } else {
       servicosPagina.forEach((servico) => {
         const tr = document.createElement("tr");
+        if (servico.status === "nao_concluido") {
+          tr.classList.add("nao-concluido-row");
+        }
 
         let aprButtonHtml = "";
         if (servico.caminho_apr_anexo) {
@@ -284,12 +290,26 @@ function atualizarTabela() {
             </button>`;
         }
 
+        let statusHtml = "";
+        if (servico.status === "concluido") {
+          statusHtml = '<span class="badge bg-success">Concluído</span>';
+        } else if (servico.status === "nao_concluido") {
+          statusHtml = `<span class="status-nao-concluido">Não Concluído</span>`;
+        } else {
+          statusHtml = servico.status || "N/A";
+        }
+
         tr.innerHTML = `
           <td>${servico.id || "N/A"}</td>
           <td>${servico.processo || "Não informado"}</td>
           <td>${servico.subestacao || "Não informado"}</td>
           <td>${servico.alimentador || "Não informado"}</td>
-          <td>${formatarData(servico.data_conclusao)}</td>
+          <td>${statusHtml}</td>
+          <td>${
+            servico.status === "concluido"
+              ? formatarData(servico.data_conclusao)
+              : "N/A"
+          }</td>
           <td>${
             (servico.responsavel_matricula
               ? servico.responsavel_matricula + " - "

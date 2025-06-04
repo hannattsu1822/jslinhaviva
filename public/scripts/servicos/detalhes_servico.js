@@ -125,7 +125,6 @@ async function carregarDetalhesServico() {
       data.alimentador || "Não informado";
     document.getElementById("servico-chave-montante").textContent =
       data.chave_montante || "Não informado";
-    // <<< LINHA ADICIONADA PARA ORDEM DE OBRA >>>
     document.getElementById("servico-ordem-obra").textContent =
       data.ordem_obra || "Não especificada";
 
@@ -164,18 +163,20 @@ async function carregarDetalhesServico() {
 
     const statusElement = document.getElementById("servico-status");
     if (statusElement) {
-      statusElement.textContent =
-        data.status === "ativo"
-          ? "Ativo"
-          : data.status === "concluido"
-          ? "Concluído"
-          : data.status || "Desconhecido";
       statusElement.className = "status-badge ";
-      if (data.status === "ativo")
+      if (data.status === "ativo") {
+        statusElement.textContent = "Ativo";
         statusElement.classList.add("bg-warning", "text-dark");
-      else if (data.status === "concluido")
+      } else if (data.status === "concluido") {
+        statusElement.textContent = "Concluído";
         statusElement.classList.add("bg-success", "text-white");
-      else statusElement.classList.add("bg-secondary", "text-white");
+      } else if (data.status === "nao_concluido") {
+        statusElement.textContent = "Não Concluído";
+        statusElement.classList.add("bg-nao-concluido");
+      } else {
+        statusElement.textContent = data.status || "Desconhecido";
+        statusElement.classList.add("bg-secondary", "text-white");
+      }
     }
 
     const locationCard = document.getElementById("location-card");
@@ -205,15 +206,80 @@ async function carregarDetalhesServico() {
       }
     }
 
-    const conclusaoContainer = document.getElementById("conclusao-container");
-    if (data.status === "concluido" && conclusaoContainer) {
-      conclusaoContainer.classList.remove("d-none");
-      document.getElementById("servico-data-conclusao").textContent =
-        formatarDataParaExibicao(data.data_conclusao);
-      document.getElementById("servico-observacoes").textContent =
-        data.observacoes_conclusao || "Nenhuma observação de conclusão.";
-    } else if (conclusaoContainer) {
-      conclusaoContainer.classList.add("d-none");
+    const dataConclusaoRow = document.getElementById("data-conclusao-row");
+    const finalizacaoInfoContainer = document.getElementById(
+      "finalizacao-info-container"
+    );
+    const motivoNaoConclusaoContainer = document.getElementById(
+      "motivo-nao-conclusao-container"
+    );
+    const servicoObservacoesElement = document.getElementById(
+      "servico-observacoes"
+    );
+    const servicoDataConclusaoElement = document.getElementById(
+      "servico-data-conclusao"
+    );
+    const servicoMotivoNaoConclusaoElement = document.getElementById(
+      "servico-motivo-nao-conclusao"
+    );
+
+    if (data.status === "concluido" || data.status === "nao_concluido") {
+      if (finalizacaoInfoContainer)
+        finalizacaoInfoContainer.classList.remove("d-none");
+
+      if (servicoObservacoesElement) {
+        servicoObservacoesElement.textContent =
+          data.observacoes_conclusao ||
+          (data.status === "nao_concluido" && !data.motivo_nao_conclusao
+            ? "Nenhuma observação ou motivo registrado."
+            : "Nenhuma observação registrada.");
+      }
+
+      if (data.status === "concluido") {
+        if (dataConclusaoRow) dataConclusaoRow.style.display = "flex";
+        if (servicoDataConclusaoElement)
+          servicoDataConclusaoElement.textContent = formatarDataParaExibicao(
+            data.data_conclusao
+          );
+        if (motivoNaoConclusaoContainer)
+          motivoNaoConclusaoContainer.style.display = "none";
+      } else {
+        if (dataConclusaoRow) dataConclusaoRow.style.display = "none";
+        if (servicoDataConclusaoElement)
+          servicoDataConclusaoElement.textContent = "-";
+
+        if (motivoNaoConclusaoContainer)
+          motivoNaoConclusaoContainer.style.display = "block";
+        if (servicoMotivoNaoConclusaoElement)
+          servicoMotivoNaoConclusaoElement.textContent =
+            data.motivo_nao_conclusao || "Motivo não especificado.";
+        if (
+          servicoObservacoesElement &&
+          data.motivo_nao_conclusao &&
+          data.observacoes_conclusao
+        ) {
+          servicoObservacoesElement.textContent = data.observacoes_conclusao;
+        } else if (
+          servicoObservacoesElement &&
+          !data.motivo_nao_conclusao &&
+          data.observacoes_conclusao
+        ) {
+          servicoObservacoesElement.textContent = data.observacoes_conclusao;
+        } else if (
+          servicoObservacoesElement &&
+          data.motivo_nao_conclusao &&
+          !data.observacoes_conclusao
+        ) {
+          servicoObservacoesElement.textContent =
+            "Nenhuma observação adicional registrada.";
+        }
+      }
+    } else {
+      if (finalizacaoInfoContainer)
+        finalizacaoInfoContainer.classList.add("d-none");
+      if (dataConclusaoRow) dataConclusaoRow.style.display = "none";
+      if (motivoNaoConclusaoContainer)
+        motivoNaoConclusaoContainer.style.display = "none";
     }
 
     preencherAnexos(data.anexos || []);
@@ -260,6 +326,8 @@ function preencherAnexos(anexos) {
     let previewHTML = "";
     const isImage =
       tipoAnexoApi.toLowerCase() === "imagem" ||
+      tipoAnexoApi.toLowerCase() === "foto_conclusao" ||
+      tipoAnexoApi.toLowerCase() === "foto_nao_conclusao" ||
       /\.(jpe?g|png|gif|bmp|webp)$/i.test(nomeOriginalDoAnexo);
 
     if (isImage && caminhoCorretoAnexo !== "#") {
@@ -289,7 +357,7 @@ function preencherAnexos(anexos) {
     }" title="Visualizar ${nomeOriginalDoAnexo}">
                             <i class="fas fa-eye"></i>
                         </a>
-                        <a href="${caminhoCorretoAnexo}" download="${nomeOriginalDoAnexo}" class="btn btn-sm btn-outline-secondary ${
+                        <a href="${caminhoCorretoAnexo}?download=true" download="${nomeOriginalDoAnexo}" class="btn btn-sm btn-outline-secondary ${
       caminhoCorretoAnexo === "#" ? "disabled" : ""
     }" title="Baixar ${nomeOriginalDoAnexo}">
                             <i class="fas fa-download"></i>
@@ -347,7 +415,7 @@ function mostrarErroDetalhes(mensagem) {
     if (alertaExistente) alertaExistente.remove();
 
     const alerta = document.createElement("div");
-    alerta.className = "alert alert-danger mt-0 mb-3"; // Ajustado para ficar no topo
+    alerta.className = "alert alert-danger mt-0 mb-3";
     alerta.setAttribute("role", "alert");
     alerta.textContent = mensagem;
 

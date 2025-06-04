@@ -265,9 +265,9 @@ function atualizarTabela() {
           <button class="btn btn-sm glass-btn btn-primary me-1" onclick="selecionarResponsavel(${
             servico.id
           })" title="Selecionar Responsável"><span class="material-symbols-outlined">manage_accounts</span></button>
-          <button class="btn btn-sm glass-btn btn-success me-1" onclick="concluirServico(${
+          <button class="btn btn-sm glass-btn btn-success me-1" onclick="abrirModalFinalizacao(${
             servico.id
-          })" title="Concluir Serviço"><span class="material-symbols-outlined">task_alt</span></button>
+          })" title="Finalizar Serviço (Concluir/Não Concluir)"><span class="material-symbols-outlined">task_alt</span></button>
           <button class="btn btn-sm glass-btn btn-danger" onclick="confirmarExclusao(${
             servico.id
           })" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>
@@ -490,40 +490,82 @@ async function excluirServico() {
   }
 }
 
-window.concluirServico = function (id) {
-  currentServicoId = id;
-  usarDataAtual();
-  const obsConclusao = document.getElementById("observacoesConclusao");
-  const fotosConclusaoInput = document.getElementById("fotosConclusao");
-  const fotoCameraInput = document.getElementById("fotoCamera");
-  const previewContainer = document.getElementById("previewContainer");
+function controlarCamposFinalizacao() {
+  const statusFinalSelect = document.getElementById("statusFinalServico");
+  const camposSomenteConcluido = document.getElementById(
+    "camposSomenteConcluido"
+  );
+  const dataConclusaoInput = document.getElementById("dataConclusao");
+  const horaConclusaoInput = document.getElementById("horaConclusao");
+  const observacoesFinalizacaoInput = document.getElementById(
+    "observacoesFinalizacao"
+  );
 
-  if (obsConclusao) obsConclusao.value = "";
-  if (fotosConclusaoInput) fotosConclusaoInput.value = "";
-  if (fotoCameraInput) fotoCameraInput.value = "";
+  if (
+    !statusFinalSelect ||
+    !camposSomenteConcluido ||
+    !dataConclusaoInput ||
+    !horaConclusaoInput ||
+    !observacoesFinalizacaoInput
+  )
+    return;
+
+  if (statusFinalSelect.value === "concluido") {
+    camposSomenteConcluido.style.display = "block";
+    dataConclusaoInput.required = true;
+    horaConclusaoInput.required = true;
+    observacoesFinalizacaoInput.placeholder =
+      "Observações da conclusão (opcional)";
+    observacoesFinalizacaoInput.required = false;
+  } else {
+    // nao_concluido
+    camposSomenteConcluido.style.display = "none";
+    dataConclusaoInput.required = false;
+    dataConclusaoInput.value = "";
+    horaConclusaoInput.required = false;
+    horaConclusaoInput.value = "";
+    observacoesFinalizacaoInput.placeholder =
+      "Motivo da não conclusão (obrigatório)";
+    observacoesFinalizacaoInput.required = true;
+  }
+}
+
+window.abrirModalFinalizacao = function (id) {
+  currentServicoId = id;
+  const form = document.getElementById("formConcluirServico");
+  if (form) form.reset();
+
+  const statusFinalSelect = document.getElementById("statusFinalServico");
+  if (statusFinalSelect) statusFinalSelect.value = "concluido";
+
+  controlarCamposFinalizacao();
+  usarDataAtual();
+
+  const previewContainer = document.getElementById("previewContainer");
   if (previewContainer) previewContainer.innerHTML = "";
 
-  if (concluirModalInstance) concluirModalInstance.show();
+  if (concluirModalInstance) {
+    concluirModalInstance.show();
+  }
 };
 
-async function finalizarServico() {
-  const btnConcluir = document.getElementById("confirmConcluir");
-  if (!btnConcluir) return;
-  const originalText = btnConcluir.innerHTML;
-  try {
-    btnConcluir.disabled = true;
-    btnConcluir.innerHTML =
-      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
-    const dataInput = document.getElementById("dataConclusao").value;
-    const horaInput = document.getElementById("horaConclusao").value;
-    const observacoes = document.getElementById("observacoesConclusao").value;
-    const fotosInput = document.getElementById("fotosConclusao");
-    const formData = new FormData();
+async function submeterFinalizacaoServico() {
+  const btnSalvarFinalizacao = document.getElementById("btnSalvarFinalizacao");
+  if (!btnSalvarFinalizacao) return;
 
-    if (!dataInput || !horaInput)
-      throw new Error("Preencha data e hora de conclusão");
-    formData.append("dataConclusao", dataInput);
-    formData.append("horaConclusao", horaInput);
+  const originalBtnText = btnSalvarFinalizacao.innerHTML;
+  btnSalvarFinalizacao.disabled = true;
+  btnSalvarFinalizacao.innerHTML =
+    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+
+  try {
+    const statusFinal = document.getElementById("statusFinalServico").value;
+    const formData = new FormData();
+    formData.append("status_final", statusFinal);
+
+    const observacoes = document.getElementById("observacoesFinalizacao").value;
+    const fotosInput = document.getElementById("fotosConclusao");
+
     formData.append("observacoes", observacoes);
 
     if (fotosInput && fotosInput.files.length > 0) {
@@ -532,37 +574,81 @@ async function finalizarServico() {
       }
     }
 
+    if (statusFinal === "concluido") {
+      const dataInput = document.getElementById("dataConclusao").value;
+      const horaInput = document.getElementById("horaConclusao").value;
+      if (!dataInput || !horaInput) {
+        throw new Error(
+          "Data e Hora de Conclusão são obrigatórias para concluir o serviço."
+        );
+      }
+      formData.append("dataConclusao", dataInput);
+      formData.append("horaConclusao", horaInput);
+    } else {
+      if (!observacoes || observacoes.trim() === "") {
+        throw new Error(
+          "As observações (motivo da não conclusão) são obrigatórias."
+        );
+      }
+      formData.append("motivo_nao_conclusao", observacoes);
+    }
+
     const response = await fetch(`/api/servicos/${currentServicoId}/concluir`, {
       method: "POST",
       body: formData,
     });
+
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       const text = await response.text();
-      throw new Error(text || "Resposta inválida do servidor ao concluir");
+      throw new Error(
+        text ||
+          `Resposta inválida do servidor ao ${
+            statusFinal === "concluido" ? "concluir" : "não concluir"
+          }`
+      );
     }
     const data = await response.json();
-    if (!response.ok || !data.success)
-      throw new Error(data.message || "Erro ao concluir serviço");
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message ||
+          `Erro ao ${
+            statusFinal === "concluido" ? "concluir" : "não concluir"
+          } serviço`
+      );
+    }
 
     const formConcluir = document.getElementById("formConcluirServico");
-    const previewContainer = document.getElementById("previewContainer");
     if (formConcluir) formConcluir.reset();
+    const previewContainer = document.getElementById("previewContainer");
     if (previewContainer) previewContainer.innerHTML = "";
 
-    showToast(data.message || "Serviço concluído com sucesso!", "success");
+    showToast(
+      data.message ||
+        `Serviço marcado como ${
+          statusFinal === "concluido" ? "Concluído" : "Não Concluído"
+        } com sucesso!`,
+      "success"
+    );
     if (concluirModalInstance) concluirModalInstance.hide();
     await carregarServicosAtivos();
   } catch (error) {
-    console.error("Erro ao concluir serviço:", error);
+    console.error(
+      `Erro ao ${
+        statusFinal === "concluido" ? "concluir" : "não concluir"
+      } serviço:`,
+      error
+    );
     let errorMessage = error.message;
     if (errorMessage.startsWith("<!DOCTYPE"))
-      errorMessage = "Erro interno no servidor ao concluir serviço";
+      errorMessage = `Erro interno no servidor ao ${
+        statusFinal === "concluido" ? "concluir" : "não concluir"
+      } serviço`;
     showToast(errorMessage, "danger");
   } finally {
-    if (btnConcluir) {
-      btnConcluir.disabled = false;
-      btnConcluir.innerHTML = originalText;
+    if (btnSalvarFinalizacao) {
+      btnSalvarFinalizacao.disabled = false;
+      btnSalvarFinalizacao.innerHTML = originalBtnText;
     }
   }
 }
@@ -655,9 +741,15 @@ document.addEventListener("DOMContentLoaded", function () {
   const confirmDeleteBtn = document.getElementById("confirmDelete");
   if (confirmDeleteBtn)
     confirmDeleteBtn.addEventListener("click", excluirServico);
-  const confirmConcluirBtn = document.getElementById("confirmConcluir");
-  if (confirmConcluirBtn)
-    confirmConcluirBtn.addEventListener("click", finalizarServico);
+
+  const btnSalvarFinalizacao = document.getElementById("btnSalvarFinalizacao");
+  if (btnSalvarFinalizacao) {
+    btnSalvarFinalizacao.addEventListener("click", () => {
+      const statusFinal = document.getElementById("statusFinalServico").value;
+      submeterFinalizacaoServico(statusFinal);
+    });
+  }
+
   const btnConfirmarUploadAPR = document.getElementById(
     "btnConfirmarUploadAPR"
   );
@@ -751,5 +843,11 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
+
+  const statusFinalSelect = document.getElementById("statusFinalServico");
+  if (statusFinalSelect) {
+    statusFinalSelect.addEventListener("change", controlarCamposFinalizacao);
+  }
+
   carregarDadosIniciais();
 });
