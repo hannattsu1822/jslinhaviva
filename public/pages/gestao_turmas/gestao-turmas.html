@@ -181,6 +181,16 @@
               <i class="fas fa-users fa-fw me-2"></i>Turmas Ativas
             </a>
           </li>
+          <!-- NOVO LINK NA SIDEBAR (OPCIONAL, MAS RECOMENDADO PARA COERÊNCIA) -->
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('controle-status');"
+              class="nav-link"
+            >
+              <i class="fas fa-user-clock fa-fw me-2"></i>Controle de Status
+            </a>
+          </li>
           <li class="nav-item">
             <a
               href="#"
@@ -247,6 +257,25 @@
               </div>
             </div>
           </div>
+
+          <!-- NOVO CARD PARA CONTROLE DE STATUS -->
+          <div class="col-md-6 col-lg-4">
+            <div
+              class="card action-card-gestao h-100"
+              onclick="navigateTo('controle-status')"
+            >
+              <div class="card-body">
+                <div class="icon-circle bg-success mx-auto mb-3">
+                  <i class="fas fa-user-clock"></i>
+                </div>
+                <h3 class="card-title">Controle de Status</h3>
+                <p class="card-text">
+                  Gerenciar folgas, férias e atestados dos funcionários.
+                </p>
+              </div>
+            </div>
+          </div>
+          <!-- FIM DO NOVO CARD -->
 
           <div class="col-md-6 col-lg-4">
             <div
