@@ -66,23 +66,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getApiUrlPorMes() {
     const responsavel = filtroEncarregadoRelEl.value;
-    // Para o gráfico por mês, o período é geralmente um ano inteiro.
-    // Se os filtros de data estiverem preenchidos, podemos tentar usá-los para definir o ano.
-    // Ou adicionar um filtro de ano específico para este gráfico.
-    // Por simplicidade, vamos pegar o ano do filtro de início, se existir, ou o ano atual.
     let ano = new Date().getFullYear();
-    if (filtroPeriodoInicioEl.value) {
+    let tituloAno = ano;
+
+    if (filtroPeriodoInicioEl.value && filtroPeriodoFimEl.value) {
+      const anoInicio = new Date(filtroPeriodoInicioEl.value).getFullYear();
+      const anoFim = new Date(filtroPeriodoFimEl.value).getFullYear();
+      if (anoInicio === anoFim) {
+        ano = anoInicio;
+        tituloAno = ano;
+      } else {
+        tituloAno = `${anoInicio} - ${anoFim}`;
+      }
+    } else if (filtroPeriodoInicioEl.value) {
       ano = new Date(filtroPeriodoInicioEl.value).getFullYear();
+      tituloAno = ano;
+    } else if (filtroPeriodoFimEl.value) {
+      ano = new Date(filtroPeriodoFimEl.value).getFullYear();
+      tituloAno = ano;
     }
 
     const params = new URLSearchParams();
-    params.append("ano", ano);
+    params.append("ano", ano); // A rota do backend espera 'ano'
     if (responsavel) params.append("responsavel_matricula", responsavel);
-    // Status para o gráfico por mês será sempre 'concluido' (conforme a rota)
-    // Se quiser incluir 'nao_concluido' por mês, a rota e a lógica aqui precisariam mudar.
 
     if (tituloGraficoPorMesEl)
-      tituloGraficoPorMesEl.textContent = `Serviços Concluídos por Mês (${ano})`;
+      tituloGraficoPorMesEl.textContent = `Serviços Concluídos por Mês (${tituloAno})`;
+
+    // Adiciona filtros de data inicio/fim se estiverem presentes, pois a rota de backend para mês não usa adicionarFiltrosComuns
+    // e o filtro de data é específico (YEAR(data_conclusao)).
+    // Se quisermos que o gráfico por mês também respeite o intervalo de datas dia-a-dia, a rota backend precisaria de ajuste.
+    // Por ora, vamos manter o filtro de ano para o gráfico por mês.
+    // Se as datas de início e fim forem para o mesmo ano, podemos refinar.
+    // Se os filtros de data de início/fim forem para refinar dentro do ano, a rota backend precisaria ser mais complexa.
 
     return `/api/relatorios/servicos-concluidos-por-mes?${params.toString()}`;
   }
@@ -91,15 +107,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxEncarregado) return;
     try {
       const url = getApiUrl("/api/relatorios/servicos-por-encarregado");
+      console.log("Fetching URL (Encarregado):", url);
       const response = await fetch(url);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
+      console.log(
+        "Dados da API (Serviços por Encarregado):",
+        JSON.stringify(data, null, 2)
+      );
+
       const labels = data.map(
         (item) => item.responsavel_nome || item.responsavel_matricula || "N/A"
       );
       const totais = data.map((item) => item.total_servicos);
+
+      console.log("Labels para o Gráfico (Encarregado):", labels);
+      console.log("Totais para o Gráfico (Encarregado):", totais);
 
       if (chartEncarregado) chartEncarregado.destroy();
       chartEncarregado = new Chart(ctxEncarregado, {
@@ -117,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ],
         },
         options: {
-          indexAxis: "y", // Barras horizontais para melhor leitura dos nomes
+          indexAxis: "y",
           scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
           responsive: true,
           maintainAspectRatio: false,
@@ -125,8 +150,14 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (error) {
       console.error("Erro ao carregar relatório por encarregado:", error);
-      ctxEncarregado.canvas.parentElement.innerHTML =
-        '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      if (
+        ctxEncarregado &&
+        ctxEncarregado.canvas &&
+        ctxEncarregado.canvas.parentElement
+      ) {
+        ctxEncarregado.canvas.parentElement.innerHTML =
+          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      }
     }
   }
 
@@ -134,10 +165,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxDesligamento) return;
     try {
       const url = getApiUrl("/api/relatorios/servicos-por-desligamento");
+      console.log("Fetching URL (Desligamento):", url);
       const response = await fetch(url);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
+
+      console.log(
+        "Dados da API (Serviços por Desligamento):",
+        JSON.stringify(data, null, 2)
+      );
 
       const labels = data.map((item) =>
         item.desligamento === "SIM" ? "Com Desligamento" : "Sem Desligamento"
@@ -165,8 +202,14 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (error) {
       console.error("Erro ao carregar relatório por desligamento:", error);
-      ctxDesligamento.canvas.parentElement.innerHTML =
-        '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      if (
+        ctxDesligamento &&
+        ctxDesligamento.canvas &&
+        ctxDesligamento.canvas.parentElement
+      ) {
+        ctxDesligamento.canvas.parentElement.innerHTML =
+          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      }
     }
   }
 
@@ -174,10 +217,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxPorMes) return;
     try {
       const url = getApiUrlPorMes();
+      console.log("Fetching URL (Por Mês):", url);
       const response = await fetch(url);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
+
+      console.log(
+        "Dados da API (Serviços por Mês):",
+        JSON.stringify(data, null, 2)
+      );
 
       const mesesNomes = [
         "Jan",
@@ -203,6 +252,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
+      console.log("Labels para o Gráfico (Por Mês):", labels);
+      console.log("Totais para o Gráfico (Por Mês):", totais);
+
       if (chartPorMes) chartPorMes.destroy();
       chartPorMes = new Chart(ctxPorMes, {
         type: "line",
@@ -226,8 +278,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (error) {
       console.error("Erro ao carregar relatório por mês:", error);
-      ctxPorMes.canvas.parentElement.innerHTML =
-        '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      if (ctxPorMes && ctxPorMes.canvas && ctxPorMes.canvas.parentElement) {
+        ctxPorMes.canvas.parentElement.innerHTML =
+          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      }
     }
   }
 
@@ -235,10 +289,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxStatusFinal) return;
     try {
       const url = getApiUrl("/api/relatorios/status-finalizacao");
+      console.log("Fetching URL (Status Finalização):", url);
       const response = await fetch(url);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
+
+      console.log(
+        "Dados da API (Status Finalização):",
+        JSON.stringify(data, null, 2)
+      );
 
       const labels = data.map((item) => {
         if (item.status === "concluido") return "Concluídos";
@@ -246,6 +306,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return item.status;
       });
       const totais = data.map((item) => item.total_servicos);
+
+      console.log("Labels para o Gráfico (Status):", labels);
+      console.log("Totais para o Gráfico (Status):", totais);
 
       if (chartStatusFinal) chartStatusFinal.destroy();
       chartStatusFinal = new Chart(ctxStatusFinal, {
@@ -276,8 +339,14 @@ document.addEventListener("DOMContentLoaded", () => {
         "Erro ao carregar relatório de status de finalização:",
         error
       );
-      ctxStatusFinal.canvas.parentElement.innerHTML =
-        '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      if (
+        ctxStatusFinal &&
+        ctxStatusFinal.canvas &&
+        ctxStatusFinal.canvas.parentElement
+      ) {
+        ctxStatusFinal.canvas.parentElement.innerHTML =
+          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
+      }
     }
   }
 
