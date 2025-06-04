@@ -14,6 +14,7 @@ const rotasTransformadores = require("./routes/rotas_transformadores");
 const rotasFibraOptica = require("./routes/rotas_fibra_optica");
 const rotasInspecoesRedes = require("./routes/rotas_inspecoes_redes");
 const rotasAvulsos = require("./routes/rotas_avulsos");
+const rotasRelatorios = require("./routes/rotas_relatorios");
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ router.use("/", rotasTransformadores);
 router.use("/", rotasFibraOptica);
 router.use("/", rotasInspecoesRedes);
 router.use("/", rotasAvulsos);
+router.use("/", rotasRelatorios);
 
 // Rota raiz básica
 router.get("/", (req, res) => {
