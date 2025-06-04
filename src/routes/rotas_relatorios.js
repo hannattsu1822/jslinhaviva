@@ -5,28 +5,35 @@ const { autenticar } = require("../auth");
 
 const router = express.Router();
 
-function adicionarFiltrosGlobais(
-  queryBase,
+function adicionarFiltrosComuns(
+  baseQuery,
   params,
   queryParams,
-  aplicarFiltroStatusPadrao = true
+  options = { omitStatus: false, omitDate: false, omitResponsible: false }
 ) {
-  let query = queryBase;
+  let query = baseQuery;
   const condicoes = [];
-  let whereClauseExists = query.toUpperCase().includes(" WHERE ");
+  let whereClauseAdicionada = query.toUpperCase().includes(" WHERE ");
 
-  if (queryParams.inicio && queryParams.fim) {
-    condicoes.push("DATE(p.data_conclusao) BETWEEN ? AND ?");
-    params.push(queryParams.inicio, queryParams.fim);
-  } else if (queryParams.inicio) {
-    condicoes.push("DATE(p.data_conclusao) >= ?");
-    params.push(queryParams.inicio);
-  } else if (queryParams.fim) {
-    condicoes.push("DATE(p.data_conclusao) <= ?");
-    params.push(queryParams.fim);
+  if (!options.omitDate) {
+    if (queryParams.inicio && queryParams.fim) {
+      condicoes.push("DATE(p.data_conclusao) BETWEEN ? AND ?");
+      params.push(queryParams.inicio, queryParams.fim);
+    } else if (queryParams.inicio) {
+      condicoes.push("DATE(p.data_conclusao) >= ?");
+      params.push(queryParams.inicio);
+    } else if (queryParams.fim) {
+      condicoes.push("DATE(p.data_conclusao) <= ?");
+      params.push(queryParams.fim);
+    }
   }
 
-  if (aplicarFiltroStatusPadrao) {
+  if (!options.omitResponsible && queryParams.responsavel_matricula) {
+    condicoes.push("p.responsavel_matricula = ?");
+    params.push(queryParams.responsavel_matricula);
+  }
+
+  if (!options.omitStatus) {
     if (queryParams.status_final) {
       if (queryParams.status_final === "finalizado") {
         condicoes.push("p.status IN ('concluido', 'nao_concluido')");
@@ -43,7 +50,7 @@ function adicionarFiltrosGlobais(
   }
 
   if (condicoes.length > 0) {
-    if (whereClauseExists) {
+    if (whereClauseAdicionada) {
       query += " AND " + condicoes.join(" AND ");
     } else {
       query += " WHERE " + condicoes.join(" AND ");
@@ -64,17 +71,19 @@ router.get(
             JOIN users u ON p.responsavel_matricula = u.matricula
         `;
 
-      sql = adicionarFiltrosGlobais(sql, params, req.query);
+      sql = adicionarFiltrosComuns(sql, params, req.query, {
+        omitResponsible: !!req.query.responsavel_matricula ? false : true,
+      });
 
-      if (req.query.responsavel_matricula) {
-        sql +=
-          (sql.toUpperCase().includes(" WHERE ") ? " AND " : " WHERE ") +
-          "p.responsavel_matricula = ?";
-        params.push(req.query.responsavel_matricula);
-      }
+      // Se nenhum filtro de responsável foi aplicado pela URL, não precisa adicionar de novo.
+      // A função adicionarFiltrosComuns já tem a opção de omitir o filtro de responsável se ele não for desejado como filtro principal.
+      // Para este gráfico em específico, queremos agrupar por responsável, então o filtro de responsável é aplicado SE existir na query.
 
       sql +=
         " GROUP BY p.responsavel_matricula, u.nome ORDER BY total_servicos DESC";
+
+      // console.log("DEBUG SQL (Encarregado):", sql);
+      // console.log("DEBUG Params (Encarregado):", params);
 
       const [rows] = await promisePool.query(sql, params);
       res.json(rows);
@@ -98,13 +107,7 @@ router.get(
             SELECT p.desligamento, COUNT(p.id) as total_servicos
             FROM processos p
         `;
-      sql = adicionarFiltrosGlobais(sql, params, req.query);
-      if (req.query.responsavel_matricula) {
-        sql +=
-          (sql.toUpperCase().includes(" WHERE ") ? " AND " : " WHERE ") +
-          "p.responsavel_matricula = ?";
-        params.push(req.query.responsavel_matricula);
-      }
+      sql = adicionarFiltrosComuns(sql, params, req.query);
       sql += " GROUP BY p.desligamento";
 
       const [rows] = await promisePool.query(sql, params);
@@ -169,13 +172,7 @@ router.get(
             SELECT p.status, COUNT(p.id) as total_servicos
             FROM processos p
         `;
-      sql = adicionarFiltrosGlobais(sql, params, req.query);
-      if (req.query.responsavel_matricula) {
-        sql +=
-          (sql.toUpperCase().includes(" WHERE ") ? " AND " : " WHERE ") +
-          "p.responsavel_matricula = ?";
-        params.push(req.query.responsavel_matricula);
-      }
+      sql = adicionarFiltrosComuns(sql, params, req.query);
       sql += " GROUP BY p.status";
 
       const [rows] = await promisePool.query(sql, params);
