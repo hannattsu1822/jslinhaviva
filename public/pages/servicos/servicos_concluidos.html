@@ -23,6 +23,25 @@
     <link rel="stylesheet" href="/static/css/servicos_concluidos.css" />
     <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
+    <style>
+      .nao-concluido-row {
+        background-color: #f8d7da !important;
+        color: #721c24;
+      }
+      .nao-concluido-row:hover {
+        background-color: #f1c6cb !important;
+      }
+      .status-nao-concluido {
+        color: #721c24;
+        font-weight: bold;
+      }
+      .motivo-nao-concluido {
+        font-size: 0.85em;
+        color: #58151c;
+        display: block;
+        margin-top: 4px;
+      }
+    </style>
   </head>
   <body>
     <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
@@ -171,7 +190,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h1 class="page-title mb-0">
             <span class="material-symbols-outlined">task_alt</span>Serviços
-            Concluídos
+            Finalizados
           </h1>
           <div class="btn-group">
             <button
@@ -243,7 +262,7 @@
               </div>
               <div class="col-md-3">
                 <label for="filtroData" class="form-label"
-                  >Data de Conclusão</label
+                  >Data de Finalização</label
                 >
                 <div class="input-group">
                   <span class="input-group-text"
@@ -283,7 +302,8 @@
                     <th>Processo</th>
                     <th>Subestação</th>
                     <th>Alimentador</th>
-                    <th>Data Conclusão</th>
+                    <th>Status / Motivo</th>
+                    <th>Data Finalização</th>
                     <th>Responsável</th>
                     <th>APR</th>
                     <th>Ordem</th>
@@ -292,7 +312,7 @@
                 </thead>
                 <tbody id="tabela-servicos">
                   <tr>
-                    <td colspan="9" class="text-center py-5">
+                    <td colspan="10" class="text-center py-5">
                       Carregando serviços...
                     </td>
                   </tr>

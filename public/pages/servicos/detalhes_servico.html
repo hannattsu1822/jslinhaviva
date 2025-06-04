@@ -83,6 +83,11 @@
           display: none;
         }
       }
+      .status-badge.bg-nao-concluido {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        border: 1px solid #f5c6cb;
+      }
     </style>
   </head>
   <body>
@@ -380,7 +385,12 @@
                       <div class="detail-value" id="servico-hora-fim">-</div>
                     </div>
                   </div>
-                  <div class="row">
+
+                  <div
+                    class="row"
+                    id="data-conclusao-row"
+                    style="display: none"
+                  >
                     <div class="col-12 mb-3">
                       <span class="detail-label">Data de Conclusão</span>
                       <div class="detail-value" id="servico-data-conclusao">
@@ -440,19 +450,42 @@
               </div>
             </div>
           </div>
+
           <div class="row">
             <div class="col-12">
               <div
                 class="detail-card card mb-4 d-none"
-                id="conclusao-container"
+                id="finalizacao-info-container"
               >
-                <div class="card-header">
-                  <i class="fas fa-clipboard-check me-2"></i>Observações de
-                  Conclusão
+                <div class="card-header" id="finalizacao-info-header">
+                  <i class="fas fa-clipboard-check me-2"></i>Informações de
+                  Finalização
                 </div>
                 <div class="card-body">
+                  <div
+                    class="row"
+                    id="motivo-nao-conclusao-container"
+                    style="display: none"
+                  >
+                    <div class="col-12 mb-3">
+                      <span class="detail-label">Motivo da Não Conclusão</span>
+                      <div
+                        class="detail-value"
+                        id="servico-motivo-nao-conclusao"
+                        style="
+                          white-space: pre-wrap;
+                          font-size: 0.9rem;
+                          color: #721c24;
+                          font-weight: bold;
+                        "
+                      >
+                        -
+                      </div>
+                    </div>
+                  </div>
                   <div class="row">
                     <div class="col-12">
+                      <span class="detail-label">Observações</span>
                       <div
                         class="detail-value"
                         id="servico-observacoes"
@@ -466,9 +499,10 @@
               </div>
             </div>
           </div>
+
           <div class="detail-card card mt-2">
             <div class="card-header">
-              <i class="fas fa-paperclip me-2"></i>Anexos
+              <i class="fas fa-paperclip me-2"></i>Anexos do Registro
             </div>
             <div class="card-body">
               <div id="anexos-container" class="row g-3">
@@ -486,7 +520,6 @@
 
     <div class="main-content-overlay"></div>
 
-    {/* Modais permanecem os mesmos */}
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content glass-modal">

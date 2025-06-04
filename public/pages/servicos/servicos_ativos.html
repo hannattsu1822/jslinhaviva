@@ -266,7 +266,6 @@
 
     <div class="main-content-overlay"></div>
 
-    {/* Modais permanecem os mesmos */}
     <div
       class="modal fade"
       id="aprUploadModal"
@@ -367,11 +366,14 @@
         </div>
       </div>
     </div>
+
     <div class="modal fade" id="concluirModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg">
         <div class="modal-content glass-modal">
           <div class="modal-header">
-            <h5 class="modal-title">Concluir Serviço</h5>
+            <h5 class="modal-title" id="concluirModalTitle">
+              Finalizar Serviço
+            </h5>
             <button
               type="button"
               class="btn-close"
@@ -382,44 +384,61 @@
           <div class="modal-body">
             <form id="formConcluirServico">
               <div class="mb-3">
-                <label for="dataConclusao" class="form-label"
-                  >Data e Hora de Conclusão</label
+                <label for="statusFinalServico" class="form-label"
+                  >Status da Finalização *</label
                 >
-                <div class="input-group">
-                  <input
-                    type="date"
-                    class="form-control glass-input"
-                    id="dataConclusao"
-                    required
-                  />
-                  <input
-                    type="time"
-                    class="form-control glass-input"
-                    id="horaConclusao"
-                    required
-                  />
-                  <button
-                    type="button"
-                    class="btn glass-btn"
-                    onclick="usarDataAtual()"
+                <select
+                  class="form-select glass-input"
+                  id="statusFinalServico"
+                  required
+                >
+                  <option value="concluido" selected>Concluído</option>
+                  <option value="nao_concluido">Não Concluído</option>
+                </select>
+              </div>
+
+              <div id="camposSomenteConcluido" style="display: block">
+                <div class="mb-3">
+                  <label for="dataConclusao" class="form-label"
+                    >Data e Hora de Conclusão *</label
                   >
-                    <span class="material-symbols-outlined">update</span> Usar
-                    agora
-                  </button>
+                  <div class="input-group">
+                    <input
+                      type="date"
+                      class="form-control glass-input"
+                      id="dataConclusao"
+                    />
+                    <input
+                      type="time"
+                      class="form-control glass-input"
+                      id="horaConclusao"
+                    />
+                    <button
+                      type="button"
+                      class="btn glass-btn"
+                      onclick="usarDataAtual()"
+                    >
+                      <span class="material-symbols-outlined">update</span> Usar
+                      agora
+                    </button>
+                  </div>
                 </div>
               </div>
+
               <div class="mb-3">
-                <label for="observacoesConclusao" class="form-label"
-                  >Observações</label
+                <label for="observacoesFinalizacao" class="form-label"
+                  >Observações / Motivo *</label
                 >
                 <textarea
                   class="form-control glass-input"
-                  id="observacoesConclusao"
+                  id="observacoesFinalizacao"
                   rows="3"
+                  placeholder="Observações gerais ou motivo da não conclusão."
                 ></textarea>
               </div>
+
               <div class="mb-3">
-                <label class="form-label">Fotos de Conclusão</label>
+                <label class="form-label">Fotos/Anexos do Registro</label>
                 <div class="d-flex flex-wrap gap-2 mb-3">
                   <button
                     type="button"
@@ -455,8 +474,7 @@
                   />
                 </div>
                 <small class="text-muted"
-                  >(Opcional) Adicione fotos comprovando a conclusão (Máx. 5
-                  fotos)</small
+                  >(Opcional) Adicione fotos/anexos (Máx. 5)</small
                 >
                 <div id="previewContainer" class="mt-3 row g-3"></div>
               </div>
@@ -468,11 +486,11 @@
             </button>
             <button
               type="button"
-              class="btn glass-btn btn-success"
-              id="confirmConcluir"
+              class="btn glass-btn btn-primary"
+              id="btnSalvarFinalizacao"
             >
-              <span class="material-symbols-outlined">check_circle</span>
-              Concluir Serviço
+              <span class="material-symbols-outlined">save</span>
+              Salvar Finalização
             </button>
           </div>
         </div>
