@@ -152,7 +152,7 @@ router.post(
         chave_montante,
         responsavel_matricula = "pendente",
         maps,
-        ordem_obra, // <<< ADICIONADO
+        ordem_obra,
       } = req.body;
 
       if (!data_prevista_execucao || !subestacao || !desligamento) {
@@ -194,7 +194,7 @@ router.post(
             chave_montante || null,
             responsavel_matricula,
             maps || null,
-            ordem_obra || null, // <<< ADICIONADO
+            ordem_obra || null,
           ]
         );
         insertedId = result.insertId;
@@ -234,7 +234,7 @@ router.post(
             chave_montante || null,
             responsavel_matricula,
             maps || null,
-            ordem_obra || null, // <<< ADICIONADO
+            ordem_obra || null,
           ]
         );
         insertedId = result.insertId;
@@ -324,8 +324,8 @@ router.get("/api/servicos", autenticar, async (req, res) => {
                 p.id, p.processo, p.data_prevista_execucao, p.desligamento, 
                 p.subestacao, p.alimentador, p.chave_montante, 
                 p.responsavel_matricula, p.maps, p.status, p.data_conclusao, 
-                p.observacoes_conclusao, u.nome as responsavel_nome,
-                p.ordem_obra, -- <<< ADICIONADO
+                p.observacoes_conclusao, p.motivo_nao_conclusao, u.nome as responsavel_nome,
+                p.ordem_obra,
                 CASE 
                     WHEN p.tipo = 'Emergencial' THEN 'Emergencial'
                     ELSE 'Normal'
@@ -337,8 +337,12 @@ router.get("/api/servicos", autenticar, async (req, res) => {
         `;
     const params = [];
     if (status) {
-      query += " WHERE p.status = ?";
-      params.push(status);
+      if (status === "concluido") {
+        query += " WHERE p.status IN ('concluido', 'nao_concluido')";
+      } else {
+        query += " WHERE p.status = ?";
+        params.push(status);
+      }
     }
     query += " ORDER BY p.data_prevista_execucao ASC, p.id DESC";
     const [servicos] = await promisePool.query(query, params);
@@ -412,7 +416,7 @@ router.put(
         hora_fim,
         maps,
         responsavel_matricula,
-        ordem_obra, // <<< ADICIONADO
+        ordem_obra,
       } = req.body;
 
       if (!subestacao) {
@@ -459,7 +463,7 @@ router.put(
           desligamento === "SIM" ? hora_fim : null,
           maps || null,
           responsavel_matricula || "pendente",
-          ordem_obra || null, // <<< ADICIONADO
+          ordem_obra || null,
           servicoId,
         ]
       );
@@ -730,10 +734,17 @@ router.post(
   async (req, res) => {
     const { id: servicoId } = req.params;
     const connection = await promisePool.getConnection();
-    let filePathsParaLimpeza = [];
+    let filePathsParaLimpeza = req.files ? req.files.map((f) => f.path) : [];
+
     try {
       await connection.beginTransaction();
-      const { observacoes, dataConclusao, horaConclusao } = req.body;
+      const {
+        observacoes,
+        dataConclusao,
+        horaConclusao,
+        status_final,
+        motivo_nao_conclusao,
+      } = req.body;
       const matricula = req.user?.matricula;
 
       if (!matricula) {
@@ -745,19 +756,19 @@ router.post(
           message: "Matrícula do responsável não encontrada",
         });
       }
-      if (!dataConclusao || !horaConclusao) {
+
+      if (status_final !== "concluido" && status_final !== "nao_concluido") {
         limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
         return res.status(400).json({
           success: false,
-          message: "Data e Hora de Conclusão são obrigatórias.",
+          message: "Status final inválido fornecido.",
         });
       }
-      const dataHoraConclusao = `${dataConclusao} ${horaConclusao}:00`;
 
       const [servicoExistenteRows] = await connection.query(
-        "SELECT id, processo, data_prevista_execucao FROM processos WHERE id = ?",
+        "SELECT id, processo FROM processos WHERE id = ?",
         [servicoId]
       );
       if (servicoExistenteRows.length === 0) {
@@ -769,16 +780,59 @@ router.post(
           .json({ success: false, message: "Serviço não encontrado" });
       }
       const servicoExistente = servicoExistenteRows[0];
+      let auditMessage = "";
+      let dataHoraConclusaoParaSalvar = null;
+      let observacoesParaSalvar = observacoes || null;
+      let motivoNaoConclusaoParaSalvar = null;
+
+      if (status_final === "concluido") {
+        if (!dataConclusao || !horaConclusao) {
+          limparArquivosTemporarios(req.files);
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({
+            success: false,
+            message:
+              "Data e Hora de Conclusão são obrigatórias para concluir o serviço.",
+          });
+        }
+        dataHoraConclusaoParaSalvar = `${dataConclusao} ${horaConclusao}:00`;
+        auditMessage = `Serviço ${servicoId} (${servicoExistente.processo}) concluído em ${dataHoraConclusaoParaSalvar}`;
+      } else {
+        if (!motivo_nao_conclusao || motivo_nao_conclusao.trim() === "") {
+          await connection.rollback();
+          connection.release();
+          limparArquivosTemporarios(req.files);
+          return res.status(400).json({
+            success: false,
+            message: "Motivo da não conclusão é obrigatório.",
+          });
+        }
+        motivoNaoConclusaoParaSalvar = motivo_nao_conclusao.trim();
+        auditMessage = `Serviço ${servicoId} (${servicoExistente.processo}) marcado como Não Concluído. Motivo: ${motivoNaoConclusaoParaSalvar}`;
+      }
 
       await connection.query(
-        `UPDATE processos SET status = 'concluido', data_conclusao = ?, observacoes_conclusao = ?, responsavel_matricula = ? WHERE id = ?`,
-        [dataHoraConclusao, observacoes || null, matricula, servicoId]
+        `UPDATE processos SET 
+          status = ?, 
+          data_conclusao = ?, 
+          observacoes_conclusao = ?, 
+          motivo_nao_conclusao = ?,
+          responsavel_matricula = ? 
+         WHERE id = ?`,
+        [
+          status_final,
+          dataHoraConclusaoParaSalvar,
+          observacoesParaSalvar,
+          motivoNaoConclusaoParaSalvar,
+          matricula,
+          servicoId,
+        ]
       );
 
       if (req.files && req.files.length > 0) {
         const nomeDaPastaParaAnexos =
           await determinarNomePastaParaServicoExistente(connection, servicoId);
-
         const diretorioDoProcesso = path.join(
           __dirname,
           "../../upload_arquivos",
@@ -788,13 +842,23 @@ router.post(
           fs.mkdirSync(diretorioDoProcesso, { recursive: true });
         }
 
+        let processedFilePaths = [];
         for (const file of req.files) {
-          filePathsParaLimpeza.push(file.path);
           const fileExt = path.extname(file.originalname).toLowerCase();
-          const newFilename = `conclusao_${Date.now()}${fileExt}`;
+          const newFilename = `${
+            status_final === "concluido"
+              ? "conclusao"
+              : "nao_conclusao_registro"
+          }_${Date.now()}${fileExt}`;
           const novoPathCompleto = path.join(diretorioDoProcesso, newFilename);
+
           await fsPromises.rename(file.path, novoPathCompleto);
-          const tipoAnexo = "foto_conclusao";
+          processedFilePaths.push(file.path);
+
+          const tipoAnexo =
+            status_final === "concluido"
+              ? "foto_conclusao"
+              : "foto_nao_conclusao";
           await connection.query(
             `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tipo_anexo, tamanho) VALUES (?, ?, ?, ?, ?)`,
             [
@@ -806,40 +870,34 @@ router.post(
             ]
           );
         }
+        filePathsParaLimpeza = filePathsParaLimpeza.filter(
+          (p) => !processedFilePaths.includes(p)
+        );
       }
+
       await connection.commit();
+      limparArquivosTemporarios(filePathsParaLimpeza); // Limpa os não processados ou restantes
+
       await registrarAuditoria(
         matricula,
-        "Conclusão de Serviço",
-        `Serviço ${servicoId} (${servicoExistente.processo}) concluído em ${dataHoraConclusao}`
+        status_final === "concluido"
+          ? "Conclusão de Serviço"
+          : "Não Conclusão de Serviço",
+        auditMessage
       );
       res.status(200).json({
         success: true,
-        message: "Serviço concluído com sucesso",
-        data_conclusao: dataHoraConclusao,
-        fotos: req.files?.length || 0,
+        message: `Serviço marcado como ${
+          status_final === "concluido" ? "Concluído" : "Não Concluído"
+        } com sucesso`,
       });
     } catch (error) {
       await connection.rollback();
-      filePathsParaLimpeza.forEach((filePath) => {
-        try {
-          if (
-            fs.existsSync(filePath) &&
-            !filePath.includes("upload_arquivos")
-          ) {
-            fs.unlinkSync(filePath);
-          }
-        } catch (e) {
-          console.error(`Erro ao limpar arquivo ${filePath} após falha:`, e);
-        }
-      });
-      limparArquivosTemporarios(
-        req.files.filter((f) => !filePathsParaLimpeza.includes(f.path))
-      );
-      console.error("Erro ao concluir serviço:", error);
+      limparArquivosTemporarios(req.files);
+      console.error("Erro ao finalizar/não concluir serviço:", error);
       res.status(500).json({
         success: false,
-        message: "Erro interno ao concluir serviço",
+        message: "Erro interno ao processar serviço",
         error:
           process.env.NODE_ENV === "development"
             ? error.message
@@ -857,7 +915,7 @@ router.patch("/api/servicos/:id/reativar", autenticar, async (req, res) => {
   const connection = await promisePool.getConnection();
   try {
     const [result] = await connection.query(
-      'UPDATE processos SET status = "ativo", data_conclusao = NULL, observacoes_conclusao = NULL WHERE id = ?',
+      'UPDATE processos SET status = "ativo", data_conclusao = NULL, observacoes_conclusao = NULL, motivo_nao_conclusao = NULL WHERE id = ?',
       [req.params.id]
     );
     if (result.affectedRows === 0) {
@@ -971,8 +1029,12 @@ router.get("/api/servicos/contador", autenticar, async (req, res) => {
     let query = "SELECT COUNT(*) as total FROM processos";
     const params = [];
     if (status) {
-      query += " WHERE status = ?";
-      params.push(status);
+      if (status === "concluido") {
+        query += " WHERE status IN ('concluido', 'nao_concluido')";
+      } else {
+        query += " WHERE status = ?";
+        params.push(status);
+      }
     }
     const [result] = await connection.query(query, params);
     res.json({ total: result[0].total });
