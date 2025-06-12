@@ -15,6 +15,7 @@ const rotasFibraOptica = require("./routes/rotas_fibra_optica");
 const rotasInspecoesRedes = require("./routes/rotas_inspecoes_redes");
 const rotasAvulsos = require("./routes/rotas_avulsos");
 const rotasRelatorios = require("./routes/rotas_relatorios");
+const rotasSubestacoes = require("./routes/rotas_subestacoes"); // Importa as novas rotas
 
 const router = express.Router();
 
@@ -30,6 +31,7 @@ router.use("/", rotasFibraOptica);
 router.use("/", rotasInspecoesRedes);
 router.use("/", rotasAvulsos);
 router.use("/", rotasRelatorios);
+router.use("/", rotasSubestacoes);
 
 // Rota raiz básica
 router.get("/", (req, res) => {
