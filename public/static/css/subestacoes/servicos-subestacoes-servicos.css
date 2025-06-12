@@ -1,0 +1,413 @@
+/* /static/css/subestacoes/servicos-subestacoes-clean.css */
+
+:root {
+  --app-primary-color: #192a56;
+  --app-primary-color-hover: #111d3c;
+  --app-primary-color-subtle-bg: #eaeff5;
+  --app-success-color: #27ae60;
+  --app-success-color-hover: #1f8b4d;
+  --app-danger-color: #e74c3c;
+  --app-danger-color-hover: #c0392b;
+  --app-warning-color: #f39c12;
+  --app-warning-color-hover: #d68910;
+  --app-info-color: #3498db;
+  --app-info-color-hover: #2580b7;
+  /* Corrigido/Confirmado: Cinza Escuro para botão Limpar e Cancelar */
+  --app-button-clear-bg: #566573;
+  --app-button-clear-border: #455a64;
+  --app-button-clear-hover-bg: #34495e; /* Um hover ainda mais escuro */
+  --app-button-clear-text: #ffffff;
+
+  --app-text-on-button: #ffffff;
+  --app-text-on-primary-header: #ffffff;
+  --app-text-on-status-badge: #ffffff;
+  --app-text-primary: #34495e;
+  --app-text-secondary: #7f8c8d;
+  --app-bg-page: #f4f7f9;
+  --app-bg-component: #ffffff;
+  --app-border-color: #d0d7de;
+  --app-border-color-light: #e1e4e8;
+  --app-font-family: "Roboto", "Segoe UI", Helvetica, Arial, sans-serif;
+  --app-border-radius: 0.3rem;
+}
+
+.btn {
+  border-radius: var(--app-border-radius);
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background-color 0.05s ease-in-out, border-color 0.05s ease-in-out,
+    color 0.05s ease-in-out !important;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  font-weight: 500;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+.btn:hover,
+.btn:active,
+.btn:focus {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.btn-primary {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-primary-color) !important;
+  border-color: var(--app-primary-color) !important;
+}
+.btn-primary:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-primary-color-hover) !important;
+  border-color: var(--app-primary-color-hover) !important;
+}
+
+.btn-success {
+  /* Aplica-se a #btnNovoServico */
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-success-color) !important;
+  border-color: var(--app-success-color) !important;
+}
+.btn-success:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-success-color-hover) !important;
+  border-color: var(--app-success-color-hover) !important;
+}
+
+.btn-danger {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-danger-color) !important;
+  border-color: var(--app-danger-color) !important;
+}
+.btn-danger:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-danger-color-hover) !important;
+  border-color: var(--app-danger-color-hover) !important;
+}
+.btn-warning {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-warning-color) !important;
+  border-color: var(--app-warning-color) !important;
+}
+.btn-warning:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-warning-color-hover) !important;
+  border-color: var(--app-warning-color-hover) !important;
+}
+
+/* Botão Limpar Filtros e Botões Cancelar/Fechar em Modais com a classe .btn-app-clear */
+.btn-app-clear {
+  color: var(--app-button-clear-text) !important;
+  background-color: var(--app-button-clear-bg) !important;
+  border-color: var(--app-button-clear-border) !important;
+}
+.btn-app-clear:hover {
+  color: var(--app-button-clear-text) !important;
+  background-color: var(--app-button-clear-hover-bg) !important;
+  border-color: var(--app-button-clear-hover-bg) !important;
+}
+
+body {
+  background-color: var(--app-bg-page);
+  font-family: var(--app-font-family);
+  font-size: 0.9rem;
+  color: var(--app-text-primary);
+  line-height: 1.55;
+}
+.form-control,
+.form-select {
+  border-radius: var(--app-border-radius);
+  border-color: var(--app-border-color-light);
+  box-shadow: none !important;
+  transition: border-color 0.1s ease-in-out;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--app-primary-color);
+}
+.form-control-sm,
+.form-select-sm {
+  font-size: 0.825rem;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  border-radius: calc(var(--app-border-radius) * 0.9);
+}
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--app-text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+#formFiltrosServicos > [class*="col-"] {
+  margin-bottom: 0.75rem;
+}
+.form-filtros-actions {
+  padding-top: 0.5rem;
+  align-self: end;
+}
+
+.page-header {
+  background-color: var(--app-bg-component);
+  border-bottom: 1px solid var(--app-border-color-light);
+  box-shadow: none;
+  border-radius: var(--app-border-radius);
+}
+.page-header h1 {
+  color: var(--app-primary-color);
+  font-weight: 500;
+  font-size: 1.5rem;
+}
+.page-header h1 .material-symbols-outlined {
+  font-size: 1.6em;
+  font-variation-settings: "wght" 300;
+}
+
+.custom-card {
+  background-color: var(--app-bg-component);
+  border: 1px solid var(--app-border-color-light);
+  border-radius: var(--app-border-radius);
+  box-shadow: none;
+}
+.custom-card-header {
+  background-color: var(--app-primary-color) !important;
+  color: var(--app-text-on-primary-header) !important;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--app-primary-color-hover) !important;
+}
+.custom-card-header h2,
+.custom-card-header h3 {
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: var(--app-text-on-primary-header) !important;
+}
+.custom-card-header .material-symbols-outlined {
+  font-size: 1.4em;
+  color: var(--app-text-on-primary-header) !important;
+  font-variation-settings: "wght" 400;
+}
+.custom-card-body {
+  padding: 1.25rem;
+}
+.custom-card-body.p-0 {
+  padding: 0 !important;
+}
+
+.btn .material-symbols-outlined {
+  font-size: 1.3em;
+  vertical-align: text-bottom;
+  line-height: 1;
+  font-variation-settings: "wght" 300;
+}
+.btn-sm .material-symbols-outlined {
+  font-size: 1.2em;
+}
+
+.table {
+  font-size: 0.825rem;
+  border-color: var(--app-border-color-light);
+  margin-bottom: 0;
+}
+.custom-table thead tr th {
+  background-color: var(--app-primary-color) !important;
+  color: var(--app-text-on-primary-header) !important;
+  border-bottom: 1px solid var(--app-primary-color-hover) !important;
+  font-weight: 500;
+  padding: 0.6rem 0.75rem;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
+.custom-table tbody tr td {
+  padding: 0.5rem 0.75rem;
+  border-color: var(--app-border-color-light);
+  vertical-align: middle;
+}
+.table-hover > tbody > tr:hover > * {
+  --bs-table-hover-bg: var(--app-primary-color-subtle-bg);
+  color: var(--app-text-primary);
+}
+
+.actions-column .btn {
+  padding: 0.1rem 0.25rem;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.actions-column .btn:hover {
+  background-color: transparent !important;
+}
+.actions-column .btn .material-symbols-outlined {
+  font-size: 1.25rem;
+  font-variation-settings: "wght" 300;
+  transition: color 0.05s ease-in-out;
+}
+.actions-column .btn.text-info:hover .material-symbols-outlined {
+  color: var(--app-info-color-hover) !important;
+}
+.actions-column .btn.text-primary:hover .material-symbols-outlined {
+  color: var(--app-primary-color-hover) !important;
+}
+.actions-column .btn.text-success:hover .material-symbols-outlined {
+  color: var(--app-success-color-hover) !important;
+}
+.actions-column .btn.text-warning:hover .material-symbols-outlined {
+  color: var(--app-warning-color-hover) !important;
+}
+.actions-column .btn.text-danger:hover .material-symbols-outlined {
+  color: var(--app-danger-color-hover) !important;
+}
+
+.custom-modal-content {
+  border-radius: var(--app-border-radius);
+  border: 1px solid var(--app-border-color);
+  box-shadow: none;
+}
+.custom-modal-header {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--app-border-color-light);
+  background-color: var(--app-bg-page);
+  color: var(--app-text-primary);
+}
+#modalServico .modal-header.custom-modal-header,
+#modalDesignarEncarregado .modal-header.custom-modal-header {
+  background-color: var(--app-primary-color) !important;
+  color: var(--app-text-on-primary-header) !important;
+  border-bottom: 1px solid var(--app-primary-color-hover) !important;
+}
+#modalServico .modal-header.custom-modal-header .modal-title,
+#modalServico .modal-header.custom-modal-header .material-symbols-outlined,
+#modalServico .modal-header.custom-modal-header .btn-close,
+#modalDesignarEncarregado .modal-header.custom-modal-header .modal-title,
+#modalDesignarEncarregado
+  .modal-header.custom-modal-header
+  .material-symbols-outlined,
+#modalDesignarEncarregado .modal-header.custom-modal-header .btn-close {
+  color: var(--app-text-on-primary-header) !important;
+}
+#modalConfirmacaoServico .modal-header.custom-modal-header .modal-title,
+#modalConfirmacaoServico
+  .modal-header.custom-modal-header
+  .material-symbols-outlined {
+  color: var(--app-primary-color);
+}
+
+.custom-modal-header .modal-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+.custom-modal-header .material-symbols-outlined {
+  font-size: 1.3em;
+  font-variation-settings: "wght" 400;
+}
+.custom-modal-footer {
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--app-border-color-light);
+  background-color: var(--app-bg-page);
+}
+.modal-body {
+  font-size: 0.875rem;
+  padding: 1.25rem;
+}
+.modal-body strong {
+  font-weight: 500;
+}
+
+.modal-xl .modal-body {
+  max-height: calc(90vh - 130px);
+  overflow-y: auto;
+}
+.sticky-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1056; /* Acima do z-index padrão do modal-body (1055) do Bootstrap */
+}
+
+.status-badge {
+  padding: 0.3em 0.7em;
+  font-size: 0.7rem;
+  font-weight: 500;
+  border-radius: var(--app-border-radius);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-text-on-status-badge) !important;
+  border: 1px solid transparent;
+  box-shadow: none;
+  line-height: 1.2;
+  text-align: center;
+  display: inline-block;
+  min-width: 110px;
+}
+.status-programado {
+  background-color: var(--app-info-color);
+  border-color: var(--app-info-color);
+}
+.status-em_andamento {
+  background-color: var(--app-warning-color);
+  border-color: var(--app-warning-color);
+}
+.status-concluido {
+  background-color: var(--app-success-color);
+  border-color: var(--app-success-color);
+}
+.status-cancelado {
+  background-color: var(--app-danger-color);
+  border-color: var(--app-danger-color);
+}
+.status-pendente_aprovacao {
+  background-color: #6f42c1;
+  border-color: #6f42c1;
+  color: #fff !important;
+}
+.status-desconhecido {
+  background-color: var(--app-text-secondary);
+  border-color: var(--app-text-secondary);
+}
+
+.anexos-fieldset {
+  border-color: var(--app-border-color-light) !important;
+  margin-top: 0.5rem;
+}
+.anexos-fieldset legend.legend-sm {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--app-text-secondary);
+}
+.anexos-fieldset legend.legend-sm .material-symbols-outlined {
+  font-size: 1.3em;
+  vertical-align: text-bottom;
+  margin-right: 0.25rem;
+}
+.anexos-list.list-group .list-group-item {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.75rem;
+  background-color: transparent;
+  border-color: var(--app-border-color-light);
+}
+.anexos-list .list-group-item .material-symbols-outlined {
+  font-size: 1.1rem;
+  margin-right: 0.3rem;
+  vertical-align: text-bottom;
+}
+.remove-anexo-btn.btn-icon .material-symbols-outlined {
+  font-size: 1.1rem !important;
+  color: var(--app-danger-color) !important;
+}
+.remove-anexo-btn.btn-icon:hover .material-symbols-outlined {
+  color: var(--app-danger-color-hover) !important;
+}
+
+.spinner-border {
+  animation: none;
+}
+.spin {
+  animation: spin-simple 1s linear infinite;
+}
+@keyframes spin-simple {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
