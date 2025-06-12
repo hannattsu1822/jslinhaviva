@@ -143,7 +143,17 @@ app.use(
     secret: sessionSecret,
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === "production" },
+    // ====================== ALTERAÇÃO IMPORTANTE AQUI ======================
+    // A opção 'secure' foi definida como 'false'.
+    // Isso é necessário para que a sessão funcione em um ambiente de desenvolvimento
+    // ou em uma VPS que está sendo acessada via HTTP (e não HTTPS).
+    // Se 'secure' estivesse 'true', o navegador só enviaria o cookie de sessão
+    // em conexões seguras (HTTPS), o que causaria a falha no redirecionamento
+    // após o login no seu cenário atual.
+    // Se no futuro você implementar HTTPS, pode voltar para:
+    // cookie: { secure: process.env.NODE_ENV === "production" },
+    // =======================================================================
+    cookie: { secure: false },
   })
 );
 
