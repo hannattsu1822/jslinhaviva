@@ -1,0 +1,563 @@
+/* :root deve estar no topo do seu CSS base, ou importado de um arquivo de variáveis global */
+:root {
+  /* Cores Primárias e Secundárias (Sua paleta é boa, pode refinar se quiser) */
+  --color-primary: #005a9c; /* Azul mais moderno, menos "elétrico" que 007bff */
+  --color-primary-dark: #003e6b;
+  --color-primary-light: #e6f0f8; /* Para fundos sutis de alerta/info */
+
+  --color-secondary: #6c757d; /* Cinza para botões secundários */
+  --color-secondary-hover: #5a6268;
+
+  /* Cores de Feedback (Suas atuais são boas) */
+  --color-success: #28a745;
+  --color-success-hover: #218838;
+  --color-danger: #dc3545;
+  --color-danger-hover: #c82333;
+  --color-warning: #ffc107;
+  --color-info: #17a2b8;
+
+  /* Texto */
+  --text-color-body: #343a40;
+  --text-color-headings: #1a253c; /* Um azul escuro/quase preto para títulos fortes */
+  --text-color-muted: #6c757d;
+  --text-color-link: var(--color-primary);
+  --text-color-on-dark-bg: #ffffff;
+  --text-color-on-primary-bg: #ffffff;
+
+  /* Fundos */
+  --bg-page: #f4f7f9; /* Um cinza muito claro para o fundo da página */
+  --bg-card: #ffffff;
+  --bg-modal-overlay: rgba(
+    26,
+    37,
+    60,
+    0.75
+  ); /* Overlay do modal um pouco mais escuro */
+  --bg-header-card: #f8f9fa; /* Fundo sutil para cabeçalhos de card/tabela */
+
+  /* Bordas */
+  --border-color: #dee2e6;
+  --border-color-light: #e9ecef;
+  --border-radius-base: 0.375rem; /* 6px */
+  --border-radius-sm: 0.25rem; /* 4px */
+  --border-radius-lg: 0.5rem; /* 8px */
+  --border-width: 1px;
+
+  /* Sombras (Mantenha as suas ou refine) */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.1);
+
+  /* Tipografia */
+  --font-family-base: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-headings: "Montserrat", "Inter", sans-serif; /* Montserrat para títulos */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --line-height-base: 1.6;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Espaçamento (Exemplo) */
+  --spacing-unit: 1rem; /* Unidade base, ex: 16px */
+  --space-1: calc(var(--spacing-unit) * 0.25); /* 4px */
+  --space-2: calc(var(--spacing-unit) * 0.5); /* 8px */
+  --space-3: calc(var(--spacing-unit) * 0.75); /* 12px */
+  --space-4: var(--spacing-unit); /* 16px */
+  --space-5: calc(var(--spacing-unit) * 1.25); /* 20px */
+  --space-6: calc(var(--spacing-unit) * 1.5); /* 24px */
+  --space-8: calc(var(--spacing-unit) * 2); /* 32px */
+
+  /* Transições */
+  --transition-base: all 0.2s ease-in-out;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family-base);
+  margin: 0;
+  background-color: var(--bg-page);
+  color: var(--text-color-body);
+  line-height: var(--line-height-base);
+  font-size: var(--font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  width: 95%;
+  max-width: 1400px; /* Ou o que for adequado */
+  margin: var(--space-6) auto; /* Mais espaçamento vertical */
+  padding: 0;
+}
+
+/* Cabeçalho Principal da Página */
+header.page-header {
+  /* Dando um nome mais específico */
+  background-color: var(--bg-card);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-color-light);
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--border-radius-lg);
+}
+
+header.page-header h1 {
+  color: var(--text-color-headings);
+  margin: 0;
+  font-size: 1.875rem; /* ~30px */
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+}
+header.page-header .header-icon {
+  margin-right: var(--space-3);
+  font-size: 1.5em; /* Relativo ao h1 */
+  color: var(--color-primary);
+}
+
+/* Seções e Cards */
+.card-section {
+  /* Classe genérica para suas sections com estilo de card */
+  margin-bottom: var(--space-6);
+  padding: var(--space-6);
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  border: var(--border-width) solid var(--border-color-light);
+}
+
+.card-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-color-light);
+}
+
+.card-section-header h2,
+.card-section-header h3 {
+  margin: 0;
+  font-family: var(--font-family-headings);
+  font-size: 1.375rem; /* ~22px */
+  font-weight: var(--font-weight-medium);
+  color: var(--text-color-headings);
+  display: flex;
+  align-items: center;
+}
+.card-section-header .section-title-icon {
+  margin-right: var(--space-2);
+  font-size: 1.25em; /* Relativo ao título pai */
+  color: var(--color-primary-dark);
+}
+
+/* Botões */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base); /* 1rem */
+  padding: var(--space-3) var(--space-5); /* 12px 20px */
+  line-height: var(--line-height-base);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--transition-base);
+  white-space: nowrap;
+}
+.btn .material-icons-outlined {
+  font-size: 1.375em; /* Levemente maior que o texto */
+  line-height: 1; /* Para melhor alinhamento vertical */
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--text-color-on-primary-bg);
+  border-color: var(--color-primary);
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.btn-success {
+  background-color: var(--color-success);
+  color: var(--text-color-on-primary-bg);
+  border-color: var(--color-success);
+  /* Se for botão de ação principal */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-3) var(--space-5); /* Consistente, talvez 10px 22px como antes, mas com variável */
+  box-shadow: var(--shadow-xs);
+}
+.btn-success:hover {
+  background-color: var(--color-success-hover);
+  border-color: var(--color-success-hover);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: var(--text-color-on-primary-bg);
+  border-color: var(--color-danger);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-3) var(--space-5);
+  box-shadow: var(--shadow-xs);
+}
+.btn-danger:hover {
+  background-color: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary);
+  color: var(--text-color-on-primary-bg);
+  border-color: var(--color-secondary);
+}
+.btn-secondary:hover {
+  background-color: var(--color-secondary-hover);
+  border-color: var(--color-secondary-hover);
+}
+
+.btn-link {
+  background-color: transparent;
+  color: var(--text-color-link);
+  border-color: transparent;
+  text-decoration: none;
+  padding: var(--space-3) var(--space-2);
+}
+.btn-link:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.btn-icon {
+  background-color: transparent;
+  color: var(--text-color-muted);
+  padding: var(--space-2);
+  border-radius: 50%;
+  border: none;
+  line-height: 1; /* Para o ícone ficar centrado */
+}
+.btn-icon:hover {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.btn-icon .material-icons-outlined {
+  font-size: 1.5rem;
+  display: block;
+}
+/* Variações de cor para btn-icon */
+.btn-icon.icon-danger:hover {
+  color: var(--color-danger);
+  background-color: rgba(220, 53, 69, 0.1);
+}
+.btn-icon.icon-success:hover {
+  color: var(--color-success);
+  background-color: rgba(40, 167, 69, 0.1);
+}
+.btn-icon.icon-info:hover {
+  color: var(--color-info);
+  background-color: rgba(23, 162, 184, 0.1);
+}
+
+/* Formulários */
+.form-group {
+  margin-bottom: var(--space-4);
+}
+.form-group label {
+  display: block;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-color-headings);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+.form-control {
+  /* Classe genérica para inputs, selects, textareas */
+  display: block;
+  width: 100%;
+  padding: var(--space-3) var(--space-4); /* 12px 16px */
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-base);
+  color: var(--text-color-body);
+  background-color: var(--bg-card);
+  background-clip: padding-box;
+  border: var(--border-width) solid var(--border-color);
+  appearance: none;
+  border-radius: var(--border-radius-base);
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.form-control:focus {
+  color: var(--text-color-body);
+  background-color: var(--bg-card);
+  border-color: var(--color-primary);
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 90, 156, 0.25); /* Sombra de foco ajustada */
+}
+.form-control::placeholder {
+  color: var(--text-color-muted);
+  opacity: 1;
+}
+select.form-control {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right var(--space-4) center;
+  background-size: 16px 12px;
+  padding-right: calc(var(--space-4) * 2.5); /* Espaço para a seta */
+}
+textarea.form-control {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Estilos de Tabela (Adaptado de listagem-inspecoes.css para consistência) */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: var(--border-width) solid var(--border-color-light);
+  border-radius: var(--border-radius-base);
+  margin-top: var(--space-4);
+}
+
+table.data-table {
+  /* Classe mais genérica para tabelas */
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--bg-card);
+}
+
+table.data-table th,
+table.data-table td {
+  padding: var(--space-3) var(--space-4);
+  vertical-align: middle;
+  text-align: left;
+  font-size: var(--font-size-sm);
+  border-bottom: var(--border-width) solid var(--border-color-light);
+}
+table.data-table thead th {
+  font-family: var(--font-family-headings);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-color-headings);
+  background-color: var(--bg-header-card);
+  border-bottom-width: calc(var(--border-width) * 2);
+  border-color: var(--border-color);
+  white-space: nowrap;
+}
+table.data-table tbody tr:hover {
+  background-color: var(--color-primary-light);
+}
+table.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+table.data-table .text-center-column {
+  text-align: center;
+}
+table.data-table .actions-column {
+  white-space: nowrap;
+  text-align: center;
+}
+table.data-table .actions-column .btn-icon {
+  margin: 0 var(--space-1);
+}
+
+/* Modais */
+.modal {
+  position: fixed;
+  z-index: 1050;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-modal-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+.modal-content {
+  background-color: var(--bg-card);
+  margin: auto;
+  padding: 0;
+  border: none;
+  width: 100%;
+  max-width: 600px; /* Padrão, pode ser sobrescrito por .small ou .large */
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  animation: modal-fade-in 0.3s ease-out;
+}
+.modal-content.small {
+  max-width: 480px;
+}
+.modal-content.large {
+  max-width: 850px;
+}
+
+@keyframes modal-fade-in {
+  from {
+    transform: translateY(-30px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+.modal-header {
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--bg-header-card);
+  color: var(--text-color-headings);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: var(--border-width) solid var(--border-color-light);
+  border-top-left-radius: var(--border-radius-lg);
+  border-top-right-radius: var(--border-radius-lg);
+}
+.modal-header h4 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.modal-header h4 .material-icons-outlined {
+  font-size: 1.2em; /* Relativo ao h4 */
+  color: inherit;
+}
+.modal-header .warning-icon {
+  color: var(--color-warning);
+}
+
+.close-modal {
+  color: var(--text-color-muted);
+  font-size: 1.75rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.close-modal:hover {
+  color: var(--text-color-headings);
+}
+
+.modal-body {
+  padding: var(--space-5) var(--space-6);
+  overflow-y: auto;
+  flex-grow: 1;
+}
+.modal-body .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.modal-footer {
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--bg-header-card);
+  text-align: right;
+  border-top: var(--border-width) solid var(--border-color-light);
+  border-bottom-left-radius: var(--border-radius-lg);
+  border-bottom-right-radius: var(--border-radius-lg);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* Mensagens de feedback, e.g., nenhum item encontrado */
+.feedback-message {
+  /* Renomeando de #nenhumEquipamento */
+  text-align: center;
+  color: var(--text-color-muted);
+  padding: var(--space-8) var(--space-4); /* Mais padding */
+  font-style: italic;
+  background-color: var(--bg-page); /* Fundo mais sutil que --bg-medium */
+  border: var(--border-width) dashed var(--border-color);
+  border-radius: var(--border-radius-base);
+  margin-top: var(--space-4);
+}
+
+/* Hidden utility */
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .container {
+    width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+  header.page-header {
+    border-radius: 0;
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+  header.page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .card-section {
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+  .card-section-header h2,
+  .card-section-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .card-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .card-section-header .btn {
+    /* Botão Novo */
+    align-self: flex-start;
+    width: auto; /* Ou 100% se preferir */
+  }
+
+  .modal-content {
+    max-width: 95%;
+    max-height: 95vh;
+  }
+  .modal-body {
+    padding: var(--space-4);
+  }
+  .modal-header,
+  .modal-footer {
+    padding: var(--space-3) var(--space-4);
+  }
+  .modal-header h4 {
+    font-size: 1.125rem;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: var(--space-2);
+  }
+  .modal-footer .btn {
+    width: 100%;
+  }
+}

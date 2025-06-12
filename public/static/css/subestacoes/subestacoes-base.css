@@ -1,0 +1,513 @@
+@import url("../subestacoes/subestacoes-base.css");
+
+/* :root local foi removido pois as variáveis agora vêm do subestacoes-base.css */
+
+/* Estilos do body, .container e header.page-header devem vir do subestacoes-base.css */
+/* Se o HTML desta página *não* usar as classes .page-header ou .container do base,
+   você precisaria manter os estilos originais específicos do body e container aqui,
+   mas o ideal é usar as classes do base no HTML. */
+
+/* Estilos específicos para .form-section e .form-grid se não estiverem usando .card-section, etc. */
+/* Se estiverem, estes podem ser simplificados ou removidos. */
+.form-section {
+  margin-bottom: var(--space-8, 40px);
+  padding-bottom: var(--space-6, 30px);
+  border-bottom: var(--border-width) solid var(--border-color-light);
+}
+.form-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.form-section h2 {
+  /* Presumindo que .card-section-header não foi usado aqui, mantendo estilo original com vars */
+  font-family: var(--font-family-headings);
+  font-size: 1.6em; /* Tamanho específico mantido */
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-dark);
+  margin-top: 0;
+  margin-bottom: var(--space-5);
+  display: flex;
+  align-items: center;
+}
+.form-section h2 .section-title-icon {
+  margin-right: var(--space-3);
+  font-size: 1.4em; /* Específico */
+  color: inherit;
+}
+
+/* form-grid.three-columns, .form-group, .form-control deveriam vir do base, se as classes estiverem no HTML */
+/* Mantendo a regra específica de three-columns por garantia */
+.form-grid.three-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-5, 20px); /* Usando var com fallback */
+}
+
+#inspecaoFormularioNumDisplay.form-control {
+  /* Se tem a classe .form-control */
+  background-color: var(--bg-disabled);
+  color: var(--text-color-muted);
+  font-style: italic;
+  cursor: not-allowed;
+}
+
+/* Container dos itens do Checklist */
+.checklist-container {
+  margin-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.checklist-grupo {
+  background-color: var(--bg-card);
+  border: var(--border-width) solid var(--border-color-light);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast);
+}
+.checklist-grupo:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.checklist-grupo-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--color-gray-100);
+  border-bottom: var(--border-width) solid var(--border-color-light);
+}
+
+.checklist-grupo-header h3 {
+  font-family: var(--font-family-headings);
+  margin: 0;
+  font-size: 1.3em;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+}
+
+.checklist-grupo-header h3 .material-icons-outlined {
+  font-size: 1.4em;
+  color: inherit;
+  margin-right: var(--space-2);
+}
+
+.checklist-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* numero | descrição | avaliação */
+  gap: var(--space-3) var(--space-4);
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-color-light);
+  transition: background-color var(--transition-fast);
+}
+.checklist-item:last-child {
+  border-bottom: none;
+}
+.checklist-item:hover {
+  background-color: var(--color-primary-xtralight);
+}
+
+.item-numero {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  font-size: var(--font-size-base);
+}
+
+.item-descricao {
+  font-size: var(--font-size-base);
+  color: var(--text-color-body);
+  line-height: var(--line-height-base);
+  transition: border-left var(--transition-fast),
+    padding-left var(--transition-fast), background-color var(--transition-fast);
+}
+.item-descricao.anormal-justificada,
+.item-descricao.anormal-com-foto {
+  border-left: 4px solid var(--color-warning);
+  padding-left: var(--space-3);
+  margin-left: calc(
+    var(--space-3) * -1
+  ); /* Manter este se o visual ficar bom */
+  background-color: var(--color-warning-light);
+  border-radius: var(--border-radius-sm);
+}
+.item-descricao.anormal-justificada.anormal-com-foto::before {
+  content: "photo_camera";
+  font-family: "Material Icons Outlined";
+  font-size: 1.125rem;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
+  color: var(--color-warning);
+  margin-right: var(--space-2);
+}
+
+.item-avaliacao {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.item-avaliacao label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  transition: var(--transition-fast);
+  background-color: var(--bg-card);
+  user-select: none;
+  min-width: 55px;
+  justify-content: center;
+}
+.item-avaliacao input[type="radio"] {
+  /* sr-only já está no base.css, se o HTML usar a classe */
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.item-avaliacao label:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-xtralight);
+}
+
+.item-avaliacao label.selected-n {
+  background-color: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success-hover);
+}
+.item-avaliacao label.selected-a {
+  background-color: var(--color-danger-light);
+  border-color: var(--color-danger);
+  color: var(--color-danger-hover);
+}
+.item-avaliacao label.selected-na {
+  background-color: var(--color-gray-100);
+  border-color: var(--color-gray-500);
+  color: var(--text-color-muted);
+}
+
+#anexosInspecaoSection fieldset.anexos-fieldset legend {
+  font-weight: var(--font-weight-medium);
+  color: var(--text-color-headings);
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-lg);
+}
+#anexosInspecaoSection
+  fieldset.anexos-fieldset
+  legend
+  .material-icons-outlined {
+  color: inherit;
+  margin-right: var(--space-1);
+  vertical-align: middle;
+  font-size: 1.2em;
+}
+
+.anexos-list.modern-anexos-list li {
+  padding: var(--space-3);
+  background-color: var(--color-gray-100);
+  border: var(--border-width) solid var(--border-color-light);
+  border-radius: var(--border-radius-base);
+  margin-bottom: var(--space-2);
+  box-shadow: var(--shadow-xs);
+}
+.modern-anexos-list li .file-preview {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--border-radius-sm);
+  border: var(--border-width) solid var(--border-color);
+  flex-shrink: 0;
+}
+.modern-anexos-list li .file-preview-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-sm);
+  background-color: var(--color-gray-200);
+  color: var(--text-color-muted);
+  font-size: 1.8em;
+  flex-shrink: 0;
+}
+.modern-anexos-list li .file-info {
+  flex-grow: 1;
+  overflow: hidden;
+}
+.modern-anexos-list li .file-name {
+  word-break: break-all;
+  font-weight: var(--font-weight-medium);
+}
+.modern-anexos-list li .file-size {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+}
+
+.btn-delete-anexo {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-round);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.btn-delete-anexo:hover {
+  background-color: var(--color-danger-light);
+}
+.btn-delete-anexo .material-icons-outlined {
+  font-size: 1.25rem;
+}
+
+/* Estilos para o modal de Justificativa - HERDARÃO do base.css se as classes corretas forem usadas no HTML */
+/* #modalJustificativaAnormalidade .modal-content { ... } já definido no base.css */
+/* #modalJustificativaAnormalidade .modal-header ... */
+
+#itemAnormalDescricao {
+  /* Este é específico e deve ser mantido */
+  font-size: 1.05em;
+  color: var(--text-color-body);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-warning-light);
+  border-left: 4px solid var(--color-warning);
+  border-radius: var(--border-radius-base);
+  line-height: 1.5;
+}
+
+.legenda-obs {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  background-color: var(--color-info-light);
+  border-left: 4px solid var(--color-info);
+  border-radius: var(--border-radius-base);
+}
+
+/* .page-form-actions do base.css deve cobrir os botões principais do formulário se a classe HTML foi atualizada */
+
+.checklist-item.item-incompleto-erro {
+  background-color: var(--color-danger-light) !important;
+  border: var(--border-width) dashed var(--color-danger) !important;
+  animation: pulse-error 0.8s infinite alternate;
+}
+@keyframes pulse-error {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+/* sr-only já vem do base.css */
+
+/* Estilos do file-input-modern (mantidos como eram, com variáveis) */
+.file-input-modern-wrapper {
+  position: relative;
+  border: var(--border-width-thick) dashed var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: var(--space-5) var(--space-4);
+  background-color: var(--color-gray-100);
+  text-align: center;
+  transition: var(--transition-base);
+  margin-bottom: var(--space-4);
+}
+.file-input-modern-wrapper:hover,
+.file-input-modern-wrapper.dragover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-xtralight);
+}
+.file-input-modern-hidden {
+  display: none;
+}
+.file-input-modern-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-color-body);
+}
+.file-input-icon {
+  font-size: 3rem;
+  color: var(--color-primary);
+  margin-bottom: var(--space-3);
+}
+.file-input-text {
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+.file-input-text strong {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+.file-input-text small {
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: var(--space-1);
+  display: block;
+}
+
+.modal-file-input {
+  padding: var(--space-4) var(--space-3);
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.modal-file-input .file-input-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-2);
+}
+.modal-file-input .file-input-text {
+  font-size: var(--font-size-sm);
+}
+
+.file-name-display {
+  display: block;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: 0;
+  font-style: italic;
+  word-break: break-all;
+  min-height: 1.2em;
+}
+
+.modal-file-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.modal-file-preview-container .file-preview {
+  max-width: 150px;
+  max-height: 150px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  object-fit: contain;
+}
+
+.btn-delete-anexo-modal {
+  background: none;
+  border: var(--border-width) solid var(--color-danger);
+  color: var(--color-danger);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--border-radius-base);
+  font-size: var(--font-size-sm);
+}
+.btn-delete-anexo-modal:hover {
+  background-color: var(--color-danger);
+  color: var(--text-color-on-primary-bg);
+}
+.btn-delete-anexo-modal .material-icons-outlined {
+  font-size: 1.125rem;
+}
+
+.file-types-note {
+  display: block;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--text-color-muted);
+  margin-top: var(--space-3);
+}
+
+/* Media Queries - ajustes finos específicos para esta página */
+@media (max-width: 992px) {
+  .form-grid.three-columns {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  .checklist-item {
+    grid-template-areas:
+      "numero descricao"
+      "avaliacao avaliacao";
+    grid-template-columns: auto 1fr;
+    row-gap: var(--space-2);
+  }
+  .item-avaliacao {
+    grid-area: avaliacao;
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  /* O .container e header.page-header são estilizados pelo base.css */
+  .form-section h2 {
+    /* Se a section não tiver .card-section-header */
+    font-size: 1.4em;
+  }
+  .form-grid.three-columns {
+    grid-template-columns: 1fr;
+  }
+  .checklist-grupo-header {
+    padding: var(--space-3) var(--space-4);
+  }
+  .checklist-grupo-header h3 {
+    font-size: 1.2em;
+  }
+  .checklist-item {
+    padding: var(--space-3) var(--space-4);
+  }
+  .item-descricao {
+    font-size: 0.95em;
+  }
+  /* Se não estiver usando .page-form-actions no HTML para os botões de salvar/cancelar no fim da página: */
+  /*
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+  .form-actions .btn {
+    width: 100%;
+    margin-bottom: var(--space-2);
+  }
+  .form-actions .btn:last-child {
+    margin-bottom: 0;
+  }
+  */
+}
+
+@media (max-width: 480px) {
+  /* header h1 { font-size: 1.6em; } -> já coberto pelo base */
+  .form-section h2 {
+    /* Se não usa .card-section-header */
+    font-size: 1.3em;
+  }
+  .item-avaliacao label {
+    padding: var(--space-2);
+    font-size: 0.8rem;
+    min-width: 40px;
+  }
+  .modern-anexos-list li {
+    font-size: 0.85em;
+    padding: var(--space-2);
+  }
+  .modern-anexos-list li .file-preview,
+  .modern-anexos-list li .file-preview-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .modal-file-input .file-input-icon {
+    font-size: 2rem;
+  }
+}
