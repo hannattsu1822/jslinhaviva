@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Formulário de Transformadores</title>
+    <link rel="stylesheet" href="/static/css/formulario_transformadores.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+
+  <body>
+    <div class="formulario-container">
+      <div class="header">
+        <h1>
+          <i class="fas fa-clipboard-check icon"></i>Formulário de
+          Transformadores
+        </h1>
+        <p>
+          Preencha os campos abaixo para realizar o checklist do transformador.
+        </p>
+      </div>
+
+      <form id="checklistForm">
+        <div class="form-group">
+          <label for="numero_serie">Número de Série:</label>
+          <input
+            type="text"
+            id="numero_serie"
+            name="numero_serie"
+            required
+            readonly
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="ano_fabricacao">Ano de Fabricação:</label>
+          <input
+            type="number"
+            id="ano_fabricacao"
+            name="ano_fabricacao"
+            min="1900"
+            max="2100"
+            step="1"
+            placeholder="AAAA"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Reformado:</label>
+          <div class="radio-group">
+            <label
+              ><input type="radio" name="reformado" value="true" /> Sim</label
+            >
+            <label
+              ><input type="radio" name="reformado" value="false" checked />
+              Não</label
+            >
+          </div>
+        </div>
+
+        <div class="form-group" id="anoReformadoGroup" style="display: none">
+          <label for="ano_reformado">Ano da Reforma:</label>
+          <input
+            type="number"
+            id="ano_reformado"
+            name="ano_reformado"
+            min="1900"
+            max="2100"
+            step="1"
+            placeholder="AAAA"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Detalhes do Tanque:</label>
+          <div class="button-group">
+            <button type="button" data-value="NORMAL">Normal</button>
+            <button type="button" data-value="FURADO">Furado</button>
+            <button type="button" data-value="PINTURA_DESGASTADA">
+              Pintura Desgastada
+            </button>
+            <button type="button" data-value="VESTIGIOS_VAZAMENTO">
+              Vestígios de Vazamento
+            </button>
+            <button type="button" data-value="VESTIGIOS_OLEO_QUEIMADO">
+              Vestígios de Óleo Queimado
+            </button>
+            <button type="button" data-value="PLAQUETA_ILEGIVEL">
+              Plaqueta Ilegível
+            </button>
+            <button type="button" data-value="CORROSAO">Corrosão</button>
+          </div>
+          <input type="hidden" id="detalhes_tanque" name="detalhes_tanque" />
+        </div>
+
+        <div class="form-group" id="tipoCorrosaoGroup" style="display: none">
+          <label for="tipo_corrosao">Tipo de Corrosão:</label>
+          <select id="tipo_corrosao" name="tipo_corrosao">
+            <option value="">Selecione...</option>
+            <option value="PEQUENAS">Pequenas</option>
+            <option value="REGULAR">Regular</option>
+            <option value="CRITICAS">Críticas</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Buchas Primárias:</label>
+          <div class="button-group">
+            <button type="button" data-value="NORMAL">Normal</button>
+            <button type="button" data-value="TRINCADA">Tricada</button>
+            <button type="button" data-value="QUEBRADA">Quebrada</button>
+            <button type="button" data-value="FOLGADA">Folgada</button>
+            <button type="button" data-value="VEDACOES_RESSECADAS">
+              Vedações Ressecadas
+            </button>
+            <button type="button" data-value="SINAIS_CURTO_CIRCUITO">
+              Sinais de Curto Circuito
+            </button>
+          </div>
+          <input type="hidden" id="buchas_primarias" name="buchas_primarias" />
+        </div>
+
+        <div class="form-group">
+          <label>Buchas Secundárias:</label>
+          <div class="button-group">
+            <button type="button" data-value="NORMAL">Normal</button>
+            <button type="button" data-value="TRINCADA">Tricada</button>
+            <button type="button" data-value="QUEBRADA">Quebrada</button>
+            <button type="button" data-value="FOLGADA">Folgada</button>
+            <button type="button" data-value="VEDACOES_RESSECADAS">
+              Vedações Ressecadas
+            </button>
+            <button type="button" data-value="SINAIS_CURTO_CIRCUITO">
+              Sinais de Curto Circuito
+            </button>
+          </div>
+          <input
+            type="hidden"
+            id="buchas_secundarias"
+            name="buchas_secundarias"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Conectores:</label>
+          <div class="button-group">
+            <button type="button" data-value="NORMAL">Normal</button>
+            <button type="button" data-value="SINAIS_DE_DESCARGAS_ATMOSFERICAS">
+              Sinais de Descargas Atmosféricas
+            </button>
+            <button type="button" data-value="TRINCADO">Tricado</button>
+            <button type="button" data-value="FALTANDO_PARAFUSOS">
+              Faltando Parafusos
+            </button>
+          </div>
+          <input type="hidden" id="conectores" name="conectores" />
+        </div>
+
+        <div class="form-group">
+          <label>Avaliação Bobina I:</label>
+          <div class="button-group single-select">
+            <button type="button" data-value="NORMAL">Normal</button>
+            <button type="button" data-value="CURTO_CIRCUITO">
+              Curto Circuito
+            </button>
+            <button type="button" data-value="EM_ABERTO">Em Aberto</button>
+          </div>
+          <input
+            type="hidden"
+            id="avaliacao_bobina_i"
+            name="avaliacao_bobina_i"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Avaliação Bobina II:</label>
+          <div class="button-group single-select">
+            <button type="button" data-value="NORMAL">Normal</button>
+            <button type="button" data-value="CURTO_CIRCUITO">
+              Curto Circuito
+            </button>
+            <button type="button" data-value="EM_ABERTO">Em Aberto</button>
+          </div>
+          <input
+            type="hidden"
+            id="avaliacao_bobina_ii"
+            name="avaliacao_bobina_ii"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Avaliação Bobina III:</label>
+          <div class="button-group single-select">
+            <button type="button" data-value="NORMAL">Normal</button>
+            <button type="button" data-value="CURTO_CIRCUITO">
+              Curto Circuito
+            </button>
+            <button type="button" data-value="EM_ABERTO">Em Aberto</button>
+          </div>
+          <input
+            type="hidden"
+            id="avaliacao_bobina_iii"
+            name="avaliacao_bobina_iii"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Conclusão:</label>
+          <div class="button-group single-select">
+            <button type="button" data-value="QUEIMADO">Queimado</button>
+            <button type="button" data-value="NORMAL">Normal</button>
+          </div>
+          <input type="hidden" id="conclusao" name="conclusao" />
+        </div>
+
+        <div class="form-group">
+          <label>Transformador Destinado:</label>
+          <div class="button-group single-select">
+            <button type="button" data-value="SUCATA">Sucata</button>
+            <button type="button" data-value="ESTOQUE">Estoque</button>
+            <button type="button" data-value="REFORMA">Reforma</button>
+          </div>
+          <input
+            type="hidden"
+            id="transformador_destinado"
+            name="transformador_destinado"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="matricula_responsavel">Responsável Técnico:</label>
+          <select
+            id="matricula_responsavel"
+            name="matricula_responsavel"
+            required
+          >
+            <option value="">Selecione um responsável...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="matricula_supervisor">Supervisor Técnico:</label>
+          <select
+            id="matricula_supervisor"
+            name="matricula_supervisor"
+            required
+          >
+            <option value="">Selecione um supervisor...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="observacoes">Observações:</label>
+          <textarea id="observacoes" name="observacoes" rows="3"></textarea>
+        </div>
+
+        <button type="submit" id="submitButton">
+          <i class="fas fa-save icon"></i>Salvar Checklist
+        </button>
+      </form>
+
+      <button
+        id="voltarButton"
+        onclick="window.location.href='/transformadores'"
+      >
+        <i class="fas fa-arrow-left icon"></i>Voltar para Transformadores
+      </button>
+
+      <div id="mensagem"></div>
+    </div>
+
+    <script src="/scripts/trafos/formulario_transformadores.js"></script>
+  </body>
+</html>

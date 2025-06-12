@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relatório de Transformadores</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/static/css/filtrar_transformadores.css" />
+    <link rel="stylesheet" href="/static/css/relatorio_transformadores.css" />
+    <style>
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+          font-size: 9pt;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .relatorio-container {
+          box-shadow: none !important;
+          border: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          width: auto !important;
+          max-width: none !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        h1,
+        h2 {
+          page-break-after: avoid !important;
+        }
+        .divisao {
+          page-break-inside: avoid !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="relatorio-container">
+      <h1>
+        <i class="fas fa-file-alt icon"></i>Relatório de Transformador
+        <span id="checklistId"></span>
+      </h1>
+
+      <div id="relatorioContent">
+        <p
+          style="text-align: center; padding: 20px; color: var(--sys-dark-gray)"
+        >
+          Carregando dados do relatório...
+        </p>
+      </div>
+
+      <div class="no-print" style="text-align: center; margin-top: 30px">
+        <button
+          onclick="window.location.href = document.referrer && document.referrer !== window.location.href ? document.referrer : '/filtrar_transformadores'"
+          class="back-btn"
+        >
+          <i class="fas fa-arrow-left icon"></i> Voltar
+        </button>
+        <button onclick="gerarPDF()" class="pdf-btn">
+          <i class="fas fa-file-pdf icon"></i> Gerar PDF Novamente
+        </button>
+      </div>
+    </div>
+
+    <script src="/scripts/trafos/relatorio_formulario.js"></script>
+  </body>
+</html>

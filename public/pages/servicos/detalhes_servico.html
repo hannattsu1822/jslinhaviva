@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalhes do Serviço | Sistema de Gestão</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/detalhes_servico.css" />
+    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
+    <link rel="stylesheet" href="/static/css/toast.css" />
+    <style>
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+          font-size: 10pt;
+        }
+        .no-print {
+          display: none !important;
+        }
+        h1,
+        h2,
+        .page-title {
+          page-break-after: avoid !important;
+        }
+        .detail-card {
+          page-break-inside: avoid !important;
+        }
+        .sidebar,
+        .sidebar-toggle-button,
+        .main-content-overlay,
+        .action-buttons,
+        .breadcrumb {
+          display: none !important;
+        }
+        .main-content {
+          margin-left: 0 !important;
+          width: 100% !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+        .container.py-4 {
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          max-width: none !important;
+          width: auto !important;
+        }
+        .detail-card {
+          border: 1px solid #ccc !important;
+          box-shadow: none !important;
+          margin-bottom: 10px !important;
+        }
+        .detail-card .card-header {
+          background-color: #f0f0f0 !important;
+          color: #000 !important;
+          border-bottom: 1px solid #ccc !important;
+        }
+        #anexos-container.row {
+          display: flex !important;
+          flex-wrap: wrap !important;
+        }
+        #anexos-container > div[class*="col-"] {
+          width: 33.33% !important;
+          padding: 5px !important;
+          page-break-inside: avoid !important;
+        }
+        .attachment-card {
+          border: 1px solid #ddd !important;
+        }
+        .attachment-card .btn-group .btn {
+          display: none;
+        }
+      }
+      .status-badge.bg-nao-concluido {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar bg-glass">
+      <div class="sidebar-header text-center py-3">
+        <div class="user-icon mb-2">
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
+      </div>
+      <div class="user-info p-3 mt-2 rounded">
+        <div class="info-item mb-2">
+          <i class="fas fa-id-card me-2"></i>
+          <span id="user-matricula">Matrícula: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-briefcase me-2"></i>
+          <span id="user-cargo">Cargo: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-calendar-alt me-2"></i>
+          <span id="current-date">--/--/----</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-clock me-2"></i>
+          <span id="current-time">--:--:--</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav flex-grow-1">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('dashboard');"
+              class="nav-link"
+            >
+              <i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('transformadores');"
+              class="nav-link"
+            >
+              <i class="fas fa-bolt fa-fw me-2"></i>Transformadores
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('transformadores_reformados');"
+              class="nav-link"
+            >
+              <i class="fas fa-sync-alt fa-fw me-2"></i>Reformados
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('subestacao');"
+              class="nav-link"
+            >
+              <i class="fas fa-industry fa-fw me-2"></i>Subestação
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('frota');"
+              class="nav-link"
+            >
+              <i class="fas fa-truck fa-fw me-2"></i>Frota
+            </a>
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-auditoria-link"
+            style="display: none"
+          >
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('auditoria');"
+              class="nav-link"
+            >
+              <i class="fas fa-search fa-fw me-2"></i>Auditoria
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('gestao-servicos');"
+              class="nav-link active"
+            >
+              <i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('servicos_ativos');"
+              class="nav-link"
+            >
+              <i class="fas fa-hourglass-half fa-fw me-2"></i>Serviços Ativos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('servicos_concluidos');"
+              class="nav-link"
+            >
+              <i class="fas fa-check-circle fa-fw me-2"></i>Serviços Concluídos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('gestao-turmas');"
+              class="nav-link"
+            >
+              <i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de Turmas
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('fibra-optica');"
+              class="nav-link"
+            >
+              <i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('inspecoes-redes');"
+              class="nav-link"
+            >
+              <i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de
+              Redes
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <button onclick="logout()" class="btn-logout">
+          <i class="fas fa-sign-out-alt me-2"></i>Sair
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container py-4">
+        <div
+          class="d-flex justify-content-between align-items-center mb-4 flex-wrap"
+        >
+          <div class="me-3">
+            <nav aria-label="breadcrumb" class="no-print page-breadcrumb">
+              <ol class="breadcrumb bg-transparent p-0 m-0">
+                <li class="breadcrumb-item">
+                  <a href="/gestao-servicos">Gestão de Serviços</a>
+                </li>
+                <li class="breadcrumb-item" id="breadcrumb-origem">
+                  <a href="/servicos_ativos">Serviços</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">
+                  Detalhes
+                </li>
+              </ol>
+            </nav>
+            <h1 class="page-title mb-0 d-flex align-items-center">
+              <i class="fas fa-info-circle me-2"></i>Detalhes do Serviço
+              <span
+                id="servico-id-header"
+                class="ms-2"
+                style="font-size: 1.1rem; color: #6c757d; font-weight: 400"
+              ></span>
+            </h1>
+          </div>
+          <div class="action-buttons no-print mt-2 mt-md-0">
+            <button
+              class="btn btn-outline-secondary me-2"
+              onclick="window.history.back();"
+            >
+              <i class="fas fa-arrow-left me-1"></i> Voltar
+            </button>
+            <button class="btn btn-primary me-2" id="btn-editar">
+              <i class="fas fa-edit me-1"></i> Editar
+            </button>
+            <button class="btn btn-danger me-2" id="btn-excluir">
+              <i class="fas fa-trash me-1"></i> Excluir
+            </button>
+            <button onclick="window.print()" class="btn btn-info">
+              <i class="fas fa-print me-1"></i> Imprimir
+            </button>
+          </div>
+        </div>
+
+        <div id="alerta-container-detalhes"></div>
+
+        <div id="relatorioContent">
+          <div class="row">
+            <div class="col-lg-7 col-md-12 mb-4">
+              <div class="detail-card card h-100">
+                <div class="card-header">
+                  <i class="fas fa-info-circle me-2"></i>Informações Básicas
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">ID do Serviço</span>
+                      <div class="detail-value" id="servico-id">-</div>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label"
+                        >Número do Processo / Tipo</span
+                      >
+                      <div class="detail-value" id="servico-processo">-</div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">Status</span>
+                      <div>
+                        <span class="status-badge" id="servico-status">-</span>
+                      </div>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">Subestação</span>
+                      <div class="detail-value" id="servico-subestacao">-</div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">Alimentador</span>
+                      <div class="detail-value" id="servico-alimentador">-</div>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">Chave Montante</span>
+                      <div class="detail-value" id="servico-chave-montante">
+                        -
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">Ordem de Obra</span>
+                      <div class="detail-value" id="servico-ordem-obra">-</div>
+                    </div>
+                    <div class="col-sm-6 mb-3"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5 col-md-12 mb-4">
+              <div class="detail-card card h-100">
+                <div class="card-header">
+                  <i class="far fa-calendar-alt me-2"></i>Datas e Horários
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">Data Prevista</span>
+                      <div class="detail-value" id="servico-data-prevista">
+                        -
+                      </div>
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                      <span class="detail-label">Desligamento</span>
+                      <div class="detail-value" id="servico-desligamento">
+                        -
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div
+                      class="col-sm-6 mb-3"
+                      id="hora-inicio-container"
+                      style="display: none"
+                    >
+                      <span class="detail-label">Hora de Início</span>
+                      <div class="detail-value" id="servico-hora-inicio">-</div>
+                    </div>
+                    <div
+                      class="col-sm-6 mb-3"
+                      id="hora-fim-container"
+                      style="display: none"
+                    >
+                      <span class="detail-label">Hora de Término</span>
+                      <div class="detail-value" id="servico-hora-fim">-</div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="row"
+                    id="data-conclusao-row"
+                    style="display: none"
+                  >
+                    <div class="col-12 mb-3">
+                      <span class="detail-label">Data de Conclusão</span>
+                      <div class="detail-value" id="servico-data-conclusao">
+                        -
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-lg-7 col-md-12 mb-4">
+              <div class="detail-card card h-100">
+                <div class="card-header">
+                  <i class="fas fa-user-tie me-2"></i>Responsáveis
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-12">
+                      <span class="detail-label">Responsável Técnico</span>
+                      <div class="detail-value" id="servico-responsavel">-</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-5 col-md-12 mb-4">
+              <div
+                class="detail-card card h-100"
+                id="location-card"
+                style="cursor: default"
+              >
+                <a
+                  href="#"
+                  id="maps-link"
+                  style="text-decoration: none; color: inherit"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <div class="card-header">
+                    <i class="fas fa-map-marked-alt me-2"></i>Localização Google
+                    Maps
+                  </div>
+                  <div class="card-body">
+                    <div
+                      class="text-center py-2 d-flex flex-column justify-content-center align-items-center"
+                      style="min-height: 120px"
+                    >
+                      <i
+                        class="fas fa-map-marked-alt fa-3x mb-3 text-muted"
+                      ></i>
+                      <p class="text-muted mb-0">Link do mapa não fornecido</p>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-12">
+              <div
+                class="detail-card card mb-4 d-none"
+                id="finalizacao-info-container"
+              >
+                <div class="card-header" id="finalizacao-info-header">
+                  <i class="fas fa-clipboard-check me-2"></i>Informações de
+                  Finalização
+                </div>
+                <div class="card-body">
+                  <div
+                    class="row"
+                    id="motivo-nao-conclusao-container"
+                    style="display: none"
+                  >
+                    <div class="col-12 mb-3">
+                      <span class="detail-label">Motivo da Não Conclusão</span>
+                      <div
+                        class="detail-value"
+                        id="servico-motivo-nao-conclusao"
+                        style="
+                          white-space: pre-wrap;
+                          font-size: 0.9rem;
+                          color: #721c24;
+                          font-weight: bold;
+                        "
+                      >
+                        -
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-12">
+                      <span class="detail-label">Observações</span>
+                      <div
+                        class="detail-value"
+                        id="servico-observacoes"
+                        style="white-space: pre-wrap; font-size: 0.9rem"
+                      >
+                        -
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card card mt-2">
+            <div class="card-header">
+              <i class="fas fa-paperclip me-2"></i>Anexos do Registro
+            </div>
+            <div class="card-body">
+              <div id="anexos-container" class="row g-3">
+                <div class="col-12">
+                  <p class="text-center text-muted py-3">
+                    Carregando anexos...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content-overlay"></div>
+
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+          <div class="modal-header bg-light">
+            <h5 class="modal-title">Confirmar Exclusão</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Tem certeza que deseja excluir este serviço permanentemente? Esta
+              ação não pode ser desfeita.
+            </p>
+            <div class="alert alert-warning mt-3">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              Todos os anexos e registros relacionados serão removidos.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-danger" id="confirmDelete">
+              Confirmar Exclusão
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      id="access-denied-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-labelledby="accessDeniedModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-exclamation-circle text-danger mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3" id="accessDeniedModalLabel">Acesso negado!</h4>
+            <p>Você não tem permissão para acessar este recurso.</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      id="development-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-labelledby="developmentModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-hammer text-warning mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3" id="developmentModalLabel">Em Desenvolvimento!</h4>
+            <p>
+              Este recurso está sendo construído e estará disponível em breve.
+            </p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/servicos/detalhes_servico.js"></script>
+  </body>
+</html>
