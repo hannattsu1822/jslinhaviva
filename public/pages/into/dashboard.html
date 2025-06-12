@@ -62,16 +62,6 @@
               class="nav-link"
             >
               <i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard
-              Principal
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('subestacoes-dashboard');"
-              class="nav-link"
-            >
-              <i class="fas fa-charging-station fa-fw me-2"></i>Subestações
             </a>
           </li>
           <li class="nav-item">
@@ -81,6 +71,15 @@
               class="nav-link"
             >
               <i class="fas fa-bolt fa-fw me-2"></i>Transformadores
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('subestacao');"
+              class="nav-link"
+            >
+              <i class="fas fa-industry fa-fw me-2"></i>Subestação
             </a>
           </li>
           <li class="nav-item">
@@ -164,26 +163,9 @@
     <div class="main-content">
       <div class="container py-4">
         <h1 class="page-title mb-4">
-          <i class="fas fa-tachometer-alt me-3"></i>Painel de Controle Principal
+          <i class="fas fa-tachometer-alt me-3"></i>Painel de Controle
         </h1>
         <div class="row g-4">
-          <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('subestacoes-dashboard')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-info mx-auto mb-2">
-                    <i class="fas fa-charging-station"></i>
-                  </div>
-                  <h3 class="card-title mb-0">Subestações</h3>
-                </div>
-              </div>
-            </div>
-          </div>
           <div class="col-md-6 col-lg-3">
             <div
               class="card glass-card h-100"
@@ -197,6 +179,23 @@
                     <i class="fas fa-bolt"></i>
                   </div>
                   <h3 class="card-title mb-0">Transformadores</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-3">
+            <div
+              class="card glass-card h-100"
+              onclick="navigateTo('subestacao')"
+            >
+              <div
+                class="card-body d-flex align-items-center justify-content-center"
+              >
+                <div class="text-center">
+                  <div class="icon-circle bg-success mx-auto mb-2">
+                    <i class="fas fa-industry"></i>
+                  </div>
+                  <h3 class="card-title mb-0">Subestação</h3>
                 </div>
               </div>
             </div>
@@ -416,7 +415,7 @@
           const existingPages = [
             "dashboard",
             "transformadores",
-            "subestacoes-dashboard",
+            "subestacao",
             "frota",
             "auditoria",
             "gestao-servicos",
@@ -434,24 +433,22 @@
             }
             return;
           }
-
-          let targetUrl = "";
-          if (page === "dashboard") {
-            targetUrl = "/dashboard";
-          } else if (page === "subestacoes-dashboard") {
-            targetUrl = "/subestacoes-dashboard";
-          } else {
-            targetUrl = `/${page}`;
+          if (
+            page === "dashboard" &&
+            window.location.pathname === "/dashboard"
+          ) {
+            return;
           }
-
-          if (window.location.pathname === targetUrl && page === "dashboard") {
+          if (page === "dashboard") {
+            window.location.href = "/dashboard";
             return;
           }
 
+          const url = `/${page}`;
           try {
-            const response = await fetch(targetUrl, { method: "HEAD" });
+            const response = await fetch(url, { method: "HEAD" });
             if (response.ok) {
-              window.location.href = targetUrl;
+              window.location.href = url;
             } else if (response.status === 403) {
               if (accessDeniedModalInstance) {
                 accessDeniedModalInstance.show();
