@@ -1,0 +1,239 @@
+:root {
+  --sys-primary-blue: var(--primary-blue, #2a5298);
+  --sys-dark-blue: var(--dark-blue, #1e3c72);
+  --sys-light-blue: var(--light-blue, #e6f0ff);
+  --sys-white: var(--white, #ffffff);
+  --sys-light-gray: var(--light-gray, #f8f9fa);
+  --sys-medium-gray: var(--medium-gray, #dee2e6);
+  --sys-dark-gray: var(--dark-gray, #6c757d);
+  --sys-text-color: var(--text-color, #495057);
+  --sys-text-dark: var(--text-dark, #212529);
+  --sys-success: var(--success, #28a745);
+  --sys-warning: var(--warning, #ffc107);
+  --sys-danger: var(--danger, #dc3545);
+  --sys-pdf-red: var(--pdf-red, #d32f2f);
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: var(--sys-white);
+  margin: 0;
+  padding: 0;
+  color: var(--sys-text-color);
+  line-height: 1.6;
+}
+
+.relatorio-container {
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: var(--sys-white);
+}
+
+.relatorio-container h1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  color: var(--sys-primary-blue);
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 25px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--sys-primary-blue);
+}
+
+.relatorio-container h1 .icon {
+  margin-right: 10px;
+}
+
+#checklistId {
+  font-size: 16px;
+  color: var(--sys-dark-gray);
+  margin-left: auto;
+  padding-left: 20px;
+  font-weight: 400;
+}
+
+.relatorio-container h2 {
+  color: var(--sys-dark-blue);
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--sys-light-blue);
+  padding-bottom: 8px;
+}
+
+.divisao {
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: var(--sys-light-gray);
+  border-radius: 6px;
+  border: 1px solid var(--sys-medium-gray);
+}
+.divisao:last-of-type {
+  margin-bottom: 0;
+}
+
+.relatorio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.relatorio-item {
+  background-color: var(--sys-white);
+  padding: 12px 15px;
+  border-radius: 4px;
+  border: 1px solid var(--sys-medium-gray);
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.relatorio-item i.fas,
+.relatorio-item i.fa-solid {
+  margin-right: 10px;
+  color: var(--sys-primary-blue);
+  width: 18px;
+  text-align: center;
+}
+
+.relatorio-item p {
+  margin: 0;
+  flex-grow: 1;
+}
+
+.relatorio-item p strong {
+  color: var(--sys-text-dark);
+  font-weight: 500;
+}
+
+.relatorio-item.ano-reforma {
+  background-color: var(--sys-light-blue);
+  border-color: var(--sys-primary-blue);
+}
+
+.checklist-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checklist-item {
+  background-color: var(--sys-white);
+  padding: 12px 15px;
+  border-radius: 4px;
+  border: 1px solid var(--sys-medium-gray);
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.checklist-item i.fas,
+.checklist-item i.fa-solid {
+  margin-right: 10px;
+  color: var(--sys-primary-blue);
+  width: 18px;
+  text-align: center;
+}
+
+.checklist-item p {
+  margin: 0;
+}
+
+.checklist-item p strong {
+  color: var(--sys-text-dark);
+}
+
+.checklist-item.destinado {
+  background-color: var(--sys-light-blue);
+  border-color: var(--sys-primary-blue);
+}
+
+.observacoes-item {
+  background-color: var(--sys-light-blue);
+  border: 1px solid var(--sys-primary-blue);
+  padding: 15px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.observacoes-item i.fas {
+  margin-right: 10px;
+  color: var(--sys-primary-blue);
+}
+.observacoes-item p {
+  white-space: pre-wrap;
+}
+
+.back-btn,
+.pdf-btn {
+  display: inline-block;
+  margin: 20px 10px 0 0;
+  padding: 10px 20px;
+  color: var(--sys-white);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  text-decoration: none;
+  text-align: center;
+}
+
+.back-btn {
+  background-color: var(--sys-dark-gray);
+}
+.back-btn:hover {
+  background-color: #5a6268;
+}
+
+.pdf-btn {
+  background-color: var(--sys-danger);
+}
+.pdf-btn:hover {
+  background-color: #c82333;
+}
+
+.erro {
+  color: var(--sys-danger);
+  text-align: center;
+  margin-top: 20px;
+  font-weight: 500;
+}
+
+@media print {
+  body,
+  .relatorio-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-size: 9pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .relatorio-container h1,
+  .relatorio-container h2 {
+    page-break-after: avoid !important;
+  }
+  .divisao {
+    page-break-inside: avoid !important;
+    margin-bottom: 15px !important;
+    padding: 10px !important;
+  }
+  .relatorio-grid,
+  .checklist-grid {
+    gap: 10px !important;
+  }
+  .relatorio-item,
+  .checklist-item {
+    padding: 8px 10px !important;
+    font-size: 8.5pt !important;
+  }
+}
