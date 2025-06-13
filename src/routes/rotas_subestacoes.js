@@ -5,7 +5,7 @@ const fs = require("fs").promises;
 const {
   promisePool,
   upload,
-  projectRootDir, // Mantido caso seja usado em algum lugar não óbvio, mas idealmente seria substituído
+  projectRootDir,
   uploadsSubestacoesDir,
 } = require("../init");
 const { autenticar, registrarAuditoria } = require("../auth");
@@ -151,7 +151,7 @@ async function verificarSubestacaoExiste(req, res, next) {
   }
   try {
     const [subestacao] = await promisePool.query(
-      "SELECT Id FROM Subestacoes WHERE Id = ?",
+      "SELECT id FROM subestacoes WHERE id = ?",
       [subestacaoId]
     );
     if (subestacao.length === 0) {
@@ -176,7 +176,7 @@ async function verificarInspecaoExiste(req, res, next) {
   }
   try {
     const [inspecao] = await promisePool.query(
-      "SELECT id, formulario_inspecao_num FROM Inspecoes_Subestacoes WHERE id = ?",
+      "SELECT id, formulario_inspecao_num FROM inspecoes_subestacoes WHERE id = ?",
       [inspecaoId]
     );
     if (inspecao.length === 0) {
@@ -202,7 +202,7 @@ async function verificarServicoExiste(req, res, next) {
   }
   try {
     const [servicoRows] = await promisePool.query(
-      "SELECT id, status, data_conclusao, observacoes_conclusao, processo FROM Servicos_Subestacoes WHERE id = ?",
+      "SELECT id, status, data_conclusao, observacoes_conclusao, processo FROM servicos_subestacoes WHERE id = ?",
       [servicoId]
     );
     if (servicoRows.length === 0) {
@@ -283,10 +283,17 @@ router.get(
 router.get("/subestacoes", autenticar, async (req, res) => {
   try {
     const [rows] = await promisePool.query(
-      "SELECT Id, sigla, nome, Ano_Inicio_Op FROM Subestacoes ORDER BY nome ASC"
+      "SELECT id, sigla, nome, ano_inicio_op FROM subestacoes ORDER BY nome ASC"
     );
-    res.json(rows);
+    const mappedRows = rows.map((row) => ({
+      Id: row.id,
+      sigla: row.sigla,
+      nome: row.nome,
+      Ano_Inicio_Op: row.ano_inicio_op,
+    }));
+    res.json(mappedRows);
   } catch (error) {
+    console.error("Erro ao buscar subestações:", error);
     res.status(500).json({ message: "Erro interno ao buscar subestações." });
   }
 });
@@ -299,14 +306,21 @@ router.get("/subestacoes/:id", autenticar, async (req, res) => {
   }
   try {
     const [rows] = await promisePool.query(
-      "SELECT Id, sigla, nome, Ano_Inicio_Op FROM Subestacoes WHERE Id = ?",
+      "SELECT id, sigla, nome, ano_inicio_op FROM subestacoes WHERE id = ?",
       [id]
     );
     if (rows.length === 0) {
       return res.status(404).json({ message: "Subestação não encontrada." });
     }
-    res.json(rows[0]);
+    const row = rows[0];
+    res.json({
+      Id: row.id,
+      sigla: row.sigla,
+      nome: row.nome,
+      Ano_Inicio_Op: row.ano_inicio_op,
+    });
   } catch (error) {
+    console.error("Erro ao buscar subestação por ID:", error);
     res.status(500).json({ message: "Erro interno ao buscar subestação." });
   }
 });
@@ -333,7 +347,7 @@ router.post(
     }
     try {
       const [result] = await promisePool.query(
-        "INSERT INTO Subestacoes (sigla, nome, Ano_Inicio_Op) VALUES (?, ?, ?)",
+        "INSERT INTO subestacoes (sigla, nome, ano_inicio_op) VALUES (?, ?, ?)",
         [sigla.toUpperCase(), nome, anoOperacao]
       );
       const newSubestacaoId = result.insertId;
@@ -352,6 +366,7 @@ router.post(
         message: "Subestação criada com sucesso!",
       });
     } catch (error) {
+      console.error("Erro ao criar subestação:", error);
       if (error.code === "ER_DUP_ENTRY") {
         return res
           .status(409)
@@ -394,7 +409,7 @@ router.put(
     }
     try {
       const [currentSubestacao] = await promisePool.query(
-        "SELECT sigla, nome, Ano_Inicio_Op FROM Subestacoes WHERE Id = ?",
+        "SELECT sigla, nome, ano_inicio_op FROM subestacoes WHERE id = ?",
         [id]
       );
       if (currentSubestacao.length === 0) {
@@ -408,10 +423,10 @@ router.put(
         Ano_Inicio_Op:
           anoOperacao !== undefined
             ? anoOperacao
-            : currentSubestacao[0].Ano_Inicio_Op,
+            : currentSubestacao[0].ano_inicio_op,
       };
       await promisePool.query(
-        "UPDATE Subestacoes SET sigla = ?, nome = ?, Ano_Inicio_Op = ? WHERE Id = ?",
+        "UPDATE subestacoes SET sigla = ?, nome = ?, ano_inicio_op = ? WHERE id = ?",
         [updateFields.sigla, updateFields.nome, updateFields.Ano_Inicio_Op, id]
       );
       if (req.user && req.user.matricula) {
@@ -427,6 +442,7 @@ router.put(
         message: "Subestação atualizada com sucesso!",
       });
     } catch (error) {
+      console.error("Erro ao atualizar subestação:", error);
       if (error.code === "ER_DUP_ENTRY") {
         return res.status(409).json({
           message:
@@ -461,7 +477,7 @@ router.delete(
         });
       }
       const [servicos] = await promisePool.query(
-        "SELECT COUNT(*) as count FROM Servicos_Subestacoes WHERE subestacao_id = ?",
+        "SELECT COUNT(*) as count FROM servicos_subestacoes WHERE subestacao_id = ?",
         [id]
       );
       if (servicos[0].count > 0) {
@@ -470,7 +486,7 @@ router.delete(
         });
       }
       const [inspecoes] = await promisePool.query(
-        "SELECT COUNT(*) as count FROM Inspecoes_Subestacoes WHERE subestacao_id = ?",
+        "SELECT COUNT(*) as count FROM inspecoes_subestacoes WHERE subestacao_id = ?",
         [id]
       );
       if (inspecoes[0].count > 0) {
@@ -479,7 +495,7 @@ router.delete(
         });
       }
       const [result] = await promisePool.query(
-        "DELETE FROM Subestacoes WHERE Id = ?",
+        "DELETE FROM subestacoes WHERE id = ?",
         [id]
       );
       if (result.affectedRows === 0) {
@@ -496,6 +512,7 @@ router.delete(
       }
       res.json({ message: "Subestação excluída com sucesso!" });
     } catch (error) {
+      console.error("Erro ao excluir subestação:", error);
       if (error.code === "ER_ROW_IS_REFERENCED_2") {
         return res.status(409).json({
           message:
@@ -518,6 +535,7 @@ router.get(
       );
       res.json(rows);
     } catch (error) {
+      console.error("Erro ao buscar equipamentos:", error);
       res.status(500).json({ message: "Erro interno ao buscar equipamentos." });
     }
   }
@@ -597,6 +615,7 @@ router.post(
         message: "Equipamento criado com sucesso!",
       });
     } catch (error) {
+      console.error("Erro ao criar equipamento:", error);
       if (
         error.code === "ER_DUP_ENTRY" &&
         error.sqlMessage &&
@@ -633,6 +652,7 @@ router.get(
       }
       res.json(rows[0]);
     } catch (error) {
+      console.error("Erro ao buscar equipamento:", error);
       res.status(500).json({ message: "Erro interno ao buscar equipamento." });
     }
   }
@@ -742,6 +762,7 @@ router.put(
         message: "Equipamento atualizado com sucesso!",
       });
     } catch (error) {
+      console.error("Erro ao atualizar equipamento:", error);
       if (
         error.code === "ER_DUP_ENTRY" &&
         error.sqlMessage &&
@@ -790,6 +811,7 @@ router.delete(
       }
       res.json({ message: "Equipamento excluído com sucesso!" });
     } catch (error) {
+      console.error("Erro ao excluir equipamento:", error);
       res.status(500).json({ message: "Erro interno ao excluir equipamento." });
     }
   }
@@ -812,6 +834,7 @@ router.get(
       const [rows] = await promisePool.query(query, cargosRelevantes);
       res.json(rows);
     } catch (error) {
+      console.error("Erro ao buscar usuários responsáveis:", error);
       res
         .status(500)
         .json({ message: "Erro interno ao buscar usuários responsáveis." });
@@ -825,10 +848,10 @@ router.get("/usuarios-encarregados", autenticar, async (req, res) => {
     );
     res.json(rows);
   } catch (error) {
+    console.error("Erro ao buscar encarregados:", error);
     res.status(500).json({ message: "Erro interno ao buscar encarregados." });
   }
 });
-
 router.post(
   "/api/servicos-subestacoes",
   autenticar,
@@ -900,7 +923,7 @@ router.post(
           ? parseInt(encarregado_designado_id)
           : null;
       const [resultServico] = await connection.query(
-        `INSERT INTO Servicos_Subestacoes (subestacao_id, processo, motivo, alimentador, equipamento_id, data_prevista, horario_inicio, horario_fim, responsavel_id, status, data_conclusao, observacoes_conclusao, encarregado_designado_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO servicos_subestacoes (subestacao_id, processo, motivo, alimentador, equipamento_id, data_prevista, horario_inicio, horario_fim, responsavel_id, status, data_conclusao, observacoes_conclusao, encarregado_designado_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           parseInt(subestacao_id),
           processo,
@@ -937,11 +960,11 @@ router.post(
           arquivosMovidosComSucesso.push(caminhoDestino);
           let categoriaAnexoFinal = "DOCUMENTO_REGISTRO";
           const [resultAnexo] = await connection.query(
-            `INSERT INTO Servicos_Subestacoes_Anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
             [
               novoServicoId,
               file.originalname,
-              `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`, // Caminho completo para o servidor
+              `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
               file.mimetype,
               file.size,
               categoriaAnexoFinal,
@@ -970,6 +993,7 @@ router.post(
       });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao criar serviço de subestação:", error);
       for (const caminho of arquivosMovidosComSucesso) {
         try {
           await fs.unlink(caminho);
@@ -979,10 +1003,10 @@ router.post(
         for (const file of arquivos) {
           if (
             file.path &&
-            (file.path.includes("temp") || file.path.includes("upload_")) // Checa se ainda é o path original do multer
+            (file.path.includes("temp") || file.path.includes("upload_"))
           ) {
             try {
-              await fs.access(file.path); // Verifica se o arquivo existe antes de tentar deletar
+              await fs.access(file.path);
               await fs.unlink(file.path);
             } catch (e) {}
           }
@@ -1083,7 +1107,7 @@ router.put(
           ? parseInt(encarregado_designado_id)
           : null;
       const [updateResult] = await connection.query(
-        `UPDATE Servicos_Subestacoes SET subestacao_id = ?, processo = ?, motivo = ?, alimentador = ?, equipamento_id = ?, data_prevista = ?, horario_inicio = ?, horario_fim = ?, responsavel_id = ?, status = ?, data_conclusao = ?, observacoes_conclusao = ?, encarregado_designado_id = ? WHERE id = ?`,
+        `UPDATE servicos_subestacoes SET subestacao_id = ?, processo = ?, motivo = ?, alimentador = ?, equipamento_id = ?, data_prevista = ?, horario_inicio = ?, horario_fim = ?, responsavel_id = ?, status = ?, data_conclusao = ?, observacoes_conclusao = ?, encarregado_designado_id = ? WHERE id = ?`,
         [
           parseInt(subestacao_id),
           processo,
@@ -1122,7 +1146,7 @@ router.put(
           await fs.rename(file.path, caminhoDestino);
           arquivosMovidosComSucesso.push(caminhoDestino);
           const [resultAnexo] = await connection.query(
-            `INSERT INTO Servicos_Subestacoes_Anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
             [
               servicoId,
               file.originalname,
@@ -1155,6 +1179,7 @@ router.put(
       });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao atualizar serviço de subestação:", error);
       for (const caminho of arquivosMovidosComSucesso) {
         try {
           await fs.unlink(caminho);
@@ -1207,15 +1232,15 @@ router.delete(
     try {
       await connection.beginTransaction();
       const [anexos] = await connection.query(
-        "SELECT caminho_servidor FROM Servicos_Subestacoes_Anexos WHERE id_servico = ?",
+        "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id_servico = ?",
         [servicoId]
       );
       await connection.query(
-        "DELETE FROM Servicos_Subestacoes_Anexos WHERE id_servico = ?",
+        "DELETE FROM servicos_subestacoes_anexos WHERE id_servico = ?",
         [servicoId]
       );
       const [result] = await connection.query(
-        "DELETE FROM Servicos_Subestacoes WHERE id = ?",
+        "DELETE FROM servicos_subestacoes WHERE id = ?",
         [servicoId]
       );
       if (result.affectedRows === 0) {
@@ -1268,6 +1293,7 @@ router.delete(
       });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao excluir serviço de subestação:", error);
       res.status(500).json({
         message: "Erro interno ao excluir serviço de subestação.",
         detalhes: error.message,
@@ -1283,7 +1309,7 @@ router.get(
   podeGerenciarPaginaServicos,
   async (req, res) => {
     try {
-      let query = ` SELECT ss.id, ss.processo, ss.motivo, ss.alimentador, DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, ss.horario_inicio, ss.horario_fim, ss.status, DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome, e.tag as equipamento_tag, ss.subestacao_id, ss.responsavel_id, ss.equipamento_id, ud.nome as encarregado_designado_nome FROM Servicos_Subestacoes ss JOIN Subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE 1=1 `;
+      let query = ` SELECT ss.id, ss.processo, ss.motivo, ss.alimentador, DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, ss.horario_inicio, ss.horario_fim, ss.status, DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome, e.tag as equipamento_tag, ss.subestacao_id, ss.responsavel_id, ss.equipamento_id, ud.nome as encarregado_designado_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE 1=1 `;
       const params = [];
       if (req.query.subestacao_id) {
         query += " AND ss.subestacao_id = ?";
@@ -1309,6 +1335,7 @@ router.get(
       const [rows] = await promisePool.query(query, params);
       res.json(rows);
     } catch (error) {
+      console.error("Erro ao listar serviços de subestação:", error);
       res.status(500).json({
         message: "Erro interno ao listar serviços de subestação.",
         detalhes: error.message,
@@ -1329,7 +1356,7 @@ router.get(
     }
     try {
       const [servicoRows] = await promisePool.query(
-        `SELECT ss.id, ss.processo, ss.motivo, ss.alimentador, DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, ss.horario_inicio, ss.horario_fim, ss.status, DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, ss.observacoes_conclusao, s.Id as subestacao_id, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.id as responsavel_id, u.nome as responsavel_nome, e.id as equipamento_id, e.tag as equipamento_tag, ss.encarregado_designado_id, ud.nome as encarregado_designado_nome FROM Servicos_Subestacoes ss JOIN Subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE ss.id = ?`,
+        `SELECT ss.id, ss.processo, ss.motivo, ss.alimentador, DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, ss.horario_inicio, ss.horario_fim, ss.status, DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, ss.observacoes_conclusao, s.id as subestacao_id, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.id as responsavel_id, u.nome as responsavel_nome, e.id as equipamento_id, e.tag as equipamento_tag, ss.encarregado_designado_id, ud.nome as encarregado_designado_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE ss.id = ?`,
         [servicoId]
       );
       if (servicoRows.length === 0) {
@@ -1339,12 +1366,13 @@ router.get(
       }
       const servico = servicoRows[0];
       const [anexosRows] = await promisePool.query(
-        `SELECT id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo FROM Servicos_Subestacoes_Anexos WHERE id_servico = ?`,
+        `SELECT id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo FROM servicos_subestacoes_anexos WHERE id_servico = ?`,
         [servicoId]
       );
       servico.anexos = anexosRows;
       res.json(servico);
     } catch (error) {
+      console.error("Erro ao buscar detalhes do serviço:", error);
       res.status(500).json({
         message: "Erro interno ao buscar detalhes do serviço.",
         detalhes: error.message,
@@ -1403,7 +1431,7 @@ router.put(
         dataConclusaoFinal = new Date().toISOString().split("T")[0];
       }
       let updateQuery =
-        "UPDATE Servicos_Subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = ?";
+        "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = ?";
       const updateParams = [dataConclusaoFinal, observacoesFinais];
       if (horarioConclusaoFinal) {
         updateQuery += ", horario_fim = IFNULL(horario_fim, ?)";
@@ -1444,7 +1472,7 @@ router.put(
           await fs.rename(file.path, caminhoDestino);
           arquivosMovidosComSucesso.push(caminhoDestino);
           const [resultAnexo] = await connection.query(
-            `INSERT INTO Servicos_Subestacoes_Anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
               servicoId,
               file.originalname,
@@ -1477,8 +1505,8 @@ router.put(
       });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao concluir o serviço:", error);
       if (arquivosConclusao && arquivosConclusao.length > 0) {
-        // Limpa os arquivos temporários do multer
         for (const file of arquivosConclusao) {
           if (
             file.path &&
@@ -1492,7 +1520,6 @@ router.put(
         }
       }
       for (const caminho of arquivosMovidosComSucesso) {
-        // Limpa os arquivos que foram movidos
         try {
           await fs.unlink(caminho);
         } catch (e) {}
@@ -1523,7 +1550,7 @@ router.put(
     try {
       await connection.beginTransaction();
       await connection.query(
-        "UPDATE Servicos_Subestacoes SET status = 'EM_ANDAMENTO', data_conclusao = NULL, observacoes_conclusao = NULL WHERE id = ?",
+        "UPDATE servicos_subestacoes SET status = 'EM_ANDAMENTO', data_conclusao = NULL, observacoes_conclusao = NULL WHERE id = ?",
         [servicoId]
       );
       if (req.user && req.user.matricula) {
@@ -1540,6 +1567,7 @@ router.put(
       });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao reabrir o serviço:", error);
       res.status(500).json({
         message: "Erro interno ao reabrir o serviço.",
         detalhes: error.message,
@@ -1566,7 +1594,7 @@ router.put(
           ? parseInt(encarregado_designado_id)
           : null;
       await connection.query(
-        "UPDATE Servicos_Subestacoes SET encarregado_designado_id = ? WHERE id = ?",
+        "UPDATE servicos_subestacoes SET encarregado_designado_id = ? WHERE id = ?",
         [encarregadoFinalId, servicoId]
       );
       if (req.user && req.user.matricula) {
@@ -1601,6 +1629,7 @@ router.put(
       res.json({ message: mensagem });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao designar/desvincular encarregado:", error);
       res.status(500).json({
         message: "Erro interno ao designar/desvincular encarregado.",
         detalhes: error.message,
@@ -1610,7 +1639,6 @@ router.put(
     }
   }
 );
-
 router.post(
   "/inspecoes-subestacoes",
   autenticar,
@@ -1731,7 +1759,7 @@ router.post(
     try {
       await connection.beginTransaction();
       const [resultInspecao] = await connection.query(
-        `INSERT INTO Inspecoes_Subestacoes (subestacao_id, responsavel_levantamento_id, data_avaliacao, hora_inicial, hora_final, status_inspecao, observacoes_gerais, formulario_inspecao_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO inspecoes_subestacoes (subestacao_id, responsavel_levantamento_id, data_avaliacao, hora_inicial, hora_final, status_inspecao, observacoes_gerais, formulario_inspecao_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           subestacao_id,
           responsavel_levantamento_id,
@@ -1745,7 +1773,7 @@ router.post(
       );
       novaInspecaoId = resultInspecao.insertId;
       await connection.query(
-        "UPDATE Inspecoes_Subestacoes SET formulario_inspecao_num = ? WHERE id = ?",
+        "UPDATE inspecoes_subestacoes SET formulario_inspecao_num = ? WHERE id = ?",
         [String(novaInspecaoId), novaInspecaoId]
       );
       const itensParaInserir = itensDoChecklist.map((item) => [
@@ -1758,7 +1786,7 @@ router.post(
       ]);
       if (itensParaInserir.length > 0) {
         await connection.query(
-          `INSERT INTO Inspecoes_Subestacoes_Itens (inspecao_id, item_num, grupo_item, descricao_item_original, avaliacao, observacao_item) VALUES ?`,
+          `INSERT INTO inspecoes_subestacoes_itens (inspecao_id, item_num, grupo_item, descricao_item_original, avaliacao, observacao_item) VALUES ?`,
           [itensParaInserir]
         );
       }
@@ -1779,7 +1807,7 @@ router.post(
         await fs.rename(file.path, caminhoDestino);
         arquivosMovidosComSucessoParaRollback.push(caminhoDestino);
         const [resultAnexo] = await connection.query(
-          `INSERT INTO Inspecoes_Subestacoes_Anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo, item_num_associado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO inspecoes_subestacoes_anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo, item_num_associado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             novaInspecaoId,
             file.originalname,
@@ -1809,7 +1837,7 @@ router.post(
         await fs.rename(file.path, caminhoDestino);
         arquivosMovidosComSucessoParaRollback.push(caminhoDestino);
         const [resultAnexo] = await connection.query(
-          `INSERT INTO Inspecoes_Subestacoes_Anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, item_num_associado) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO inspecoes_subestacoes_anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, item_num_associado) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
             novaInspecaoId,
             file.originalname,
@@ -1845,6 +1873,7 @@ router.post(
       });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao registrar inspeção:", error);
       for (const caminho of arquivosMovidosComSucessoParaRollback) {
         try {
           await fs.unlink(caminho);
@@ -1919,7 +1948,7 @@ router.post(
         const categoriaAnexoFinal = "DOCUMENTO_ESCRITORIO";
         const descricaoAnexoFinal = req.body.descricao_anexo_escritorio || null;
         const [resultAnexo] = await connection.query(
-          `INSERT INTO Inspecoes_Subestacoes_Anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo, item_num_associado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO inspecoes_subestacoes_anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo, item_num_associado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             inspecaoId,
             file.originalname,
@@ -1954,6 +1983,7 @@ router.post(
       });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao salvar anexos de escritório:", error);
       for (const caminho of arquivosMovidosComSucesso) {
         try {
           await fs.unlink(caminho);
@@ -1987,7 +2017,7 @@ router.get(
   podeGerenciarPaginaInspecoes,
   async (req, res) => {
     try {
-      let query = ` SELECT i.id, i.formulario_inspecao_num, DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, i.hora_inicial, i.hora_final, i.status_inspecao, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome FROM Inspecoes_Subestacoes i JOIN Subestacoes s ON i.subestacao_id = s.Id JOIN users u ON i.responsavel_levantamento_id = u.id WHERE 1=1 `;
+      let query = ` SELECT i.id, i.formulario_inspecao_num, DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, i.hora_inicial, i.hora_final, i.status_inspecao, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome FROM inspecoes_subestacoes i JOIN subestacoes s ON i.subestacao_id = s.id JOIN users u ON i.responsavel_levantamento_id = u.id WHERE 1=1 `;
       const params = [];
       if (req.query.subestacao_id) {
         query += " AND i.subestacao_id = ?";
@@ -2013,6 +2043,7 @@ router.get(
       const [rows] = await promisePool.query(query, params);
       res.json(rows);
     } catch (error) {
+      console.error("Erro interno ao listar inspeções:", error);
       res.status(500).json({
         message: "Erro interno ao listar inspeções.",
         detalhes: error.message,
@@ -2033,7 +2064,7 @@ router.get(
     }
     try {
       const [inspecaoHeaderRows] = await promisePool.query(
-        `SELECT i.id, i.subestacao_id, i.formulario_inspecao_num, i.responsavel_levantamento_id, DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, i.hora_inicial, i.hora_final, i.status_inspecao, i.observacoes_gerais, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome FROM Inspecoes_Subestacoes i JOIN Subestacoes s ON i.subestacao_id = s.Id JOIN users u ON i.responsavel_levantamento_id = u.id WHERE i.id = ?`,
+        `SELECT i.id, i.subestacao_id, i.formulario_inspecao_num, i.responsavel_levantamento_id, DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, i.hora_inicial, i.hora_final, i.status_inspecao, i.observacoes_gerais, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome FROM inspecoes_subestacoes i JOIN subestacoes s ON i.subestacao_id = s.id JOIN users u ON i.responsavel_levantamento_id = u.id WHERE i.id = ?`,
         [id]
       );
       if (inspecaoHeaderRows.length === 0) {
@@ -2043,11 +2074,11 @@ router.get(
       }
       const inspecaoHeader = inspecaoHeaderRows[0];
       const [inspecaoItensRows] = await promisePool.query(
-        `SELECT item_num, grupo_item, descricao_item_original, avaliacao, observacao_item FROM Inspecoes_Subestacoes_Itens WHERE inspecao_id = ? ORDER BY item_num ASC`,
+        `SELECT item_num, grupo_item, descricao_item_original, avaliacao, observacao_item FROM inspecoes_subestacoes_itens WHERE inspecao_id = ? ORDER BY item_num ASC`,
         [id]
       );
       const [anexosItensRows] = await promisePool.query(
-        `SELECT item_num_associado, nome_original, caminho_servidor, categoria_anexo FROM Inspecoes_Subestacoes_Anexos WHERE inspecao_id = ? AND item_num_associado IS NOT NULL AND categoria_anexo = 'FOTO_EVIDENCIA_ITEM'`,
+        `SELECT item_num_associado, nome_original, caminho_servidor, categoria_anexo FROM inspecoes_subestacoes_anexos WHERE inspecao_id = ? AND item_num_associado IS NOT NULL AND categoria_anexo = 'FOTO_EVIDENCIA_ITEM'`,
         [id]
       );
       const anexosPorItem = {};
@@ -2076,7 +2107,7 @@ router.get(
         });
       }
       const [anexosGeraisRows] = await promisePool.query(
-        `SELECT nome_original, caminho_servidor, categoria_anexo, descricao_anexo FROM Inspecoes_Subestacoes_Anexos WHERE inspecao_id = ? AND (item_num_associado IS NULL OR categoria_anexo != 'FOTO_EVIDENCIA_ITEM')`,
+        `SELECT nome_original, caminho_servidor, categoria_anexo, descricao_anexo FROM inspecoes_subestacoes_anexos WHERE inspecao_id = ? AND (item_num_associado IS NULL OR categoria_anexo != 'FOTO_EVIDENCIA_ITEM')`,
         [id]
       );
       const resultadoCompleto = {
@@ -2091,6 +2122,7 @@ router.get(
       };
       res.json(resultadoCompleto);
     } catch (error) {
+      console.error("Erro ao buscar detalhes da inspeção:", error);
       res.status(500).json({
         message: "Erro interno ao buscar detalhes da inspeção.",
         detalhes: error.message,
@@ -2109,7 +2141,7 @@ router.put(
     try {
       await connection.beginTransaction();
       const [currentInspecaoRows] = await connection.query(
-        "SELECT status_inspecao, hora_final FROM Inspecoes_Subestacoes WHERE id = ?",
+        "SELECT status_inspecao, hora_final FROM inspecoes_subestacoes WHERE id = ?",
         [inspecaoId]
       );
       if (currentInspecaoRows.length === 0) {
@@ -2127,7 +2159,7 @@ router.put(
         });
       }
       let sqlUpdateQuery =
-        "UPDATE Inspecoes_Subestacoes SET status_inspecao = 'CONCLUIDA'";
+        "UPDATE inspecoes_subestacoes SET status_inspecao = 'CONCLUIDA'";
       const paramsUpdate = [];
       if (!horaFinalAtual) {
         const now = new Date();
@@ -2161,6 +2193,7 @@ router.put(
       res.json({ message: `Inspeção ID ${inspecaoId} concluída com sucesso!` });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao concluir a inspeção:", error);
       res.status(500).json({
         message: "Erro interno ao concluir a inspeção.",
         detalhes: error.message,
@@ -2181,7 +2214,7 @@ router.put(
     try {
       await connection.beginTransaction();
       const [currentInspecaoRows] = await connection.query(
-        "SELECT status_inspecao FROM Inspecoes_Subestacoes WHERE id = ?",
+        "SELECT status_inspecao FROM inspecoes_subestacoes WHERE id = ?",
         [inspecaoId]
       );
       if (currentInspecaoRows.length === 0) {
@@ -2199,7 +2232,7 @@ router.put(
         });
       }
       const [result] = await connection.query(
-        "UPDATE Inspecoes_Subestacoes SET status_inspecao = 'EM_ANDAMENTO', hora_final = NULL WHERE id = ?",
+        "UPDATE inspecoes_subestacoes SET status_inspecao = 'EM_ANDAMENTO', hora_final = NULL WHERE id = ?",
         [inspecaoId]
       );
       if (result.affectedRows === 0) {
@@ -2220,6 +2253,7 @@ router.put(
       res.json({ message: `Inspeção ID ${inspecaoId} reaberta com sucesso!` });
     } catch (error) {
       await connection.rollback();
+      console.error("Erro ao reabrir a inspeção:", error);
       res.status(500).json({
         message: "Erro interno ao reabrir a inspeção.",
         detalhes: error.message,
@@ -2242,20 +2276,20 @@ router.delete(
       await connection.beginTransaction();
 
       const [anexos] = await connection.query(
-        "SELECT caminho_servidor FROM Inspecoes_Subestacoes_Anexos WHERE inspecao_id = ?",
+        "SELECT caminho_servidor FROM inspecoes_subestacoes_anexos WHERE inspecao_id = ?",
         [inspecaoId]
       );
 
       await connection.query(
-        "DELETE FROM Inspecoes_Subestacoes_Anexos WHERE inspecao_id = ?",
+        "DELETE FROM inspecoes_subestacoes_anexos WHERE inspecao_id = ?",
         [inspecaoId]
       );
       await connection.query(
-        "DELETE FROM Inspecoes_Subestacoes_Itens WHERE inspecao_id = ?",
+        "DELETE FROM inspecoes_subestacoes_itens WHERE inspecao_id = ?",
         [inspecaoId]
       );
       const [result] = await connection.query(
-        "DELETE FROM Inspecoes_Subestacoes WHERE id = ?",
+        "DELETE FROM inspecoes_subestacoes WHERE id = ?",
         [inspecaoId]
       );
 
