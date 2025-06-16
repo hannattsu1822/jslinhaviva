@@ -448,6 +448,37 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         </div>`;
 
+      if (inspecao.medicoes && inspecao.medicoes.length > 0) {
+        htmlDetalhes += "<hr><h4>Medições de Equipamentos Registradas:</h4>";
+        htmlDetalhes += '<div class="medicoes-registradas-container mb-3">';
+        inspecao.medicoes.forEach((med) => {
+          let tipoMedicaoDisplay = med.tipo_medicao.replace(/_/g, " ");
+          if (med.tipo_medicao === "TEMPERATURA_TRAFO")
+            tipoMedicaoDisplay = "Temperatura Trafo";
+          else if (med.tipo_medicao === "CONTADOR_RELIGADOR")
+            tipoMedicaoDisplay = "Contador Religador";
+          else if (med.tipo_medicao === "BATERIA_MONITOR")
+            tipoMedicaoDisplay = "Bateria Monitor";
+
+          htmlDetalhes += `<div class="medicao-registrada-item alert alert-light py-2 px-3 mb-2">`;
+          htmlDetalhes += `<strong>Tipo:</strong> ${tipoMedicaoDisplay}`;
+          if (med.tag_equipamento) {
+            htmlDetalhes += ` | <strong>TAG Equip.:</strong> ${med.tag_equipamento}`;
+          }
+          htmlDetalhes += ` | <strong>Valor:</strong> ${
+            med.valor_medido_texto || med.valor_medido_numerico || "-"
+          }`;
+          if (med.unidade_medida) {
+            htmlDetalhes += ` ${med.unidade_medida}`;
+          }
+          if (med.observacao) {
+            htmlDetalhes += `<br><small class="text-muted"><em>Obs: ${med.observacao}</em></small>`;
+          }
+          htmlDetalhes += `</div>`;
+        });
+        htmlDetalhes += "</div>";
+      }
+
       if (
         inspecao.gruposDeItens &&
         Object.keys(inspecao.gruposDeItens).length > 0

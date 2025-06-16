@@ -19,6 +19,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSalvarInspecao = document.getElementById("btnSalvarInspecao");
   const btnCancelarChecklist = document.getElementById("btnCancelarChecklist");
 
+  const btnAdicionarMedicao = document.getElementById("btnAdicionarMedicao");
+  const containerMedicoesDinamicas = document.getElementById(
+    "containerMedicoesDinamicas"
+  );
+  const templateLinhaMedicao = document.getElementById("templateLinhaMedicao");
+  const nenhumaMedicaoAdicionadaMsg = document.getElementById(
+    "nenhumaMedicaoAdicionada"
+  );
+
   const inspecaoAnexosInput = document.getElementById("inspecaoAnexosInput");
   const listaNomesAnexosInspecao = document.getElementById(
     "listaNomesAnexosInspecao"
@@ -652,6 +661,94 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function adicionarNovaLinhaMedicao() {
+    if (!templateLinhaMedicao || !containerMedicoesDinamicas) return;
+
+    const clone = templateLinhaMedicao.content.cloneNode(true);
+    const novaLinha = clone.querySelector(".medicao-dinamica-item");
+
+    if (
+      nenhumaMedicaoAdicionadaMsg &&
+      !nenhumaMedicaoAdicionadaMsg.classList.contains("d-none")
+    ) {
+      nenhumaMedicaoAdicionadaMsg.classList.add("d-none");
+    }
+
+    containerMedicoesDinamicas.appendChild(novaLinha);
+
+    const btnRemover = novaLinha.querySelector(".btn-remover-medicao");
+    btnRemover.addEventListener("click", () => {
+      novaLinha.remove();
+      if (
+        containerMedicoesDinamicas.querySelectorAll(".medicao-dinamica-item")
+          .length === 0 &&
+        nenhumaMedicaoAdicionadaMsg
+      ) {
+        nenhumaMedicaoAdicionadaMsg.classList.remove("d-none");
+      }
+    });
+
+    const selectTipoMedicao = novaLinha.querySelector(".tipo-medicao");
+    const inputUnidade = novaLinha.querySelector(".unidade-medida");
+    const inputValor = novaLinha.querySelector(".valor-medido");
+
+    selectTipoMedicao.addEventListener("change", function () {
+      inputValor.type = "text";
+      inputValor.step = "any";
+      inputValor.min = "";
+      inputValor.max = "";
+
+      switch (this.value) {
+        case "TEMPERATURA_TRAFO":
+          inputUnidade.value = "°C";
+          inputValor.type = "number";
+          inputValor.step = "0.1";
+          inputValor.placeholder = "Ex: 75.5";
+          break;
+        case "CONTADOR_RELIGADOR":
+          inputUnidade.value = "qnt";
+          inputValor.type = "number";
+          inputValor.step = "1";
+          inputValor.placeholder = "Ex: 123";
+          break;
+        case "BATERIA_MONITOR":
+          inputUnidade.value = "%";
+          inputValor.type = "number";
+          inputValor.step = "1";
+          inputValor.min = "0";
+          inputValor.max = "100";
+          inputValor.placeholder = "Ex: 80";
+          break;
+        case "OUTRO":
+          inputUnidade.value = "";
+          inputUnidade.placeholder = "Unidade";
+          inputValor.placeholder = "Valor";
+          break;
+        default:
+          inputUnidade.value = "";
+          inputUnidade.placeholder = "Unidade";
+          inputValor.placeholder = "Valor";
+      }
+    });
+  }
+
+  if (btnAdicionarMedicao) {
+    btnAdicionarMedicao.addEventListener("click", adicionarNovaLinhaMedicao);
+  }
+
+  function limparMedicoesDinamicas() {
+    if (containerMedicoesDinamicas) {
+      containerMedicoesDinamicas.innerHTML = "";
+      if (nenhumaMedicaoAdicionadaMsg) {
+        const p = document.createElement("p");
+        p.id = "nenhumaMedicaoAdicionada";
+        p.className = "text-muted text-center";
+        p.textContent = "Nenhuma medição adicionada ainda.";
+        containerMedicoesDinamicas.appendChild(p);
+      }
+    }
+  }
+
   if (formChecklistInspecao) {
     formChecklistInspecao.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -677,11 +774,17 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Preencha os campos obrigatórios (*) do cabeçalho.");
         return;
       }
+
       for (const key in dadosCabecalho) {
         if (dadosCabecalho[key] !== null && dadosCabecalho[key] !== undefined) {
-          formData.append(key, dadosCabecalho[key]);
+          if (dadosCabecalho[key] || typeof dadosCabecalho[key] === "number") {
+            formData.append(key, dadosCabecalho[key]);
+          } else if (dadosCabecalho[key] === null) {
+            formData.append(key, "");
+          }
         }
       }
+
       let todosItensAvaliados = true;
       let todosItensAnormaisCompletos = true;
       const itensChecklistArray = [];
@@ -759,8 +862,48 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         return;
       }
-
       formData.append("itens", JSON.stringify(itensChecklistArray));
+
+      const medicoesDinamicas = [];
+      const linhasMedicao = containerMedicoesDinamicas.querySelectorAll(
+        ".medicao-dinamica-item"
+      );
+      let todasMedicoesValidas = true;
+      linhasMedicao.forEach((linha) => {
+        const tipo = linha.querySelector(".tipo-medicao").value;
+        const tag = linha
+          .querySelector(".tag-equipamento-medicao")
+          .value.trim();
+        const valor = linha.querySelector(".valor-medido").value.trim();
+        const unidade = linha.querySelector(".unidade-medida").value.trim();
+        const obs = linha.querySelector(".obs-medicao").value.trim();
+
+        if (!tipo || !valor) {
+          alert(
+            "Para cada medição adicionada, o Tipo de Medição e o Valor Lido são obrigatórios."
+          );
+          linha.querySelector(".tipo-medicao").focus();
+          todasMedicoesValidas = false;
+          return;
+        }
+
+        medicoesDinamicas.push({
+          tipo_medicao: tipo,
+          tag_equipamento: tag || null,
+          valor_medido: valor,
+          unidade_medida: unidade || null,
+          observacao: obs || null,
+        });
+      });
+
+      if (!todasMedicoesValidas) {
+        return;
+      }
+
+      if (medicoesDinamicas.length > 0) {
+        formData.append("medicoes", JSON.stringify(medicoesDinamicas));
+      }
+
       selectedGeneralFiles.forEach((file) => {
         formData.append("anexosInspecao", file);
       });
@@ -788,6 +931,8 @@ document.addEventListener("DOMContentLoaded", () => {
               : "")
         );
         formChecklistInspecao.reset();
+        limparMedicoesDinamicas();
+
         preencherDataAtual();
         gerarItensChecklist();
         if (listaNomesAnexosInspecao) listaNomesAnexosInspecao.innerHTML = "";
@@ -812,6 +957,8 @@ document.addEventListener("DOMContentLoaded", () => {
         )
       ) {
         if (formChecklistInspecao) formChecklistInspecao.reset();
+        limparMedicoesDinamicas();
+
         preencherDataAtual();
         gerarItensChecklist();
         if (inspecaoSubestacaoSelect) inspecaoSubestacaoSelect.focus();
@@ -852,18 +999,15 @@ document.addEventListener("DOMContentLoaded", () => {
             radioN ||
             currentItemAnormalElement.querySelector(
               `input[name="item_${itemNum}_avaliacao"]:not([value="A"])`
-            ); // Tenta outro se N não existir
+            );
 
           if (radioAnteriorOuN) {
             radioAnteriorOuN.checked = true;
-            // Dispara o evento change para atualizar classes visuais e lógica
             radioAnteriorOuN.dispatchEvent(
               new Event("change", { bubbles: true })
             );
           } else {
-            // Caso fallback se nenhum outro radio estiver presente
             radioAnormalChecked.checked = false;
-            // Dispara o evento change no radioAnormal desmarcado para limpar os dados
             radioAnormalChecked.dispatchEvent(
               new Event("change", { bubbles: true })
             );
