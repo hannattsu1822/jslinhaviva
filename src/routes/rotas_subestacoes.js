@@ -607,12 +607,9 @@ router.post(
         error.sqlMessage &&
         error.sqlMessage.includes("serial_number")
       ) {
-        return res
-          .status(409)
-          .json({
-            message:
-              "Erro ao criar equipamento: Número de série já cadastrado.",
-          });
+        return res.status(409).json({
+          message: "Erro ao criar equipamento: Número de série já cadastrado.",
+        });
       }
       res.status(500).json({ message: "Erro interno ao criar equipamento." });
     }
@@ -635,11 +632,9 @@ router.get(
         [equipamentoId, req.subestacaoId]
       );
       if (rows.length === 0) {
-        return res
-          .status(404)
-          .json({
-            message: `Equipamento ID ${equipamentoId} não encontrado na subestação ${req.subestacaoId}.`,
-          });
+        return res.status(404).json({
+          message: `Equipamento ID ${equipamentoId} não encontrado na subestação ${req.subestacaoId}.`,
+        });
       }
       res.json(rows[0]);
     } catch (error) {
@@ -686,11 +681,9 @@ router.put(
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dataInstalacao))
             throw new Error("Formato inválido após conversão");
         } catch (e) {
-          return res
-            .status(400)
-            .json({
-              message: "Data de Instalação inválida. Use YYYY-MM-DD ou null.",
-            });
+          return res.status(400).json({
+            message: "Data de Instalação inválida. Use YYYY-MM-DD ou null.",
+          });
         }
       } else {
         dataInstalacao = date_inst;
@@ -702,11 +695,9 @@ router.put(
         [equipamentoId, subestacaoId]
       );
       if (currentEquip.length === 0) {
-        return res
-          .status(404)
-          .json({
-            message: `Equipamento ID ${equipamentoId} não encontrado na subestação ${subestacaoId}.`,
-          });
+        return res.status(404).json({
+          message: `Equipamento ID ${equipamentoId} não encontrado na subestação ${subestacaoId}.`,
+        });
       }
       const updateData = {
         description:
@@ -761,12 +752,10 @@ router.put(
         error.sqlMessage &&
         error.sqlMessage.includes("serial_number")
       ) {
-        return res
-          .status(409)
-          .json({
-            message:
-              "Erro ao atualizar equipamento: Número de série já cadastrado para outro equipamento.",
-          });
+        return res.status(409).json({
+          message:
+            "Erro ao atualizar equipamento: Número de série já cadastrado para outro equipamento.",
+        });
       }
       res
         .status(500)
@@ -793,11 +782,9 @@ router.delete(
         [equipamentoId, subestacaoId]
       );
       if (result.affectedRows === 0) {
-        return res
-          .status(404)
-          .json({
-            message: `Equipamento ID ${equipamentoId} não encontrado na subestação ${subestacaoId} para exclusão.`,
-          });
+        return res.status(404).json({
+          message: `Equipamento ID ${equipamentoId} não encontrado na subestação ${subestacaoId} para exclusão.`,
+        });
       }
       if (req.user && req.user.matricula) {
         await registrarAuditoria(
@@ -897,11 +884,9 @@ router.post(
           } catch (e) {}
         }
       }
-      return res
-        .status(400)
-        .json({
-          message: "Data de conclusão é obrigatória para serviços concluídos.",
-        });
+      return res.status(400).json({
+        message: "Data de conclusão é obrigatória para serviços concluídos.",
+      });
     }
     const connection = await promisePool.getConnection();
     let novoServicoId;
@@ -985,13 +970,11 @@ router.post(
           connection
         );
       }
-      res
-        .status(201)
-        .json({
-          id: novoServicoId,
-          message: "Serviço de subestação registrado com sucesso!",
-          anexos: anexosSalvosInfo,
-        });
+      res.status(201).json({
+        id: novoServicoId,
+        message: "Serviço de subestação registrado com sucesso!",
+        anexos: anexosSalvosInfo,
+      });
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao criar serviço de subestação:", error);
@@ -1018,19 +1001,15 @@ router.post(
         error.sqlMessage &&
         error.sqlMessage.includes("processo")
       ) {
-        return res
-          .status(409)
-          .json({
-            message:
-              "Erro ao criar serviço: Número de Processo/OS já cadastrado.",
-          });
-      }
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao criar serviço de subestação.",
-          detalhes: error.message,
+        return res.status(409).json({
+          message:
+            "Erro ao criar serviço: Número de Processo/OS já cadastrado.",
         });
+      }
+      res.status(500).json({
+        message: "Erro interno ao criar serviço de subestação.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1090,11 +1069,9 @@ router.put(
           } catch (e) {}
         }
       }
-      return res
-        .status(400)
-        .json({
-          message: "Data de conclusão é obrigatória para serviços concluídos.",
-        });
+      return res.status(400).json({
+        message: "Data de conclusão é obrigatória para serviços concluídos.",
+      });
     }
     const connection = await promisePool.getConnection();
     let arquivosMovidosComSucesso = [];
@@ -1210,19 +1187,15 @@ router.put(
         error.sqlMessage &&
         error.sqlMessage.includes("processo")
       ) {
-        return res
-          .status(409)
-          .json({
-            message:
-              "Erro ao atualizar serviço: Número de Processo/OS já cadastrado para outro serviço.",
-          });
-      }
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao atualizar serviço de subestação.",
-          detalhes: error.message,
+        return res.status(409).json({
+          message:
+            "Erro ao atualizar serviço: Número de Processo/OS já cadastrado para outro serviço.",
         });
+      }
+      res.status(500).json({
+        message: "Erro interno ao atualizar serviço de subestação.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1305,12 +1278,10 @@ router.delete(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao excluir serviço de subestação:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao excluir serviço de subestação.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao excluir serviço de subestação.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1349,12 +1320,10 @@ router.get(
       res.json(rows);
     } catch (error) {
       console.error("Erro ao listar serviços de subestação:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao listar serviços de subestação.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao listar serviços de subestação.",
+        detalhes: error.message,
+      });
     }
   }
 );
@@ -1388,12 +1357,10 @@ router.get(
       res.json(servico);
     } catch (error) {
       console.error("Erro ao buscar detalhes do serviço:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao buscar detalhes do serviço.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao buscar detalhes do serviço.",
+        detalhes: error.message,
+      });
     }
   }
 );
@@ -1420,11 +1387,9 @@ router.put(
           } catch (e) {}
         }
       }
-      return res
-        .status(400)
-        .json({
-          message: `Serviço (Processo: ${servico.processo}) já está no status ${servico.status}.`,
-        });
+      return res.status(400).json({
+        message: `Serviço (Processo: ${servico.processo}) já está no status ${servico.status}.`,
+      });
     }
     if (!data_conclusao_manual) {
       if (arquivosConclusao && arquivosConclusao.length > 0) {
@@ -1543,12 +1508,10 @@ router.put(
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao concluir o serviço.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao concluir o serviço.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1563,11 +1526,9 @@ router.put(
     const { servicoId } = req.params;
     const { servico } = req;
     if (servico.status !== "CONCLUIDO" && servico.status !== "CANCELADO") {
-      return res
-        .status(400)
-        .json({
-          message: `Serviço (Processo: ${servico.processo}) no status ${servico.status} não pode ser reaberto.`,
-        });
+      return res.status(400).json({
+        message: `Serviço (Processo: ${servico.processo}) no status ${servico.status} não pode ser reaberto.`,
+      });
     }
     const connection = await promisePool.getConnection();
     try {
@@ -1591,12 +1552,10 @@ router.put(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao reabrir o serviço:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao reabrir o serviço.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao reabrir o serviço.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1655,17 +1614,16 @@ router.put(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao designar/desvincular encarregado:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao designar/desvincular encarregado.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao designar/desvincular encarregado.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
   }
 );
+
 router.post(
   "/inspecoes-subestacoes",
   autenticar,
@@ -1681,6 +1639,7 @@ router.post(
       status_inspecao,
       observacoes_gerais,
     } = req.body;
+
     const generalAttachments = [];
     const itemPhotos = {};
     if (req.files && req.files.length > 0) {
@@ -1693,7 +1652,10 @@ router.post(
         }
       });
     }
+
     let itensDoChecklist;
+    let medicoesDinamicas;
+
     try {
       if (req.body.itens && typeof req.body.itens === "string") {
         itensDoChecklist = JSON.parse(req.body.itens);
@@ -1702,21 +1664,30 @@ router.post(
           "Dados dos itens do checklist não recebidos ou em formato incorreto."
         );
       }
+      if (req.body.medicoes && typeof req.body.medicoes === "string") {
+        medicoesDinamicas = JSON.parse(req.body.medicoes);
+      } else {
+        medicoesDinamicas = []; // Se não houver medições, continua com um array vazio
+      }
     } catch (e) {
       if (req.files && req.files.length > 0) {
         for (const file of req.files) {
           try {
             await fs.unlink(file.path);
-          } catch (errunlink) {}
+          } catch (errunlink) {
+            console.error(
+              "Falha ao limpar arquivo temp após erro de parsing:",
+              errunlink
+            );
+          }
         }
       }
-      return res
-        .status(400)
-        .json({
-          message: "Formato inválido para os itens do checklist.",
-          detalhes: e.message,
-        });
+      return res.status(400).json({
+        message: "Formato inválido para os dados do checklist ou medições.",
+        detalhes: e.message,
+      });
     }
+
     if (
       !subestacao_id ||
       !responsavel_levantamento_id ||
@@ -1730,15 +1701,19 @@ router.post(
         for (const file of req.files) {
           try {
             await fs.unlink(file.path);
-          } catch (e) {}
+          } catch (e) {
+            console.error(
+              "Falha ao limpar arquivo temp após erro de validação:",
+              e
+            );
+          }
         }
       }
-      return res
-        .status(400)
-        .json({
-          message: "Campos obrigatórios do cabeçalho e itens são necessários.",
-        });
+      return res.status(400).json({
+        message: "Campos obrigatórios do cabeçalho e itens são necessários.",
+      });
     }
+
     for (const item of itensDoChecklist) {
       if (
         item.item_num == null ||
@@ -1750,53 +1725,88 @@ router.post(
           for (const file of req.files) {
             try {
               await fs.unlink(file.path);
-            } catch (e) {}
+            } catch (e) {
+              console.error(
+                "Falha ao limpar arquivo temp após erro de validação de item:",
+                e
+              );
+            }
           }
         }
-        return res
-          .status(400)
-          .json({
-            message: `Dados incompletos para o item do checklist: ${JSON.stringify(
-              item
-            )}`,
-          });
+        return res.status(400).json({
+          message: `Dados incompletos para o item do checklist: ${JSON.stringify(
+            item
+          )}`,
+        });
       }
       if (!["N", "A", "NA"].includes(item.avaliacao)) {
         if (req.files && req.files.length > 0) {
           for (const file of req.files) {
             try {
               await fs.unlink(file.path);
-            } catch (e) {}
+            } catch (e) {
+              console.error(
+                "Falha ao limpar arquivo temp após erro de validação de avaliação:",
+                e
+              );
+            }
           }
         }
-        return res
-          .status(400)
-          .json({
-            message: `Avaliação inválida ('${item.avaliacao}') para o item ${item.item_num}. Use N, A, ou NA.`,
-          });
+        return res.status(400).json({
+          message: `Avaliação inválida ('${item.avaliacao}') para o item ${item.item_num}. Use N, A, ou NA.`,
+        });
       }
       if (item.avaliacao === "A" && !itemPhotos[item.item_num]) {
         if (req.files && req.files.length > 0) {
           for (const file of req.files) {
             try {
               await fs.unlink(file.path);
-            } catch (e) {}
+            } catch (e) {
+              console.error(
+                "Falha ao limpar arquivo temp após erro de foto faltante:",
+                e
+              );
+            }
           }
         }
-        return res
-          .status(400)
-          .json({
-            message: `Item ${item.item_num} (${item.descricao_item_original}) está marcado como Anormal, mas não foi enviada uma foto de evidência.`,
-          });
+        return res.status(400).json({
+          message: `Item ${item.item_num} (${item.descricao_item_original}) está marcado como Anormal, mas não foi enviada uma foto de evidência.`,
+        });
       }
     }
+
+    // Validação para medições dinâmicas
+    if (medicoesDinamicas) {
+      for (const med of medicoesDinamicas) {
+        if (!med.tipo_medicao || !med.valor_medido) {
+          if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+              try {
+                await fs.unlink(file.path);
+              } catch (e) {}
+            }
+          }
+          return res
+            .status(400)
+            .json({
+              message: `Para cada medição adicionada, o Tipo de Medição e o Valor Lido são obrigatórios.`,
+            });
+        }
+      }
+    }
+
     const connection = await promisePool.getConnection();
     let novaInspecaoId;
     let arquivosMovidosComSucessoParaRollback = [];
+
     try {
       await connection.beginTransaction();
+
       const [resultInspecao] = await connection.query(
-        `INSERT INTO inspecoes_subestacoes (subestacao_id, responsavel_levantamento_id, data_avaliacao, hora_inicial, hora_final, status_inspecao, observacoes_gerais, formulario_inspecao_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO inspecoes_subestacoes (
+            subestacao_id, responsavel_levantamento_id, data_avaliacao, hora_inicial, hora_final, 
+            status_inspecao, observacoes_gerais, formulario_inspecao_num
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, // Removidos os campos de valor fixo daqui
         [
           subestacao_id,
           responsavel_levantamento_id,
@@ -1809,10 +1819,12 @@ router.post(
         ]
       );
       novaInspecaoId = resultInspecao.insertId;
+
       await connection.query(
         "UPDATE inspecoes_subestacoes SET formulario_inspecao_num = ? WHERE id = ?",
         [String(novaInspecaoId), novaInspecaoId]
       );
+
       const itensParaInserir = itensDoChecklist.map((item) => [
         novaInspecaoId,
         item.item_num,
@@ -1827,6 +1839,44 @@ router.post(
           [itensParaInserir]
         );
       }
+
+      // Inserir medições dinâmicas
+      if (medicoesDinamicas && medicoesDinamicas.length > 0) {
+        const medicoesParaInserir = medicoesDinamicas.map((med) => {
+          let valorNumerico = null;
+          let valorTexto = med.valor_medido; // Por padrão, guarda como texto
+
+          // Tenta converter para número se for um tipo que esperamos numérico
+          if (
+            ["TEMPERATURA_TRAFO", "BATERIA_MONITOR"].includes(
+              med.tipo_medicao
+            ) &&
+            !isNaN(parseFloat(med.valor_medido))
+          ) {
+            valorNumerico = parseFloat(med.valor_medido);
+          } else if (
+            med.tipo_medicao === "CONTADOR_RELIGADOR" &&
+            !isNaN(parseInt(med.valor_medido))
+          ) {
+            valorNumerico = parseInt(med.valor_medido);
+          }
+
+          return [
+            novaInspecaoId,
+            med.tipo_medicao,
+            med.tag_equipamento || null,
+            valorNumerico,
+            valorTexto,
+            med.unidade_medida || null,
+            med.observacao || null,
+          ];
+        });
+        await connection.query(
+          `INSERT INTO inspecoes_subestacoes_medicoes (inspecao_id, tipo_medicao, tag_equipamento, valor_medido_numerico, valor_medido_texto, unidade_medida, observacao) VALUES ?`,
+          [medicoesParaInserir]
+        );
+      }
+
       let anexosSalvosInfo = [];
       const inspecaoUploadDir = path.join(
         uploadsSubestacoesDir,
@@ -1834,6 +1884,7 @@ router.post(
         `checklist_${String(novaInspecaoId)}`
       );
       await fs.mkdir(inspecaoUploadDir, { recursive: true });
+
       for (const file of generalAttachments) {
         const nomeUnicoArquivo = `${Date.now()}_GA_${file.originalname.replace(
           /[^a-zA-Z0-9.\-_]/g,
@@ -1863,6 +1914,7 @@ router.post(
           type: "general",
         });
       }
+
       for (const itemNumKey in itemPhotos) {
         const file = itemPhotos[itemNumKey];
         const nomeUnicoArquivo = `${Date.now()}_ITEM${itemNumKey}_${file.originalname.replace(
@@ -1893,6 +1945,7 @@ router.post(
           type: "item_specific",
         });
       }
+
       await connection.commit();
       if (req.user && req.user.matricula) {
         await registrarAuditoria(
@@ -1902,21 +1955,21 @@ router.post(
           connection
         );
       }
-      res
-        .status(201)
-        .json({
-          id: novaInspecaoId,
-          formulario_inspecao_num: String(novaInspecaoId),
-          message: "Inspeção registrada com sucesso!",
-          anexos: anexosSalvosInfo,
-        });
+      res.status(201).json({
+        id: novaInspecaoId,
+        formulario_inspecao_num: String(novaInspecaoId),
+        message: "Inspeção registrada com sucesso!",
+        anexos: anexosSalvosInfo,
+      });
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao registrar inspeção:", error);
       for (const caminho of arquivosMovidosComSucessoParaRollback) {
         try {
           await fs.unlink(caminho);
-        } catch (e) {}
+        } catch (e) {
+          console.error("Falha ao limpar arquivo movido durante rollback:", e);
+        }
       }
       if (req.files && req.files.length > 0) {
         for (const file of req.files) {
@@ -1931,28 +1984,28 @@ router.post(
           }
         }
       }
+
       if (
         error.code === "ER_DUP_ENTRY" &&
         error.sqlMessage &&
-        error.sqlMessage.includes("uq_inspecao_item_num")
+        (error.sqlMessage.includes("uq_inspecao_item_num") ||
+          error.sqlMessage.includes("uq_inspecao_medicao")) // Adicionar verificação para constraint de medições se houver
       ) {
-        return res
-          .status(409)
-          .json({
-            message: "Erro: Itens do checklist duplicados para esta inspeção.",
-          });
-      }
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao registrar inspeção.",
-          detalhes: error.message,
+        return res.status(409).json({
+          message:
+            "Erro: Dados duplicados para esta inspeção (itens ou medições).",
         });
+      }
+      res.status(500).json({
+        message: "Erro interno ao registrar inspeção.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
   }
 );
+
 router.post(
   "/inspecoes-subestacoes/:inspecaoId/anexos-escritorio",
   autenticar,
@@ -2020,12 +2073,10 @@ router.post(
           connection
         );
       }
-      res
-        .status(201)
-        .json({
-          message: "Anexos de escritório salvos com sucesso!",
-          anexos: anexosSalvosInfo,
-        });
+      res.status(201).json({
+        message: "Anexos de escritório salvos com sucesso!",
+        anexos: anexosSalvosInfo,
+      });
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao salvar anexos de escritório:", error);
@@ -2047,12 +2098,10 @@ router.post(
           }
         }
       }
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao salvar anexos de escritório.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao salvar anexos de escritório.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -2091,12 +2140,10 @@ router.get(
       res.json(rows);
     } catch (error) {
       console.error("Erro interno ao listar inspeções:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao listar inspeções.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao listar inspeções.",
+        detalhes: error.message,
+      });
     }
   }
 );
@@ -2113,7 +2160,16 @@ router.get(
     }
     try {
       const [inspecaoHeaderRows] = await promisePool.query(
-        `SELECT i.id, i.subestacao_id, i.formulario_inspecao_num, i.responsavel_levantamento_id, DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, i.hora_inicial, i.hora_final, i.status_inspecao, i.observacoes_gerais, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome FROM inspecoes_subestacoes i JOIN subestacoes s ON i.subestacao_id = s.Id JOIN users u ON i.responsavel_levantamento_id = u.id WHERE i.id = ?`,
+        `SELECT 
+            i.id, i.subestacao_id, i.formulario_inspecao_num, i.responsavel_levantamento_id, 
+            DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, 
+            i.hora_inicial, i.hora_final, i.status_inspecao, i.observacoes_gerais, 
+            s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
+            u.nome as responsavel_nome
+         FROM inspecoes_subestacoes i 
+         JOIN subestacoes s ON i.subestacao_id = s.Id 
+         JOIN users u ON i.responsavel_levantamento_id = u.id 
+         WHERE i.id = ?`,
         [id]
       );
       if (inspecaoHeaderRows.length === 0) {
@@ -2122,6 +2178,7 @@ router.get(
           .json({ message: `Inspeção com ID ${id} não encontrada.` });
       }
       const inspecaoHeader = inspecaoHeaderRows[0];
+
       const [inspecaoItensRows] = await promisePool.query(
         `SELECT item_num, grupo_item, descricao_item_original, avaliacao, observacao_item FROM inspecoes_subestacoes_itens WHERE inspecao_id = ? ORDER BY item_num ASC`,
         [id]
@@ -2140,6 +2197,7 @@ router.get(
           caminho: anexo.caminho_servidor,
         });
       });
+
       const itensAgrupados = {};
       if (inspecaoItensRows.length > 0) {
         inspecaoItensRows.forEach((item) => {
@@ -2159,9 +2217,17 @@ router.get(
         `SELECT nome_original, caminho_servidor, categoria_anexo, descricao_anexo FROM inspecoes_subestacoes_anexos WHERE inspecao_id = ? AND (item_num_associado IS NULL OR categoria_anexo != 'FOTO_EVIDENCIA_ITEM')`,
         [id]
       );
+
+      const [medicoesRows] = await promisePool.query(
+        `SELECT id, tipo_medicao, tag_equipamento, valor_medido_numerico, valor_medido_texto, unidade_medida, observacao 
+         FROM inspecoes_subestacoes_medicoes WHERE inspecao_id = ? ORDER BY id ASC`,
+        [id]
+      );
+
       const resultadoCompleto = {
         ...inspecaoHeader,
         gruposDeItens: itensAgrupados,
+        medicoes: medicoesRows, // Adiciona as medições ao resultado
         anexosGerais: anexosGeraisRows.map((anexo) => ({
           nome: anexo.nome_original,
           caminho: anexo.caminho_servidor,
@@ -2169,18 +2235,18 @@ router.get(
           descricao: anexo.descricao_anexo,
         })),
       };
+
       res.json(resultadoCompleto);
     } catch (error) {
       console.error("Erro ao buscar detalhes da inspeção:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao buscar detalhes da inspeção.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao buscar detalhes da inspeção.",
+        detalhes: error.message,
+      });
     }
   }
 );
+
 router.put(
   "/inspecoes-subestacoes/:inspecaoId/concluir",
   autenticar,
@@ -2205,11 +2271,9 @@ router.put(
       let horaFinalAtual = currentInspecaoRows[0].hora_final;
       if (currentStatus === "CONCLUIDA" || currentStatus === "CANCELADA") {
         await connection.rollback();
-        return res
-          .status(400)
-          .json({
-            message: `Inspeção ID ${inspecaoId} já está no status ${currentStatus} e não pode ser alterada para concluída novamente.`,
-          });
+        return res.status(400).json({
+          message: `Inspeção ID ${inspecaoId} já está no status ${currentStatus} e não pode ser alterada para concluída novamente.`,
+        });
       }
       let sqlUpdateQuery =
         "UPDATE inspecoes_subestacoes SET status_inspecao = 'CONCLUIDA'";
@@ -2230,11 +2294,9 @@ router.put(
       const [result] = await connection.query(sqlUpdateQuery, paramsUpdate);
       if (result.affectedRows === 0) {
         await connection.rollback();
-        return res
-          .status(404)
-          .json({
-            message: "Falha ao atualizar a inspeção. Nenhuma linha afetada.",
-          });
+        return res.status(404).json({
+          message: "Falha ao atualizar a inspeção. Nenhuma linha afetada.",
+        });
       }
       if (req.user && req.user.matricula) {
         await registrarAuditoria(
@@ -2249,12 +2311,10 @@ router.put(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao concluir a inspeção:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao concluir a inspeção.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao concluir a inspeção.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -2284,11 +2344,9 @@ router.put(
       const statusReversiveis = ["CONCLUIDA", "CANCELADA"];
       if (!statusReversiveis.includes(currentStatus)) {
         await connection.rollback();
-        return res
-          .status(400)
-          .json({
-            message: `Inspeção ID ${inspecaoId} no status ${currentStatus} não pode ser reaberta.`,
-          });
+        return res.status(400).json({
+          message: `Inspeção ID ${inspecaoId} no status ${currentStatus} não pode ser reaberta.`,
+        });
       }
       const [result] = await connection.query(
         "UPDATE inspecoes_subestacoes SET status_inspecao = 'EM_ANDAMENTO', hora_final = NULL WHERE id = ?",
@@ -2296,11 +2354,9 @@ router.put(
       );
       if (result.affectedRows === 0) {
         await connection.rollback();
-        return res
-          .status(404)
-          .json({
-            message: "Falha ao reabrir a inspeção. Nenhuma linha afetada.",
-          });
+        return res.status(404).json({
+          message: "Falha ao reabrir a inspeção. Nenhuma linha afetada.",
+        });
       }
       if (req.user && req.user.matricula) {
         await registrarAuditoria(
@@ -2315,12 +2371,10 @@ router.put(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao reabrir a inspeção:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao reabrir a inspeção.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao reabrir a inspeção.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -2349,17 +2403,20 @@ router.delete(
         "DELETE FROM inspecoes_subestacoes_itens WHERE inspecao_id = ?",
         [inspecaoId]
       );
+      await connection.query(
+        // Deletar as medições associadas
+        "DELETE FROM inspecoes_subestacoes_medicoes WHERE inspecao_id = ?",
+        [inspecaoId]
+      );
       const [result] = await connection.query(
         "DELETE FROM inspecoes_subestacoes WHERE id = ?",
         [inspecaoId]
       );
       if (result.affectedRows === 0) {
         await connection.rollback();
-        return res
-          .status(404)
-          .json({
-            message: `Inspeção com ID ${inspecaoId} não encontrada para exclusão.`,
-          });
+        return res.status(404).json({
+          message: `Inspeção com ID ${inspecaoId} não encontrada para exclusão.`,
+        });
       }
       if (anexos.length > 0) {
         const anexoChecklistBaseDir = path.join(
@@ -2372,6 +2429,7 @@ router.delete(
           "inspecoes_escritorio",
           `inspecao_escritorio_${String(inspecaoId)}`
         );
+
         for (const anexo of anexos) {
           const caminhoRelativoNoServidor = anexo.caminho_servidor.replace(
             /^\/upload_arquivos_subestacoes\//,
@@ -2409,6 +2467,7 @@ router.delete(
           }
         }
       }
+
       await connection.commit();
       if (req.user && req.user.matricula) {
         await registrarAuditoria(
@@ -2424,12 +2483,10 @@ router.delete(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao excluir inspeção:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao excluir inspeção.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao excluir inspeção.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
