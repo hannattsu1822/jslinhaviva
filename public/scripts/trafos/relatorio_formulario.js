@@ -12,24 +12,52 @@ function formatarValoresConcatenados(valor) {
     .join(", ");
 }
 
-function formatarData(data, tipo = "completa") {
+function formatarData(data, tipo = "completa", incluirHoras = false) {
   if (!data) return "Não informado";
 
-  if (/^\d{4}$/.test(data)) {
-    return data;
+  // Se a API já envia no formato DD/MM/YYYY ou DD/MM/YYYY HH:MM:SS
+  if (typeof data === "string" && data.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+    if (tipo === "ano" && data.length === 10) {
+      // Ex: "10/06/2025" -> "2025"
+      return data.slice(6, 10);
+    }
+    // Se for para incluir horas e já tem, ou se não for para incluir e já está sem, retorna como está
+    // Se for para incluir horas e não tem, ou não for para incluir e tem, a lógica abaixo cuida
+    if (
+      (incluirHoras && data.length > 10) ||
+      (!incluirHoras && data.length === 10)
+    ) {
+      return data;
+    }
+    // Se precisar adicionar/remover horas de um DD/MM/YYYY
   }
 
-  const date = new Date(data);
-  if (isNaN(date.getTime())) return "Data inválida";
+  let dateStringParaConverter = String(data);
+  if (dateStringParaConverter.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    dateStringParaConverter += "T00:00:00Z"; // Garante interpretação UTC para YYYY-MM-DD
+  } else if (dateStringParaConverter.match(/^\d{4}$/) && tipo === "ano") {
+    return dateStringParaConverter; // Se for apenas ano e o tipo for "ano"
+  }
 
-  const dia = String(date.getUTCDate()).padStart(2, "0");
-  const mes = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const ano = date.getUTCFullYear();
+  const dateObj = new Date(dateStringParaConverter);
+  if (isNaN(dateObj.getTime())) return "Data inválida";
+
+  const dia = String(dateObj.getUTCDate()).padStart(2, "0");
+  const mes = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+  const ano = dateObj.getUTCFullYear();
 
   if (tipo === "ano") {
     return ano;
   }
-  return `${dia}/${mes}/${ano}`;
+
+  let dataFormatada = `${dia}/${mes}/${ano}`;
+
+  if (incluirHoras) {
+    const horas = String(dateObj.getUTCHours()).padStart(2, "0");
+    const minutos = String(dateObj.getUTCMinutes()).padStart(2, "0");
+    dataFormatada += ` ${horas}:${minutos}`;
+  }
+  return dataFormatada;
 }
 
 async function carregarRelatorio() {
@@ -39,197 +67,135 @@ async function carregarRelatorio() {
   const relatorioContent = document.getElementById("relatorioContent");
 
   if (!checklistId) {
-    alert("ID do checklist não encontrado na URL!");
     if (relatorioContent)
-      relatorioContent.innerHTML = `<p class="erro">ID do checklist não fornecido.</p>`;
+      relatorioContent.innerHTML = `<p class="erro">ID do checklist não fornecido na URL.</p>`;
     return;
   }
-
-  if (checklistIdSpan) {
-    checklistIdSpan.textContent = `ID: ${checklistId}`;
-  }
-
+  if (checklistIdSpan)
+    checklistIdSpan.textContent = `ID do Checklist: ${checklistId}`;
   if (!relatorioContent) {
-    console.error("Elemento 'relatorioContent' não encontrado.");
+    console.error("Elemento 'relatorioContent' não encontrado no DOM.");
     return;
   }
+
+  relatorioContent.innerHTML = `<p style="text-align: center; padding: 30px; color: var(--sys-dark-gray); font-style: italic;"><i class="fas fa-spinner fa-spin"></i> Carregando dados do relatório...</p>`;
 
   try {
     const response = await fetch(
       `/api/checklist_transformadores_publico/${checklistId}`
     );
     if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
+      const errorData = await response.json().catch(() => ({
+        message: `Erro HTTP: ${response.status}. Não foi possível obter detalhes do erro.`,
+      }));
       throw new Error(
         errorData.message ||
-          `Erro ao buscar dados do relatório: ${response.status}`
+          `Falha ao buscar dados do relatório: ${response.status}`
       );
     }
     const data = await response.json();
 
+    // data.data_formulario_completa já vem formatada da API como DD/MM/YYYY HH:MM:SS
+    // data.data_entrada_almoxarifado_formatada e data_processamento_remessa_formatada já vêm como DD/MM/YYYY
+    // data.data_fabricacao_formatada e data_reformado_formatada já vêm como YYYY (ano)
     relatorioContent.innerHTML = `
         <div class="divisao">
-          <h2>Informações Gerais</h2>
+          <h2>Informações Gerais do Checklist</h2>
           <div class="relatorio-grid">
-            <div class="relatorio-item">
-              <i class="fas fa-hashtag"></i>
-              <p><strong>Número de Série:</strong> ${tratarValor(
-                data.numero_serie
-              )}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-calendar-alt"></i>
-              <p><strong>Ano de Fabricação:</strong> ${formatarData(
-                data.data_fabricacao,
-                "ano"
-              )}</p>
-            </div>
-            <div class="relatorio-item ano-reforma">
-              <i class="fas fa-calendar-alt"></i>
-              <p><strong>Ano da Reforma:</strong> ${
-                data.reformado === "true" || data.reformado === true
-                  ? formatarData(data.data_reformado, "ano")
-                  : "Não Reformado"
-              }</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-calendar-check"></i>
-              <p><strong>Data do Formulário:</strong> ${formatarData(
-                data.data_checklist,
-                "completa"
-              )}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-user"></i>
-              <p><strong>Responsável:</strong> ${tratarValor(
-                data.nome_responsavel
-              )} (${tratarValor(data.matricula_responsavel)})</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-user-tie"></i>
-              <p><strong>Supervisor:</strong> ${tratarValor(
-                data.nome_supervisor
-              )} (${tratarValor(data.matricula_supervisor)})</p>
-            </div>
+            <div class="relatorio-item"><i class="fas fa-hashtag"></i><p><strong>Nº de Série do Transformador:</strong> ${tratarValor(
+              data.numero_serie
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-calendar-alt"></i><p><strong>Ano de Fabricação do Trafo:</strong> ${tratarValor(
+              data.data_fabricacao_formatada
+            )}</p></div>
+            <div class="relatorio-item ano-reforma"><i class="fas fa-calendar-alt"></i><p><strong>Ano da Reforma do Trafo:</strong> ${
+              data.reformado === 1 ||
+              data.reformado === true ||
+              String(data.reformado).toLowerCase() === "true"
+                ? tratarValor(data.data_reformado_formatada)
+                : "Não Reformado"
+            }</p></div>
+            <div class="relatorio-item"><i class="fas fa-calendar-check"></i><p><strong>Data deste Formulário:</strong> ${tratarValor(
+              data.data_formulario_completa
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-user"></i><p><strong>Responsável pelo Checklist:</strong> ${tratarValor(
+              data.nome_responsavel
+            )} (${tratarValor(data.matricula_responsavel)})</p></div>
+            <div class="relatorio-item"><i class="fas fa-user-tie"></i><p><strong>Supervisor Técnico:</strong> ${tratarValor(
+              data.nome_supervisor_fmt
+            )} (${tratarValor(data.matricula_supervisor_fmt)})</p></div>
           </div>
         </div>
   
         <div class="divisao">
-          <h2>Dados do Transformador</h2>
+          <h2>Dados Cadastrais do Transformador</h2>
           <div class="relatorio-grid">
-            <div class="relatorio-item">
-              <i class="fas fa-map-marker-alt"></i>
-              <p><strong>Local de Retirada:</strong> ${tratarValor(
-                data.local_retirada
-              )}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-bolt"></i>
-              <p><strong>Número de Fases:</strong> ${tratarValor(
-                data.numero_fases
-              )}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-bolt"></i>
-              <p><strong>Potência (kVA):</strong> ${tratarValor(
-                data.potencia
-              )}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-industry"></i>
-              <p><strong>Marca:</strong> ${tratarValor(data.marca)}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-globe"></i>
-              <p><strong>Regional:</strong> ${tratarValor(data.regional)}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-exclamation-triangle"></i>
-              <p><strong>Motivo de Desativação:</strong> ${tratarValor(
-                data.motivo_desativacao
-              )}</p>
-            </div>
-            <div class="relatorio-item">
-              <i class="fas fa-calendar-day"></i>
-              <p><strong>Data de Entrada no Almoxarifado:</strong> ${formatarData(
-                data.data_entrada_almoxarifado,
-                "completa"
-              )}</p>
-            </div>
+            <div class="relatorio-item"><i class="fas fa-industry"></i><p><strong>Marca:</strong> ${tratarValor(
+              data.marca
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-bolt"></i><p><strong>Potência (kVA):</strong> ${tratarValor(
+              data.potencia
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-bolt"></i><p><strong>Número de Fases:</strong> ${tratarValor(
+              data.numero_fases
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-map-marker-alt"></i><p><strong>Local de Retirada:</strong> ${tratarValor(
+              data.local_retirada
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-globe"></i><p><strong>Regional:</strong> ${tratarValor(
+              data.regional
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-calendar-day"></i><p><strong>Data de Entrada no Almoxarifado:</strong> ${tratarValor(
+              data.data_entrada_almoxarifado_formatada
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-file-invoice"></i><p><strong>Data Último Processamento de Remessa:</strong> ${tratarValor(
+              data.data_processamento_remessa_formatada
+            )}</p></div>
+            <div class="relatorio-item"><i class="fas fa-exclamation-triangle"></i><p><strong>Motivo de Desativação (se aplicável):</strong> ${tratarValor(
+              data.motivo_desativacao
+            )}</p></div>
           </div>
         </div>
   
         <div class="divisao">
-          <h2>Checklist Visual e Elétrico</h2>
+          <h2>Avaliação do Checklist</h2>
           <div class="checklist-grid">
-            <div class="checklist-item">
-              <i class="fas fa-box-open"></i>
-              <p><strong>Detalhes do Tanque:</strong> ${formatarValoresConcatenados(
-                data.detalhes_tanque
-              )}</p>
-            </div>
-            <div class="checklist-item">
-              <i class="fas fa-flask"></i>
-              <p><strong>Corrosão do Tanque:</strong> ${tratarValor(
-                data.corrosao_tanque
-              )}</p>
-            </div>
-            <div class="checklist-item">
-              <i class="fas fa-plug"></i>
-              <p><strong>Conectores:</strong> ${formatarValoresConcatenados(
-                data.conectores
-              )}</p>
-            </div>
-            <div class="checklist-item">
-              <i class="fas fa-oil-can"></i>
-              <p><strong>Buchas Primárias:</strong> ${formatarValoresConcatenados(
-                data.buchas_primarias
-              )}</p>
-            </div>
-            <div class="checklist-item">
-              <i class="fas fa-oil-can"></i>
-              <p><strong>Buchas Secundárias:</strong> ${formatarValoresConcatenados(
-                data.buchas_secundarias
-              )}</p>
-            </div>
-            <div class="checklist-item">
-              <i class="fas fa-wave-square"></i>
-              <p><strong>Bobina 1:</strong> ${tratarValor(
-                data.avaliacao_bobina_i
-              )}</p>
-            </div>
-            <div class="checklist-item">
-              <i class="fas fa-wave-square"></i>
-              <p><strong>Bobina 2:</strong> ${tratarValor(
-                data.avaliacao_bobina_ii
-              )}</p>
-            </div>
-            <div class="checklist-item">
-              <i class="fas fa-wave-square"></i>
-              <p><strong>Bobina 3:</strong> ${tratarValor(
-                data.avaliacao_bobina_iii
-              )}</p>
-            </div>
+            <div class="checklist-item"><i class="fas fa-box-open"></i><p><strong>Detalhes do Tanque:</strong> ${formatarValoresConcatenados(
+              data.detalhes_tanque
+            )}</p></div>
+            <div class="checklist-item"><i class="fas fa-flask"></i><p><strong>Corrosão do Tanque:</strong> ${tratarValor(
+              data.corrosao_tanque
+            )}</p></div>
+            <div class="checklist-item"><i class="fas fa-oil-can"></i><p><strong>Buchas Primárias:</strong> ${formatarValoresConcatenados(
+              data.buchas_primarias
+            )}</p></div>
+            <div class="checklist-item"><i class="fas fa-oil-can"></i><p><strong>Buchas Secundárias:</strong> ${formatarValoresConcatenados(
+              data.buchas_secundarias
+            )}</p></div>
+            <div class="checklist-item"><i class="fas fa-plug"></i><p><strong>Conectores:</strong> ${formatarValoresConcatenados(
+              data.conectores
+            )}</p></div>
+            <div class="checklist-item"><i class="fas fa-wave-square"></i><p><strong>Bobina I:</strong> ${tratarValor(
+              data.avaliacao_bobina_i
+            )}</p></div>
+            <div class="checklist-item"><i class="fas fa-wave-square"></i><p><strong>Bobina II:</strong> ${tratarValor(
+              data.avaliacao_bobina_ii
+            )}</p></div>
+            <div class="checklist-item"><i class="fas fa-wave-square"></i><p><strong>Bobina III:</strong> ${tratarValor(
+              data.avaliacao_bobina_iii
+            )}</p></div>
           </div>
         </div>
         
         <div class="divisao">
           <h2>Conclusão e Destino</h2>
           <div class="relatorio-grid">
-              <div class="checklist-item">
-                  <i class="fas fa-check-double"></i>
-                  <p><strong>Conclusão Técnica:</strong> ${tratarValor(
-                    data.conclusao
-                  )}</p>
-              </div>
-              <div class="checklist-item">
-                  <i class="fas fa-dolly"></i>
-                  <p><strong>Transformador Destinado:</strong> ${tratarValor(
-                    data.transformador_destinado
-                  )}</p>
-              </div>
+              <div class="checklist-item"><i class="fas fa-check-double"></i><p><strong>Conclusão Técnica:</strong> ${tratarValor(
+                data.conclusao
+              )}</p></div>
+              <div class="checklist-item"><i class="fas fa-dolly"></i><p><strong>Transformador Destinado Para:</strong> ${tratarValor(
+                data.transformador_destinado
+              )}</p></div>
           </div>
         </div>
   
@@ -237,7 +203,7 @@ async function carregarRelatorio() {
           data.observacoes
             ? `
           <div class="divisao">
-            <h2>Observações</h2>
+            <h2>Observações Adicionais</h2>
             <div class="relatorio-item observacoes-item">
               <i class="fas fa-comment-dots"></i>
               <p>${data.observacoes}</p>
@@ -255,35 +221,23 @@ async function carregarRelatorio() {
   }
 }
 
-// A função gerarPDF é chamada pelo onclick no HTML, então precisa ser global.
-// eslint-disable-next-line no-unused-vars
 function gerarPDF() {
   const urlParams = new URLSearchParams(window.location.search);
   const checklistId = urlParams.get("id");
-
   if (checklistId) {
     const noPrintElements = document.querySelectorAll(".no-print");
     noPrintElements.forEach((button) => {
       button.style.display = "none";
     });
-
-    // Redireciona para a rota da API que gera e serve o PDF
     window.location.href = `/api/gerar_pdf/${checklistId}`;
-
-    // Idealmente, o servidor forçaria o download.
-    // Reexibir os botões pode não ser ideal se a navegação ocorrer.
-    // Considerar uma abordagem onde o PDF abre em nova aba ou é baixado
-    // sem que a página atual mude ou precise reexibir botões.
-    // Por ora, mantendo a lógica original:
     setTimeout(() => {
       noPrintElements.forEach((button) => {
-        button.style.display = "inline-block"; // ou o display original
+        button.style.display = "inline-block";
       });
-    }, 2000); // Aumentado o tempo, mas ainda não ideal
+    }, 3000);
   } else {
-    alert("ID do checklist não encontrado!");
+    alert("ID do checklist não encontrado na URL para gerar PDF!");
   }
 }
 
-// Carrega o relatório quando o DOM estiver pronto
 document.addEventListener("DOMContentLoaded", carregarRelatorio);
