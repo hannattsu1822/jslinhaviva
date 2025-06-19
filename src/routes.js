@@ -1,7 +1,7 @@
 // src/routes.js
 const express = require("express");
 const path = require("path");
-const { autenticar } = require("./auth");
+const { autenticar } = require("./auth"); // Ajuste o caminho se necessário
 
 const rotasAuth = require("./routes/rotas_auth");
 const rotasAuditoria = require("./routes/rotas_auditoria");
@@ -14,14 +14,16 @@ const rotasFibraOptica = require("./routes/rotas_fibra_optica");
 const rotasInspecoesRedes = require("./routes/rotas_inspecoes_redes");
 const rotasAvulsos = require("./routes/rotas_avulsos");
 const rotasRelatorios = require("./routes/rotas_relatorios");
-const rotasSubestacoes = require("./routes/rotas_subestacoes"); // Importa as novas rotas
+// REMOVIDO: const rotasSubestacoes = require("./routes/rotas_subestacoes");
+
+// ADICIONADO: Novas importações para subestações
+const rotasSubestacoesInfra = require("./routes/rotas_subestacoes_infra");
+const rotasSubestacoesServicos = require("./routes/rotas_subestacoes_servicos");
+const rotasSubestacoesChecklist = require("./routes/rotas_subestacoes_checklist");
 
 const router = express.Router();
 
-// Usando os módulos de rota. O prefixo "/" é implícito se não especificado.
-// Para manter seu padrão atual, montamos as rotas diretamente.
-// Ex: se rotasAuth tem '/login', ele será acessível como '/login'
-router.use("/", rotasAuth); // Ou apenas router.use(rotasAuth);
+router.use("/", rotasAuth);
 router.use("/", rotasAuditoria);
 router.use("/", rotasFrota);
 router.use("/", rotasGestaoServicos);
@@ -32,7 +34,12 @@ router.use("/", rotasFibraOptica);
 router.use("/", rotasInspecoesRedes);
 router.use("/", rotasAvulsos);
 router.use("/", rotasRelatorios);
-router.use("/", rotasSubestacoes); // Adiciona as rotas de subestações
+// REMOVIDO: router.use("/", rotasSubestacoes);
+
+// ADICIONADO: Adicionando os novos módulos de rota para subestações
+router.use("/", rotasSubestacoesInfra);
+router.use("/", rotasSubestacoesServicos);
+router.use("/", rotasSubestacoesChecklist);
 
 router.get("/", (req, res) => {
   if (req.session && req.session.user) {
@@ -43,8 +50,6 @@ router.get("/", (req, res) => {
 });
 
 router.get("/login", (req, res) => {
-  // Se a página de login já é servida por rotasAuth, esta pode ser redundante
-  // ou pode ser um fallback se rotasAuth não servir o HTML.
   res.sendFile(path.join(__dirname, "../public/pages/login/login.html"));
 });
 
