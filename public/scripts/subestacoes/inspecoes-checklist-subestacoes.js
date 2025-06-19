@@ -28,139 +28,152 @@ document.addEventListener("DOMContentLoaded", () => {
     "nenhumaMedicaoAdicionada"
   );
 
+  const btnAdicionarEquipamentoObservado = document.getElementById(
+    "btnAdicionarEquipamentoObservado"
+  );
+  const containerEquipamentosObservados = document.getElementById(
+    "containerEquipamentosObservados"
+  );
+  const templateLinhaEquipamento = document.getElementById(
+    "templateLinhaEquipamento"
+  );
+  const nenhumEquipamentoObservadoMsg = document.getElementById(
+    "nenhumEquipamentoObservado"
+  );
+
+  const btnAdicionarVerificacao = document.getElementById(
+    "btnAdicionarVerificacao"
+  );
+  const containerVerificacoesAdicionais = document.getElementById(
+    "containerVerificacoesAdicionais"
+  );
+  const templateLinhaVerificacaoAdicional = document.getElementById(
+    "templateLinhaVerificacaoAdicional"
+  );
+  const nenhumaVerificacaoAdicionadaMsg = document.getElementById(
+    "nenhumaVerificacaoAdicionada"
+  );
+
   const inspecaoAnexosInput = document.getElementById("inspecaoAnexosInput");
   const listaNomesAnexosInspecao = document.getElementById(
     "listaNomesAnexosInspecao"
   );
   let selectedGeneralFiles = [];
 
-  const modalJustificativaEl = document.getElementById(
-    "modalJustificativaAnormalidade"
+  const modalDetalhesItemEl = document.getElementById("modalDetalhesItem");
+  const itemDetalhesModalDescricaoP = document.getElementById(
+    "itemDetalhesModalDescricao"
   );
-  const itemAnormalDescricaoP = document.getElementById("itemAnormalDescricao");
-  const justificativaTextarea = document.getElementById(
-    "justificativaAnormalidadeTextarea"
+  const itemObservacaoTextarea = document.getElementById(
+    "itemObservacaoTextarea"
   );
-  const fotoAnormalidadeInput = document.getElementById(
-    "fotoAnormalidadeInput"
+  const fotosItemInput = document.getElementById("fotosItemInput");
+  const fotosItemPreviewContainer = document.getElementById(
+    "fotosItemPreviewContainer"
   );
-  const fotoAnormalidadeNomeP = document.getElementById("fotoAnormalidadeNome");
-  const fotoAnormalidadePreview = document.getElementById(
-    "fotoAnormalidadePreview"
+  const fotosItemCountP = document.getElementById("fotosItemCount");
+  const fotosItemLabelHelper = document.getElementById("fotosItemLabelHelper");
+  const btnSalvarDetalhesItem = document.getElementById(
+    "btnSalvarDetalhesItem"
   );
-  const fotoAnormalidadePreviewContainer = document.getElementById(
-    "fotoAnormalidadePreviewContainer"
-  );
-  const btnDeleteFotoAnormalidade = document.getElementById(
-    "btnDeleteFotoAnormalidade"
-  );
-  const btnSalvarJustificativa = document.getElementById(
-    "btnSalvarJustificativa"
+  const templateFotoItemPreview = document.getElementById(
+    "templateFotoItemPreview"
   );
 
-  let bsModalJustificativa = null;
-  if (modalJustificativaEl) {
-    bsModalJustificativa = new bootstrap.Modal(modalJustificativaEl);
+  let bsModalDetalhesItem = null;
+  if (modalDetalhesItemEl) {
+    bsModalDetalhesItem = new bootstrap.Modal(modalDetalhesItemEl);
   }
 
-  let currentItemAnormalElement = null;
-  let itemAnormalData = {};
+  let currentItemEditingElement = null;
+  let itemEvidencesData = {};
+  let medicoesDinamicas_linhaFotos = {};
+  let equipamentosObservados_linhaFotos = {};
 
-  const checklistTemplate = [
+  const MAX_FOTOS_POR_ITEM = 10;
+  const MAX_FOTOS_POR_MEDICAO = 5;
+  const MAX_FOTOS_POR_EQUIPAMENTO_OBS = 5;
+
+  const checklistTemplateOriginal = [
     {
       grupo: "Barramentos 69 e 13,8 kV",
       icon: "electrical_services",
       itens: [
         {
-          num: 1,
           desc: "Condições das estruturas de concreto armado quanto à existência de ferragens expostas e ferrugens.",
         },
         {
-          num: 2,
           desc: "Condições de conservação das estruturas metálicas, ferragens, etc.",
         },
         {
-          num: 3,
           desc: "Condições dos Isoladores: trincas, corrosões, sinais de curto circuito.",
         },
         {
-          num: 4,
           desc: "Conexões dos cabos de descarga dos pára-raios à malha de terra e estado de conservação.",
         },
-        { num: 5, desc: "Existência e estado de conservação dos TP's e TC's." },
+        { desc: "Existência e estado de conservação dos TP's e TC's." },
         {
-          num: 6,
           desc: "Existência e condições dos pontos de medição da malha de terra.",
         },
         {
-          num: 7,
           desc: "Inexistência de ninhos de pássaros, cupins, maribondos, etc.",
         },
-        { num: 8, desc: "Existência e estado de conservação dos para-raios." },
-        { num: 9, desc: "Ausência de pontos quentes nas conexões." },
+        { desc: "Existência e estado de conservação dos para-raios." },
+        { desc: "Ausência de pontos quentes nas conexões." },
       ],
     },
     {
       grupo: "Chaves Seccionadoras e Fusíveis",
       icon: "power_settings_new",
       itens: [
-        { num: 10, desc: "Inexistência de trincas nos isoladores." },
+        { desc: "Inexistência de trincas nos isoladores." },
         {
-          num: 11,
           desc: "Existência e estado de conservação do cabo de interligação dos equipamentos à malha de terra.",
         },
-        { num: 12, desc: "Estado da codificação operacional." },
+        { desc: "Estado da codificação operacional." },
         {
-          num: 13,
           desc: "Estado de conservação da pintura, chaparia, além da ausência de sujeira.",
         },
         {
-          num: 14,
           desc: "Estado e sinalização dos varões de comando das chaves de manobra.",
         },
-        { num: 15, desc: "Inexistência de elos fusíveis queimados." },
-        { num: 16, desc: "Ausência de pontos quentes nas conexões." },
+        { desc: "Inexistência de elos fusíveis queimados." },
+        { desc: "Ausência de pontos quentes nas conexões." },
+        {
+          desc: "Verificar sinais de curto-circuito nos contatos e isoladores.",
+        },
+        { desc: "Inexistência de ninhos, cupins, maribondos e etc." },
       ],
     },
     {
       grupo: "Transformadores de Força e Auxiliares",
       icon: "transform",
       itens: [
-        { num: 17, desc: "Inexistência de vazamentos de óleo." },
+        { desc: "Inexistência de vazamentos de óleo." },
         {
-          num: 18,
           desc: "Estado de conservação da pintura, chaparia, além da ausência de sujeira.",
         },
-        { num: 19, desc: "Indicadores de níveis de óleo." },
-        { num: 20, desc: "Inexistência de trincas nas buchas." },
+        { desc: "Indicadores de níveis de óleo." },
+        { desc: "Temperatura do Óleo." },
+        { desc: "Temperatura do Enrolamento." },
+        { desc: "Inexistência de trincas nas buchas." },
         {
-          num: 21,
           desc: "Existência e estado de conservação do cabo de interligação dos equipamentos à malha de terra.",
         },
-        { num: 22, desc: "Estado da codificação operacional." },
+        { desc: "Estado da codificação operacional." },
         {
-          num: 23,
           desc: "Cor da sílica gel e existência de óleo no copo de respiração.",
         },
         {
-          num: 24,
           desc: "Estado de conservação e teste – via comando manual – da ventilação forçada do transformador de força.",
         },
         {
-          num: 25,
           desc: "Existência e funcionamento da tomada de força presente no painel.",
         },
+        { desc: "Existência e funcionamento da iluminação interna no painel." },
+        { desc: "Condições das Fiações, Disjuntores e Fusíveis no Painel." },
+        { desc: "Avaliação dos Protetores de Buchas." },
         {
-          num: 26,
-          desc: "Condições das interligações das fiações das réguas de conexões dos equipamentos.",
-        },
-        {
-          num: 27,
-          desc: "Existência e funcionamento da iluminação interna no painel.",
-        },
-        { num: 28, desc: "Condições dos disjuntores e fusíveis nos painéis." },
-        {
-          num: 29,
           desc: "Inexistência de ninhos de pássaros, cupins, maribondos, etc.",
         },
       ],
@@ -169,80 +182,68 @@ document.addEventListener("DOMContentLoaded", () => {
       grupo: "Religadores e Disjuntores",
       icon: "bolt",
       itens: [
-        { num: 30, desc: "Inexistência de vazamentos de óleo." },
+        { desc: "Inexistência de vazamento de óleo ou gás." },
         {
-          num: 31,
           desc: "Estado de conservação da pintura, chaparia, além da ausência de sujeira.",
         },
-        { num: 32, desc: "Indicadores de níveis de óleo." },
-        { num: 33, desc: "Inexistência de trincas nas buchas." },
+        { desc: "Indicadores de nível de óleo/gás." },
+        { desc: "Inexistência de trincas nas buchas." },
         {
-          num: 34,
           desc: "Existência e estado de conservação do cabo de interligação dos equipamentos à malha de terra.",
         },
-        { num: 35, desc: "Estado da codificação operacional." },
+        { desc: "Estado da codificação operacional." },
         {
-          num: 36,
           desc: "Existência e funcionamento da tomada de força presente no painel.",
         },
+        { desc: "Condições das fiações, disjuntores e fusíveis no painel." },
+        { desc: "Existência e funcionamento da iluminação interna no painel." },
+        { desc: "Avaliação dos protetores de buchas." },
         {
-          num: 37,
-          desc: "Condições das interligações das fiações das réguas de conexões dos equipamentos.",
-        },
-        {
-          num: 38,
-          desc: "Existência e funcionamento da iluminação interna no painel.",
-        },
-        { num: 39, desc: "Condições dos disjuntores e fusíveis no painel." },
-        {
-          num: 40,
-          desc: "Existência, condições e adequação dos protetores de buchas.",
-        },
-        {
-          num: 41,
           desc: "Estado de conservação dos contadores de operação religador. (Anotar o número de operação).",
         },
-        { num: 42, desc: "Existência e estado de conservação dos para-raios." },
+        { desc: "Existência e estado de conservação dos para-raios." },
         {
-          num: 43,
           desc: "Inexistência de ninhos de pássaros, cupins, maribondos, etc.",
         },
-        { num: 44, desc: "Ausência de pontos quentes nas conexões." },
+        { desc: "Ausência de pontos quentes nas conexões." },
       ],
     },
     {
       grupo: "Banco de Capacitores",
       icon: "storage",
       itens: [
-        { num: 45, desc: "Estado de consevarção da chave a óleo." },
-        { num: 46, desc: "Inexistência de vazamentos de óleo." },
+        { desc: "Estado de conservação da chave de acionamento." },
+        { desc: "Inexistência de vazamentos de óleo." },
         {
-          num: 47,
           desc: "Estado de conservação da pintura, chaparia dos equipamentos em geral, além da ausência de sujeira.",
         },
+        { desc: "Inexistência de trincas nas buchas e nos isoladores." },
         {
-          num: 48,
-          desc: "Inexistência de trincas nas buchas e nos isoladores.",
-        },
-        {
-          num: 49,
           desc: "Existência e estado de conservação do cabo de interligação dos equipamentos à malha de terra.",
         },
-        { num: 50, desc: "Estado da codificação operacional." },
-        { num: 51, desc: "Inexistência de elos fusíveis queimados." },
+        { desc: "Estado da codificação operacional." },
+        { desc: "Inexistência de elos fusíveis queimados." },
+        { desc: "Existencia e estado de conservação da chave terra." },
+        { desc: "Existência e estado de conservação dos para-raios." },
         {
-          num: 52,
-          desc: "Existencia e estado de conservação da chave terra (31H1-7).",
-        },
-        { num: 53, desc: "Existência e estado de conservação dos para-raios." },
-        {
-          num: 54,
           desc: "Inexistência de ninhos de pássaros, cupins, maribondos, etc.",
         },
-        { num: 55, desc: "Ausência de pontos quentes nas conexões." },
+        { desc: "Ausência de pontos quentes nas conexões." },
       ],
     },
   ];
+
+  function numerarItensChecklist(template) {
+    let contadorGlobalItens = 1;
+    return template.map((grupo) => ({
+      ...grupo,
+      itens: grupo.itens.map((item) => ({
+        ...item,
+        num: contadorGlobalItens++,
+      })),
+    }));
+  }
+  const checklistTemplate = numerarItensChecklist(checklistTemplateOriginal);
 
   async function fetchData(url, options = {}) {
     try {
@@ -266,7 +267,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function mostrarModal(bsModalInstance) {
     if (bsModalInstance) bsModalInstance.show();
   }
-
   function ocultarModal(bsModalInstance) {
     if (bsModalInstance) bsModalInstance.hide();
   }
@@ -287,6 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
       inspecaoSubestacaoSelect.innerHTML = '<option value="">Erro</option>';
     }
   }
+
   async function popularSelectResponsaveis() {
     if (!inspecaoResponsavelSelect) return;
     try {
@@ -303,68 +304,65 @@ document.addEventListener("DOMContentLoaded", () => {
       inspecaoResponsavelSelect.innerHTML = '<option value="">Erro</option>';
     }
   }
+
   function preencherDataAtual() {
-    if (inspecaoDataAvaliacaoInput) {
+    if (inspecaoDataAvaliacaoInput)
       inspecaoDataAvaliacaoInput.value = new Date().toISOString().split("T")[0];
-    }
   }
 
   function gerarItensChecklist() {
     if (!checklistItensContainer) return;
     checklistItensContainer.innerHTML = "";
-    itemAnormalData = {};
+    itemEvidencesData = {};
     checklistTemplate.forEach((grupo) => {
       const grupoSection = document.createElement("div");
       grupoSection.className = "checklist-grupo mb-3";
       grupoSection.setAttribute("data-grupo", grupo.grupo);
-
       const grupoHeader = document.createElement("div");
       grupoHeader.className = "checklist-grupo-header p-2";
       grupoHeader.innerHTML = `<h3><span class="material-symbols-outlined">${
         grupo.icon || "inventory_2"
       }</span> ${grupo.grupo}</h3>`;
       grupoSection.appendChild(grupoHeader);
-
       const itensList = document.createElement("div");
-
       grupo.itens.forEach((item) => {
         const itemDiv = document.createElement("div");
         itemDiv.className = "checklist-item p-2";
         itemDiv.setAttribute("data-item-num", item.num);
         itemDiv.setAttribute("data-item-desc", item.desc);
-
         itemDiv.innerHTML = `
-            <div class="item-numero">${item.num}.</div>
-            <div class="item-descricao">${item.desc}</div>
-            <div class="item-avaliacao btn-group" role="group" aria-label="Avaliação do item ${item.num}">
-                <input type="radio" class="btn-check" name="item_${item.num}_avaliacao" id="item_${item.num}_n" value="N" required autocomplete="off">
-                <label class="btn btn-sm btn-outline-success" for="item_${item.num}_n">N</label>
-
-                <input type="radio" class="btn-check" name="item_${item.num}_avaliacao" id="item_${item.num}_a" value="A" autocomplete="off">
-                <label class="btn btn-sm btn-outline-danger" for="item_${item.num}_a">A</label>
-
-                <input type="radio" class="btn-check" name="item_${item.num}_avaliacao" id="item_${item.num}_na" value="NA" autocomplete="off">
-                <label class="btn btn-sm btn-outline-secondary" for="item_${item.num}_na">NA</label>
+            <div class="item-main-content">
+                <div class="item-numero">${item.num}.</div>
+                <div class="item-descricao">${item.desc}</div>
             </div>
-        `;
-
+            <div class="item-controls">
+                <div class="item-avaliacao btn-group" role="group" aria-label="Avaliação do item ${item.num}">
+                    <input type="radio" class="btn-check" name="item_${item.num}_avaliacao" id="item_${item.num}_n" value="N" required autocomplete="off">
+                    <label class="btn btn-sm btn-outline-success" for="item_${item.num}_n">N</label>
+                    <input type="radio" class="btn-check" name="item_${item.num}_avaliacao" id="item_${item.num}_a" value="A" autocomplete="off">
+                    <label class="btn btn-sm btn-outline-danger" for="item_${item.num}_a">A</label>
+                    <input type="radio" class="btn-check" name="item_${item.num}_avaliacao" id="item_${item.num}_na" value="NA" autocomplete="off">
+                    <label class="btn btn-sm btn-outline-secondary" for="item_${item.num}_na">NA</label>
+                </div>
+                <div class="item-actions mt-1">
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-detalhes-item" title="Adicionar/Ver Observação e Fotos">
+                        <span class="material-symbols-outlined">add_comment</span> Anexar/Obs
+                    </button>
+                </div>
+            </div>
+            <div class="item-feedback-icons">
+                <span class="material-symbols-outlined obs-icon d-none" title="Observação adicionada">comment</span>
+                <span class="material-symbols-outlined fotos-icon d-none" title="Fotos adicionadas">photo_library</span>
+            </div>`;
+        itemDiv
+          .querySelector(".btn-detalhes-item")
+          .addEventListener("click", () => abrirModalParaItem(itemDiv));
         const radios = itemDiv.querySelectorAll(
           `input[name="item_${item.num}_avaliacao"]`
         );
         radios.forEach((radio) => {
-          radio.addEventListener("change", (event) => {
-            const descElement = itemDiv.querySelector(".item-descricao");
-            if (descElement) {
-              descElement.classList.remove(
-                "anormal-justificada",
-                "anormal-com-foto"
-              );
-            }
-            handleAvaliacaoChange(
-              event,
-              itemDiv,
-              itemDiv.querySelector(".item-descricao")
-            );
+          radio.addEventListener("change", () => {
+            atualizarEstiloBotaoDetalhes(itemDiv);
           });
         });
         itensList.appendChild(itemDiv);
@@ -374,199 +372,189 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function handleAvaliacaoChange(event, itemElement, itemDescElement) {
-    const selectedValue = event.target.value;
+  function abrirModalParaItem(itemElement) {
+    currentItemEditingElement = itemElement;
     const itemNum = itemElement.getAttribute("data-item-num");
-    const itemDescText = itemElement.getAttribute("data-item-desc");
-
-    if (selectedValue === "A") {
-      currentItemAnormalElement = itemElement;
-      if (itemAnormalDescricaoP)
-        itemAnormalDescricaoP.textContent = `Item ${itemNum}: ${itemDescText}`;
-      if (justificativaTextarea)
-        justificativaTextarea.value =
-          itemAnormalData[`item_${itemNum}_obs`] || "";
-      if (fotoAnormalidadeInput) fotoAnormalidadeInput.value = null;
-
-      const currentFile = itemAnormalData[`item_${itemNum}_fotoFile`];
-      if (currentFile) {
-        if (fotoAnormalidadeNomeP)
-          fotoAnormalidadeNomeP.textContent = currentFile.name;
-        if (fotoAnormalidadePreview)
-          fotoAnormalidadePreview.src = URL.createObjectURL(currentFile);
-        if (fotoAnormalidadePreview)
-          fotoAnormalidadePreview.style.display = "block";
-        if (btnDeleteFotoAnormalidade)
-          btnDeleteFotoAnormalidade.style.display = "inline-flex";
-        if (fotoAnormalidadePreviewContainer)
-          fotoAnormalidadePreviewContainer.style.display = "flex";
-      } else {
-        if (fotoAnormalidadeNomeP)
-          fotoAnormalidadeNomeP.textContent = "Nenhuma foto selecionada.";
-        if (fotoAnormalidadePreview) {
-          fotoAnormalidadePreview.src = "#";
-          fotoAnormalidadePreview.style.display = "none";
-        }
-        if (btnDeleteFotoAnormalidade)
-          btnDeleteFotoAnormalidade.style.display = "none";
-        if (fotoAnormalidadePreviewContainer)
-          fotoAnormalidadePreviewContainer.style.display = "none";
-      }
-      if (bsModalJustificativa) {
-        mostrarModal(bsModalJustificativa);
-        if (justificativaTextarea) {
-          setTimeout(() => {
-            justificativaTextarea.focus();
-          }, 150);
-        }
-      }
-    } else {
-      delete itemAnormalData[`item_${itemNum}_obs`];
-      delete itemAnormalData[`item_${itemNum}_fotoFile`];
-      if (itemDescElement) {
-        itemDescElement.classList.remove(
-          "anormal-justificada",
-          "anormal-com-foto"
-        );
-      }
-    }
-  }
-
-  if (fotoAnormalidadeInput) {
-    fotoAnormalidadeInput.addEventListener("change", (event) => {
-      if (currentItemAnormalElement) {
-        const itemNum = currentItemAnormalElement.getAttribute("data-item-num");
-        const file = event.target.files[0];
-        if (file) {
-          if (file.type.startsWith("image/")) {
-            itemAnormalData[`item_${itemNum}_fotoFile`] = file;
-            if (fotoAnormalidadeNomeP)
-              fotoAnormalidadeNomeP.textContent = file.name;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              if (fotoAnormalidadePreview)
-                fotoAnormalidadePreview.src = e.target.result;
-              if (fotoAnormalidadePreview)
-                fotoAnormalidadePreview.style.display = "block";
-              if (btnDeleteFotoAnormalidade)
-                btnDeleteFotoAnormalidade.style.display = "inline-flex";
-              if (fotoAnormalidadePreviewContainer)
-                fotoAnormalidadePreviewContainer.style.display = "flex";
-            };
-            reader.readAsDataURL(file);
-          } else {
-            alert(
-              "Por favor, selecione um arquivo de imagem válido (jpg, png, etc)."
-            );
-            fotoAnormalidadeInput.value = null;
-            delete itemAnormalData[`item_${itemNum}_fotoFile`];
-            if (fotoAnormalidadeNomeP)
-              fotoAnormalidadeNomeP.textContent = "Nenhuma foto selecionada.";
-            if (fotoAnormalidadePreview) {
-              fotoAnormalidadePreview.src = "#";
-              fotoAnormalidadePreview.style.display = "none";
-            }
-            if (btnDeleteFotoAnormalidade)
-              btnDeleteFotoAnormalidade.style.display = "none";
-            if (fotoAnormalidadePreviewContainer)
-              fotoAnormalidadePreviewContainer.style.display = "none";
-          }
-        } else {
-          delete itemAnormalData[`item_${itemNum}_fotoFile`];
-          if (fotoAnormalidadeNomeP)
-            fotoAnormalidadeNomeP.textContent = "Nenhuma foto selecionada.";
-          if (fotoAnormalidadePreview) {
-            fotoAnormalidadePreview.src = "#";
-            fotoAnormalidadePreview.style.display = "none";
-          }
-          if (btnDeleteFotoAnormalidade)
-            btnDeleteFotoAnormalidade.style.display = "none";
-          if (fotoAnormalidadePreviewContainer)
-            fotoAnormalidadePreviewContainer.style.display = "none";
-        }
-      }
-    });
-
-    const modalFileInputWrapper = fotoAnormalidadeInput.closest(
-      ".file-input-modern-wrapper"
+    const itemDesc = itemElement.getAttribute("data-item-desc");
+    const avaliacaoAtualRadio = itemElement.querySelector(
+      `input[name="item_${itemNum}_avaliacao"]:checked`
     );
-    if (modalFileInputWrapper) {
-      modalFileInputWrapper.addEventListener("dragover", (event) => {
-        event.preventDefault();
-        modalFileInputWrapper.classList.add("dragover");
-      });
-      modalFileInputWrapper.addEventListener("dragleave", () => {
-        modalFileInputWrapper.classList.remove("dragover");
-      });
-      modalFileInputWrapper.addEventListener("drop", (event) => {
-        event.preventDefault();
-        modalFileInputWrapper.classList.remove("dragover");
-        if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
-          fotoAnormalidadeInput.files = event.dataTransfer.files;
-          fotoAnormalidadeInput.dispatchEvent(
-            new Event("change", { bubbles: true })
-          );
-        }
-      });
+    const avaliacaoAtual = avaliacaoAtualRadio
+      ? avaliacaoAtualRadio.value
+      : null;
+    if (itemDetalhesModalDescricaoP)
+      itemDetalhesModalDescricaoP.textContent = `Item ${itemNum}: ${
+        itemDesc || "Descrição não disponível"
+      }`;
+    if (itemObservacaoTextarea) {
+      itemObservacaoTextarea.value =
+        itemEvidencesData[`item_${itemNum}_obs`] || "";
+      itemObservacaoTextarea.placeholder =
+        "Descreva a observação ou justificativa aqui...";
     }
+    if (fotosItemLabelHelper) {
+      fotosItemLabelHelper.textContent =
+        avaliacaoAtual === "A"
+          ? "(Obrigatória se Anormal, máx. 10 fotos)"
+          : "(Opcional, máx. 10 fotos)";
+    }
+    renderizarFotosItemModal(itemNum);
+    if (bsModalDetalhesItem) mostrarModal(bsModalDetalhesItem);
   }
 
-  if (btnDeleteFotoAnormalidade) {
-    btnDeleteFotoAnormalidade.addEventListener("click", () => {
-      if (currentItemAnormalElement) {
-        const itemNum = currentItemAnormalElement.getAttribute("data-item-num");
-        delete itemAnormalData[`item_${itemNum}_fotoFile`];
-        if (fotoAnormalidadeInput) fotoAnormalidadeInput.value = null;
-        if (fotoAnormalidadePreview) {
-          fotoAnormalidadePreview.src = "#";
-          fotoAnormalidadePreview.style.display = "none";
-        }
-        btnDeleteFotoAnormalidade.style.display = "none";
-        if (fotoAnormalidadePreviewContainer)
-          fotoAnormalidadePreviewContainer.style.display = "none";
-        if (fotoAnormalidadeNomeP)
-          fotoAnormalidadeNomeP.textContent = "Nenhuma foto selecionada.";
-        const descElement =
-          currentItemAnormalElement.querySelector(".item-descricao");
-        if (descElement) descElement.classList.remove("anormal-com-foto");
+  function renderizarFotosItemModal(itemNum) {
+    if (
+      !fotosItemPreviewContainer ||
+      !fotosItemCountP ||
+      !templateFotoItemPreview
+    )
+      return;
+    fotosItemPreviewContainer.innerHTML = "";
+    const fotosKey = `item_${itemNum}_fotos`;
+    const currentFiles = itemEvidencesData[fotosKey] || [];
+    currentFiles.forEach((file, index) => {
+      const previewClone = templateFotoItemPreview.content.cloneNode(true);
+      const img = previewClone.querySelector(".foto-preview-item-img");
+      const btnDelete = previewClone.querySelector(
+        ".btn-delete-foto-item-preview"
+      );
+      img.src = URL.createObjectURL(file);
+      img.onload = () => URL.revokeObjectURL(img.src);
+      btnDelete.addEventListener("click", () => {
+        itemEvidencesData[fotosKey].splice(index, 1);
+        renderizarFotosItemModal(itemNum);
+      });
+      fotosItemPreviewContainer.appendChild(previewClone);
+    });
+    fotosItemCountP.textContent = `${currentFiles.length} de ${MAX_FOTOS_POR_ITEM} fotos selecionadas.`;
+    if (fotosItemInput) fotosItemInput.value = null;
+  }
+
+  if (fotosItemInput) {
+    fotosItemInput.addEventListener("change", (event) => {
+      if (!currentItemEditingElement) return;
+      const itemNum = currentItemEditingElement.getAttribute("data-item-num");
+      const fotosKey = `item_${itemNum}_fotos`;
+      const currentFiles = itemEvidencesData[fotosKey] || [];
+      const newFiles = Array.from(event.target.files);
+      if (currentFiles.length + newFiles.length > MAX_FOTOS_POR_ITEM) {
+        alert(
+          `Você pode adicionar no máximo ${MAX_FOTOS_POR_ITEM} fotos por item.`
+        );
+        fotosItemInput.value = null;
+        return;
       }
+      newFiles.forEach((file) => {
+        if (file.type.startsWith("image/")) {
+          if (!itemEvidencesData[fotosKey]) itemEvidencesData[fotosKey] = [];
+          itemEvidencesData[fotosKey].push(file);
+        } else {
+          alert("Por favor, selecione apenas arquivos de imagem.");
+        }
+      });
+      renderizarFotosItemModal(itemNum);
     });
   }
 
-  if (btnSalvarJustificativa) {
-    btnSalvarJustificativa.addEventListener("click", () => {
-      if (
-        currentItemAnormalElement &&
-        justificativaTextarea &&
-        fotoAnormalidadeInput
-      ) {
-        const itemNum = currentItemAnormalElement.getAttribute("data-item-num");
-        const justificativa = justificativaTextarea.value.trim();
-        const fotoFile = itemAnormalData[`item_${itemNum}_fotoFile`];
-        const descElement =
-          currentItemAnormalElement.querySelector(".item-descricao");
-
-        if (!justificativa) {
-          alert("Forneça uma justificativa para a anormalidade.");
-          justificativaTextarea.focus();
-          return;
-        }
-        if (!fotoFile) {
-          alert("Uma foto de evidência é obrigatória para itens anormais.");
-          return;
-        }
-
-        itemAnormalData[`item_${itemNum}_obs`] = justificativa;
-
-        if (descElement) {
-          if (justificativa) descElement.classList.add("anormal-justificada");
-          else descElement.classList.remove("anormal-justificada");
-
-          if (fotoFile) descElement.classList.add("anormal-com-foto");
-          else descElement.classList.remove("anormal-com-foto");
-        }
-        if (bsModalJustificativa) ocultarModal(bsModalJustificativa);
+  if (btnSalvarDetalhesItem) {
+    btnSalvarDetalhesItem.addEventListener("click", () => {
+      if (!currentItemEditingElement || !itemObservacaoTextarea) return;
+      const itemNum = currentItemEditingElement.getAttribute("data-item-num");
+      const obsKey = `item_${itemNum}_obs`;
+      const fotosKey = `item_${itemNum}_fotos`;
+      const observacao = itemObservacaoTextarea.value.trim();
+      const fotos = itemEvidencesData[fotosKey] || [];
+      const avaliacaoRadio = currentItemEditingElement.querySelector(
+        `input[name="item_${itemNum}_avaliacao"]:checked`
+      );
+      const avaliacao = avaliacaoRadio ? avaliacaoRadio.value : null;
+      if (!avaliacaoRadio) {
+        alert(
+          "Uma avaliação (N, A, ou NA) deve estar selecionada para salvar detalhes."
+        );
+        return;
       }
+      if (avaliacao === "A") {
+        if (!observacao) {
+          alert("A observação é obrigatória para itens anormais.");
+          itemObservacaoTextarea.focus();
+          return;
+        }
+        if (fotos.length === 0) {
+          alert("Pelo menos uma foto é obrigatória para itens anormais.");
+          return;
+        }
+      }
+      itemEvidencesData[obsKey] = observacao;
+      if (bsModalDetalhesItem) ocultarModal(bsModalDetalhesItem);
+      atualizarIndicadoresVisuaisItem(currentItemEditingElement);
+      atualizarEstiloBotaoDetalhes(currentItemEditingElement);
+    });
+  }
+
+  function atualizarEstiloBotaoDetalhes(itemElement) {
+    if (!itemElement) return;
+    const btnDetalhes = itemElement.querySelector(".btn-detalhes-item");
+    const itemNum = itemElement.getAttribute("data-item-num");
+    const avaliacaoRadio = itemElement.querySelector(
+      `input[name="item_${itemNum}_avaliacao"]:checked`
+    );
+    const isAnormal =
+      avaliacaoRadio && avaliacaoRadio.value === "A" && avaliacaoRadio.checked;
+    const temDados =
+      itemEvidencesData[`item_${itemNum}_obs`] ||
+      (itemEvidencesData[`item_${itemNum}_fotos`] &&
+        itemEvidencesData[`item_${itemNum}_fotos`].length > 0);
+    btnDetalhes.classList.remove(
+      "btn-outline-primary",
+      "btn-primary",
+      "btn-danger"
+    );
+    if (isAnormal) {
+      btnDetalhes.classList.add("btn-danger");
+      btnDetalhes.innerHTML =
+        '<span class="material-symbols-outlined">warning</span> Anexar/Obs (Anormal)';
+    } else {
+      btnDetalhes.classList.add(
+        temDados ? "btn-primary" : "btn-outline-primary"
+      );
+      const avaliacaoTexto = avaliacaoRadio ? `(${avaliacaoRadio.value})` : "";
+      btnDetalhes.innerHTML = `<span class="material-symbols-outlined">add_comment</span> Anexar/Obs ${avaliacaoTexto
+        .replace("(N)", "(Normal)")
+        .replace("(NA)", "(N/A)")}`;
+    }
+  }
+
+  function atualizarIndicadoresVisuaisItem(itemElement) {
+    if (!itemElement) return;
+    const itemNum = itemElement.getAttribute("data-item-num");
+    const obsKey = `item_${itemNum}_obs`;
+    const fotosKey = `item_${itemNum}_fotos`;
+    const temObs = !!itemEvidencesData[obsKey];
+    const temFotos = (itemEvidencesData[fotosKey] || []).length > 0;
+    const obsIcon = itemElement.querySelector(".obs-icon");
+    const fotosIcon = itemElement.querySelector(".fotos-icon");
+    if (obsIcon)
+      temObs
+        ? obsIcon.classList.remove("d-none")
+        : obsIcon.classList.add("d-none");
+    if (fotosIcon)
+      temFotos
+        ? fotosIcon.classList.remove("d-none")
+        : fotosIcon.classList.add("d-none");
+  }
+
+  if (modalDetalhesItemEl) {
+    modalDetalhesItemEl.addEventListener("hidden.bs.modal", () => {
+      if (currentItemEditingElement) {
+        atualizarIndicadoresVisuaisItem(currentItemEditingElement);
+        atualizarEstiloBotaoDetalhes(currentItemEditingElement);
+      }
+      if (fotosItemInput) fotosItemInput.value = null;
+      if (fotosItemPreviewContainer) fotosItemPreviewContainer.innerHTML = "";
+      if (fotosItemCountP)
+        fotosItemCountP.textContent = `0 de ${MAX_FOTOS_POR_ITEM} fotos selecionadas.`;
+      currentItemEditingElement = null;
     });
   }
 
@@ -577,19 +565,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const li = document.createElement("li");
       li.className =
         "list-group-item d-flex justify-content-between align-items-center";
-
       const fileIcon = document.createElement("span");
       fileIcon.className = "material-symbols-outlined me-2 file-preview-icon";
       fileIcon.textContent = file.type.startsWith("image/") ? "image" : "draft";
-
       const fileNameSpan = document.createElement("span");
       fileNameSpan.className = "file-name flex-grow-1 text-truncate";
       fileNameSpan.textContent = file.name;
-
       const fileSizeSpan = document.createElement("small");
       fileSizeSpan.className = "text-muted ms-2";
       fileSizeSpan.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
-
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.className =
@@ -598,7 +582,6 @@ document.addEventListener("DOMContentLoaded", () => {
       deleteButton.title = "Remover anexo";
       deleteButton.innerHTML =
         '<span class="material-symbols-outlined">delete</span>';
-
       li.appendChild(fileIcon);
       li.appendChild(fileNameSpan);
       li.appendChild(fileSizeSpan);
@@ -613,33 +596,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (selectedGeneralFiles.length > 10) {
         alert("Você pode selecionar no máximo 10 arquivos gerais.");
         selectedGeneralFiles = selectedGeneralFiles.slice(0, 10);
-
         const dataTransfer = new DataTransfer();
         selectedGeneralFiles.forEach((file) => dataTransfer.items.add(file));
         event.target.files = dataTransfer.files;
       }
       renderGeneralAttachmentsList();
     });
-    const wrapper = inspecaoAnexosInput.closest(".file-input-modern-wrapper");
-    if (wrapper) {
-      wrapper.addEventListener("dragover", (event) => {
-        event.preventDefault();
-        wrapper.classList.add("dragover");
-      });
-      wrapper.addEventListener("dragleave", () => {
-        wrapper.classList.remove("dragover");
-      });
-      wrapper.addEventListener("drop", (event) => {
-        event.preventDefault();
-        wrapper.classList.remove("dragover");
-        if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
-          inspecaoAnexosInput.files = event.dataTransfer.files;
-          inspecaoAnexosInput.dispatchEvent(
-            new Event("change", { bubbles: true })
-          );
-        }
-      });
-    }
   }
 
   if (listaNomesAnexosInspecao) {
@@ -651,11 +613,9 @@ document.addEventListener("DOMContentLoaded", () => {
           10
         );
         selectedGeneralFiles.splice(indexToRemove, 1);
-
         const newFileList = new DataTransfer();
         selectedGeneralFiles.forEach((file) => newFileList.items.add(file));
         if (inspecaoAnexosInput) inspecaoAnexosInput.files = newFileList.files;
-
         renderGeneralAttachmentsList();
       }
     });
@@ -663,9 +623,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function adicionarNovaLinhaMedicao() {
     if (!templateLinhaMedicao || !containerMedicoesDinamicas) return;
-
     const clone = templateLinhaMedicao.content.cloneNode(true);
     const novaLinha = clone.querySelector(".medicao-dinamica-item");
+    const medicaoDomIndex = containerMedicoesDinamicas.querySelectorAll(
+      ".medicao-dinamica-item"
+    ).length;
+    novaLinha.setAttribute("data-dom-index", medicaoDomIndex);
+
+    // Adiciona uma entrada no array de dados para esta linha, com um ID único para as fotos
+    // Assim, mesmo se linhas forem removidas, o ID das fotos permanece ligado ao seu conjunto de dados original.
+    const medicaoDataId = `med_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 5)}`;
+    novaLinha.setAttribute("data-medicao-id", medicaoDataId);
+    medicoesDinamicas_linhaFotos[medicaoDataId] = [];
 
     if (
       nenhumaMedicaoAdicionadaMsg &&
@@ -673,11 +644,12 @@ document.addEventListener("DOMContentLoaded", () => {
     ) {
       nenhumaMedicaoAdicionadaMsg.classList.add("d-none");
     }
-
     containerMedicoesDinamicas.appendChild(novaLinha);
 
     const btnRemover = novaLinha.querySelector(".btn-remover-medicao");
     btnRemover.addEventListener("click", () => {
+      const idDaLinha = novaLinha.getAttribute("data-medicao-id");
+      delete medicoesDinamicas_linhaFotos[idDaLinha]; // Remove os dados das fotos
       novaLinha.remove();
       if (
         containerMedicoesDinamicas.querySelectorAll(".medicao-dinamica-item")
@@ -691,15 +663,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectTipoMedicao = novaLinha.querySelector(".tipo-medicao");
     const inputUnidade = novaLinha.querySelector(".unidade-medida");
     const inputValor = novaLinha.querySelector(".valor-medido");
-
     selectTipoMedicao.addEventListener("change", function () {
       inputValor.type = "text";
       inputValor.step = "any";
       inputValor.min = "";
       inputValor.max = "";
-
       switch (this.value) {
         case "TEMPERATURA_TRAFO":
+        case "TEMPERATURA_OLEO":
+        case "TEMPERATURA_ENROLAMENTO":
           inputUnidade.value = "°C";
           inputValor.type = "number";
           inputValor.step = "0.1";
@@ -719,22 +691,207 @@ document.addEventListener("DOMContentLoaded", () => {
           inputValor.max = "100";
           inputValor.placeholder = "Ex: 80";
           break;
-        case "OUTRO":
-          inputUnidade.value = "";
-          inputUnidade.placeholder = "Unidade";
-          inputValor.placeholder = "Valor";
+        case "NIVEL_OLEO":
+          inputUnidade.value = "%";
+          inputValor.placeholder = "Ex: Normal ou 75";
           break;
         default:
           inputUnidade.value = "";
           inputUnidade.placeholder = "Unidade";
           inputValor.placeholder = "Valor";
+          break;
+      }
+    });
+    const fotosInputMedicao = novaLinha.querySelector(".foto-medicao-input");
+    fotosInputMedicao.addEventListener("change", function (event) {
+      const idDaLinha = novaLinha.getAttribute("data-medicao-id");
+      let currentFotos = medicoesDinamicas_linhaFotos[idDaLinha] || [];
+      const newFiles = Array.from(event.target.files);
+      if (currentFotos.length + newFiles.length > MAX_FOTOS_POR_MEDICAO) {
+        alert(
+          `Você pode adicionar no máximo ${MAX_FOTOS_POR_MEDICAO} fotos por medição.`
+        );
+        this.value = null;
+        return;
+      }
+      newFiles.forEach((file) => {
+        if (file.type.startsWith("image/")) currentFotos.push(file);
+        else alert("Selecione apenas arquivos de imagem para medições.");
+      });
+      medicoesDinamicas_linhaFotos[idDaLinha] = currentFotos;
+      renderizarFotosLinhaDinamica(
+        novaLinha,
+        medicoesDinamicas_linhaFotos[idDaLinha],
+        ".fotos-medicao-preview-container",
+        ".fotos-medicao-count",
+        MAX_FOTOS_POR_MEDICAO,
+        fotosInputMedicao
+      );
+    });
+    renderizarFotosLinhaDinamica(
+      novaLinha,
+      [],
+      ".fotos-medicao-preview-container",
+      ".fotos-medicao-count",
+      MAX_FOTOS_POR_MEDICAO,
+      fotosInputMedicao
+    );
+  }
+
+  function adicionarNovaLinhaEquipamentoObservado() {
+    if (!templateLinhaEquipamento || !containerEquipamentosObservados) return;
+    const clone = templateLinhaEquipamento.content.cloneNode(true);
+    const novaLinha = clone.querySelector(".equipamento-observado-item");
+    const equipamentoDataId = `equip_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 5)}`;
+    novaLinha.setAttribute("data-equipamento-id", equipamentoDataId);
+    equipamentosObservados_linhaFotos[equipamentoDataId] = [];
+
+    if (
+      nenhumEquipamentoObservadoMsg &&
+      !nenhumEquipamentoObservadoMsg.classList.contains("d-none")
+    ) {
+      nenhumEquipamentoObservadoMsg.classList.add("d-none");
+    }
+    containerEquipamentosObservados.appendChild(novaLinha);
+    const btnRemover = novaLinha.querySelector(
+      ".btn-remover-equipamento-observado"
+    );
+    btnRemover.addEventListener("click", () => {
+      const idDaLinha = novaLinha.getAttribute("data-equipamento-id");
+      delete equipamentosObservados_linhaFotos[idDaLinha];
+      novaLinha.remove();
+      if (
+        containerEquipamentosObservados.querySelectorAll(
+          ".equipamento-observado-item"
+        ).length === 0 &&
+        nenhumEquipamentoObservadoMsg
+      ) {
+        nenhumEquipamentoObservadoMsg.classList.remove("d-none");
+      }
+    });
+    const fotosInput = novaLinha.querySelector(".fotos-equipamento-input");
+    fotosInput.addEventListener("change", function (event) {
+      const idDaLinha = novaLinha.getAttribute("data-equipamento-id");
+      let currentFotos = equipamentosObservados_linhaFotos[idDaLinha] || [];
+      const newFiles = Array.from(event.target.files);
+      if (
+        currentFotos.length + newFiles.length >
+        MAX_FOTOS_POR_EQUIPAMENTO_OBS
+      ) {
+        alert(
+          `Você pode adicionar no máximo ${MAX_FOTOS_POR_EQUIPAMENTO_OBS} fotos por equipamento.`
+        );
+        this.value = null;
+        return;
+      }
+      newFiles.forEach((file) => {
+        if (file.type.startsWith("image/")) currentFotos.push(file);
+        else alert("Selecione apenas arquivos de imagem.");
+      });
+      equipamentosObservados_linhaFotos[idDaLinha] = currentFotos;
+      renderizarFotosLinhaDinamica(
+        novaLinha,
+        equipamentosObservados_linhaFotos[idDaLinha],
+        ".fotos-equipamento-preview-container",
+        ".fotos-equipamento-count",
+        MAX_FOTOS_POR_EQUIPAMENTO_OBS,
+        fotosInput
+      );
+    });
+    renderizarFotosLinhaDinamica(
+      novaLinha,
+      [],
+      ".fotos-equipamento-preview-container",
+      ".fotos-equipamento-count",
+      MAX_FOTOS_POR_EQUIPAMENTO_OBS,
+      fotosInput
+    );
+  }
+
+  function renderizarFotosLinhaDinamica(
+    linhaElement,
+    listaDeArquivos,
+    previewSelector,
+    countSelector,
+    maxFotos,
+    inputElement
+  ) {
+    const previewContainer = linhaElement.querySelector(previewSelector);
+    const countElement = linhaElement.querySelector(countSelector);
+    if (!previewContainer || !countElement || !templateFotoItemPreview) return;
+    previewContainer.innerHTML = "";
+
+    listaDeArquivos.forEach((file, fileIndex) => {
+      const previewClone = templateFotoItemPreview.content.cloneNode(true);
+      const img = previewClone.querySelector(".foto-preview-item-img");
+      const btnDelete = previewClone.querySelector(
+        ".btn-delete-foto-item-preview"
+      );
+      img.src = URL.createObjectURL(file);
+      img.onload = () => URL.revokeObjectURL(img.src);
+      btnDelete.addEventListener("click", () => {
+        listaDeArquivos.splice(fileIndex, 1);
+        renderizarFotosLinhaDinamica(
+          linhaElement,
+          listaDeArquivos,
+          previewSelector,
+          countSelector,
+          maxFotos,
+          inputElement
+        );
+      });
+      previewContainer.appendChild(previewClone);
+    });
+    countElement.textContent = `${listaDeArquivos.length} de ${maxFotos} fotos selecionadas.`;
+    if (inputElement) {
+      inputElement.disabled = listaDeArquivos.length >= maxFotos;
+      if (listaDeArquivos.length < maxFotos && inputElement.value)
+        inputElement.value = null;
+    }
+  }
+
+  function adicionarNovaLinhaVerificacaoAdicional() {
+    if (!templateLinhaVerificacaoAdicional || !containerVerificacoesAdicionais)
+      return;
+    const clone = templateLinhaVerificacaoAdicional.content.cloneNode(true);
+    const novaLinha = clone.querySelector(".verificacao-adicional-item");
+    if (
+      nenhumaVerificacaoAdicionadaMsg &&
+      !nenhumaVerificacaoAdicionadaMsg.classList.contains("d-none")
+    ) {
+      nenhumaVerificacaoAdicionadaMsg.classList.add("d-none");
+    }
+    containerVerificacoesAdicionais.appendChild(novaLinha);
+    const btnRemover = novaLinha.querySelector(
+      ".btn-remover-verificacao-adicional"
+    );
+    btnRemover.addEventListener("click", () => {
+      novaLinha.remove();
+      if (
+        containerVerificacoesAdicionais.querySelectorAll(
+          ".verificacao-adicional-item"
+        ).length === 0 &&
+        nenhumaVerificacaoAdicionadaMsg
+      ) {
+        nenhumaVerificacaoAdicionadaMsg.classList.remove("d-none");
       }
     });
   }
 
-  if (btnAdicionarMedicao) {
+  if (btnAdicionarMedicao)
     btnAdicionarMedicao.addEventListener("click", adicionarNovaLinhaMedicao);
-  }
+  if (btnAdicionarEquipamentoObservado)
+    btnAdicionarEquipamentoObservado.addEventListener(
+      "click",
+      adicionarNovaLinhaEquipamentoObservado
+    );
+  if (btnAdicionarVerificacao)
+    btnAdicionarVerificacao.addEventListener(
+      "click",
+      adicionarNovaLinhaVerificacaoAdicional
+    );
 
   function limparMedicoesDinamicas() {
     if (containerMedicoesDinamicas) {
@@ -747,13 +904,38 @@ document.addEventListener("DOMContentLoaded", () => {
         containerMedicoesDinamicas.appendChild(p);
       }
     }
+    medicoesDinamicas_linhaFotos = {};
+  }
+  function limparEquipamentosObservados() {
+    if (containerEquipamentosObservados) {
+      containerEquipamentosObservados.innerHTML = "";
+      if (nenhumEquipamentoObservadoMsg) {
+        const p = document.createElement("p");
+        p.id = "nenhumEquipamentoObservado";
+        p.className = "text-muted text-center";
+        p.textContent = "Nenhum equipamento observado adicionado ainda.";
+        containerEquipamentosObservados.appendChild(p);
+      }
+    }
+    equipamentosObservados_linhaFotos = {};
+  }
+  function limparVerificacoesAdicionais() {
+    if (containerVerificacoesAdicionais) {
+      containerVerificacoesAdicionais.innerHTML = "";
+      if (nenhumaVerificacaoAdicionadaMsg) {
+        const p = document.createElement("p");
+        p.id = "nenhumaVerificacaoAdicionada";
+        p.className = "text-muted text-center";
+        p.textContent = "Nenhum ponto de verificação adicionado ainda.";
+        containerVerificacoesAdicionais.appendChild(p);
+      }
+    }
   }
 
   if (formChecklistInspecao) {
     formChecklistInspecao.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!btnSalvarInspecao) return;
-
       const formData = new FormData();
       const dadosCabecalho = {
         subestacao_id: inspecaoSubestacaoSelect?.value,
@@ -774,22 +956,17 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Preencha os campos obrigatórios (*) do cabeçalho.");
         return;
       }
-
       for (const key in dadosCabecalho) {
         if (dadosCabecalho[key] !== null && dadosCabecalho[key] !== undefined) {
-          if (dadosCabecalho[key] || typeof dadosCabecalho[key] === "number") {
+          if (dadosCabecalho[key] || typeof dadosCabecalho[key] === "number")
             formData.append(key, dadosCabecalho[key]);
-          } else if (dadosCabecalho[key] === null) {
-            formData.append(key, "");
-          }
+          else if (dadosCabecalho[key] === null) formData.append(key, "");
         }
       }
-
       let todosItensAvaliados = true;
       let todosItensAnormaisCompletos = true;
       const itensChecklistArray = [];
       const checklistItems = document.querySelectorAll(".checklist-item");
-
       if (checklistItems.length === 0) {
         alert("Nenhum item de checklist encontrado para registrar.");
         return;
@@ -801,24 +978,22 @@ document.addEventListener("DOMContentLoaded", () => {
           `input[name="item_${itemNum}_avaliacao"]:checked`
         );
         const avaliacao = avaliacaoRadio ? avaliacaoRadio.value : null;
-        if (!avaliacao) {
-          todosItensAvaliados = false;
-        }
-
-        const itemData = {
+        if (!avaliacao) todosItensAvaliados = false;
+        const obsKey = `item_${itemNum}_obs`;
+        const fotosKey = `item_${itemNum}_fotos`;
+        const observacaoItem = itemEvidencesData[obsKey] || null;
+        const fotosItem = itemEvidencesData[fotosKey] || [];
+        itensChecklistArray.push({
           item_num: parseInt(itemNum),
           grupo_item: itemDiv
             .closest(".checklist-grupo")
             ?.getAttribute("data-grupo"),
           descricao_item_original: itemDiv.getAttribute("data-item-desc"),
           avaliacao: avaliacao,
-          observacao_item: itemAnormalData[`item_${itemNum}_obs`] || null,
-        };
-        itensChecklistArray.push(itemData);
+          observacao_item: observacaoItem,
+        });
         if (avaliacao === "A") {
-          const fotoFile = itemAnormalData[`item_${itemNum}_fotoFile`];
-          const obs = itemAnormalData[`item_${itemNum}_obs`];
-          if (!fotoFile || !obs) {
+          if (!observacaoItem || fotosItem.length === 0) {
             todosItensAnormaisCompletos = false;
             itemDiv.classList.add("item-incompleto-erro");
             setTimeout(
@@ -827,19 +1002,22 @@ document.addEventListener("DOMContentLoaded", () => {
             );
           } else {
             itemDiv.classList.remove("item-incompleto-erro");
-            formData.append(`foto_item_${itemNum}`, fotoFile, fotoFile.name);
           }
         }
+        fotosItem.forEach((fotoFile) =>
+          formData.append(`foto_item_${itemNum}`, fotoFile, fotoFile.name)
+        );
       });
+
       if (!todosItensAvaliados) {
         alert("Todos os itens do checklist devem ser avaliados (N, A ou NA).");
         const primeiroNaoAvaliado = Array.from(checklistItems).find(
-          (itemDiv) => {
-            const itemNum = itemDiv.getAttribute("data-item-num");
-            return !itemDiv.querySelector(
-              `input[name="item_${itemNum}_avaliacao"]:checked`
-            );
-          }
+          (itemDiv) =>
+            !itemDiv.querySelector(
+              `input[name="item_${itemDiv.getAttribute(
+                "data-item-num"
+              )}_avaliacao"]:checked`
+            )
         );
         if (primeiroNaoAvaliado)
           primeiroNaoAvaliado.scrollIntoView({
@@ -850,7 +1028,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (!todosItensAnormaisCompletos) {
         alert(
-          "Existem itens anormais sem justificativa e/ou foto. Verifique os itens destacados em vermelho."
+          "Existem itens anormais sem observação e/ou foto. Verifique os itens destacados."
         );
         const primeiroIncompleto = document.querySelector(
           ".item-incompleto-erro"
@@ -864,54 +1042,148 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       formData.append("itens", JSON.stringify(itensChecklistArray));
 
-      const medicoesDinamicas = [];
-      const linhasMedicao = containerMedicoesDinamicas.querySelectorAll(
-        ".medicao-dinamica-item"
-      );
+      const medicoesParaEnviar = [];
       let todasMedicoesValidas = true;
-      linhasMedicao.forEach((linha) => {
-        const tipo = linha.querySelector(".tipo-medicao").value;
-        const tag = linha
-          .querySelector(".tag-equipamento-medicao")
-          .value.trim();
-        const valor = linha.querySelector(".valor-medido").value.trim();
-        const unidade = linha.querySelector(".unidade-medida").value.trim();
-        const obs = linha.querySelector(".obs-medicao").value.trim();
-
-        if (!tipo || !valor) {
-          alert(
-            "Para cada medição adicionada, o Tipo de Medição e o Valor Lido são obrigatórios."
+      document
+        .querySelectorAll(".medicao-dinamica-item")
+        .forEach((linhaDOM, indexDOM) => {
+          const tipo = linhaDOM.querySelector(".tipo-medicao").value;
+          const tag = linhaDOM
+            .querySelector(".tag-equipamento-medicao")
+            .value.trim();
+          const valor = linhaDOM.querySelector(".valor-medido").value.trim();
+          const unidade = linhaDOM
+            .querySelector(".unidade-medida")
+            .value.trim();
+          const obs = linhaDOM.querySelector(".obs-medicao").value.trim();
+          if (!tipo || !valor) {
+            alert(
+              `Para a medição #${
+                indexDOM + 1
+              }, o Tipo de Medição e o Valor Lido são obrigatórios.`
+            );
+            linhaDOM.querySelector(".tipo-medicao").focus();
+            todasMedicoesValidas = false;
+            return;
+          }
+          const dataMedicaoId = linhaDOM.getAttribute("data-medicao-id");
+          medicoesParaEnviar.push({
+            originalDataId: dataMedicaoId,
+            tipo_medicao: tipo,
+            tag_equipamento: tag || null,
+            valor_medido: valor,
+            unidade_medida: unidade || null,
+            observacao: obs || null,
+          });
+          const fotosMedicao =
+            medicoesDinamicas_linhaFotos[dataMedicaoId] || [];
+          fotosMedicao.forEach((fotoFile) =>
+            formData.append(
+              `foto_medicao_${dataMedicaoId}`,
+              fotoFile,
+              fotoFile.name
+            )
           );
-          linha.querySelector(".tipo-medicao").focus();
-          todasMedicoesValidas = false;
-          return;
-        }
-
-        medicoesDinamicas.push({
-          tipo_medicao: tipo,
-          tag_equipamento: tag || null,
-          valor_medido: valor,
-          unidade_medida: unidade || null,
-          observacao: obs || null,
         });
-      });
+      if (!todasMedicoesValidas) return;
+      if (medicoesParaEnviar.length > 0)
+        formData.append("medicoes", JSON.stringify(medicoesParaEnviar));
 
-      if (!todasMedicoesValidas) {
-        return;
-      }
+      const equipamentosObservadosParaEnviar = [];
+      let todosEquipamentosValidos = true;
+      document
+        .querySelectorAll(".equipamento-observado-item")
+        .forEach((linhaDOM, indexDOM) => {
+          const tipo = linhaDOM.querySelector(
+            ".tipo-equipamento-observado"
+          ).value;
+          const tag = linhaDOM
+            .querySelector(".tag-equipamento-observado")
+            .value.trim();
+          const obs = linhaDOM
+            .querySelector(".obs-equipamento-observado")
+            .value.trim();
+          if (!tipo) {
+            alert(
+              `Para o equipamento observado #${
+                indexDOM + 1
+              }, o Tipo de Equipamento é obrigatório.`
+            );
+            linhaDOM.querySelector(".tipo-equipamento-observado").focus();
+            todosEquipamentosValidos = false;
+            return;
+          }
+          const dataEquipId = linhaDOM.getAttribute("data-equipamento-id");
+          equipamentosObservadosParaEnviar.push({
+            originalDataId: dataEquipId,
+            tipo_equipamento: tipo,
+            tag_equipamento: tag || null,
+            observacao: obs || null,
+          });
+          const fotosEquipamento =
+            equipamentosObservados_linhaFotos[dataEquipId] || [];
+          fotosEquipamento.forEach((fotoFile) =>
+            formData.append(
+              `foto_equip_obs_${dataEquipId}`,
+              fotoFile,
+              fotoFile.name
+            )
+          );
+        });
+      if (!todosEquipamentosValidos) return;
+      if (equipamentosObservadosParaEnviar.length > 0)
+        formData.append(
+          "equipamentos_observados",
+          JSON.stringify(equipamentosObservadosParaEnviar)
+        );
 
-      if (medicoesDinamicas.length > 0) {
-        formData.append("medicoes", JSON.stringify(medicoesDinamicas));
-      }
+      const verificacoesAdicionaisParaEnviar = [];
+      let todasVerificacoesValidas = true;
+      document
+        .querySelectorAll(".verificacao-adicional-item")
+        .forEach((linhaDOM, indexDOM) => {
+          const itemVerificado = linhaDOM
+            .querySelector(".item-verificado-adicional")
+            .value.trim();
+          const estadoItem = linhaDOM.querySelector(
+            ".estado-item-adicional"
+          ).value;
+          const numFormRef = linhaDOM
+            .querySelector(".num-formulario-anterior-adicional")
+            .value.trim();
+          const detalhesObs = linhaDOM
+            .querySelector(".detalhes-obs-adicional")
+            .value.trim();
+          if (!itemVerificado || !estadoItem) {
+            alert(
+              `Para o ponto de verificação #${
+                indexDOM + 1
+              }, 'Item Verificado' e 'Estado' são obrigatórios.`
+            );
+            linhaDOM.querySelector(".item-verificado-adicional").focus();
+            todasVerificacoesValidas = false;
+            return;
+          }
+          verificacoesAdicionaisParaEnviar.push({
+            item_verificado: itemVerificado,
+            estado_item: estadoItem,
+            num_formulario_referencia: numFormRef || null,
+            detalhes_observacao: detalhesObs || null,
+          });
+        });
+      if (!todasVerificacoesValidas) return;
+      if (verificacoesAdicionaisParaEnviar.length > 0)
+        formData.append(
+          "verificacoes_adicionais",
+          JSON.stringify(verificacoesAdicionaisParaEnviar)
+        );
 
-      selectedGeneralFiles.forEach((file) => {
-        formData.append("anexosInspecao", file);
-      });
-
+      selectedGeneralFiles.forEach((file) =>
+        formData.append("anexosInspecao", file)
+      );
       btnSalvarInspecao.disabled = true;
       btnSalvarInspecao.innerHTML =
         '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
-
       try {
         const response = await fetch("/inspecoes-subestacoes", {
           method: "POST",
@@ -930,16 +1202,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ? ` Nº da Inspeção: ${result.formulario_inspecao_num}`
               : "")
         );
-        formChecklistInspecao.reset();
-        limparMedicoesDinamicas();
-
-        preencherDataAtual();
-        gerarItensChecklist();
-        if (listaNomesAnexosInspecao) listaNomesAnexosInspecao.innerHTML = "";
-        selectedGeneralFiles = [];
-        if (inspecaoFormularioNumDisplay)
-          inspecaoFormularioNumDisplay.value = "Será gerado ao salvar";
-        if (inspecaoSubestacaoSelect) inspecaoSubestacaoSelect.focus();
+        resetFormularioCompleto();
       } catch (error) {
         alert(`Falha ao salvar inspeção: ${error.message}`);
       } finally {
@@ -949,6 +1212,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  function resetFormularioCompleto() {
+    if (formChecklistInspecao) formChecklistInspecao.reset();
+    itemEvidencesData = {};
+    medicoesDinamicas_linhaFotos = {};
+    equipamentosObservados_linhaFotos = {};
+    verificacoesAdicionaisData = []; // Mantido para dados textuais, pois não têm fotos
+    limparMedicoesDinamicas();
+    limparEquipamentosObservados();
+    limparVerificacoesAdicionais();
+    preencherDataAtual();
+    gerarItensChecklist();
+    if (listaNomesAnexosInspecao) listaNomesAnexosInspecao.innerHTML = "";
+    selectedGeneralFiles = [];
+    if (inspecaoAnexosInput) inspecaoAnexosInput.value = null;
+    if (inspecaoFormularioNumDisplay)
+      inspecaoFormularioNumDisplay.value = "Será gerado ao salvar";
+    if (inspecaoSubestacaoSelect) inspecaoSubestacaoSelect.focus();
+  }
+
   if (btnCancelarChecklist) {
     btnCancelarChecklist.addEventListener("click", () => {
       if (
@@ -956,63 +1239,7 @@ document.addEventListener("DOMContentLoaded", () => {
           "Cancelar e limpar o formulário? Os dados não salvos serão perdidos."
         )
       ) {
-        if (formChecklistInspecao) formChecklistInspecao.reset();
-        limparMedicoesDinamicas();
-
-        preencherDataAtual();
-        gerarItensChecklist();
-        if (inspecaoSubestacaoSelect) inspecaoSubestacaoSelect.focus();
-        if (listaNomesAnexosInspecao) listaNomesAnexosInspecao.innerHTML = "";
-        selectedGeneralFiles = [];
-        if (fotoAnormalidadePreview) {
-          fotoAnormalidadePreview.src = "#";
-          fotoAnormalidadePreview.style.display = "none";
-        }
-        if (btnDeleteFotoAnormalidade)
-          btnDeleteFotoAnormalidade.style.display = "none";
-        if (fotoAnormalidadePreviewContainer)
-          fotoAnormalidadePreviewContainer.style.display = "none";
-        if (fotoAnormalidadeNomeP)
-          fotoAnormalidadeNomeP.textContent = "Nenhuma foto selecionada.";
-        if (inspecaoFormularioNumDisplay)
-          inspecaoFormularioNumDisplay.value = "Será gerado ao salvar";
-      }
-    });
-  }
-
-  if (modalJustificativaEl) {
-    modalJustificativaEl.addEventListener("hidden.bs.modal", () => {
-      if (currentItemAnormalElement) {
-        const itemNum = currentItemAnormalElement.getAttribute("data-item-num");
-        const isAnormalidadeSalva =
-          itemAnormalData[`item_${itemNum}_obs`] &&
-          itemAnormalData[`item_${itemNum}_fotoFile`];
-        const radioAnormalChecked = currentItemAnormalElement.querySelector(
-          `input[name="item_${itemNum}_avaliacao"][value="A"]:checked`
-        );
-
-        if (radioAnormalChecked && !isAnormalidadeSalva) {
-          const radioN = currentItemAnormalElement.querySelector(
-            `input[name="item_${itemNum}_avaliacao"][value="N"]`
-          );
-          const radioAnteriorOuN =
-            radioN ||
-            currentItemAnormalElement.querySelector(
-              `input[name="item_${itemNum}_avaliacao"]:not([value="A"])`
-            );
-
-          if (radioAnteriorOuN) {
-            radioAnteriorOuN.checked = true;
-            radioAnteriorOuN.dispatchEvent(
-              new Event("change", { bubbles: true })
-            );
-          } else {
-            radioAnormalChecked.checked = false;
-            radioAnormalChecked.dispatchEvent(
-              new Event("change", { bubbles: true })
-            );
-          }
-        }
+        resetFormularioCompleto();
       }
     });
   }
@@ -1024,6 +1251,18 @@ document.addEventListener("DOMContentLoaded", () => {
     preencherDataAtual();
     if (inspecaoFormularioNumDisplay)
       inspecaoFormularioNumDisplay.value = "Será gerado ao salvar";
+    if (btnAdicionarMedicao)
+      btnAdicionarMedicao.addEventListener("click", adicionarNovaLinhaMedicao);
+    if (btnAdicionarEquipamentoObservado)
+      btnAdicionarEquipamentoObservado.addEventListener(
+        "click",
+        adicionarNovaLinhaEquipamentoObservado
+      );
+    if (btnAdicionarVerificacao)
+      btnAdicionarVerificacao.addEventListener(
+        "click",
+        adicionarNovaLinhaVerificacaoAdicional
+      );
   }
   init();
 });

@@ -21,6 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const corpoModalDetalhesInspecao = document.getElementById(
     "corpoModalDetalhesInspecao"
   );
+  const btnGerarPdfInspecaoModal = document.getElementById(
+    "btnGerarPdfInspecaoModal"
+  );
 
   const modalAnexosEscritorioEl = document.getElementById(
     "modalAnexosEscritorio"
@@ -71,19 +74,16 @@ document.addEventListener("DOMContentLoaded", () => {
   let bsModalAnexosEscritorio = null;
   let bsModalConfirmacaoGeral = null;
   let bsModalImageLightbox = null;
+  let currentInspecaoIdParaPdf = null;
 
-  if (modalDetalhesInspecaoEl) {
+  if (modalDetalhesInspecaoEl)
     bsModalDetalhesInspecao = new bootstrap.Modal(modalDetalhesInspecaoEl);
-  }
-  if (modalAnexosEscritorioEl) {
+  if (modalAnexosEscritorioEl)
     bsModalAnexosEscritorio = new bootstrap.Modal(modalAnexosEscritorioEl);
-  }
-  if (modalConfirmacaoGeralEl) {
+  if (modalConfirmacaoGeralEl)
     bsModalConfirmacaoGeral = new bootstrap.Modal(modalConfirmacaoGeralEl);
-  }
-  if (imageLightboxEl) {
+  if (imageLightboxEl)
     bsModalImageLightbox = new bootstrap.Modal(imageLightboxEl);
-  }
 
   let idParaAcao = null;
   let callbackAcaoConfirmada = null;
@@ -110,7 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function mostrarModal(bsModalInstance) {
     if (bsModalInstance) bsModalInstance.show();
   }
-
   function ocultarModal(bsModalInstance) {
     if (bsModalInstance) bsModalInstance.hide();
   }
@@ -161,22 +160,20 @@ document.addEventListener("DOMContentLoaded", () => {
   async function carregarInspecoes(params = {}) {
     if (!corpoTabelaInspecoes || !nenhumaInspecaoMsg) return;
     corpoTabelaInspecoes.innerHTML =
-      '<tr><td colspan="6" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando inspeções...</td></tr>';
+      '<tr><td colspan="7" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando inspeções...</td></tr>';
     nenhumaInspecaoMsg.classList.add("d-none");
-
     const queryParams = new URLSearchParams();
     for (const key in params) {
       if (params[key]) queryParams.append(key, params[key]);
     }
     const queryString = queryParams.toString();
     const url = `/inspecoes-subestacoes${queryString ? "?" + queryString : ""}`;
-
     try {
       const inspecoes = await fetchData(url);
       popularTabelaInspecoes(inspecoes);
     } catch (error) {
       corpoTabelaInspecoes.innerHTML =
-        '<tr><td colspan="6" class="text-center text-danger p-5">Erro ao carregar inspeções.</td></tr>';
+        '<tr><td colspan="7" class="text-center text-danger p-5">Erro ao carregar inspeções.</td></tr>';
     }
   }
 
@@ -188,7 +185,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     nenhumaInspecaoMsg.classList.add("d-none");
-
     inspecoes.forEach((insp) => {
       const tr = document.createElement("tr");
       const dataAvaliacaoFormatada = formatarDataSimples(insp.data_avaliacao);
@@ -197,9 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
         statusInsp === "EM_ANDAMENTO" || statusInsp === "PENDENTE_REVISAO";
       const podeRecuperar =
         statusInsp === "CONCLUIDA" || statusInsp === "CANCELADA";
-
       const formNumId = insp.formulario_inspecao_num || insp.id;
-
       const statusClasseBase = (
         insp.status_inspecao || "desconhecido"
       ).toLowerCase();
@@ -209,17 +203,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const statusTextoDisplay = (
         insp.status_inspecao || "DESCONHECIDO"
       ).replace("_", " ");
-
       let btnConcluirHtml = `<button class="btn btn-icon text-muted" title="Inspeção não pode ser concluída" disabled><span class="material-symbols-outlined">task_alt</span></button>`;
-      if (podeConcluir) {
+      if (podeConcluir)
         btnConcluirHtml = `<button class="btn btn-icon text-success btn-concluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Concluir Inspeção"><span class="material-symbols-outlined">task_alt</span></button>`;
-      }
-
       let btnRecoveryHtml = `<button class="btn btn-icon text-muted" title="Inspeção não pode ser reaberta" disabled><span class="material-symbols-outlined">history</span></button>`;
-      if (podeRecuperar) {
+      if (podeRecuperar)
         btnRecoveryHtml = `<button class="btn btn-icon text-warning btn-recovery-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Reabrir Inspeção"><span class="material-symbols-outlined">history</span></button>`;
-      }
-
       let btnExcluirHtml = `<button class="btn btn-icon text-danger btn-excluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Excluir Inspeção"><span class="material-symbols-outlined">delete</span></button>`;
 
       tr.innerHTML = `
@@ -229,20 +218,20 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${insp.responsavel_nome}</td>
         <td class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
         <td class="text-center actions-column">
-            <button class="btn btn-icon text-info btn-ver-detalhes-inspecao" data-id="${insp.id}" title="Ver Detalhes">
-                <span class="material-symbols-outlined">visibility</span>
-            </button>
-            <button class="btn btn-icon text-primary btn-anexar-escritorio" data-id="${insp.id}" title="Anexar Documentos">
-                <span class="material-symbols-outlined">attach_file</span>
-            </button>
+            <button class="btn btn-icon text-info btn-ver-detalhes-inspecao" data-id="${insp.id}" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
+            <button class="btn btn-icon text-secondary btn-gerar-pdf-inspecao" data-id="${insp.id}" title="Gerar PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button>
+            <button class="btn btn-icon text-primary btn-anexar-escritorio" data-id="${insp.id}" title="Anexar Documentos"><span class="material-symbols-outlined">attach_file</span></button>
             ${btnConcluirHtml}
             ${btnRecoveryHtml}
             ${btnExcluirHtml}
         </td>`;
-
       tr.querySelector(".btn-ver-detalhes-inspecao")?.addEventListener(
         "click",
         () => abrirModalDetalhesInspecao(insp.id)
+      );
+      tr.querySelector(".btn-gerar-pdf-inspecao")?.addEventListener(
+        "click",
+        () => gerarPdfInspecao(insp.id)
       );
       tr.querySelector(".btn-anexar-escritorio")?.addEventListener(
         "click",
@@ -281,8 +270,27 @@ document.addEventListener("DOMContentLoaded", () => {
             "danger"
           )
       );
-
       corpoTabelaInspecoes.appendChild(tr);
+    });
+  }
+
+  function gerarPdfInspecao(inspecaoId) {
+    if (inspecaoId) {
+      window.open(`/inspecoes-subestacoes/${inspecaoId}/pdf`, "_blank");
+    } else {
+      alert("ID da inspeção não encontrado para gerar o PDF.");
+    }
+  }
+
+  if (btnGerarPdfInspecaoModal) {
+    btnGerarPdfInspecaoModal.addEventListener("click", () => {
+      if (currentInspecaoIdParaPdf) {
+        gerarPdfInspecao(currentInspecaoIdParaPdf);
+      } else {
+        alert(
+          "Não foi possível identificar a inspeção para gerar o PDF a partir do modal."
+        );
+      }
     });
   }
 
@@ -304,12 +312,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (mensagemConfirmacaoGeral)
       mensagemConfirmacaoGeral.textContent = `Tem certeza que deseja ${tipoAcao.toLowerCase()} a Inspeção ${formNumReferencia}?`;
-
     if (btnConfirmarAcaoGeral) {
       btnConfirmarAcaoGeral.className = `btn btn-sm btn-${classeBtnContextual}`;
       btnConfirmarAcaoGeral.innerHTML = `<span class="material-symbols-outlined">${icone}</span> Confirmar ${acaoCapitalizada}`;
     }
-
     if (tipoAcao === "concluir")
       callbackAcaoConfirmada = handleConcluirInspecao;
     else if (tipoAcao === "reabrir")
@@ -317,7 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (tipoAcao === "excluir")
       callbackAcaoConfirmada = handleExcluirInspecao;
     else callbackAcaoConfirmada = null;
-
     if (bsModalConfirmacaoGeral) mostrarModal(bsModalConfirmacaoGeral);
   }
 
@@ -325,12 +330,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!idParaAcao) return;
     await executarAcaoInspecao(idParaAcao, "concluir", "Concluindo...");
   }
-
   async function handleReabrirInspecao() {
     if (!idParaAcao) return;
     await executarAcaoInspecao(idParaAcao, "reabrir", "Reabrindo...");
   }
-
   async function handleExcluirInspecao() {
     if (!idParaAcao) return;
     await executarAcaoInspecao(idParaAcao, "excluir", "Excluindo...", "DELETE");
@@ -346,7 +349,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const originalButtonHtml = btnConfirmarAcaoGeral.innerHTML;
     btnConfirmarAcaoGeral.disabled = true;
     btnConfirmarAcaoGeral.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ${mensagemCarregando}`;
-
     try {
       const url =
         acao === "excluir"
@@ -365,7 +367,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
       alert(result.message || `Inspeção ${acao} com sucesso!`);
       if (bsModalConfirmacaoGeral) ocultarModal(bsModalConfirmacaoGeral);
-
       const formData = formFiltrosInspecoes
         ? new FormData(formFiltrosInspecoes)
         : new FormData();
@@ -382,9 +383,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnConfirmarAcaoGeral && bsModalConfirmacaoGeral) {
     btnConfirmarAcaoGeral.addEventListener("click", () => {
-      if (typeof callbackAcaoConfirmada === "function") {
+      if (typeof callbackAcaoConfirmada === "function")
         callbackAcaoConfirmada();
-      }
     });
   }
 
@@ -402,6 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
       !modalDetalhesInspecaoTitulo
     )
       return;
+    currentInspecaoIdParaPdf = inspecaoId;
     corpoModalDetalhesInspecao.innerHTML =
       '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> <p class="mt-2">Carregando detalhes...</p></div>';
     mostrarModal(bsModalDetalhesInspecao);
@@ -410,7 +411,6 @@ document.addEventListener("DOMContentLoaded", () => {
       modalDetalhesInspecaoTitulo.innerHTML = `<span class="material-symbols-outlined me-2">plagiarism</span> Detalhes Inspeção #${
         inspecao.formulario_inspecao_num || inspecao.id
       } (${inspecao.subestacao_sigla})`;
-
       const statusClasseBaseModal = (
         inspecao.status_inspecao || "desconhecido"
       ).toLowerCase();
@@ -433,18 +433,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="col-md-6"><strong>Responsável:</strong> ${
                   inspecao.responsavel_nome
                 }</div>
-                <div class="col-md-6"><strong>Data Avaliação:</strong> ${formatarDataSimples(
-                  inspecao.data_avaliacao
-                )}</div>
+                <div class="col-md-6"><strong>Data Avaliação:</strong> ${
+                  inspecao.data_avaliacao_fmt ||
+                  formatarDataSimples(inspecao.data_avaliacao)
+                }</div>
                 <div class="col-md-6"><strong>Horário:</strong> ${inspecao.hora_inicial.substring(
                   0,
                   5
                 )} ${
         inspecao.hora_final ? " às " + inspecao.hora_final.substring(0, 5) : ""
       }</div>
-                <div class="col-md-6"><strong>Status:</strong> 
-                    <span class="status-badge status-${statusClasseFinalModal}">${statusTextoDisplayModal}</span>
-                </div>
+                <div class="col-md-6"><strong>Status:</strong> <span class="status-badge status-${statusClasseFinalModal}">${statusTextoDisplayModal}</span></div>
             </div>
         </div>`;
 
@@ -459,21 +458,79 @@ document.addEventListener("DOMContentLoaded", () => {
             tipoMedicaoDisplay = "Contador Religador";
           else if (med.tipo_medicao === "BATERIA_MONITOR")
             tipoMedicaoDisplay = "Bateria Monitor";
-
+          else if (med.tipo_medicao === "TEMPERATURA_OLEO")
+            tipoMedicaoDisplay = "Temperatura Óleo";
+          else if (med.tipo_medicao === "TEMPERATURA_ENROLAMENTO")
+            tipoMedicaoDisplay = "Temperatura Enrolamento";
+          else if (med.tipo_medicao === "NIVEL_OLEO")
+            tipoMedicaoDisplay = "Nível Óleo";
           htmlDetalhes += `<div class="medicao-registrada-item alert alert-light py-2 px-3 mb-2">`;
           htmlDetalhes += `<strong>Tipo:</strong> ${tipoMedicaoDisplay}`;
-          if (med.tag_equipamento) {
+          if (med.tag_equipamento)
             htmlDetalhes += ` | <strong>TAG Equip.:</strong> ${med.tag_equipamento}`;
-          }
           htmlDetalhes += ` | <strong>Valor:</strong> ${
             med.valor_medido_texto || med.valor_medido_numerico || "-"
           }`;
-          if (med.unidade_medida) {
-            htmlDetalhes += ` ${med.unidade_medida}`;
-          }
-          if (med.observacao) {
+          if (med.unidade_medida) htmlDetalhes += ` ${med.unidade_medida}`;
+          if (med.observacao)
             htmlDetalhes += `<br><small class="text-muted"><em>Obs: ${med.observacao}</em></small>`;
+          if (med.anexos_medicao && med.anexos_medicao.length > 0) {
+            htmlDetalhes += `<div class="anexos-sub-item-container mt-2">`;
+            med.anexos_medicao.forEach((anexoMed) => {
+              htmlDetalhes += `<div class="anexo-item-detalhes d-inline-block me-2 mb-2"> <img src="${anexoMed.caminho_servidor}" alt="Evidência medição" class="anexo-foto-item anexo-foto-medicao" data-src="${anexoMed.caminho_servidor}"></div>`;
+            });
+            htmlDetalhes += `</div>`;
           }
+          htmlDetalhes += `</div>`;
+        });
+        htmlDetalhes += "</div>";
+      }
+
+      if (
+        inspecao.equipamentos_observados &&
+        inspecao.equipamentos_observados.length > 0
+      ) {
+        htmlDetalhes += "<hr><h4>Equipamentos Observados/Inspecionados:</h4>";
+        htmlDetalhes += '<div class="equipamentos-observados-container mb-3">';
+        inspecao.equipamentos_observados.forEach((equip) => {
+          htmlDetalhes += `<div class="equipamento-observado-item alert alert-light py-2 px-3 mb-2">`;
+          htmlDetalhes += `<strong>Tipo:</strong> ${equip.tipo_equipamento}`;
+          if (equip.tag_equipamento)
+            htmlDetalhes += ` | <strong>TAG:</strong> ${equip.tag_equipamento}`;
+          if (equip.observacao)
+            htmlDetalhes += `<br><small class="text-muted"><em>Obs: ${equip.observacao}</em></small>`;
+          if (equip.anexos_equip_obs && equip.anexos_equip_obs.length > 0) {
+            htmlDetalhes += `<div class="anexos-sub-item-container mt-2">`;
+            equip.anexos_equip_obs.forEach((anexoEq) => {
+              htmlDetalhes += `<div class="anexo-item-detalhes d-inline-block me-2 mb-2"> <img src="${
+                anexoEq.caminho_servidor
+              }" alt="Foto Equipamento ${
+                equip.tag_equipamento || equip.tipo_equipamento
+              }" class="anexo-foto-item anexo-foto-equip-obs" data-src="${
+                anexoEq.caminho_servidor
+              }"></div>`;
+            });
+            htmlDetalhes += `</div>`;
+          }
+          htmlDetalhes += `</div>`;
+        });
+        htmlDetalhes += "</div>";
+      }
+
+      if (
+        inspecao.verificacoes_adicionais &&
+        inspecao.verificacoes_adicionais.length > 0
+      ) {
+        htmlDetalhes += "<hr><h4>Pontos de Verificação Adicionais:</h4>";
+        htmlDetalhes += '<div class="verificacoes-adicionais-container mb-3">';
+        inspecao.verificacoes_adicionais.forEach((verif) => {
+          htmlDetalhes += `<div class="verificacao-adicional-item alert alert-light py-2 px-3 mb-2">`;
+          htmlDetalhes += `<strong>Item Verificado:</strong> ${verif.item_verificado}`;
+          htmlDetalhes += ` | <strong>Estado:</strong> ${verif.estado_item}`;
+          if (verif.num_formulario_referencia)
+            htmlDetalhes += ` | <strong>Form. Ref.:</strong> ${verif.num_formulario_referencia}`;
+          if (verif.detalhes_observacao)
+            htmlDetalhes += `<br><small class="text-muted"><em>Detalhes: ${verif.detalhes_observacao}</em></small>`;
           htmlDetalhes += `</div>`;
         });
         htmlDetalhes += "</div>";
@@ -497,9 +554,11 @@ document.addEventListener("DOMContentLoaded", () => {
               item.obs ? `<br><em class="text-muted">Obs: ${item.obs}</em>` : ""
             }`;
             if (item.anexos && item.anexos.length > 0) {
+              htmlDetalhes += `<div class="anexos-sub-item-container mt-2">`;
               item.anexos.forEach((anexo) => {
-                htmlDetalhes += `<div class="anexo-item-detalhes"> <img src="${anexo.caminho}" alt="Evidência item ${item.num}" class="anexo-foto-item" data-src="${anexo.caminho}"> <div class="anexo-info"> <a href="${anexo.caminho}" target="_blank">${anexo.nome}</a> </div> </div>`;
+                htmlDetalhes += `<div class="anexo-item-detalhes d-inline-block me-2 mb-2"> <img src="${anexo.caminho}" alt="Evidência item ${item.num}" class="anexo-foto-item anexo-foto-checklist-item" data-src="${anexo.caminho}"></div>`;
               });
+              htmlDetalhes += `</div>`;
             }
             htmlDetalhes += `</li>`;
           });
@@ -511,7 +570,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (inspecao.observacoes_gerais) {
-        htmlDetalhes += `<hr><h4>Observações Gerais:</h4><p class="obs-gerais alert alert-secondary">${inspecao.observacoes_gerais}</p>`;
+        htmlDetalhes += `<hr><h4>Observações Gerais (Campo Livre):</h4><p class="obs-gerais alert alert-secondary">${inspecao.observacoes_gerais}</p>`;
       }
 
       if (inspecao.anexosGerais && inspecao.anexosGerais.length > 0) {
@@ -526,7 +585,6 @@ document.addEventListener("DOMContentLoaded", () => {
           else if (anexo.caminho.match(/\.(doc|docx)$/i)) icon = "article";
           else if (anexo.caminho.match(/\.(xls|xlsx|csv)$/i))
             icon = "assessment";
-
           htmlDetalhes += `<div class="col-md-6"><div class="anexo-item-detalhes"> <span class="material-symbols-outlined">${icon}</span> <div class="anexo-info"> <a href="${
             anexo.caminho
           }" target="_blank">${
@@ -604,7 +662,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const inspecaoId = inspecaoIdAnexoEscritorioInput.value;
       const files = arquivosAnexoEscritorioInput.files;
       const descricao = descricaoAnexoEscritorioInput.value.trim();
-
       if (!inspecaoId) {
         alert("ID da Inspeção não encontrado.");
         return;
@@ -617,20 +674,14 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Você pode anexar no máximo 5 arquivos por vez.");
         return;
       }
-
       const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < files.length; i++)
         formData.append("anexosEscritorio", files[i]);
-      }
-      if (descricao) {
-        formData.append("descricao_anexo_escritorio", descricao);
-      }
-
+      if (descricao) formData.append("descricao_anexo_escritorio", descricao);
       const originalButtonHtml = btnSalvarAnexosEscritorio.innerHTML;
       btnSalvarAnexosEscritorio.disabled = true;
       btnSalvarAnexosEscritorio.innerHTML =
         '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
-
       try {
         const response = await fetch(
           `/inspecoes-subestacoes/${inspecaoId}/anexos-escritorio`,
