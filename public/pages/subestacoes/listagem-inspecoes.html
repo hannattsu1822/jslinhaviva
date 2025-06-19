@@ -146,7 +146,9 @@
                     <th class="text-center" scope="col">Data Avaliação</th>
                     <th scope="col">Responsável</th>
                     <th class="text-center" scope="col">Status</th>
-                    <th class="text-center" scope="col">Utilidades</th>
+                    <th class="text-center actions-column" scope="col">
+                      Utilidades
+                    </th>
                   </tr>
                 </thead>
                 <tbody id="corpoTabelaInspecoes"></tbody>
@@ -188,8 +190,18 @@
               aria-label="Fechar"
             ></button>
           </div>
-          <div class="modal-body" id="corpoModalDetalhesInspecao"></div>
+          <div class="modal-body" id="corpoModalDetalhesInspecao">
+            {/* O conteúdo aqui é gerado pelo listagem-inspecoes.js */}
+          </div>
           <div class="modal-footer custom-modal-footer">
+            <button
+              type="button"
+              class="btn btn-info btn-sm"
+              id="btnGerarPdfInspecaoModal"
+            >
+              <span class="material-symbols-outlined">picture_as_pdf</span>
+              Gerar PDF
+            </button>
             <button
               type="button"
               class="btn btn-app-clear btn-sm"

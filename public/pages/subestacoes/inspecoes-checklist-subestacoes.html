@@ -146,6 +146,64 @@
             </div>
           </section>
 
+          <section id="equipamentosObservadosSection" class="custom-card mb-4">
+            <div
+              class="custom-card-header d-flex justify-content-between align-items-center"
+            >
+              <h2 class="h5 mb-0 d-flex align-items-center">
+                <span class="material-symbols-outlined me-2">visibility</span>
+                Equipamentos Observados/Inspecionados
+              </h2>
+              <button
+                type="button"
+                id="btnAdicionarEquipamentoObservado"
+                class="btn btn-sm btn-primary"
+              >
+                Adicionar Equipamento
+              </button>
+            </div>
+            <div class="custom-card-body">
+              <div id="containerEquipamentosObservados">
+                <p
+                  id="nenhumEquipamentoObservado"
+                  class="text-muted text-center"
+                >
+                  Nenhum equipamento observado adicionado ainda.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="verificacoesAdicionaisSection" class="custom-card mb-4">
+            <div
+              class="custom-card-header d-flex justify-content-between align-items-center"
+            >
+              <h2 class="h5 mb-0 d-flex align-items-center">
+                <span class="material-symbols-outlined me-2"
+                  >playlist_add_check_circle</span
+                >
+                Pontos de Verificação Adicionais
+              </h2>
+              <button
+                type="button"
+                id="btnAdicionarVerificacao"
+                class="btn btn-sm btn-primary"
+              >
+                Adicionar Ponto
+              </button>
+            </div>
+            <div class="custom-card-body">
+              <div id="containerVerificacoesAdicionais">
+                <p
+                  id="nenhumaVerificacaoAdicionada"
+                  class="text-muted text-center"
+                >
+                  Nenhum ponto de verificação adicionado ainda.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section id="anexosInspecaoSection" class="custom-card mb-4">
             <div class="custom-card-header">
               <h2 class="h5 mb-0 d-flex align-items-center">
@@ -210,7 +268,7 @@
                 <span class="material-symbols-outlined me-2"
                   >speaker_notes</span
                 >
-                Observações Gerais
+                Observações Gerais (Campo Livre)
               </h2>
             </div>
             <div class="custom-card-body">
@@ -220,7 +278,7 @@
                   name="observacoes_gerais"
                   rows="4"
                   class="form-control form-control-sm"
-                  placeholder="Observações gerais sobre a inspeção..."
+                  placeholder="Observações gerais sobre a inspeção que não se encaixam nos itens acima..."
                 ></textarea>
               </div>
               <p class="legenda-obs alert alert-secondary p-2" role="alert">
@@ -255,9 +313,9 @@
 
     <div
       class="modal fade"
-      id="modalJustificativaAnormalidade"
+      id="modalDetalhesItem"
       tabindex="-1"
-      aria-labelledby="modalJustificativaLabel"
+      aria-labelledby="modalDetalhesItemLabel"
       aria-hidden="true"
     >
       <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -265,12 +323,10 @@
           <div class="modal-header custom-modal-header">
             <h5
               class="modal-title d-flex align-items-center"
-              id="modalJustificativaLabel"
+              id="modalDetalhesItemLabel"
             >
-              <span class="material-symbols-outlined me-2 text-warning"
-                >report_problem</span
-              >
-              Justificar Anormalidade
+              <span class="material-symbols-outlined me-2">comment_add</span>
+              Detalhes e Evidências do Item
             </h5>
             <button
               type="button"
@@ -281,39 +337,36 @@
           </div>
           <div class="modal-body">
             <div
-              id="itemAnormalDescricao"
-              class="alert alert-warning p-2 small"
+              id="itemDetalhesModalDescricao"
+              class="alert alert-secondary p-2 small mb-3"
               role="alert"
             ></div>
             <div class="mb-3">
-              <label for="justificativaAnormalidadeTextarea" class="form-label"
-                >Justificativa da Anormalidade:*</label
+              <label for="itemObservacaoTextarea" class="form-label"
+                >Observação do Item (Obrigatória se Anormal):</label
               >
               <textarea
-                id="justificativaAnormalidadeTextarea"
+                id="itemObservacaoTextarea"
                 class="form-control form-control-sm"
                 rows="3"
-                required
-                placeholder="Descreva o motivo da anormalidade..."
+                placeholder="Descreva a observação ou justificativa aqui..."
               ></textarea>
             </div>
             <div class="mb-3">
-              <label
-                for="fotoAnormalidadeInput"
-                class="form-label visually-hidden"
-                >Foto de Evidência (Obrigatória):*</label
+              <label for="fotosItemInput" class="form-label"
+                >Fotos de Evidência (Máx. 10, Obrigatória se Anormal):</label
               >
               <div class="file-input-modern-wrapper modal-file-input">
                 <input
                   type="file"
-                  id="fotoAnormalidadeInput"
-                  name="fotoAnormalidade"
+                  id="fotosItemInput"
+                  name="fotosItem"
                   accept="image/*"
-                  required
+                  multiple
                   class="file-input-modern-hidden"
                 />
                 <label
-                  for="fotoAnormalidadeInput"
+                  for="fotosItemInput"
                   class="file-input-modern-trigger p-3"
                 >
                   <span
@@ -321,37 +374,24 @@
                     >add_a_photo</span
                   >
                   <span class="file-input-text small">
-                    Arraste a foto ou <strong>clique para selecionar</strong>.
-                    <small class="text-muted d-block mt-1">(Obrigatória)</small>
+                    Arraste fotos ou <strong>clique para selecionar</strong>.
+                    <br />
+                    <small
+                      id="fotosItemLabelHelper"
+                      class="text-muted d-block mt-1"
+                      >(Opcional, máx. 10 fotos)</small
+                    >
                   </span>
                 </label>
               </div>
               <div
-                id="fotoAnormalidadePreviewContainer"
-                class="modal-file-preview-container mt-2"
-                style="display: none"
-              >
-                <img
-                  id="fotoAnormalidadePreview"
-                  class="img-thumbnail"
-                  src="#"
-                  alt="Pré-visualização"
-                  style="max-width: 150px; max-height: 150px; display: none"
-                />
-                <button
-                  type="button"
-                  id="btnDeleteFotoAnormalidade"
-                  class="btn btn-icon text-danger btn-sm ms-2"
-                  style="display: none"
-                  title="Remover foto"
-                >
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              </div>
+                id="fotosItemPreviewContainer"
+                class="modal-file-preview-container mt-2 d-flex flex-wrap gap-2"
+              ></div>
               <small
-                id="fotoAnormalidadeNome"
+                id="fotosItemCount"
                 class="form-text text-muted d-block text-center mt-1"
-                >Nenhuma foto selecionada.</small
+                >0 de 10 fotos selecionadas.</small
               >
             </div>
           </div>
@@ -365,11 +405,11 @@
             </button>
             <button
               type="button"
-              id="btnSalvarJustificativa"
+              id="btnSalvarDetalhesItem"
               class="btn btn-primary btn-sm"
             >
               <span class="material-symbols-outlined">check_circle</span>
-              Confirmar Justificativa e Foto
+              Confirmar Detalhes do Item
             </button>
           </div>
         </div>
@@ -377,7 +417,9 @@
     </div>
 
     <template id="templateLinhaMedicao">
-      <div class="medicao-dinamica-item row g-3 mb-3 p-3 border rounded">
+      <div
+        class="medicao-dinamica-item row g-3 mb-3 p-3 border rounded align-items-start"
+      >
         <div class="col-md-3">
           <label class="form-label form-label-sm">Tipo de Medição:*</label>
           <select
@@ -386,22 +428,27 @@
             required
           >
             <option value="">Selecione...</option>
-            <option value="TEMPERATURA_TRAFO">Temperatura Trafo (°C)</option>
-            <option value="CONTADOR_RELIGADOR">Contador Religador (qnt)</option>
-            <option value="BATERIA_MONITOR">Bateria Monitor (%)</option>
+            <option value="TEMPERATURA_TRAFO">Temperatura Trafo</option>
+            <option value="TEMPERATURA_OLEO">Temperatura Óleo</option>
+            <option value="TEMPERATURA_ENROLAMENTO">
+              Temperatura Enrolamento
+            </option>
+            <option value="NIVEL_OLEO">Nível Óleo</option>
+            <option value="CONTADOR_RELIGADOR">Contador Religador</option>
+            <option value="BATERIA_MONITOR">Bateria Monitor</option>
             <option value="OUTRO">Outro</option>
           </select>
         </div>
-        <div class="col-md-3">
-          <label class="form-label form-label-sm">TAG Equipamento:</label>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">TAG Equip.:</label>
           <input
             type="text"
             name="tag_equipamento_medicao[]"
-            class="form-control form-control-sm tag-equipamento-medicao"
+            class="form-control form-control-sm tag-equipamento_medicao"
             placeholder="Ex: F041"
           />
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label form-label-sm">Valor Lido:*</label>
           <input
             type="text"
@@ -411,16 +458,37 @@
             placeholder="Ex: 65.5 ou 120"
           />
         </div>
-        <div class="col-md-2">
-          <label class="form-label form-label-sm">Unidade:</label>
+        <div class="col-md-1">
+          <label class="form-label form-label-sm">Unid.:</label>
           <input
             type="text"
             name="unidade_medida[]"
             class="form-control form-control-sm unidade-medida"
-            placeholder="°C, qnt, %"
+            placeholder="°C"
           />
         </div>
-        <div class="col-md-1 d-flex align-items-end">
+        <div class="col-md-3">
+          <label class="form-label form-label-sm foto-medicao-label"
+            >Fotos (Opcional, máx. 5):</label
+          >
+          <input
+            type="file"
+            name="foto_medicao[]"
+            class="form-control form-control-sm foto-medicao-input"
+            accept="image/*"
+            multiple
+          />
+          <div
+            class="fotos-medicao-preview-container mt-1 d-flex flex-wrap gap-1"
+          ></div>
+          <small
+            class="form-text text-muted d-block text-center mt-1 fotos-medicao-count"
+            >0 de 5 fotos selecionadas.</small
+          >
+        </div>
+        <div
+          class="col-md-1 d-flex align-items-center justify-content-end pt-md-4"
+        >
           <button
             type="button"
             class="btn btn-danger btn-sm btn-remover-medicao"
@@ -438,6 +506,173 @@
             placeholder="Detalhes adicionais..."
           />
         </div>
+      </div>
+    </template>
+
+    <template id="templateLinhaEquipamento">
+      <div
+        class="equipamento-observado-item row g-3 mb-3 p-3 border rounded align-items-start"
+      >
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">Tipo de Equipamento:*</label>
+          <select
+            name="tipo_equipamento_observado[]"
+            class="form-select form-select-sm tipo-equipamento-observado"
+            required
+          >
+            <option value="">Selecione...</option>
+            <option value="Transformador de Força">
+              Transformador de Força
+            </option>
+            <option value="Transformador Auxiliar">
+              Transformador Auxiliar
+            </option>
+            <option value="Chave Seccionadora">Chave Seccionadora</option>
+            <option value="Chave Fusível">Chave Fusível</option>
+            <option value="Religador">Religador</option>
+            <option value="Disjuntor">Disjuntor</option>
+            <option value="Para-raio">Para-raio</option>
+            <option value="Banco de Capacitor">Banco de Capacitor</option>
+            <option value="TP">TP (Transformador de Potencial)</option>
+            <option value="TC">TC (Transformador de Corrente)</option>
+            <option value="Painel de Comando">Painel de Comando</option>
+            <option value="Painel de Proteção">Painel de Proteção</option>
+            <option value="Estrutura Metálica">Estrutura Metálica</option>
+            <option value="Isolador">Isolador</option>
+            <option value="Outro">Outro (especificar em obs.)</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm"
+            >TAG Equipamento (Opcional):</label
+          >
+          <input
+            type="text"
+            name="tag_equipamento_observado[]"
+            class="form-control form-control-sm tag-equipamento-observado"
+            placeholder="Ex: T-01"
+          />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm"
+            >Fotos (Opcional, máx. 5):</label
+          >
+          <input
+            type="file"
+            name="fotos_equipamento_observado[]"
+            class="form-control form-control-sm fotos-equipamento-input"
+            accept="image/*"
+            multiple
+          />
+          <div
+            class="fotos-equipamento-preview-container mt-1 d-flex flex-wrap gap-1"
+          ></div>
+          <small
+            class="form-text text-muted d-block text-center mt-1 fotos-equipamento-count"
+            >0 de 5 fotos selecionadas.</small
+          >
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">Observação (Opcional):</label>
+          <input
+            type="text"
+            name="obs_equipamento_observado[]"
+            class="form-control form-control-sm obs-equipamento-observado"
+            placeholder="Detalhes adicionais..."
+          />
+        </div>
+        <div
+          class="col-md-1 d-flex align-items-center justify-content-end pt-md-4"
+        >
+          <button
+            type="button"
+            class="btn btn-danger btn-sm btn-remover-equipamento-observado"
+            title="Remover Equipamento Observado"
+          >
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    {/* NOVO TEMPLATE PARA LINHA DE PONTO DE VERIFICAÇÃO ADICIONAL */}
+    <template id="templateLinhaVerificacaoAdicional">
+      <div
+        class="verificacao-adicional-item row g-3 mb-3 p-3 border rounded align-items-start"
+      >
+        <div class="col-md-4">
+          <label class="form-label form-label-sm">Item Verificado:*</label>
+          <input
+            type="text"
+            name="item_verificado_adicional[]"
+            class="form-control form-control-sm item-verificado-adicional"
+            required
+            placeholder="Ex: Checklist anterior, Acesso à SE"
+          />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">Estado:*</label>
+          <select
+            name="estado_item_adicional[]"
+            class="form-select form-select-sm estado-item-adicional"
+            required
+          >
+            <option value="OK">OK</option>
+            <option value="Com Pendência">Com Pendência</option>
+            <option value="Crítico">Crítico</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm"
+            >Nº Formulário Anterior (Opc.):</label
+          >
+          <input
+            type="text"
+            name="num_formulario_anterior_adicional[]"
+            class="form-control form-control-sm num-formulario-anterior-adicional"
+            placeholder="Número do formulário"
+          />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm"
+            >Detalhes da Observação:</label
+          >
+          <textarea
+            name="detalhes_obs_adicional[]"
+            class="form-control form-control-sm detalhes-obs-adicional"
+            rows="1"
+            placeholder="Estado: OK"
+          ></textarea>
+        </div>
+        <div
+          class="col-md-1 d-flex align-items-center justify-content-end pt-md-4"
+        >
+          <button
+            type="button"
+            class="btn btn-danger btn-sm btn-remover-verificacao-adicional"
+            title="Remover Ponto de Verificação"
+          >
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <template id="templateFotoItemPreview">
+      <div class="foto-preview-item-wrapper">
+        <img
+          src="#"
+          class="img-thumbnail foto-preview-item-img"
+          alt="Preview"
+        />
+        <button
+          type="button"
+          class="btn btn-icon btn-danger btn-sm btn-delete-foto-item-preview"
+          title="Remover esta foto"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
     </template>
 
