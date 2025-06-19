@@ -44,62 +44,6 @@
   --app-radio-outline-na-hover-bg: rgba(127, 140, 141, 0.1);
 }
 
-.btn {
-  border-radius: var(--app-border-radius);
-  box-shadow: none !important;
-  transform: none !important;
-  transition: background-color 0.05s ease-in-out, border-color 0.05s ease-in-out,
-    color 0.05s ease-in-out !important;
-  padding-top: 0.45rem;
-  padding-bottom: 0.45rem;
-  font-weight: 500;
-  font-size: 0.85rem;
-  letter-spacing: 0.02em;
-}
-.btn:hover,
-.btn:active,
-.btn:focus {
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.btn-primary {
-  color: var(--app-text-on-button) !important;
-  background-color: var(--app-primary-color) !important;
-  border-color: var(--app-primary-color) !important;
-}
-.btn-primary:hover {
-  color: var(--app-text-on-button) !important;
-  background-color: var(--app-primary-color-hover) !important;
-  border-color: var(--app-primary-color-hover) !important;
-}
-
-.btn-success,
-#btnSalvarInspecao.btn-success {
-  color: var(--app-text-on-button) !important;
-  background-color: var(--app-success-color) !important;
-  border-color: var(--app-success-color) !important;
-}
-.btn-success:hover,
-#btnSalvarInspecao.btn-success:hover {
-  color: var(--app-text-on-button) !important;
-  background-color: var(--app-success-color-hover) !important;
-  border-color: var(--app-success-color-hover) !important;
-}
-
-.btn-app-clear,
-#btnCancelarChecklist.btn-app-clear {
-  color: var(--app-button-clear-text) !important;
-  background-color: var(--app-button-clear-bg) !important;
-  border-color: var(--app-button-clear-border) !important;
-}
-.btn-app-clear:hover,
-#btnCancelarChecklist.btn-app-clear:hover {
-  color: var(--app-button-clear-text) !important;
-  background-color: var(--app-button-clear-hover-bg) !important;
-  border-color: var(--app-button-clear-hover-bg) !important;
-}
-
 body {
   background-color: var(--app-bg-page);
   font-family: var(--app-font-family);
@@ -107,12 +51,12 @@ body {
   color: var(--app-text-primary);
   line-height: 1.55;
 }
+
 .form-control,
 .form-select {
   border-radius: var(--app-border-radius);
   border-color: var(--app-border-color-light);
   box-shadow: none !important;
-  transition: border-color 0.1s ease-in-out;
 }
 .form-control:focus,
 .form-select:focus {
@@ -132,10 +76,97 @@ body {
   margin-bottom: 0.2rem;
 }
 
+.btn {
+  border-radius: var(--app-border-radius);
+  box-shadow: none !important;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  font-weight: 500;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn:hover,
+.btn:active,
+.btn:focus {
+  box-shadow: none !important;
+}
+.btn .material-symbols-outlined {
+  font-size: 1.3em;
+  vertical-align: text-bottom;
+  line-height: 1;
+  font-variation-settings: "wght" 300;
+  margin-right: 0.25em;
+}
+.btn-sm .material-symbols-outlined {
+  font-size: 1.2em;
+}
+
+.btn-primary {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-primary-color) !important;
+  border-color: var(--app-primary-color) !important;
+}
+.btn-primary:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-primary-color-hover) !important;
+  border-color: var(--app-primary-color-hover) !important;
+}
+.btn-success,
+#btnSalvarInspecao.btn-success {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-success-color) !important;
+  border-color: var(--app-success-color) !important;
+}
+.btn-success:hover,
+#btnSalvarInspecao.btn-success:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-success-color-hover) !important;
+  border-color: var(--app-success-color-hover) !important;
+}
+.btn-danger {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-danger-color) !important;
+  border-color: var(--app-danger-color) !important;
+}
+.btn-danger:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-danger-color-hover) !important;
+  border-color: var(--app-danger-color-hover) !important;
+}
+.btn-app-clear,
+#btnCancelarChecklist.btn-app-clear {
+  color: var(--app-button-clear-text) !important;
+  background-color: var(--app-button-clear-bg) !important;
+  border-color: var(--app-button-clear-border) !important;
+}
+.btn-app-clear:hover,
+#btnCancelarChecklist.btn-app-clear:hover {
+  color: var(--app-button-clear-text) !important;
+  background-color: var(--app-button-clear-hover-bg) !important;
+  border-color: var(--app-button-clear-hover-bg) !important;
+}
+.btn-icon {
+  padding: 0.25rem 0.5rem !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+.btn-icon .material-symbols-outlined {
+  margin-right: 0;
+  font-size: 1.25rem;
+}
+.btn-icon.text-danger .material-symbols-outlined {
+  color: var(--app-danger-color);
+}
+.btn-icon.text-danger:hover .material-symbols-outlined {
+  color: var(--app-danger-color-hover);
+}
+
 .page-header {
   background-color: var(--app-bg-component);
   border-bottom: 1px solid var(--app-border-color-light);
-  box-shadow: none;
   border-radius: var(--app-border-radius);
 }
 .page-header h1 {
@@ -152,7 +183,6 @@ body {
   background-color: var(--app-bg-component);
   border: 1px solid var(--app-border-color-light);
   border-radius: var(--app-border-radius);
-  box-shadow: none;
 }
 .custom-card-header {
   background-color: var(--app-primary-color) !important;
@@ -175,37 +205,23 @@ body {
   padding: 1.25rem;
 }
 
-.btn .material-symbols-outlined {
-  font-size: 1.3em;
-  vertical-align: text-bottom;
-  line-height: 1;
-  font-variation-settings: "wght" 300;
-}
-.btn-sm .material-symbols-outlined {
-  font-size: 1.2em;
-}
-
 #inspecaoFormularioNumDisplay.form-control[readonly] {
   background-color: var(--app-bg-page);
   color: var(--app-text-secondary);
   font-style: italic;
   cursor: default;
 }
-
 #checklistItensContainer {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
-
 .checklist-grupo {
   background-color: var(--app-bg-component);
   border: 1px solid var(--app-border-color-light);
   border-radius: var(--app-border-radius);
-  box-shadow: none;
   overflow: hidden;
 }
-
 .checklist-grupo-header {
   display: flex;
   align-items: center;
@@ -215,7 +231,6 @@ body {
   border-bottom: 1px solid var(--app-border-color-light);
 }
 .checklist-grupo-header h3 {
-  font-family: var(--app-font-family);
   margin: 0;
   font-size: 1rem;
   font-weight: 500;
@@ -232,51 +247,46 @@ body {
 
 .checklist-item {
   display: grid;
-  grid-template-columns: min-content 1fr auto;
+  grid-template-columns: min-content 1fr auto auto;
+  grid-template-areas: "numero descricao controles feedback";
   gap: 0.5rem 0.75rem;
-  align-items: center;
+  align-items: start;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--app-border-color-light);
 }
 .checklist-item:last-child {
   border-bottom: none;
 }
+.item-main-content {
+  grid-area: descricao;
+  display: contents;
+}
 .item-numero {
+  grid-area: numero;
   font-weight: 500;
   color: var(--app-primary-color);
   font-size: 0.875rem;
   text-align: right;
-  padding-right: 0.25rem;
+  padding-top: 0.1em;
 }
 .item-descricao {
   font-size: 0.875rem;
   color: var(--app-text-primary);
   line-height: 1.5;
+  word-break: break-word;
 }
-.item-descricao.anormal-justificada,
-.item-descricao.anormal-com-foto {
-  position: relative;
-  padding-left: 1.5rem;
+.item-controls {
+  grid-area: controles;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
-.item-descricao.anormal-justificada.anormal-com-foto::before {
-  content: "photo_camera";
-  font-family: "Material Symbols Outlined";
-  font-variation-settings: "wght" 300;
-  font-size: 0.9rem;
-  line-height: 1;
-  position: absolute;
-  left: 0.25rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--app-warning-color);
-}
-
 .item-avaliacao.btn-group {
   gap: 0;
   box-shadow: none !important;
+  margin-bottom: 0.25rem;
 }
 .item-avaliacao label.btn {
-  font-family: var(--app-font-family);
   font-weight: 500;
   font-size: 0.75rem;
   padding: 0.3rem 0.6rem;
@@ -288,7 +298,6 @@ body {
   cursor: pointer;
   transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out,
     border-color 0.1s ease-in-out;
-  box-shadow: none !important;
 }
 .item-avaliacao
   input[type="radio"].btn-check:checked
@@ -323,7 +332,6 @@ body {
   color: var(--app-radio-outline-na-text);
   border-color: var(--app-radio-outline-na-border);
 }
-
 .item-avaliacao
   input[type="radio"].btn-check:not(:checked)
   + label.btn-outline-success:hover {
@@ -341,6 +349,45 @@ body {
   + label.btn-outline-secondary:hover {
   background-color: var(--app-radio-outline-na-hover-bg);
   color: var(--app-radio-outline-na-text);
+}
+.item-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+.item-actions .btn-detalhes-item {
+  min-width: 160px;
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+.item-actions .btn-detalhes-item .material-symbols-outlined {
+  font-size: 1.1em;
+}
+.item-feedback-icons {
+  grid-area: feedback;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0.2rem;
+}
+.item-feedback-icons .material-symbols-outlined {
+  font-size: 1.1rem;
+  color: var(--app-info-color);
+  margin-bottom: 0.15rem;
+}
+.item-feedback-icons .obs-icon.d-none,
+.item-feedback-icons .fotos-icon.d-none {
+  display: none !important;
+}
+.checklist-item.item-incompleto-erro {
+  background-color: var(--bs-danger-bg-subtle) !important;
+  outline: 1px dashed var(--app-danger-color) !important;
+  outline-offset: -1px;
+}
+.item-incompleto-erro .item-descricao {
+  font-weight: 500;
+  color: var(--app-danger-color-hover);
 }
 
 .anexos-fieldset {
@@ -363,7 +410,6 @@ body {
   border-radius: var(--app-border-radius);
   background-color: var(--app-bg-page);
   text-align: center;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .file-input-modern-wrapper:hover,
 .file-input-modern-wrapper.dragover {
@@ -425,7 +471,6 @@ body {
   border-left-width: 3px;
   border-left-color: var(--app-primary-color) !important;
 }
-
 .page-form-actions {
   background-color: var(--app-bg-page);
   border-top: 1px solid var(--app-border-color-light);
@@ -463,61 +508,104 @@ body {
   font-weight: 500;
 }
 
-#modalJustificativaAnormalidade #itemAnormalDescricao.alert-warning {
-  background-color: var(--bs-warning-bg-subtle);
-  border-color: var(--bs-warning-border-subtle);
-  color: var(--bs-warning-text-emphasis);
+#modalDetalhesItem #itemDetalhesModalDescricao.alert-secondary {
+  background-color: var(--app-primary-color-subtle-bg);
+  border-color: var(--app-border-color);
+  color: var(--app-text-primary);
   font-size: 0.85rem;
   margin-bottom: 1rem;
 }
-#modalJustificativaAnormalidade .modal-file-input {
+#modalDetalhesItem .modal-file-input {
   padding: 0.75rem;
 }
-#modalJustificativaAnormalidade .file-input-icon {
+#modalDetalhesItem .file-input-icon {
   font-size: 2rem;
   margin-bottom: 0.25rem;
 }
-#modalJustificativaAnormalidade .file-input-text {
+#modalDetalhesItem .file-input-text {
   font-size: 0.85rem;
 }
-#modalJustificativaAnormalidade .file-input-text small {
+#modalDetalhesItem .file-input-text small {
   font-size: 0.75rem;
 }
-
-#modalJustificativaAnormalidade .modal-file-preview-container img {
+#modalDetalhesItem .modal-file-preview-container img.foto-preview-item-img {
   border-radius: var(--app-border-radius);
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: cover;
 }
-#modalJustificativaAnormalidade #btnDeleteFotoAnormalidade.btn-icon {
-  padding: 0.15rem 0.3rem;
-  background-color: transparent;
+#modalDetalhesItem .foto-preview-item-wrapper {
+  position: relative;
+  display: inline-block;
 }
-#modalJustificativaAnormalidade
-  #btnDeleteFotoAnormalidade
-  .material-symbols-outlined {
-  font-size: 1.1rem;
+#modalDetalhesItem .btn-delete-foto-item-preview {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  line-height: 1;
+  padding: 0.2rem;
+}
+#modalDetalhesItem .btn-delete-foto-item-preview .material-symbols-outlined {
+  font-size: 1rem;
 }
 
-.checklist-item.item-incompleto-erro {
-  background-color: var(--bs-danger-bg-subtle) !important;
-  outline: 1px dashed var(--app-danger-color) !important;
-  outline-offset: -1px;
+.medicao-dinamica-item {
+  background-color: var(--app-primary-color-subtle-bg);
 }
-.item-incompleto-erro .item-descricao {
-  font-weight: 500;
+.foto-medicao-preview-wrapper {
+  border: 1px solid var(--app-border-color-light);
+  background-color: var(--app-bg-page);
+}
+.foto-medicao-preview-img {
+  border-radius: calc(var(--app-border-radius) * 0.8);
+}
+.btn-delete-foto-medicao .material-symbols-outlined {
+  color: var(--app-danger-color);
+}
+.btn-delete-foto-medicao:hover .material-symbols-outlined {
   color: var(--app-danger-color-hover);
 }
 
-.spinner-border {
-  animation: none;
+.btn .spinner-border {
+  margin-right: 0.5em;
 }
-.spin {
-  animation: spin-simple 1s linear infinite;
+
+/* Estilos para a nova seção de Equipamentos Observados */
+#equipamentosObservadosSection .custom-card-header .material-symbols-outlined {
+  color: var(
+    --app-text-on-primary-header
+  ); /* Garante que o ícone do cabeçalho seja branco */
 }
-@keyframes spin-simple {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.equipamento-observado-item {
+  background-color: var(
+    --app-primary-color-subtle-bg
+  ); /* Mesmo fundo das medições */
+}
+/* Reutiliza o estilo de preview de fotos para os equipamentos observados */
+.fotos-equipamento-preview-container img.foto-preview-item-img {
+  /* Se usar o mesmo template de preview */
+  border-radius: var(--app-border-radius);
+  max-width: 60px; /* Pode ajustar o tamanho das miniaturas */
+  max-height: 60px;
+  object-fit: cover;
+}
+.fotos-equipamento-preview-container .foto-preview-item-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.fotos-equipamento-preview-container .btn-delete-foto-item-preview {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  line-height: 1;
+  padding: 0.15rem;
+}
+.fotos-equipamento-preview-container
+  .btn-delete-foto-item-preview
+  .material-symbols-outlined {
+  font-size: 0.9rem;
 }

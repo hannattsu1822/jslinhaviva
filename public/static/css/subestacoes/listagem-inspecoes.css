@@ -1,5 +1,3 @@
-/* /static/css/subestacoes/listagem-inspecoes-clean.css */
-
 :root {
   --app-primary-color: #192a56;
   --app-primary-color-hover: #111d3c;
@@ -38,23 +36,64 @@
   --app-avaliacao-na-border: #cfd8dc;
 }
 
+body {
+  background-color: var(--app-bg-page);
+  font-family: var(--app-font-family);
+  font-size: 0.9rem;
+  color: var(--app-text-primary);
+  line-height: 1.55;
+}
+
+.form-control,
+.form-select {
+  border-radius: var(--app-border-radius);
+  border-color: var(--app-border-color-light);
+  box-shadow: none !important;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--app-primary-color);
+}
+.form-control-sm,
+.form-select-sm {
+  font-size: 0.825rem;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  border-radius: calc(var(--app-border-radius) * 0.9);
+}
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--app-text-secondary);
+  margin-bottom: 0.2rem;
+}
+
 .btn {
   border-radius: var(--app-border-radius);
   box-shadow: none !important;
-  transform: none !important;
-  transition: background-color 0.05s ease-in-out, border-color 0.05s ease-in-out,
-    color 0.05s ease-in-out !important;
   padding-top: 0.45rem;
   padding-bottom: 0.45rem;
   font-weight: 500;
   font-size: 0.85rem;
   letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .btn:hover,
 .btn:active,
 .btn:focus {
   box-shadow: none !important;
-  transform: none !important;
+}
+.btn .material-symbols-outlined {
+  font-size: 1.3em;
+  vertical-align: text-bottom;
+  line-height: 1;
+  font-variation-settings: "wght" 300;
+  margin-right: 0.25em;
+}
+.btn-sm .material-symbols-outlined {
+  font-size: 1.2em;
 }
 
 .btn-primary {
@@ -67,7 +106,6 @@
   background-color: var(--app-primary-color-hover) !important;
   border-color: var(--app-primary-color-hover) !important;
 }
-
 .btn-success,
 #btnNovaInspecaoRedirect.btn-success {
   color: var(--app-text-on-button) !important;
@@ -80,7 +118,6 @@
   background-color: var(--app-success-color-hover) !important;
   border-color: var(--app-success-color-hover) !important;
 }
-
 .btn-danger {
   color: var(--app-text-on-button) !important;
   background-color: var(--app-danger-color) !important;
@@ -100,6 +137,16 @@
   color: var(--app-text-on-button) !important;
   background-color: var(--app-warning-color-hover) !important;
   border-color: var(--app-warning-color-hover) !important;
+}
+.btn-info {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-info-color) !important;
+  border-color: var(--app-info-color) !important;
+}
+.btn-info:hover {
+  color: var(--app-text-on-button) !important;
+  background-color: var(--app-info-color-hover) !important;
+  border-color: var(--app-info-color-hover) !important;
 }
 
 #btnLimparFiltrosInspecoes.btn-outline-secondary,
@@ -134,38 +181,6 @@
   color: var(--app-primary-color) !important;
 }
 
-body {
-  background-color: var(--app-bg-page);
-  font-family: var(--app-font-family);
-  font-size: 0.9rem;
-  color: var(--app-text-primary);
-  line-height: 1.55;
-}
-.form-control,
-.form-select {
-  border-radius: var(--app-border-radius);
-  border-color: var(--app-border-color-light);
-  box-shadow: none !important;
-  transition: border-color 0.1s ease-in-out;
-}
-.form-control:focus,
-.form-select:focus {
-  border-color: var(--app-primary-color);
-}
-.form-control-sm,
-.form-select-sm {
-  font-size: 0.825rem;
-  padding-top: 0.3rem;
-  padding-bottom: 0.3rem;
-  border-radius: calc(var(--app-border-radius) * 0.9);
-}
-.form-label {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--app-text-secondary);
-  margin-bottom: 0.2rem;
-}
-
 #formFiltrosInspecoes > .col-md-6,
 #formFiltrosInspecoes > .col-lg-3,
 #formFiltrosInspecoes > .col-lg-2 {
@@ -178,7 +193,6 @@ body {
 .page-header {
   background-color: var(--app-bg-component);
   border-bottom: 1px solid var(--app-border-color-light);
-  box-shadow: none;
   border-radius: var(--app-border-radius);
 }
 .page-header h1 {
@@ -195,7 +209,6 @@ body {
   background-color: var(--app-bg-component);
   border: 1px solid var(--app-border-color-light);
   border-radius: var(--app-border-radius);
-  box-shadow: none;
 }
 .custom-card-header {
   background-color: transparent;
@@ -218,16 +231,6 @@ body {
 }
 .custom-card-body.p-0 {
   padding: 0 !important;
-}
-
-.btn .material-symbols-outlined {
-  font-size: 1.3em;
-  vertical-align: text-bottom;
-  line-height: 1;
-  font-variation-settings: "wght" 300;
-}
-.btn-sm .material-symbols-outlined {
-  font-size: 1.2em;
 }
 
 .table {
@@ -268,7 +271,6 @@ body {
 .actions-column .btn .material-symbols-outlined {
   font-size: 1.25rem;
   font-variation-settings: "wght" 300;
-  transition: color 0.05s ease-in-out;
 }
 .actions-column .btn.text-info:hover .material-symbols-outlined {
   color: var(--app-info-color-hover) !important;
@@ -318,7 +320,6 @@ body {
 #modalDetalhesInspecao .modal-body {
   padding: 1rem 1.5rem;
 }
-
 #corpoModalDetalhesInspecao .detalhes-cabecalho {
   background-color: var(--app-primary-color-subtle-bg);
   padding: 0.75rem 1rem;
@@ -441,17 +442,43 @@ body {
   color: var(--app-primary-color);
   font-variation-settings: "wght" 300;
 }
+
+.anexos-sub-item-container {
+  margin-top: 0.75rem;
+  padding-left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.anexos-sub-item-container .anexo-item-detalhes {
+  margin-bottom: 0; /* Removido pois o gap do flex container cuida disso */
+  /* Adicione um padding interno ao anexo-item-detalhes se quiser mais espaço dentro de cada 'caixinha' de imagem */
+  padding: 0.25rem;
+  border: 1px solid var(--app-border-color-light); /* Borda para cada 'caixinha' de imagem */
+  background-color: var(
+    --app-bg-component
+  ); /* Fundo branco para cada caixinha */
+  border-radius: var(--app-border-radius);
+}
+
 img.anexo-foto-item {
-  width: 35px;
-  height: 35px;
+  display: block;
+  width: 70px;
+  height: 70px;
   object-fit: cover;
-  border-radius: calc(var(--app-border-radius) * 0.7);
   border: 1px solid var(--app-border-color);
+  border-radius: calc(var(--app-border-radius) * 0.7);
   cursor: pointer;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+  background-color: var(
+    --app-bg-page
+  ); /* Cor de fundo enquanto a imagem carrega */
 }
 img.anexo-foto-item:hover {
-  opacity: 0.8;
+  transform: scale(1.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
+
 .anexo-info {
   line-height: 1.3;
   overflow: hidden;
@@ -520,22 +547,19 @@ p.obs-gerais {
   background-color: transparent;
   border-color: var(--app-border-color-light);
 }
-
 #imageLightbox img {
   border-radius: var(--app-border-radius);
 }
 
-.spinner-border {
-  animation: none;
+.medicoes-registradas-container .medicao-registrada-item,
+.equipamentos-observados-container .equipamento-observado-item,
+.verificacoes-adicionais-container .verificacao-adicional-item {
+  font-size: 0.85rem;
+  padding: 0.6rem 0.8rem;
+  background-color: var(--app-bg-page); /* Fundo leve para os cards internos */
 }
-.spin {
-  animation: spin-simple 1s linear infinite;
-}
-@keyframes spin-simple {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.verificacoes-adicionais-container .verificacao-adicional-item strong,
+.equipamentos-observados-container .equipamento-observado-item strong,
+.medicoes-registradas-container .medicao-registrada-item strong {
+  font-weight: 500;
 }
