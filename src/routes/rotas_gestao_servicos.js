@@ -30,7 +30,7 @@ function formatarTamanhoArquivo(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-router.get("/gestao-servicos", autenticar, (req, res) => {
+router.get("/gestao-servicos", autenticar, verificarPermissaoPorCargo, (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/gestao_servico.html")
   );
