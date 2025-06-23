@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registrar/Editar Serviço de Subestação</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/subestacoes/registrar-servico-subestacao.css"
+    />
+  </head>
+  <body>
+    <div class="container mt-4 mb-5">
+      <header class="page-header mb-4 p-3 rounded">
+        <h1 id="paginaTitulo" class="h3 mb-0 d-flex align-items-center">
+          <span class="material-symbols-outlined fs-1 me-2">playlist_add</span>
+          Registrar Novo Serviço
+        </h1>
+      </header>
+
+      <main>
+        <form
+          id="formServico"
+          enctype="multipart/form-data"
+          class="custom-card"
+        >
+          <div class="custom-card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="servicoSubestacaoModal" class="form-label"
+                  >Subestação:*</label
+                >
+                <select
+                  id="servicoSubestacaoModal"
+                  name="subestacao_id"
+                  class="form-select form-select-sm"
+                  required
+                >
+                  <option value="">Selecione...</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="servicoProcessoModal" class="form-label"
+                  >Nº Processo/OS:*</label
+                >
+                <input
+                  type="text"
+                  id="servicoProcessoModal"
+                  name="processo"
+                  class="form-control form-control-sm"
+                  required
+                />
+              </div>
+              <div class="col-12">
+                <label for="servicoMotivoModal" class="form-label"
+                  >Motivo do Serviço:*</label
+                >
+                <textarea
+                  id="servicoMotivoModal"
+                  name="motivo"
+                  class="form-control form-control-sm"
+                  rows="3"
+                  required
+                ></textarea>
+              </div>
+              <div class="col-md-6">
+                <label for="servicoAlimentadorModal" class="form-label"
+                  >Alimentador:</label
+                >
+                <input
+                  type="text"
+                  id="servicoAlimentadorModal"
+                  name="alimentador"
+                  class="form-control form-control-sm"
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="servicoEquipamentoModal" class="form-label"
+                  >Equipamento Específico (Opcional):</label
+                >
+                <select
+                  id="servicoEquipamentoModal"
+                  name="equipamento_id"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Nenhum / Selecione subestação</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="servicoDataPrevistaModal" class="form-label"
+                  >Data Prevista:*</label
+                >
+                <input
+                  type="date"
+                  id="servicoDataPrevistaModal"
+                  name="data_prevista"
+                  class="form-control form-control-sm"
+                  required
+                />
+              </div>
+              <div class="col-md-4">
+                <label for="servicoHorarioInicioModal" class="form-label"
+                  >Horário Início Previsto:*</label
+                >
+                <input
+                  type="time"
+                  id="servicoHorarioInicioModal"
+                  name="horario_inicio"
+                  class="form-control form-control-sm"
+                  required
+                />
+              </div>
+              <div class="col-md-4">
+                <label for="servicoHorarioFimModal" class="form-label"
+                  >Horário Fim Previsto:*</label
+                >
+                <input
+                  type="time"
+                  id="servicoHorarioFimModal"
+                  name="horario_fim"
+                  class="form-control form-control-sm"
+                  required
+                />
+              </div>
+              <div class="col-md-6">
+                <label for="servicoResponsavelModal" class="form-label"
+                  >Responsável Técnico:*</label
+                >
+                <select
+                  id="servicoResponsavelModal"
+                  name="responsavel_id"
+                  class="form-select form-select-sm"
+                  required
+                >
+                  <option value="">Selecione...</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="servicoStatusModal" class="form-label"
+                  >Status:</label
+                >
+                <select
+                  id="servicoStatusModal"
+                  name="status"
+                  class="form-select form-select-sm"
+                >
+                  <option value="PROGRAMADO" selected>PROGRAMADO</option>
+                  <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                  <option value="PENDENTE_APROVACAO">PENDENTE APROVAÇÃO</option>
+                  <option value="CONCLUIDO">CONCLUÍDO</option>
+                  <option value="CANCELADO">CANCELADO</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label for="servicoEncarregadoDesignadoModal" class="form-label"
+                  >Encarregado Designado (Opcional):</label
+                >
+                <select
+                  id="servicoEncarregadoDesignadoModal"
+                  name="encarregado_designado_id"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Nenhum</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <fieldset class="anexos-fieldset border p-3 rounded mt-2">
+                  <legend class="legend-sm float-none w-auto px-2">
+                    <span class="material-symbols-outlined">attach_file</span>
+                    Anexos
+                  </legend>
+                  <div class="mb-2">
+                    <label for="servicoAnexosInput" class="form-label"
+                      >Adicionar Novos Anexos (Opcional, máx. 5):</label
+                    >
+                    <input
+                      type="file"
+                      id="servicoAnexosInput"
+                      name="anexosServico"
+                      class="form-control form-control-sm"
+                      multiple
+                      accept=".pdf,.jpg,.jpeg,.png,.xls,.xlsx,.csv,.doc,.docx,.txt"
+                    />
+                    <ul
+                      id="listaNomesAnexosModal"
+                      class="list-group list-group-flush anexos-list mt-2"
+                    ></ul>
+                    <small class="form-text"
+                      >Tipos: PDF, Imagens, Planilhas, Documentos, CSV,
+                      TXT.</small
+                    >
+                  </div>
+                  <div id="anexosExistentesContainer" class="d-none mt-2">
+                    <p class="mb-1">
+                      <strong>Anexos existentes (na edição):</strong>
+                    </p>
+                    <ul
+                      id="listaAnexosExistentes"
+                      class="list-group list-group-flush anexos-list"
+                    ></ul>
+                  </div>
+                </fieldset>
+              </div>
+
+              <div class="col-12">
+                <div id="inspecoesVinculadasContainer" class="mt-3 d-none">
+                  <h6 class="d-flex align-items-center mb-3 pt-2 border-top">
+                    <span class="material-symbols-outlined me-1"
+                      >fact_check</span
+                    >
+                    Inspeções Vinculadas e Defeitos Associados
+                  </h6>
+                  <div
+                    id="listaInspecoesVinculadasComDefeitos"
+                    class="p-2 border rounded bg-light"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <fieldset
+                  id="conclusaoFieldset"
+                  class="border p-3 rounded mt-2 d-none"
+                >
+                  <legend class="legend-sm float-none w-auto px-2">
+                    <span class="material-symbols-outlined">task_alt</span>
+                    Detalhes da Conclusão
+                  </legend>
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label for="servicoDataConclusaoModal" class="form-label"
+                        >Data de Conclusão:</label
+                      >
+                      <input
+                        type="date"
+                        id="servicoDataConclusaoModal"
+                        name="data_conclusao"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                    <div class="col-12">
+                      <label
+                        for="servicoObservacoesConclusaoModal"
+                        class="form-label"
+                        >Observações da Conclusão:</label
+                      >
+                      <textarea
+                        id="servicoObservacoesConclusaoModal"
+                        name="observacoes_conclusao"
+                        class="form-control form-control-sm"
+                        rows="2"
+                      ></textarea>
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+          <div class="custom-card-footer text-end p-3 border-top">
+            <button
+              type="button"
+              id="btnCancelarServicoForm"
+              class="btn btn-app-clear btn-sm me-2"
+            >
+              <span class="material-symbols-outlined">cancel</span> Cancelar e
+              Voltar
+            </button>
+            <button
+              type="submit"
+              id="btnSalvarServicoForm"
+              class="btn btn-success btn-sm"
+            >
+              <span class="material-symbols-outlined">save</span> Salvar Serviço
+            </button>
+          </div>
+        </form>
+      </main>
+
+      <footer class="mt-5 pt-4 text-center">
+        <a
+          href="/pagina-servicos-subestacoes"
+          class="btn btn-outline-secondary btn-sm"
+        >
+          <span class="material-symbols-outlined">arrow_back</span> Voltar para
+          Listagem de Serviços
+        </a>
+      </footer>
+    </div>
+
+    <!-- Modal: Pré-Seleção de Tipo de Serviço -->
+    <div
+      class="modal fade"
+      id="modalPreSelecaoServico"
+      tabindex="-1"
+      aria-labelledby="modalPreSelecaoServicoLabel"
+      aria-hidden="true"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal-content">
+          <div class="modal-header custom-modal-header">
+            <h5
+              class="modal-title d-flex align-items-center"
+              id="modalPreSelecaoServicoLabel"
+            >
+              <span class="material-symbols-outlined me-2">source_notes</span>
+              Origem do Novo Serviço
+            </h5>
+          </div>
+          <div class="modal-body">
+            <p>Como você deseja criar/registrar este serviço?</p>
+            <div class="d-grid gap-3">
+              <button
+                type="button"
+                id="btnServicoAvulso"
+                class="btn btn-lg btn-outline-primary d-flex align-items-center justify-content-center"
+              >
+                <span class="material-symbols-outlined me-2">post_add</span>
+                Serviço Avulso (Manual)
+              </button>
+              <button
+                type="button"
+                id="btnServicoAPartirDeInspecao"
+                class="btn btn-lg btn-outline-info d-flex align-items-center justify-content-center"
+              >
+                <span class="material-symbols-outlined me-2">link</span>
+                A Partir de Inspeção(ões) Existente(s)
+              </button>
+            </div>
+          </div>
+          <div class="modal-footer custom-modal-footer">
+            <button
+              type="button"
+              id="btnCancelarPreSelecao"
+              class="btn btn-app-clear btn-sm"
+              data-bs-dismiss="modal"
+            >
+              Cancelar Registro
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Selecionar Inspeção -->
+    <div
+      class="modal fade"
+      id="modalSelecionarInspecao"
+      tabindex="-1"
+      aria-labelledby="modalSelecionarInspecaoLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content custom-modal-content">
+          <div class="modal-header custom-modal-header">
+            <h5
+              class="modal-title d-flex align-items-center"
+              id="modalSelecionarInspecaoLabel"
+            >
+              <span class="material-symbols-outlined me-2">fact_check</span>
+              Selecionar Inspeção(ões) para Vincular ao Serviço
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-2 mb-3 align-items-end">
+              <div class="col-md-4">
+                <label
+                  for="filtroInspecaoSubestacaoParaServico"
+                  class="form-label form-label-sm"
+                  >Subestação:</label
+                >
+                <select
+                  id="filtroInspecaoSubestacaoParaServico"
+                  name="subestacao_id_filtro_inspecao"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label
+                  for="filtroInspecaoStatusParaServico"
+                  class="form-label form-label-sm"
+                  >Status Inspeção:</label
+                >
+                <select
+                  id="filtroInspecaoStatusParaServico"
+                  name="status_inspecao_filtro"
+                  class="form-select form-select-sm"
+                >
+                  <option value="">Todos</option>
+                  <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                  <option value="CONCLUIDA" selected>CONCLUÍDA</option>
+                  <option value="PENDENTE_REVISAO">PENDENTE REVISÃO</option>
+                  <option value="CANCELADA">CANCELADA</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label
+                  for="filtroInspecaoFormularioParaServico"
+                  class="form-label form-label-sm"
+                  >Nº Inspeção:</label
+                >
+                <input
+                  type="text"
+                  id="filtroInspecaoFormularioParaServico"
+                  name="form_num_filtro_inspecao"
+                  class="form-control form-control-sm"
+                  placeholder="Buscar por Nº..."
+                />
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                <button
+                  type="button"
+                  id="btnFiltrarInspecoesParaServico"
+                  class="btn btn-primary btn-sm w-100"
+                >
+                  <span class="material-symbols-outlined">search</span> Buscar
+                </button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover table-sm custom-table">
+                <thead>
+                  <tr>
+                    <th class="text-center col-selecao-checkbox">
+                      <input
+                        type="checkbox"
+                        id="selecionarTodasInspecoesCheckbox"
+                        class="form-check-input"
+                        title="Selecionar todas/nenhuma"
+                      />
+                    </th>
+                    <th class="text-center">Nº Insp.</th>
+                    <th>Subestação</th>
+                    <th class="text-center">Data</th>
+                    <th>Responsável</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Itens Anormais</th>
+                  </tr>
+                </thead>
+                <tbody id="corpoTabelaSelecaoInspecoes"></tbody>
+              </table>
+            </div>
+            <div
+              id="nenhumaInspecaoParaSelecaoMsg"
+              class="alert alert-light border mt-3 d-none"
+              role="alert"
+            >
+              Nenhuma inspeção encontrada com os filtros aplicados.
+            </div>
+          </div>
+          <div class="modal-footer custom-modal-footer">
+            <button
+              type="button"
+              class="btn btn-app-clear btn-sm"
+              data-bs-dismiss="modal"
+            >
+              Cancelar Seleção
+            </button>
+            <button
+              type="button"
+              id="btnConfirmarSelecaoInspecoes"
+              class="btn btn-success btn-sm"
+            >
+              <span class="material-symbols-outlined">check_circle</span>
+              Confirmar Inspeções Selecionadas
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/subestacoes/registrar-servico-subestacao.js"></script>
+  </body>
+</html>
