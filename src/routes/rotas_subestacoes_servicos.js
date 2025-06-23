@@ -7,10 +7,9 @@ const {
   upload,
   projectRootDir,
   uploadsSubestacoesDir,
-} = require("../init"); // Ajuste o caminho conforme necessário
-const { autenticar, registrarAuditoria } = require("../auth"); // Ajuste o caminho conforme necessário
+} = require("../init");
+const { autenticar, registrarAuditoria } = require("../auth");
 
-// Middlewares de Permissão (Idealmente, centralizar no futuro)
 const podeGerenciarPaginaServicos = (req, res, next) => {
   const cargosPermitidos = [
     "ADMIN",
@@ -25,7 +24,9 @@ const podeGerenciarPaginaServicos = (req, res, next) => {
   if (req.user && cargosPermitidos.includes(req.user.cargo)) {
     next();
   } else {
-    res.status(403).json({ message: "Acesso negado." });
+    res
+      .status(403)
+      .json({ message: "Acesso negado para gerenciar página de serviços." });
   }
 };
 
@@ -41,11 +42,10 @@ const podeModificarServicos = (req, res, next) => {
   if (req.user && cargosPermitidos.includes(req.user.cargo)) {
     next();
   } else {
-    res.status(403).json({ message: "Acesso negado." });
+    res.status(403).json({ message: "Acesso negado para modificar serviços." });
   }
 };
 
-// Função de Verificação (Idealmente, centralizar no futuro)
 async function verificarServicoExiste(req, res, next) {
   const { servicoId } = req.params;
   if (isNaN(parseInt(servicoId, 10))) {
@@ -55,7 +55,7 @@ async function verificarServicoExiste(req, res, next) {
   }
   try {
     const [servicoRows] = await promisePool.query(
-      "SELECT id, status, data_conclusao, observacoes_conclusao, processo FROM servicos_subestacoes WHERE id = ?",
+      "SELECT id, status, data_conclusao, observacoes_conclusao, processo, encarregado_designado_id FROM servicos_subestacoes WHERE id = ?",
       [servicoId]
     );
     if (servicoRows.length === 0) {
@@ -66,12 +66,11 @@ async function verificarServicoExiste(req, res, next) {
     req.servico = servicoRows[0];
     next();
   } catch (error) {
-    console.error("Erro ao verificar serviço:", error);
+    console.error("Erro ao verificar existência do serviço:", error);
     res.status(500).json({ message: "Erro interno ao verificar serviço." });
   }
 }
 
-// Rota para Página HTML de Serviços
 router.get(
   "/pagina-servicos-subestacoes",
   autenticar,
@@ -86,7 +85,34 @@ router.get(
   }
 );
 
-// Rotas API Auxiliares para Serviços
+router.get(
+  "/registrar-servico-subestacao",
+  autenticar,
+  podeModificarServicos,
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRootDir,
+        "public/pages/subestacoes/registrar-servico-subestacao.html"
+      )
+    );
+  }
+);
+
+router.get(
+  "/servicos/:servicoId/detalhes-pagina",
+  autenticar,
+  podeGerenciarPaginaServicos,
+  async (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRootDir,
+        "public/pages/subestacoes/servico-detalhes-pagina.html"
+      )
+    );
+  }
+);
+
 router.get(
   "/usuarios-responsaveis-para-servicos",
   autenticar,
@@ -105,10 +131,10 @@ router.get(
       const [rows] = await promisePool.query(query, cargosRelevantes);
       res.json(rows);
     } catch (error) {
-      console.error("Erro ao buscar usuários responsáveis:", error);
+      console.error("Erro ao buscar usuários responsáveis (API):", error);
       res
         .status(500)
-        .json({ message: "Erro interno ao buscar usuários responsáveis." });
+        .json({ message: "Erro ao buscar usuários responsáveis." });
     }
   }
 );
@@ -120,12 +146,28 @@ router.get("/usuarios-encarregados", autenticar, async (req, res) => {
     );
     res.json(rows);
   } catch (error) {
-    console.error("Erro ao buscar encarregados:", error);
-    res.status(500).json({ message: "Erro interno ao buscar encarregados." });
+    console.error("Erro ao buscar encarregados (API):", error);
+    res.status(500).json({ message: "Erro ao buscar encarregados." });
   }
 });
 
-// Rotas API para Serviços de Subestações (CRUD)
+router.get("/api/catalogo-defeitos-servicos", autenticar, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT id, codigo, ponto_defeito, descricao, categoria_principal FROM catalogo_defeitos_servicos ORDER BY codigo ASC"
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("Erro ao buscar catálogo de defeitos (API):", error);
+    res
+      .status(500)
+      .json({
+        message: "Erro ao buscar catálogo de defeitos.",
+        detalhes: error.message,
+      });
+  }
+});
+
 router.post(
   "/api/servicos-subestacoes",
   autenticar,
@@ -146,6 +188,8 @@ router.post(
       data_conclusao,
       observacoes_conclusao,
       encarregado_designado_id,
+      inspecao_ids_vinculadas,
+      mapeamento_defeitos,
     } = req.body;
     const arquivos = req.files;
 
@@ -159,26 +203,60 @@ router.post(
       !responsavel_id
     ) {
       if (arquivos && arquivos.length > 0) {
-        for (const file of arquivos) {
-          try {
-            await fs.unlink(file.path);
-          } catch (e) {}
-        }
+        arquivos.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       }
       return res.status(400).json({ message: "Campos obrigatórios faltando." });
     }
-
     if (status === "CONCLUIDO" && !data_conclusao) {
       if (arquivos && arquivos.length > 0) {
-        for (const file of arquivos) {
-          try {
-            await fs.unlink(file.path);
-          } catch (e) {}
-        }
+        arquivos.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       }
-      return res.status(400).json({
-        message: "Data de conclusão é obrigatória para serviços concluídos.",
-      });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Data de conclusão obrigatória para serviços com status CONCLUÍDO.",
+        });
+    }
+
+    let parsedInspecaoIds = [];
+    if (inspecao_ids_vinculadas) {
+      try {
+        parsedInspecaoIds = JSON.parse(inspecao_ids_vinculadas);
+        if (
+          !Array.isArray(parsedInspecaoIds) ||
+          !parsedInspecaoIds.every((id) => Number.isInteger(Number(id)))
+        ) {
+          throw new Error("Formato inválido para IDs de inspeção vinculadas.");
+        }
+      } catch (e) {
+        return res
+          .status(400)
+          .json({
+            message: "Erro ao processar IDs de inspeção vinculadas.",
+            detalhes: e.message,
+          });
+      }
+    }
+    let parsedMapeamentoDefeitos = [];
+    if (mapeamento_defeitos) {
+      try {
+        parsedMapeamentoDefeitos = JSON.parse(mapeamento_defeitos);
+        if (!Array.isArray(parsedMapeamentoDefeitos)) {
+          throw new Error("Formato inválido para mapeamento_defeitos.");
+        }
+      } catch (e) {
+        return res
+          .status(400)
+          .json({
+            message: "Erro ao processar mapeamento de defeitos.",
+            detalhes: e.message,
+          });
+      }
     }
 
     const connection = await promisePool.getConnection();
@@ -197,7 +275,9 @@ router.post(
       const observacoesConclusaoFinal =
         status === "CONCLUIDO" ? observacoes_conclusao : null;
       const encarregadoIdFinal =
-        encarregado_designado_id && !isNaN(parseInt(encarregado_designado_id))
+        encarregado_designado_id &&
+        encarregado_designado_id !== "" &&
+        !isNaN(parseInt(encarregado_designado_id))
           ? parseInt(encarregado_designado_id)
           : null;
 
@@ -221,6 +301,29 @@ router.post(
       );
       novoServicoId = resultServico.insertId;
 
+      if (parsedInspecaoIds.length > 0) {
+        const vinculosValues = parsedInspecaoIds.map((inspecaoId) => [
+          novoServicoId,
+          parseInt(inspecaoId),
+        ]);
+        await connection.query(
+          "INSERT INTO servicos_inspecoes_vinculadas (servico_id, inspecao_id) VALUES ?",
+          [vinculosValues]
+        );
+      }
+      if (parsedMapeamentoDefeitos.length > 0) {
+        const defeitosValues = parsedMapeamentoDefeitos.map((defeito) => [
+          novoServicoId,
+          parseInt(defeito.inspecao_item_id),
+          parseInt(defeito.catalogo_defeito_id),
+          defeito.observacao_especifica_servico || null,
+        ]);
+        await connection.query(
+          "INSERT INTO servico_item_inspecao_defeito (servico_id, inspecao_item_id, catalogo_defeito_id, observacao_especifica_servico) VALUES ?",
+          [defeitosValues]
+        );
+      }
+
       let anexosSalvosInfo = [];
       if (arquivos && arquivos.length > 0) {
         const servicoUploadDir = path.join(
@@ -229,7 +332,6 @@ router.post(
           `servico_${String(novoServicoId)}`
         );
         await fs.mkdir(servicoUploadDir, { recursive: true });
-
         for (const file of arquivos) {
           const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
             /[^a-zA-Z0-9.\-_]/g,
@@ -238,10 +340,8 @@ router.post(
           const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
           await fs.rename(file.path, caminhoDestino);
           arquivosMovidosComSucesso.push(caminhoDestino);
-
           const caminhoRelativoServidor = `servicos/servico_${novoServicoId}/${nomeUnicoArquivo}`;
           let categoriaAnexoFinal = "DOCUMENTO_REGISTRO";
-
           const [resultAnexo] = await connection.query(
             `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
             [
@@ -266,15 +366,17 @@ router.post(
         await registrarAuditoria(
           req.user.matricula,
           "CREATE_SERVICO_SUBESTACAO",
-          `Serviço de Subestação ID ${novoServicoId} criado. Processo: ${processo}`,
+          `Serviço ID ${novoServicoId} (Proc: ${processo}) criado. Insp: ${parsedInspecaoIds.length}, Defs: ${parsedMapeamentoDefeitos.length}`,
           connection
         );
       }
-      res.status(201).json({
-        id: novoServicoId,
-        message: "Serviço de subestação registrado com sucesso!",
-        anexos: anexosSalvosInfo,
-      });
+      res
+        .status(201)
+        .json({
+          id: novoServicoId,
+          message: "Serviço de subestação registrado com sucesso!",
+          anexos: anexosSalvosInfo,
+        });
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao criar serviço de subestação:", error);
@@ -296,20 +398,12 @@ router.post(
           }
         }
       }
-      if (
-        error.code === "ER_DUP_ENTRY" &&
-        error.sqlMessage &&
-        error.sqlMessage.includes("processo")
-      ) {
-        return res.status(409).json({
-          message:
-            "Erro ao criar serviço: Número de Processo/OS já cadastrado.",
+      res
+        .status(500)
+        .json({
+          message: "Erro interno ao criar serviço de subestação.",
+          detalhes: error.message,
         });
-      }
-      res.status(500).json({
-        message: "Erro interno ao criar serviço de subestação.",
-        detalhes: error.message,
-      });
     } finally {
       if (connection) connection.release();
     }
@@ -323,12 +417,8 @@ router.put(
   upload.array("anexosServico", 5),
   async (req, res) => {
     const { servicoId } = req.params;
-    if (isNaN(parseInt(servicoId, 10))) {
-      return res
-        .status(400)
-        .json({ message: `ID do serviço inválido: ${servicoId}` });
-    }
-
+    if (isNaN(parseInt(servicoId)))
+      return res.status(400).json({ message: `ID inválido: ${servicoId}` });
     const {
       subestacao_id,
       processo,
@@ -343,6 +433,8 @@ router.put(
       data_conclusao,
       observacoes_conclusao,
       encarregado_designado_id,
+      inspecao_ids_vinculadas,
+      mapeamento_defeitos,
     } = req.body;
     const arquivosNovos = req.files;
 
@@ -356,31 +448,57 @@ router.put(
       !responsavel_id
     ) {
       if (arquivosNovos && arquivosNovos.length > 0) {
-        for (const file of arquivosNovos) {
-          try {
-            await fs.unlink(file.path);
-          } catch (e) {}
-        }
+        arquivosNovos.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       }
       return res.status(400).json({ message: "Campos obrigatórios faltando." });
     }
-
     if (status === "CONCLUIDO" && !data_conclusao) {
       if (arquivosNovos && arquivosNovos.length > 0) {
-        for (const file of arquivosNovos) {
-          try {
-            await fs.unlink(file.path);
-          } catch (e) {}
-        }
+        arquivosNovos.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       }
-      return res.status(400).json({
-        message: "Data de conclusão é obrigatória para serviços concluídos.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Data de conclusão obrigatória para CONCLUÍDO." });
     }
+
+    let parsedInspecaoIds = [],
+      parsedMapeamentoDefeitos = [];
+    if (inspecao_ids_vinculadas)
+      try {
+        parsedInspecaoIds = JSON.parse(inspecao_ids_vinculadas);
+        if (
+          !Array.isArray(parsedInspecaoIds) ||
+          !parsedInspecaoIds.every((id) => Number.isInteger(Number(id)))
+        )
+          throw new Error("Formato inválido IDs inspeção");
+      } catch (e) {
+        return res
+          .status(400)
+          .json({
+            message: "Erro ao processar IDs de inspeção.",
+            detalhes: e.message,
+          });
+      }
+    if (mapeamento_defeitos)
+      try {
+        parsedMapeamentoDefeitos = JSON.parse(mapeamento_defeitos);
+        if (!Array.isArray(parsedMapeamentoDefeitos))
+          throw new Error("Formato inválido mapeamento defeitos");
+      } catch (e) {
+        return res
+          .status(400)
+          .json({
+            message: "Erro ao processar mapeamento de defeitos.",
+            detalhes: e.message,
+          });
+      }
 
     const connection = await promisePool.getConnection();
     let arquivosMovidosComSucesso = [];
-
     try {
       await connection.beginTransaction();
       const equipamentoIdFinal =
@@ -393,12 +511,14 @@ router.put(
       const observacoesConclusaoFinal =
         status === "CONCLUIDO" ? observacoes_conclusao : null;
       const encarregadoIdFinal =
-        encarregado_designado_id && !isNaN(parseInt(encarregado_designado_id))
+        encarregado_designado_id &&
+        encarregado_designado_id !== "" &&
+        !isNaN(parseInt(encarregado_designado_id))
           ? parseInt(encarregado_designado_id)
           : null;
 
-      const [updateResult] = await connection.query(
-        `UPDATE servicos_subestacoes SET subestacao_id = ?, processo = ?, motivo = ?, alimentador = ?, equipamento_id = ?, data_prevista = ?, horario_inicio = ?, horario_fim = ?, responsavel_id = ?, status = ?, data_conclusao = ?, observacoes_conclusao = ?, encarregado_designado_id = ? WHERE id = ?`,
+      await connection.query(
+        `UPDATE servicos_subestacoes SET subestacao_id=?,processo=?,motivo=?,alimentador=?,equipamento_id=?,data_prevista=?,horario_inicio=?,horario_fim=?,responsavel_id=?,status=?,data_conclusao=?,observacoes_conclusao=?,encarregado_designado_id=? WHERE id=?`,
         [
           parseInt(subestacao_id),
           processo,
@@ -416,7 +536,38 @@ router.put(
           servicoId,
         ]
       );
-      // Não é necessário lançar erro se affectedRows for 0, pois pode não haver alteração de dados.
+
+      await connection.query(
+        "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
+        [servicoId]
+      );
+      await connection.query(
+        "DELETE FROM servico_item_inspecao_defeito WHERE servico_id = ?",
+        [servicoId]
+      );
+
+      if (parsedInspecaoIds.length > 0) {
+        const vinculosValues = parsedInspecaoIds.map((inspecaoId) => [
+          servicoId,
+          parseInt(inspecaoId),
+        ]);
+        await connection.query(
+          "INSERT INTO servicos_inspecoes_vinculadas (servico_id, inspecao_id) VALUES ?",
+          [vinculosValues]
+        );
+      }
+      if (parsedMapeamentoDefeitos.length > 0) {
+        const defeitosValues = parsedMapeamentoDefeitos.map((defeito) => [
+          servicoId,
+          parseInt(defeito.inspecao_item_id),
+          parseInt(defeito.catalogo_defeito_id),
+          defeito.observacao_especifica_servico || null,
+        ]);
+        await connection.query(
+          "INSERT INTO servico_item_inspecao_defeito (servico_id, inspecao_item_id, catalogo_defeito_id, observacao_especifica_servico) VALUES ?",
+          [defeitosValues]
+        );
+      }
 
       let anexosSalvosInfo = [];
       if (arquivosNovos && arquivosNovos.length > 0) {
@@ -426,7 +577,6 @@ router.put(
           `servico_${String(servicoId)}`
         );
         await fs.mkdir(servicoUploadDir, { recursive: true });
-
         for (const file of arquivosNovos) {
           const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
             /[^a-zA-Z0-9.\-_]/g,
@@ -435,19 +585,16 @@ router.put(
           const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
           await fs.rename(file.path, caminhoDestino);
           arquivosMovidosComSucesso.push(caminhoDestino);
-
           const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
-          const categoriaAnexoFinal = "DOCUMENTO_REGISTRO";
-
           const [resultAnexo] = await connection.query(
-            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO servicos_subestacoes_anexos (id_servico,nome_original,caminho_servidor,tipo_mime,tamanho,categoria_anexo) VALUES (?,?,?,?,?,?)`,
             [
               servicoId,
               file.originalname,
               `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
               file.mimetype,
               file.size,
-              categoriaAnexoFinal,
+              "DOCUMENTO_REGISTRO",
             ]
           );
           anexosSalvosInfo.push({
@@ -457,16 +604,14 @@ router.put(
           });
         }
       }
-
       await connection.commit();
-      if (req.user && req.user.matricula) {
+      if (req.user && req.user.matricula)
         await registrarAuditoria(
           req.user.matricula,
           "UPDATE_SERVICO_SUBESTACAO",
-          `Serviço de Subestação ID ${servicoId} atualizado. Processo: ${processo}`,
+          `Serviço ID ${servicoId} (Proc: ${processo}) atualizado.`,
           connection
         );
-      }
       res.json({
         id: servicoId,
         message: "Serviço de subestação atualizado com sucesso!",
@@ -481,32 +626,24 @@ router.put(
         } catch (e) {}
       }
       if (arquivosNovos && arquivosNovos.length > 0) {
-        for (const file of arquivosNovos) {
+        arquivosNovos.forEach((f) => {
           if (
-            file.path &&
-            (file.path.includes("temp") || file.path.includes("upload_"))
+            f.path &&
+            (f.path.includes("temp") || f.path.includes("upload_"))
           ) {
             try {
-              await fs.access(file.path);
-              await fs.unlink(file.path);
+              fs.accessSync(f.path);
+              fs.unlinkSync(f.path);
             } catch (e) {}
           }
-        }
-      }
-      if (
-        error.code === "ER_DUP_ENTRY" &&
-        error.sqlMessage &&
-        error.sqlMessage.includes("processo")
-      ) {
-        return res.status(409).json({
-          message:
-            "Erro ao atualizar serviço: Número de Processo/OS já cadastrado para outro serviço.",
         });
       }
-      res.status(500).json({
-        message: "Erro interno ao atualizar serviço de subestação.",
-        detalhes: error.message,
-      });
+      res
+        .status(500)
+        .json({
+          message: "Erro interno ao atualizar serviço de subestação.",
+          detalhes: error.message,
+        });
     } finally {
       if (connection) connection.release();
     }
@@ -519,16 +656,19 @@ router.delete(
   podeModificarServicos,
   async (req, res) => {
     const { servicoId } = req.params;
-    if (isNaN(parseInt(servicoId, 10))) {
-      return res
-        .status(400)
-        .json({ message: `ID do serviço inválido: ${servicoId}` });
-    }
-
+    if (isNaN(parseInt(servicoId)))
+      return res.status(400).json({ message: `ID inválido: ${servicoId}` });
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
-
+      await connection.query(
+        "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
+        [servicoId]
+      );
+      await connection.query(
+        "DELETE FROM servico_item_inspecao_defeito WHERE servico_id = ?",
+        [servicoId]
+      );
       const [anexos] = await connection.query(
         "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id_servico = ?",
         [servicoId]
@@ -541,12 +681,11 @@ router.delete(
         "DELETE FROM servicos_subestacoes WHERE id = ?",
         [servicoId]
       );
-
       if (result.affectedRows === 0) {
         await connection.rollback();
         return res
           .status(404)
-          .json({ message: `Serviço com ID ${servicoId} não encontrado.` });
+          .json({ message: `Serviço ${servicoId} não encontrado.` });
       }
 
       if (anexos.length > 0) {
@@ -568,43 +707,41 @@ router.delete(
             await fs.access(caminhoCompleto);
             await fs.unlink(caminhoCompleto);
           } catch (err) {
-            if (err.code !== "ENOENT") {
+            if (err.code !== "ENOENT")
               console.warn(
                 `Falha ao excluir anexo ${caminhoCompleto} do serviço ${servicoId}: ${err.message}`
               );
-            }
           }
         }
         try {
           await fs.rm(servicoUploadDir, { recursive: true, force: true });
         } catch (err) {
-          if (err.code !== "ENOENT") {
+          if (err.code !== "ENOENT")
             console.warn(
               `Falha ao remover diretório de anexos do serviço ${servicoId} (${servicoUploadDir}): ${err.message}`
             );
-          }
         }
       }
-
       await connection.commit();
-      if (req.user && req.user.matricula) {
+      if (req.user && req.user.matricula)
         await registrarAuditoria(
           req.user.matricula,
           "DELETE_SERVICO_SUBESTACAO",
-          `Serviço de Subestação ID ${servicoId} e seus anexos foram excluídos.`,
+          `Serviço ID ${servicoId} e dados associados foram excluídos.`,
           connection
         );
-      }
       res.json({
-        message: `Serviço ID ${servicoId} e seus anexos foram excluídos com sucesso.`,
+        message: `Serviço ID ${servicoId} e seus dados associados foram excluídos com sucesso.`,
       });
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao excluir serviço de subestação:", error);
-      res.status(500).json({
-        message: "Erro interno ao excluir serviço de subestação.",
-        detalhes: error.message,
-      });
+      res
+        .status(500)
+        .json({
+          message: "Erro interno ao excluir serviço de subestação.",
+          detalhes: error.message,
+        });
     } finally {
       if (connection) connection.release();
     }
@@ -617,9 +754,24 @@ router.get(
   podeGerenciarPaginaServicos,
   async (req, res) => {
     try {
-      let query = ` SELECT ss.id, ss.processo, ss.motivo, ss.alimentador, DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, ss.horario_inicio, ss.horario_fim, ss.status, DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome, e.tag as equipamento_tag, ss.subestacao_id, ss.responsavel_id, ss.equipamento_id, ud.nome as encarregado_designado_nome, ss.encarregado_designado_id FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE 1=1 `;
-      const params = [];
+      let query = `
+        SELECT 
+          ss.id, ss.processo, ss.motivo, ss.alimentador, 
+          DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, 
+          ss.horario_inicio, ss.horario_fim, ss.status, 
+          DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, 
+          s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
+          u.nome as responsavel_nome, e.tag as equipamento_tag, 
+          ss.subestacao_id, ss.responsavel_id, ss.equipamento_id, 
+          ud.nome as encarregado_designado_nome, ss.encarregado_designado_id 
+        FROM servicos_subestacoes ss 
+        JOIN subestacoes s ON ss.subestacao_id = s.Id 
+        JOIN users u ON ss.responsavel_id = u.id 
+        LEFT JOIN infra_equip e ON ss.equipamento_id = e.id 
+        LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id 
+        WHERE 1=1`;
 
+      const params = [];
       if (req.query.subestacao_id) {
         query += " AND ss.subestacao_id = ?";
         params.push(req.query.subestacao_id);
@@ -640,16 +792,25 @@ router.get(
         query += " AND ss.data_prevista <= ?";
         params.push(req.query.data_prevista_ate);
       }
-      query += " ORDER BY ss.data_prevista DESC, ss.id DESC";
 
+      const cargosComVisaoTotal = ["ADMIN", "Gerente", "Engenheiro", "ADM"]; // Exemplo de cargos que podem ver tudo, ajuste conforme necessário
+      if (
+        req.user &&
+        req.user.cargo === "Encarregado" &&
+        !cargosComVisaoTotal.includes(req.user.cargo)
+      ) {
+        query += " AND ss.encarregado_designado_id = ?";
+        params.push(req.user.id);
+      }
+
+      query += " ORDER BY ss.data_prevista DESC, ss.id DESC";
       const [rows] = await promisePool.query(query, params);
       res.json(rows);
-    } catch (error) {
-      console.error("Erro ao listar serviços de subestação:", error);
-      res.status(500).json({
-        message: "Erro interno ao listar serviços de subestação.",
-        detalhes: error.message,
-      });
+    } catch (err) {
+      console.error("Erro ao listar serviços (API):", err);
+      res
+        .status(500)
+        .json({ message: "Erro ao listar serviços.", detalhes: err.message });
     }
   }
 );
@@ -660,35 +821,79 @@ router.get(
   podeGerenciarPaginaServicos,
   async (req, res) => {
     const { servicoId } = req.params;
-    if (isNaN(parseInt(servicoId, 10))) {
-      return res
-        .status(400)
-        .json({ message: `ID do serviço inválido: ${servicoId}` });
-    }
+    if (isNaN(parseInt(servicoId)))
+      return res.status(400).json({ message: `ID inválido: ${servicoId}` });
     try {
       const [servicoRows] = await promisePool.query(
-        `SELECT ss.id, ss.processo, ss.motivo, ss.alimentador, DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, ss.horario_inicio, ss.horario_fim, ss.status, DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, ss.observacoes_conclusao, s.Id as subestacao_id, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.id as responsavel_id, u.nome as responsavel_nome, e.id as equipamento_id, e.tag as equipamento_tag, ss.encarregado_designado_id, ud.nome as encarregado_designado_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE ss.id = ?`,
+        `SELECT ss.id,ss.processo,ss.motivo,ss.alimentador,DATE_FORMAT(ss.data_prevista,'%Y-%m-%d') as data_prevista,ss.horario_inicio,ss.horario_fim,ss.status,DATE_FORMAT(ss.data_conclusao,'%Y-%m-%d') as data_conclusao,ss.observacoes_conclusao,s.Id as subestacao_id,s.sigla as subestacao_sigla,s.nome as subestacao_nome,u.id as responsavel_id,u.nome as responsavel_nome,e.id as equipamento_id,e.tag as equipamento_tag,ss.encarregado_designado_id,ud.nome as encarregado_designado_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE ss.id = ?`,
         [servicoId]
       );
-
-      if (servicoRows.length === 0) {
+      if (servicoRows.length === 0)
         return res
           .status(404)
-          .json({ message: `Serviço com ID ${servicoId} não encontrado.` });
-      }
+          .json({ message: `Serviço ${servicoId} não encontrado.` });
       const servico = servicoRows[0];
+
+      const cargosComVisaoTotal = [
+        "ADMIN",
+        "Gerente",
+        "Engenheiro",
+        "ADM",
+        "Inspetor",
+        "Técnico",
+      ];
+      if (
+        req.user &&
+        req.user.cargo === "Encarregado" &&
+        servico.encarregado_designado_id !== req.user.id &&
+        !cargosComVisaoTotal.includes(req.user.cargo)
+      ) {
+        return res
+          .status(403)
+          .json({
+            message:
+              "Acesso negado. Este serviço não está designado a você ou você não tem permissão para visualizá-lo.",
+          });
+      }
+
       const [anexosRows] = await promisePool.query(
-        `SELECT id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo FROM servicos_subestacoes_anexos WHERE id_servico = ?`,
+        `SELECT id,nome_original,caminho_servidor,tipo_mime,tamanho,categoria_anexo FROM servicos_subestacoes_anexos WHERE id_servico = ? ORDER BY id DESC`,
         [servicoId]
       );
       servico.anexos = anexosRows;
+
+      const [inspecoesVinculadasRows] = await promisePool.query(
+        `SELECT i.id as inspecao_id,i.formulario_inspecao_num,DATE_FORMAT(i.data_avaliacao,'%d/%m/%Y') as data_avaliacao_fmt, s.sigla as subestacao_sigla FROM servicos_inspecoes_vinculadas siv JOIN inspecoes_subestacoes i ON siv.inspecao_id = i.id JOIN subestacoes s ON i.subestacao_id = s.Id WHERE siv.servico_id = ? ORDER BY i.data_avaliacao DESC, i.id DESC`,
+        [servicoId]
+      );
+      servico.inspecoes_vinculadas = [];
+
+      for (const inspV of inspecoesVinculadasRows) {
+        const [anexosItensInsp] = await promisePool.query(
+          `SELECT isa.caminho_servidor, isa.nome_original, isa.item_num_associado 
+               FROM inspecoes_subestacoes_anexos isa 
+               WHERE isa.inspecao_id = ? AND isa.categoria_anexo = 'FOTO_EVIDENCIA_ITEM' 
+               ORDER BY isa.id ASC`,
+          [inspV.inspecao_id]
+        );
+        inspV.anexos_itens_inspecao = anexosItensInsp;
+        servico.inspecoes_vinculadas.push(inspV);
+      }
+
+      const [mapeamentoDefeitosRows] = await promisePool.query(
+        `SELECT siid.inspecao_item_id,siid.catalogo_defeito_id,siid.observacao_especifica_servico,cd.codigo as defeito_codigo,cd.descricao as defeito_descricao,isi.item_num as inspecao_item_num,isi.descricao_item_original as inspecao_item_descricao, ins.id as inspecao_id, ins.formulario_inspecao_num as inspecao_formulario_num FROM servico_item_inspecao_defeito siid JOIN catalogo_defeitos_servicos cd ON siid.catalogo_defeito_id = cd.id JOIN inspecoes_subestacoes_itens isi ON siid.inspecao_item_id = isi.id JOIN inspecoes_subestacoes ins ON isi.inspecao_id = ins.id WHERE siid.servico_id = ? ORDER BY ins.data_avaliacao DESC, ins.id DESC, isi.item_num ASC`,
+        [servicoId]
+      );
+      servico.mapeamento_defeitos_existentes = mapeamentoDefeitosRows;
       res.json(servico);
-    } catch (error) {
-      console.error("Erro ao buscar detalhes do serviço:", error);
-      res.status(500).json({
-        message: "Erro interno ao buscar detalhes do serviço.",
-        detalhes: error.message,
-      });
+    } catch (err) {
+      console.error("Erro ao buscar detalhes do serviço (API):", err);
+      res
+        .status(500)
+        .json({
+          message: "Erro ao buscar detalhes do serviço.",
+          detalhes: err.message,
+        });
     }
   }
 );
@@ -711,24 +916,21 @@ router.put(
 
     if (servico.status === "CONCLUIDO" || servico.status === "CANCELADO") {
       if (arquivosConclusao && arquivosConclusao.length > 0) {
-        for (const file of arquivosConclusao) {
-          try {
-            await fs.unlink(file.path);
-          } catch (e) {}
-        }
+        arquivosConclusao.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       }
-      return res.status(400).json({
-        message: `Serviço (Processo: ${servico.processo}) já está no status ${servico.status}.`,
-      });
+      return res
+        .status(400)
+        .json({
+          message: `Serviço (Processo: ${servico.processo}) já está no status ${servico.status}.`,
+        });
     }
-
     if (!data_conclusao_manual) {
       if (arquivosConclusao && arquivosConclusao.length > 0) {
-        for (const file of arquivosConclusao) {
-          try {
-            await fs.unlink(file.path);
-          } catch (e) {}
-        }
+        arquivosConclusao.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       }
       return res
         .status(400)
@@ -743,21 +945,17 @@ router.put(
       let observacoesFinais =
         observacoes_conclusao_manual || servico.observacoes_conclusao || "";
       let horarioConclusaoFinal = hora_conclusao_manual || null;
-
-      if (!dataConclusaoFinal) {
+      if (!dataConclusaoFinal)
         dataConclusaoFinal = new Date().toISOString().split("T")[0];
-      }
 
       let updateQuery =
         "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = ?";
       const updateParams = [dataConclusaoFinal, observacoesFinais];
-
       if (horarioConclusaoFinal) {
         updateQuery += ", horario_fim = IFNULL(horario_fim, ?)";
         updateParams.push(horarioConclusaoFinal);
       } else {
-        const now = new Date();
-        const horaAtualFormatada = now.toLocaleTimeString("pt-BR", {
+        const horaAtualFormatada = new Date().toLocaleTimeString("pt-BR", {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
@@ -768,7 +966,6 @@ router.put(
       }
       updateQuery += " WHERE id = ?";
       updateParams.push(servicoId);
-
       await connection.query(updateQuery, updateParams);
 
       let anexosSalvosConclusaoInfo = [];
@@ -780,7 +977,6 @@ router.put(
           "conclusao"
         );
         await fs.mkdir(servicoUploadDirConclusao, { recursive: true });
-
         for (const file of arquivosConclusao) {
           const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
             /[^a-zA-Z0-9.\-_]/g,
@@ -792,10 +988,9 @@ router.put(
           );
           await fs.rename(file.path, caminhoDestino);
           arquivosMovidosComSucesso.push(caminhoDestino);
-
           const caminhoRelativoServidor = `servicos/servico_${servicoId}/conclusao/${nomeUnicoArquivo}`;
           const [resultAnexo] = await connection.query(
-            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?,?,?,?,?,?,?)`,
             [
               servicoId,
               file.originalname,
@@ -813,16 +1008,14 @@ router.put(
           });
         }
       }
-
       if (req.user && req.user.matricula) {
         await registrarAuditoria(
           req.user.matricula,
           "CONCLUDE_SERVICO_SUBESTACAO",
-          `Serviço de Subestação ID ${servicoId} (Processo: ${servico.processo}) marcado como CONCLUÍDO. Data: ${dataConclusaoFinal}. Anexos Conclusão: ${anexosSalvosConclusaoInfo.length}`,
+          `Serviço ID ${servicoId} (Proc: ${servico.processo}) CONCLUÍDO. Data: ${dataConclusaoFinal}. Anexos: ${anexosSalvosConclusaoInfo.length}`,
           connection
         );
       }
-
       await connection.commit();
       res.json({
         message: `Serviço (Processo: ${servico.processo}) concluído com sucesso!`,
@@ -832,27 +1025,29 @@ router.put(
       await connection.rollback();
       console.error("Erro ao concluir o serviço:", error);
       if (arquivosConclusao && arquivosConclusao.length > 0) {
-        for (const file of arquivosConclusao) {
+        arquivosConclusao.forEach((f) => {
           if (
-            file.path &&
-            (file.path.includes("temp") || file.path.includes("upload_"))
+            f.path &&
+            (f.path.includes("temp") || f.path.includes("upload_"))
           ) {
             try {
-              await fs.access(file.path);
-              await fs.unlink(file.path);
+              fs.accessSync(f.path);
+              fs.unlinkSync(f.path);
             } catch (e) {}
           }
-        }
+        });
       }
       for (const caminho of arquivosMovidosComSucesso) {
         try {
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      res.status(500).json({
-        message: "Erro interno ao concluir o serviço.",
-        detalhes: error.message,
-      });
+      res
+        .status(500)
+        .json({
+          message: "Erro interno ao concluir o serviço.",
+          detalhes: error.message,
+        });
     } finally {
       if (connection) connection.release();
     }
@@ -867,13 +1062,13 @@ router.put(
   async (req, res) => {
     const { servicoId } = req.params;
     const { servico } = req;
-
     if (servico.status !== "CONCLUIDO" && servico.status !== "CANCELADO") {
-      return res.status(400).json({
-        message: `Serviço (Processo: ${servico.processo}) no status ${servico.status} não pode ser reaberto.`,
-      });
+      return res
+        .status(400)
+        .json({
+          message: `Serviço (Processo: ${servico.processo}) no status ${servico.status} não pode ser reaberto.`,
+        });
     }
-
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
@@ -881,16 +1076,14 @@ router.put(
         "UPDATE servicos_subestacoes SET status = 'EM_ANDAMENTO', data_conclusao = NULL, observacoes_conclusao = NULL WHERE id = ?",
         [servicoId]
       );
-
       if (req.user && req.user.matricula) {
         await registrarAuditoria(
           req.user.matricula,
           "REOPEN_SERVICO_SUBESTACAO",
-          `Serviço de Subestação ID ${servicoId} (Processo: ${servico.processo}) reaberto.`,
+          `Serviço ID ${servicoId} (Proc: ${servico.processo}) reaberto.`,
           connection
         );
       }
-
       await connection.commit();
       res.json({
         message: `Serviço (Processo: ${servico.processo}) reaberto com sucesso! Novo status: EM ANDAMENTO.`,
@@ -898,10 +1091,12 @@ router.put(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao reabrir o serviço:", error);
-      res.status(500).json({
-        message: "Erro interno ao reabrir o serviço.",
-        detalhes: error.message,
-      });
+      res
+        .status(500)
+        .json({
+          message: "Erro interno ao reabrir o serviço.",
+          detalhes: error.message,
+        });
     } finally {
       if (connection) connection.release();
     }
@@ -917,20 +1112,19 @@ router.put(
     const { servicoId } = req.params;
     const { encarregado_designado_id } = req.body;
     const { servico } = req;
-
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
       const encarregadoFinalId =
-        encarregado_designado_id && !isNaN(parseInt(encarregado_designado_id))
+        encarregado_designado_id &&
+        encarregado_designado_id !== "" &&
+        !isNaN(parseInt(encarregado_designado_id))
           ? parseInt(encarregado_designado_id)
           : null;
-
       await connection.query(
         "UPDATE servicos_subestacoes SET encarregado_designado_id = ? WHERE id = ?",
         [encarregadoFinalId, servicoId]
       );
-
       if (req.user && req.user.matricula) {
         let nomeEncarregado = "Ninguém";
         if (encarregadoFinalId) {
@@ -956,7 +1150,6 @@ router.put(
           connection
         );
       }
-
       await connection.commit();
       const mensagem = encarregadoFinalId
         ? `Serviço (Processo: ${servico.processo}) designado com sucesso!`
@@ -965,10 +1158,12 @@ router.put(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao designar/desvincular encarregado:", error);
-      res.status(500).json({
-        message: "Erro interno ao designar/desvincular encarregado.",
-        detalhes: error.message,
-      });
+      res
+        .status(500)
+        .json({
+          message: "Erro interno ao designar/desvincular encarregado.",
+          detalhes: error.message,
+        });
     } finally {
       if (connection) connection.release();
     }
