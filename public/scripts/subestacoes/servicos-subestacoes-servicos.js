@@ -8,62 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const nenhumServicoMsg = document.getElementById("nenhumServico");
   const btnNovoServico = document.getElementById("btnNovoServico");
 
-  const modalServicoEl = document.getElementById("modalServico");
-  const modalServicoTitulo = document.getElementById("modalServicoTitulo");
-  const formServico = document.getElementById("formServico");
-  const servicoIdModalInput = document.getElementById("servicoIdModal");
-  const servicoSubestacaoModalSelect = document.getElementById(
-    "servicoSubestacaoModal"
-  );
-  const servicoProcessoModalInput = document.getElementById(
-    "servicoProcessoModal"
-  );
-  const servicoMotivoModalTextarea =
-    document.getElementById("servicoMotivoModal");
-  const servicoAlimentadorModalInput = document.getElementById(
-    "servicoAlimentadorModal"
-  );
-  const servicoEquipamentoModalSelect = document.getElementById(
-    "servicoEquipamentoModal"
-  );
-  const servicoDataPrevistaModalInput = document.getElementById(
-    "servicoDataPrevistaModal"
-  );
-  const servicoHorarioInicioModalInput = document.getElementById(
-    "servicoHorarioInicioModal"
-  );
-  const servicoHorarioFimModalInput = document.getElementById(
-    "servicoHorarioFimModal"
-  );
-  const servicoResponsavelModalSelect = document.getElementById(
-    "servicoResponsavelModal"
-  );
-  const servicoStatusModalSelect =
-    document.getElementById("servicoStatusModal");
-  const servicoEncarregadoDesignadoModalSelect = document.getElementById(
-    "servicoEncarregadoDesignadoModal"
-  );
-  const servicoAnexosInput = document.getElementById("servicoAnexosInput");
-  const listaNomesAnexosModal = document.getElementById(
-    "listaNomesAnexosModal"
-  );
-  const anexosExistentesContainer = document.getElementById(
-    "anexosExistentesContainer"
-  );
-  const listaAnexosExistentes = document.getElementById(
-    "listaAnexosExistentes"
-  );
-  const conclusaoFieldset = document.getElementById("conclusaoFieldset");
-  const servicoDataConclusaoModalInput = document.getElementById(
-    "servicoDataConclusaoModal"
-  );
-  const servicoObservacoesConclusaoModalTextarea = document.getElementById(
-    "servicoObservacoesConclusaoModal"
-  );
-  const btnSalvarServicoModal = document.getElementById(
-    "btnSalvarServicoModal"
-  );
-
   const modalConfirmacaoServicoEl = document.getElementById(
     "modalConfirmacaoServico"
   );
@@ -111,11 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnSalvarDesignacaoEncarregado"
   );
 
-  let bsModalServico = null;
   let bsModalConfirmacaoServico = null;
   let bsModalDesignarEncarregado = null;
 
-  if (modalServicoEl) bsModalServico = new bootstrap.Modal(modalServicoEl);
   if (modalConfirmacaoServicoEl)
     bsModalConfirmacaoServico = new bootstrap.Modal(modalConfirmacaoServicoEl);
   if (modalDesignarEncarregadoEl)
@@ -126,9 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let operacaoConfirmacaoServico = null;
   let idServicoParaAcao = null;
   let subestacoesCache = [];
-  let usuariosResponsaveisCache = [];
   let encarregadosCache = [];
-  let equipamentosCache = {};
 
   async function fetchData(url, options = {}) {
     try {
@@ -137,13 +77,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const errorData = await response
           .json()
           .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
+        console.error(
+          `[fetchData] Erro na resposta para ${url}:`,
+          response.status,
+          errorData
+        );
         throw new Error(
           errorData.message || `Erro HTTP: ${response.status} em ${url}`
         );
       }
-      if (response.status === 204) return null;
+      if (response.status === 204) {
+        return null;
+      }
       return await response.json();
     } catch (error) {
+      console.error(`[fetchData] Exceção ao buscar dados de ${url}:`, error);
       alert(`Erro ao comunicar com o servidor: ${error.message}`);
       throw error;
     }
@@ -161,214 +109,178 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function formatarHoraParaInput(horaISO) {
     if (!horaISO) return "";
-    if (typeof horaISO === "string" && horaISO.includes(":")) {
+    if (typeof horaISO === "string" && horaISO.includes(":"))
       return horaISO.substring(0, 5);
-    }
     return "";
   }
 
-  async function popularFiltroESelectSubestacoes() {
-    try {
-      const subestacoes = await fetchData("/subestacoes");
-      subestacoesCache = subestacoes;
-      const selects = [
-        filtroSubestacaoSelect,
-        servicoSubestacaoModalSelect,
-      ].filter(Boolean);
-      selects.forEach((select) => {
-        select.innerHTML =
-          select === filtroSubestacaoSelect
-            ? '<option value="">Todas</option>'
-            : '<option value="">Selecione...</option>';
-        subestacoes.forEach((sub) => {
-          const option = document.createElement("option");
-          option.value = sub.Id;
-          option.textContent = `${sub.sigla} - ${sub.nome}`;
-          select.appendChild(option);
-        });
-      });
-    } catch (error) {
-      console.error("Erro ao carregar subestações para filtros/modal:", error);
-    }
-  }
-
-  async function popularSelectEquipamentosModal(
-    subestacaoId,
-    equipamentoSelecionadoId = null
-  ) {
-    if (!servicoEquipamentoModalSelect) return;
-    servicoEquipamentoModalSelect.innerHTML =
-      '<option value="">Carregando...</option>';
-    servicoEquipamentoModalSelect.disabled = true;
-    if (!subestacaoId) {
-      servicoEquipamentoModalSelect.innerHTML =
-        '<option value="">Selecione subestação primeiro</option>';
-      servicoEquipamentoModalSelect.disabled = false;
+  async function popularFiltroSubestacoes() {
+    if (!filtroSubestacaoSelect) {
+      console.warn(
+        "[popularFiltroSubestacoes] Select de filtro de subestação não encontrado no DOM."
+      );
       return;
     }
     try {
-      if (!equipamentosCache[subestacaoId]) {
-        equipamentosCache[subestacaoId] = await fetchData(
-          `/subestacoes/${subestacaoId}/equipamentos`
-        );
-      }
-      const equipamentos = equipamentosCache[subestacaoId] || [];
-      servicoEquipamentoModalSelect.innerHTML =
-        '<option value="">Nenhum específico</option>';
-      equipamentos.forEach((eq) => {
-        const option = document.createElement("option");
-        option.value = eq.id;
-        option.textContent = `${eq.tag} (${
-          eq.description || eq.model || "Equipamento"
-        })`;
-        servicoEquipamentoModalSelect.appendChild(option);
-      });
-      servicoEquipamentoModalSelect.value = equipamentoSelecionadoId
-        ? String(equipamentoSelecionadoId)
-        : "";
+      subestacoesCache = (await fetchData("/subestacoes")) || [];
+      filtroSubestacaoSelect.innerHTML = '<option value="">Todas</option>';
+      subestacoesCache.forEach((sub) =>
+        filtroSubestacaoSelect.add(
+          new Option(`${sub.sigla} - ${sub.nome}`, sub.Id)
+        )
+      );
     } catch (error) {
-      console.error("Erro ao carregar equipamentos para modal:", error);
-      servicoEquipamentoModalSelect.innerHTML =
-        '<option value="">Erro ao carregar</option>';
-    } finally {
-      servicoEquipamentoModalSelect.disabled = false;
+      console.error(
+        "[popularFiltroSubestacoes] Erro ao carregar subestações para filtro:",
+        error
+      );
+      if (filtroSubestacaoSelect)
+        filtroSubestacaoSelect.innerHTML =
+          '<option value="">Erro ao carregar</option>';
     }
   }
 
-  async function popularSelectResponsaveisModal() {
-    if (!servicoResponsavelModalSelect) return;
-    try {
-      const usuarios = await fetchData("/usuarios-responsaveis-para-servicos");
-      usuariosResponsaveisCache = usuarios;
-      servicoResponsavelModalSelect.innerHTML =
-        '<option value="">Selecione...</option>';
-      usuarios.forEach((user) => {
-        const option = document.createElement("option");
-        option.value = user.id;
-        option.textContent = user.nome;
-        servicoResponsavelModalSelect.appendChild(option);
-      });
-    } catch (error) {
-      console.error("Erro ao carregar responsáveis para modal:", error);
-      servicoResponsavelModalSelect.innerHTML =
-        '<option value="">Erro</option>';
+  async function popularSelectEncarregadosParaDesignacao(selecionadoId = null) {
+    if (!selectEncarregadoDesignar) {
+      console.warn(
+        "[popularSelectEncarregadosParaDesignacao] Select de designar encarregado não encontrado no DOM."
+      );
+      return;
     }
-  }
-
-  async function popularSelectEncarregados(
-    selectElement,
-    selecionadoId = null
-  ) {
-    if (!selectElement) return;
     try {
-      if (encarregadosCache.length === 0) {
-        encarregadosCache = await fetchData("/usuarios-encarregados");
-      }
-      selectElement.innerHTML =
-        selectElement === servicoEncarregadoDesignadoModalSelect
-          ? '<option value="">Nenhum</option>'
-          : '<option value="">Selecione...</option>';
-      encarregadosCache.forEach((user) => {
-        const option = document.createElement("option");
-        option.value = user.id;
-        option.textContent = user.nome;
-        selectElement.appendChild(option);
-      });
-      if (selecionadoId) {
-        selectElement.value = String(selecionadoId);
+      if (encarregadosCache.length === 0)
+        encarregadosCache = (await fetchData("/usuarios-encarregados")) || [];
+      selectEncarregadoDesignar.innerHTML = '<option value="">Nenhum</option>';
+      encarregadosCache.forEach((user) =>
+        selectEncarregadoDesignar.add(new Option(user.nome, user.id))
+      );
+      if (
+        selecionadoId &&
+        selecionadoId !== "null" &&
+        selecionadoId !== "undefined" &&
+        selecionadoId !== ""
+      ) {
+        selectEncarregadoDesignar.value = String(selecionadoId);
+      } else {
+        selectEncarregadoDesignar.value = "";
       }
     } catch (error) {
-      selectElement.innerHTML = '<option value="">Erro ao carregar</option>';
-      console.error("Erro ao carregar encarregados:", error);
+      if (selectEncarregadoDesignar)
+        selectEncarregadoDesignar.innerHTML =
+          '<option value="">Erro ao carregar</option>';
+      console.error(
+        "[popularSelectEncarregadosParaDesignacao] Erro ao carregar encarregados:",
+        error
+      );
     }
   }
 
   async function carregarServicos(params = {}) {
-    if (!corpoTabelaServicos || !nenhumServicoMsg) return;
-    corpoTabelaServicos.innerHTML =
-      '<tr><td colspan="9" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando serviços...</td></tr>';
-    nenhumServicoMsg.classList.add("d-none");
+    const corpoTabelaServicosLocal = document.getElementById(
+      "corpoTabelaServicos"
+    );
+    const nenhumServicoMsgLocal = document.getElementById("nenhumServico");
+
+    if (!corpoTabelaServicosLocal || !nenhumServicoMsgLocal) {
+      console.error(
+        "[carregarServicos] Elementos da tabela (corpoTabelaServicos ou nenhumServicoMsg) não encontrados no DOM!"
+      );
+      return;
+    }
+    corpoTabelaServicosLocal.innerHTML =
+      '<tr><td colspan="10" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando serviços...</td></tr>';
+    nenhumServicoMsgLocal.classList.add("d-none");
     const queryParams = new URLSearchParams();
     Object.keys(params).forEach((key) => {
-      if (params[key]) {
-        queryParams.append(key, params[key]);
-      }
+      if (params[key]) queryParams.append(key, params[key]);
     });
-    const url = `/api/servicos-subestacoes${
-      queryParams.toString() ? "?" + queryParams.toString() : ""
-    }`;
+
+    const url = `/api/servicos-subestacoes?${queryParams.toString()}`;
     try {
       const servicos = await fetchData(url);
       popularTabelaServicos(servicos);
     } catch (error) {
-      corpoTabelaServicos.innerHTML =
-        '<tr><td colspan="9" class="text-center text-danger p-5">Erro ao carregar serviços.</td></tr>';
+      console.error(
+        "[carregarServicos] Erro na chamada fetchData ou ao popular tabela:",
+        error
+      );
+      if (corpoTabelaServicosLocal) {
+        corpoTabelaServicosLocal.innerHTML =
+          '<tr><td colspan="10" class="text-center text-danger p-5">Erro ao carregar os serviços. Verifique o console.</td></tr>';
+      }
     }
   }
 
   function popularTabelaServicos(servicos) {
-    if (!corpoTabelaServicos || !nenhumServicoMsg) return;
-    corpoTabelaServicos.innerHTML = "";
-    if (!servicos || servicos.length === 0) {
-      nenhumServicoMsg.classList.remove("d-none");
+    const corpoTabelaServicosLocal = document.getElementById(
+      "corpoTabelaServicos"
+    );
+    const nenhumServicoMsgLocal = document.getElementById("nenhumServico");
+
+    if (!corpoTabelaServicosLocal || !nenhumServicoMsgLocal) {
+      console.error(
+        "[popularTabelaServicos] Elementos da tabela não encontrados no DOM ao tentar popular!"
+      );
       return;
     }
-    nenhumServicoMsg.classList.add("d-none");
+    corpoTabelaServicosLocal.innerHTML = "";
+    if (!servicos || servicos.length === 0) {
+      nenhumServicoMsgLocal.classList.remove("d-none");
+      return;
+    }
+    nenhumServicoMsgLocal.classList.add("d-none");
+
     servicos.forEach((serv) => {
       const tr = document.createElement("tr");
-      const statusServico = (serv.status || "").toUpperCase();
-      const podeConcluir =
-        statusServico !== "CONCLUIDO" && statusServico !== "CANCELADO";
-      const podeReabrir =
-        statusServico === "CONCLUIDO" || statusServico === "CANCELADO";
-
-      const statusClasseBase = (serv.status || "desconhecido").toLowerCase();
-      const statusClasseFinal = statusClasseBase.replace(/_/g, "");
-      const statusTextoDisplay = (serv.status || "DESCONHECIDO").replace(
-        "_",
-        " "
-      );
-
-      let btnConcluirHtml = `<button class="btn btn-icon text-muted" title="Serviço não pode ser concluído" disabled><span class="material-symbols-outlined">check_circle</span></button>`;
-      if (podeConcluir) {
-        btnConcluirHtml = `<button class="btn btn-icon text-success btn-concluir-servico" data-id="${serv.id}" data-processo="${serv.processo}" title="Concluir Serviço"><span class="material-symbols-outlined">check_circle</span></button>`;
-      }
-
-      let btnReabrirHtml = `<button class="btn btn-icon text-muted" title="Serviço não pode ser reaberto" disabled><span class="material-symbols-outlined">history</span></button>`;
-      if (podeReabrir) {
-        btnReabrirHtml = `<button class="btn btn-icon text-warning btn-reabrir-servico" data-id="${serv.id}" data-processo="${serv.processo}" title="Reabrir Serviço"><span class="material-symbols-outlined">history</span></button>`;
-      }
+      const statusServ = (serv.status || "").toUpperCase();
+      const podeConc = statusServ !== "CONCLUIDO" && statusServ !== "CANCELADO";
+      const podeReab = statusServ === "CONCLUIDO" || statusServ === "CANCELADO";
+      const statusCls = (serv.status || "desconhecido")
+        .toLowerCase()
+        .replace(/_/g, "");
+      const statusTxt = (serv.status || "DESCONHECIDO").replace("_", " ");
+      const btnConcHtml = `<button class="btn btn-icon text-${
+        podeConc ? "success" : "muted"
+      } btn-concluir-servico" data-id="${serv.id}" data-processo="${
+        serv.processo
+      }" title="Concluir" ${
+        !podeConc ? "disabled" : ""
+      }><span class="material-symbols-outlined">check_circle</span></button>`;
+      const btnReabHtml = `<button class="btn btn-icon text-${
+        podeReab ? "warning" : "muted"
+      } btn-reabrir-servico" data-id="${serv.id}" data-processo="${
+        serv.processo
+      }" title="Reabrir" ${
+        !podeReab ? "disabled" : ""
+      }><span class="material-symbols-outlined">history</span></button>`;
+      const dataPrevistaFormatada = serv.data_prevista
+        ? new Date(serv.data_prevista + "T00:00:00Z").toLocaleDateString(
+            "pt-BR",
+            { timeZone: "UTC" }
+          )
+        : "-";
 
       tr.innerHTML = `
+          <td class="text-center">${serv.id || "-"}</td>
           <td>${serv.processo || "-"}</td>
-          <td>${serv.subestacao_sigla || serv.subestacao_id}</td>
-          <td title="${serv.motivo}">${(serv.motivo || "").substring(0, 35)}${
-        (serv.motivo || "").length > 35 ? "..." : ""
-      }</td>
-          <td>${
-            serv.data_prevista
-              ? new Date(serv.data_prevista + "T00:00:00").toLocaleDateString(
-                  "pt-BR",
-                  { timeZone: "UTC" }
-                )
-              : "-"
-          }</td>
-          <td>${
-            serv.horario_inicio
-              ? formatarHoraParaInput(serv.horario_inicio)
-              : "-"
-          } - ${
-        serv.horario_fim ? formatarHoraParaInput(serv.horario_fim) : "-"
+          <td>${serv.subestacao_sigla || serv.subestacao_id || "-"}</td>
+          <td title="${serv.motivo || ""}">${(serv.motivo || "").substring(
+        0,
+        35
+      )}${(serv.motivo || "").length > 35 ? "..." : ""}</td>
+          <td>${dataPrevistaFormatada}</td>
+          <td>${formatarHoraParaInput(serv.horario_inicio) || "-"} - ${
+        formatarHoraParaInput(serv.horario_fim) || "-"
       }</td>
           <td>${serv.responsavel_nome || "-"}</td>
           <td>${serv.encarregado_designado_nome || "-"}</td>
-          <td class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
+          <td class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
           <td class="text-center actions-column">
               <button class="btn btn-icon text-info btn-ver-detalhes" data-id="${
                 serv.id
               }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-              ${btnConcluirHtml}
-              ${btnReabrirHtml}
+              ${btnConcHtml}
+              ${btnReabHtml}
               <button class="btn btn-icon text-primary btn-assign-encarregado" data-id="${
                 serv.id
               }" data-processo="${serv.processo}" data-encarregado-id="${
@@ -383,42 +295,62 @@ document.addEventListener("DOMContentLoaded", () => {
         serv.processo
       }" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>
           </td>`;
-      tr.querySelector(".btn-ver-detalhes")?.addEventListener("click", () =>
-        abrirModalServicoParaEdicao(serv.id, true)
-      );
-      tr.querySelector(".btn-concluir-servico")?.addEventListener(
-        "click",
-        (e) =>
+
+      const btnVerDetalhes = tr.querySelector(".btn-ver-detalhes");
+      if (btnVerDetalhes)
+        btnVerDetalhes.addEventListener("click", (e) =>
+          window.open(
+            `/servicos/${e.currentTarget.dataset.id}/detalhes-pagina`,
+            "_blank"
+          )
+        );
+
+      const btnEditarServico = tr.querySelector(".btn-editar-servico");
+      if (btnEditarServico)
+        btnEditarServico.addEventListener(
+          "click",
+          (e) =>
+            (window.location.href = `/registrar-servico-subestacao?editarId=${e.currentTarget.dataset.id}`)
+        );
+
+      const btnConcluir = tr.querySelector(".btn-concluir-servico");
+      if (btnConcluir)
+        btnConcluir.addEventListener("click", (e) =>
           abrirModalConfirmacaoConcluirServico(
             e.currentTarget.dataset.id,
             e.currentTarget.dataset.processo
           )
-      );
-      tr.querySelector(".btn-reabrir-servico")?.addEventListener("click", (e) =>
-        abrirModalConfirmacaoReabrirServico(
-          e.currentTarget.dataset.id,
-          e.currentTarget.dataset.processo
-        )
-      );
-      tr.querySelector(".btn-assign-encarregado")?.addEventListener(
-        "click",
-        (e) =>
+        );
+
+      const btnReabrir = tr.querySelector(".btn-reabrir-servico");
+      if (btnReabrir)
+        btnReabrir.addEventListener("click", (e) =>
+          abrirModalConfirmacaoReabrirServico(
+            e.currentTarget.dataset.id,
+            e.currentTarget.dataset.processo
+          )
+        );
+
+      const btnAssignEncarregado = tr.querySelector(".btn-assign-encarregado");
+      if (btnAssignEncarregado)
+        btnAssignEncarregado.addEventListener("click", (e) =>
           abrirModalDesignarEncarregado(
             e.currentTarget.dataset.id,
             e.currentTarget.dataset.processo,
             e.currentTarget.dataset.encarregadoId
           )
-      );
-      tr.querySelector(".btn-editar-servico")?.addEventListener("click", () =>
-        abrirModalServicoParaEdicao(serv.id, false)
-      );
-      tr.querySelector(".btn-excluir-servico")?.addEventListener("click", (e) =>
-        confirmarExclusaoServico(
-          e.currentTarget.dataset.id,
-          e.currentTarget.dataset.processo
-        )
-      );
-      corpoTabelaServicos.appendChild(tr);
+        );
+
+      const btnExcluir = tr.querySelector(".btn-excluir-servico");
+      if (btnExcluir)
+        btnExcluir.addEventListener("click", (e) =>
+          confirmarExclusaoServico(
+            e.currentTarget.dataset.id,
+            e.currentTarget.dataset.processo
+          )
+        );
+
+      if (corpoTabelaServicosLocal) corpoTabelaServicosLocal.appendChild(tr);
     });
   }
 
@@ -438,6 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
       carregarServicos(params);
     });
   }
+
   if (btnLimparFiltrosServicos && formFiltrosServicos) {
     btnLimparFiltrosServicos.addEventListener("click", () => {
       formFiltrosServicos.reset();
@@ -445,375 +378,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function configurarModalParaNovoServico() {
-    if (
-      !formServico ||
-      !servicoIdModalInput ||
-      !modalServicoTitulo ||
-      !servicoStatusModalSelect ||
-      !servicoEncarregadoDesignadoModalSelect ||
-      !servicoEquipamentoModalSelect ||
-      !listaNomesAnexosModal ||
-      !servicoAnexosInput ||
-      !anexosExistentesContainer ||
-      !listaAnexosExistentes ||
-      !btnSalvarServicoModal
-    )
-      return;
-    formServico.reset();
-    servicoIdModalInput.value = "";
-    modalServicoTitulo.innerHTML =
-      '<span class="material-symbols-outlined me-2">playlist_add_check</span> Registrar Novo Serviço';
-    servicoStatusModalSelect.value = "PROGRAMADO";
-    servicoEncarregadoDesignadoModalSelect.value = "";
-    servicoEquipamentoModalSelect.innerHTML =
-      '<option value="">Selecione subestação primeiro</option>';
-    servicoEquipamentoModalSelect.disabled = true;
-    listaNomesAnexosModal.innerHTML = "";
-    servicoAnexosInput.value = "";
-    anexosExistentesContainer.classList.add("d-none");
-    listaAnexosExistentes.innerHTML = "";
-    atualizarVisibilidadeConclusao();
-    habilitarCamposFormulario(true);
-    btnSalvarServicoModal.style.display = "inline-flex";
-    const campoNovosAnexos = servicoAnexosInput.closest(".mb-2");
-    if (campoNovosAnexos) campoNovosAnexos.style.display = "block";
-    if (bsModalServico) mostrarModal(bsModalServico);
-    if (servicoSubestacaoModalSelect) servicoSubestacaoModalSelect.focus();
-  }
-
-  async function abrirModalServicoParaEdicao(servicoId, readOnly = false) {
-    if (!bsModalServico || !formServico) return;
-    configurarModalParaNovoServico();
-    if (modalServicoTitulo) {
-      modalServicoTitulo.innerHTML = readOnly
-        ? `<span class="material-symbols-outlined me-2">visibility</span> Detalhes do Serviço`
-        : `<span class="material-symbols-outlined me-2">edit_note</span> Editar Serviço`;
-    }
-    try {
-      const servico = await fetchData(`/api/servicos-subestacoes/${servicoId}`);
-      if (!servico) {
-        alert("Serviço não encontrado.");
-        ocultarModal(bsModalServico);
-        return;
-      }
-      if (modalServicoTitulo)
-        modalServicoTitulo.innerHTML = readOnly
-          ? `<span class="material-symbols-outlined me-2">visibility</span> Detalhes do Serviço #${servico.id}`
-          : `<span class="material-symbols-outlined me-2">edit_note</span> Editar Serviço #${servico.id}`;
-      if (servicoIdModalInput) servicoIdModalInput.value = servico.id;
-      if (servicoProcessoModalInput)
-        servicoProcessoModalInput.value = servico.processo || "";
-      if (servicoMotivoModalTextarea)
-        servicoMotivoModalTextarea.value = servico.motivo || "";
-      if (servicoAlimentadorModalInput)
-        servicoAlimentadorModalInput.value = servico.alimentador || "";
-      if (servicoDataPrevistaModalInput)
-        servicoDataPrevistaModalInput.value = formatarDataParaInput(
-          servico.data_prevista
-        );
-      if (servicoHorarioInicioModalInput)
-        servicoHorarioInicioModalInput.value = formatarHoraParaInput(
-          servico.horario_inicio
-        );
-      if (servicoHorarioFimModalInput)
-        servicoHorarioFimModalInput.value = formatarHoraParaInput(
-          servico.horario_fim
-        );
-      if (servicoResponsavelModalSelect)
-        servicoResponsavelModalSelect.value = String(servico.responsavel_id);
-      if (servicoStatusModalSelect)
-        servicoStatusModalSelect.value = servico.status || "PROGRAMADO";
-      if (servicoEncarregadoDesignadoModalSelect)
-        servicoEncarregadoDesignadoModalSelect.value =
-          servico.encarregado_designado_id
-            ? String(servico.encarregado_designado_id)
-            : "";
-      if (servicoSubestacaoModalSelect)
-        servicoSubestacaoModalSelect.value = String(servico.subestacao_id);
-      await popularSelectEquipamentosModal(
-        servico.subestacao_id,
-        servico.equipamento_id
-      );
-      if (servicoEquipamentoModalSelect && servico.equipamento_id) {
-        servicoEquipamentoModalSelect.value = String(servico.equipamento_id);
-      } else if (servicoEquipamentoModalSelect) {
-        servicoEquipamentoModalSelect.value = "";
-      }
-      if (servicoObservacoesConclusaoModalTextarea)
-        servicoObservacoesConclusaoModalTextarea.value =
-          servico.observacoes_conclusao || "";
-      if (servicoDataConclusaoModalInput)
-        servicoDataConclusaoModalInput.value = formatarDataParaInput(
-          servico.data_conclusao
-        );
-      if (listaAnexosExistentes && anexosExistentesContainer) {
-        listaAnexosExistentes.innerHTML = "";
-        if (servico.anexos && servico.anexos.length > 0) {
-          anexosExistentesContainer.classList.remove("d-none");
-          servico.anexos.forEach((anexo) => {
-            const li = document.createElement("li");
-            li.className =
-              "list-group-item d-flex justify-content-between align-items-center py-1";
-            const anexoPath = anexo.caminho_servidor || anexo.caminho || "#";
-            const anexoName =
-              anexo.nome_original || anexo.nome || "Anexo sem nome";
-            const anexoIdDb = anexo.id;
-            let anexoDisplay = `<a href="${anexoPath}" target="_blank" class="text-decoration-none"><span class="material-symbols-outlined me-1 small align-middle">attach_file</span>${anexoName}</a>`;
-            li.innerHTML = `<span>${anexoDisplay}</span> ${
-              !readOnly && anexoIdDb
-                ? `<button type="button" class="btn btn-icon text-danger btn-sm remove-anexo-btn" data-anexo-id="${anexoIdDb}" title="Excluir anexo"><span class="material-symbols-outlined">delete</span></button>`
-                : ""
-            }`;
-            if (!readOnly && anexoIdDb) {
-              li.querySelector(".remove-anexo-btn")?.addEventListener(
-                "click",
-                (e) =>
-                  confirmarExclusaoAnexo(e.currentTarget.dataset.anexoId, li)
-              );
-            }
-            listaAnexosExistentes.appendChild(li);
-          });
-        } else {
-          anexosExistentesContainer.classList.add("d-none");
-        }
-      }
-      atualizarVisibilidadeConclusao();
-      habilitarCamposFormulario(!readOnly);
-      if (btnSalvarServicoModal)
-        btnSalvarServicoModal.style.display = readOnly ? "none" : "inline-flex";
-      if (servicoAnexosInput) {
-        const campoNovosAnexos = servicoAnexosInput.closest(".mb-2");
-        if (campoNovosAnexos) {
-          campoNovosAnexos.style.display = readOnly ? "none" : "block";
-        }
-      }
-      mostrarModal(bsModalServico);
-    } catch (error) {
-      console.error("Erro ao carregar dados do serviço: ", error);
-      alert("Erro ao carregar dados do serviço.");
-      ocultarModal(bsModalServico);
-    }
-  }
-
-  function habilitarCamposFormulario(habilitar) {
-    if (!formServico) return;
-    const formElements = formServico.elements;
-    for (let i = 0; i < formElements.length; i++) {
-      const element = formElements[i];
-      if (
-        element.type !== "button" &&
-        element.type !== "submit" &&
-        !element.classList.contains("btn-close")
-      ) {
-        element.disabled = !habilitar;
-      }
-    }
-    if (servicoAnexosInput) {
-      servicoAnexosInput.disabled = !habilitar;
-    }
-  }
-
-  async function confirmarExclusaoAnexo(anexoId, listItemElement) {
-    if (!anexoId || !listaAnexosExistentes || !anexosExistentesContainer) {
-      alert("ID do anexo ou elementos do DOM não encontrados.");
-      return;
-    }
-    if (
-      confirm(
-        "Tem certeza que deseja excluir este anexo? Esta ação não pode ser desfeita."
-      )
-    ) {
-      try {
-        alert(
-          `FUNCIONALIDADE PENDENTE: A API de exclusão de anexo (ID: ${anexoId}) precisa ser implementada. O anexo NÃO foi excluído do servidor.`
-        );
-        listItemElement.remove();
-        if (listaAnexosExistentes.children.length === 0) {
-          anexosExistentesContainer.classList.add("d-none");
-        }
-      } catch (error) {
-        alert(`Falha ao excluir anexo: ${error.message}`);
-      }
-    }
-  }
-
   if (btnNovoServico) {
-    btnNovoServico.addEventListener("click", configurarModalParaNovoServico);
-  }
-
-  if (servicoSubestacaoModalSelect) {
-    servicoSubestacaoModalSelect.addEventListener("change", (event) => {
-      const equipamentoPreviamenteSelecionado =
-        servicoEquipamentoModalSelect?.value;
-      popularSelectEquipamentosModal(
-        event.target.value,
-        equipamentoPreviamenteSelecionado
-      );
-    });
-  }
-  if (servicoStatusModalSelect) {
-    servicoStatusModalSelect.addEventListener(
-      "change",
-      atualizarVisibilidadeConclusao
-    );
-  }
-
-  function atualizarVisibilidadeConclusao() {
-    if (
-      !servicoStatusModalSelect ||
-      !conclusaoFieldset ||
-      !servicoDataConclusaoModalInput ||
-      !servicoIdModalInput
-    )
-      return;
-    const statusSelecionado = servicoStatusModalSelect.value;
-    if (statusSelecionado === "CONCLUIDO") {
-      conclusaoFieldset.classList.remove("d-none");
-      if (
-        !servicoDataConclusaoModalInput.value &&
-        (!servicoIdModalInput.value || servicoIdModalInput.value === "")
-      ) {
-        servicoDataConclusaoModalInput.value = formatarDataParaInput(
-          new Date().toISOString()
-        );
-      }
-    } else {
-      conclusaoFieldset.classList.add("d-none");
-      servicoDataConclusaoModalInput.value = "";
-      if (servicoObservacoesConclusaoModalTextarea)
-        servicoObservacoesConclusaoModalTextarea.value = "";
-    }
-  }
-
-  if (servicoAnexosInput && listaNomesAnexosModal) {
-    servicoAnexosInput.addEventListener("change", () => {
-      listaNomesAnexosModal.innerHTML = "";
-      if (servicoAnexosInput.files.length > 0) {
-        for (const file of servicoAnexosInput.files) {
-          const li = document.createElement("li");
-          li.className =
-            "list-group-item d-flex justify-content-between align-items-center py-1";
-          li.innerHTML = `<div><span class="material-symbols-outlined me-1 small align-middle">draft</span> ${
-            file.name
-          }</div> <small class="text-muted">${(file.size / 1024).toFixed(
-            1
-          )} KB</small>`;
-          listaNomesAnexosModal.appendChild(li);
-        }
-      }
-    });
-  }
-
-  if (confirmacaoAnexosInput && listaNomesAnexosConclusao) {
-    confirmacaoAnexosInput.addEventListener("change", (event) => {
-      listaNomesAnexosConclusao.innerHTML = "";
-      if (event.target.files.length > 0) {
-        for (const file of event.target.files) {
-          const li = document.createElement("li");
-          li.className =
-            "list-group-item d-flex justify-content-between align-items-center py-1";
-          li.innerHTML = `<div><span class="material-symbols-outlined me-1 small align-middle">draft</span> ${
-            file.name
-          }</div> <small class="text-muted">${(file.size / 1024).toFixed(
-            1
-          )} KB</small>`;
-          listaNomesAnexosConclusao.appendChild(li);
-        }
-      }
-    });
-  }
-
-  if (formServico) {
-    formServico.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      if (
-        !servicoIdModalInput ||
-        !btnSalvarServicoModal ||
-        !formFiltrosServicos
-      )
-        return;
-      const formData = new FormData(formServico);
-      const servicoId = servicoIdModalInput.value;
-      if (
-        !formData.get("subestacao_id") ||
-        !formData.get("processo") ||
-        !formData.get("motivo") ||
-        !formData.get("data_prevista") ||
-        !formData.get("horario_inicio") ||
-        !formData.get("horario_fim") ||
-        !formData.get("responsavel_id")
-      ) {
-        alert("Por favor, preencha todos os campos obrigatórios (*).");
-        return;
-      }
-      if (
-        formData.get("status") === "CONCLUIDO" &&
-        !formData.get("data_conclusao") &&
-        servicoDataConclusaoModalInput
-      ) {
-        alert("Data de conclusão é obrigatória se o status for CONCLUÍDO.");
-        servicoDataConclusaoModalInput.focus();
-        return;
-      }
-      const submitButton = btnSalvarServicoModal;
-      const originalButtonHtml = submitButton.innerHTML;
-      submitButton.disabled = true;
-      submitButton.innerHTML =
-        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
-      const url = servicoId
-        ? `/api/servicos-subestacoes/${servicoId}`
-        : "/api/servicos-subestacoes";
-      const method = servicoId ? "PUT" : "POST";
-      if (!formData.get("equipamento_id")) {
-        formData.set("equipamento_id", "");
-      }
-      if (!formData.get("encarregado_designado_id")) {
-        formData.set("encarregado_designado_id", "");
-      }
-      if (formData.get("status") !== "CONCLUIDO") {
-        formData.delete("data_conclusao");
-        formData.delete("observacoes_conclusao");
-      }
-      try {
-        const response = await fetch(url, { method: method, body: formData });
-        if (!response.ok) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ message: "Erro desconhecido ao salvar serviço." }));
-          throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
-        }
-        const result = await response.json();
-        alert(
-          result.message ||
-            `Serviço ${servicoId ? "atualizado" : "registrado"} com sucesso!`
-        );
-        ocultarModal(bsModalServico);
-        const currentParams = {};
-        new FormData(formFiltrosServicos).forEach((value, key) => {
-          const paramKey = key
-            .replace(/^filtro/, "")
-            .replace(/([A-Z])/g, (match, p1) => `_${p1.toLowerCase()}`);
-          if (value)
-            currentParams[
-              paramKey.startsWith("_") ? paramKey.substring(1) : paramKey
-            ] = value;
-        });
-        carregarServicos(currentParams);
-      } catch (error) {
-        console.error(
-          `Erro ao ${servicoId ? "atualizar" : "registrar"} serviço:`,
-          error
-        );
-        alert(
-          `Falha ao ${servicoId ? "atualizar" : "registrar"} serviço: ${
-            error.message
-          }`
-        );
-      } finally {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonHtml;
-      }
+    btnNovoServico.addEventListener("click", () => {
+      window.location.href = "/registrar-servico-subestacao";
     });
   }
 
@@ -824,8 +391,12 @@ document.addEventListener("DOMContentLoaded", () => {
       !formConfirmacaoConcluirServico ||
       !btnConfirmarAcaoServico ||
       !bsModalConfirmacaoServico
-    )
+    ) {
+      console.error(
+        "[confirmarExclusaoServico] Elementos do modal de confirmação de exclusão não encontrados."
+      );
       return;
+    }
     const iconElement = modalConfirmacaoServicoTitulo.querySelector(
       ".material-symbols-outlined"
     );
@@ -833,7 +404,6 @@ document.addEventListener("DOMContentLoaded", () => {
       iconElement.textContent = "warning";
       iconElement.className = "material-symbols-outlined me-2 text-danger";
     }
-
     const titleTextNode = Array.from(
       modalConfirmacaoServicoTitulo.childNodes
     ).find(
@@ -876,15 +446,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         carregarServicos(currentParams);
       } catch (error) {
+        console.error(`[operacaoConfirmacaoServico - Excluir] Erro:`, error);
         alert(`Falha ao excluir serviço: ${error.message}`);
       } finally {
-        ocultarModal(bsModalConfirmacaoServico);
+        if (bsModalConfirmacaoServico) ocultarModal(bsModalConfirmacaoServico);
         submitButton.disabled = false;
         submitButton.innerHTML = originalButtonHtmlInner;
         idServicoParaAcao = null;
       }
     };
-    mostrarModal(bsModalConfirmacaoServico);
+    if (bsModalConfirmacaoServico) mostrarModal(bsModalConfirmacaoServico);
   }
 
   function abrirModalConfirmacaoConcluirServico(servicoId, processoServico) {
@@ -899,8 +470,13 @@ document.addEventListener("DOMContentLoaded", () => {
       !listaNomesAnexosConclusao ||
       !btnConfirmarAcaoServico ||
       !bsModalConfirmacaoServico
-    )
+    ) {
+      console.error(
+        "[abrirModalConfirmacaoConcluirServico] Elementos do modal de conclusão não encontrados."
+      );
       return;
+    }
+
     idServicoParaAcao = servicoId;
     const iconElement = modalConfirmacaoServicoTitulo.querySelector(
       ".material-symbols-outlined"
@@ -909,7 +485,6 @@ document.addEventListener("DOMContentLoaded", () => {
       iconElement.textContent = "check_circle";
       iconElement.className = "material-symbols-outlined me-2 text-success";
     }
-
     const titleTextNode = Array.from(
       modalConfirmacaoServicoTitulo.childNodes
     ).find(
@@ -932,13 +507,13 @@ document.addEventListener("DOMContentLoaded", () => {
       minute: "2-digit",
     });
     confirmacaoObservacoesTextarea.value = "";
-    confirmacaoAnexosInput.value = "";
-    listaNomesAnexosConclusao.innerHTML = "";
+    if (confirmacaoAnexosInput) confirmacaoAnexosInput.value = "";
+    if (listaNomesAnexosConclusao) listaNomesAnexosConclusao.innerHTML = "";
     btnConfirmarAcaoServico.className = "btn btn-sm btn-success";
     btnConfirmarAcaoServico.innerHTML =
       '<span class="material-symbols-outlined">check_circle</span> Confirmar Conclusão';
     operacaoConfirmacaoServico = handleConcluirServico;
-    mostrarModal(bsModalConfirmacaoServico);
+    if (bsModalConfirmacaoServico) mostrarModal(bsModalConfirmacaoServico);
   }
 
   async function handleConcluirServico() {
@@ -949,12 +524,13 @@ document.addEventListener("DOMContentLoaded", () => {
       !confirmacaoObservacoesTextarea ||
       !confirmacaoAnexosInput ||
       !btnConfirmarAcaoServico
-    )
+    ) {
+      console.error(
+        "[handleConcluirServico] Campos necessários para concluir não encontrados."
+      );
       return;
+    }
     const dataConclusaoManual = confirmacaoDataConclusaoInput.value;
-    const horaConclusaoManual = confirmacaoHoraConclusaoInput.value;
-    const observacoesConclusaoManual = confirmacaoObservacoesTextarea.value;
-    const anexosConclusao = confirmacaoAnexosInput.files;
     if (!dataConclusaoManual) {
       alert("A data de conclusão é obrigatória.");
       confirmacaoDataConclusaoInput.focus();
@@ -967,20 +543,29 @@ document.addEventListener("DOMContentLoaded", () => {
       '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Confirmando...';
     const formData = new FormData();
     formData.append("data_conclusao_manual", dataConclusaoManual);
-    if (horaConclusaoManual) {
-      formData.append("hora_conclusao_manual", horaConclusaoManual);
-    }
-    if (observacoesConclusaoManual) {
+    if (confirmacaoHoraConclusaoInput.value)
+      formData.append(
+        "hora_conclusao_manual",
+        confirmacaoHoraConclusaoInput.value
+      );
+    if (confirmacaoObservacoesTextarea.value)
       formData.append(
         "observacoes_conclusao_manual",
-        observacoesConclusaoManual
+        confirmacaoObservacoesTextarea.value
       );
-    }
-    if (anexosConclusao && anexosConclusao.length > 0) {
-      for (let i = 0; i < anexosConclusao.length; i++) {
-        formData.append("anexos_conclusao_servico", anexosConclusao[i]);
+
+    if (
+      confirmacaoAnexosInput.files &&
+      confirmacaoAnexosInput.files.length > 0
+    ) {
+      for (let i = 0; i < confirmacaoAnexosInput.files.length; i++) {
+        formData.append(
+          "anexos_conclusao_servico",
+          confirmacaoAnexosInput.files[i]
+        );
       }
     }
+
     try {
       const response = await fetch(
         `/api/servicos-subestacoes/${idServicoParaAcao}/concluir`,
@@ -994,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const result = await response.json();
       alert(result.message || "Serviço concluído com sucesso!");
-      ocultarModal(bsModalConfirmacaoServico);
+      if (bsModalConfirmacaoServico) ocultarModal(bsModalConfirmacaoServico);
       const currentParams = {};
       if (formFiltrosServicos) {
         new FormData(formFiltrosServicos).forEach((value, key) => {
@@ -1009,6 +594,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       carregarServicos(currentParams);
     } catch (error) {
+      console.error(`[handleConcluirServico] Erro ao concluir:`, error);
       alert(`Falha ao concluir serviço: ${error.message}`);
     } finally {
       submitButton.disabled = false;
@@ -1024,8 +610,12 @@ document.addEventListener("DOMContentLoaded", () => {
       !formConfirmacaoConcluirServico ||
       !btnConfirmarAcaoServico ||
       !bsModalConfirmacaoServico
-    )
+    ) {
+      console.error(
+        "[abrirModalConfirmacaoReabrirServico] Elementos do modal de reabertura não encontrados."
+      );
       return;
+    }
     idServicoParaAcao = servicoId;
     const iconElement = modalConfirmacaoServicoTitulo.querySelector(
       ".material-symbols-outlined"
@@ -1034,7 +624,6 @@ document.addEventListener("DOMContentLoaded", () => {
       iconElement.textContent = "history";
       iconElement.className = "material-symbols-outlined me-2 text-warning";
     }
-
     const titleTextNode = Array.from(
       modalConfirmacaoServicoTitulo.childNodes
     ).find(
@@ -1052,11 +641,16 @@ document.addEventListener("DOMContentLoaded", () => {
     btnConfirmarAcaoServico.innerHTML =
       '<span class="material-symbols-outlined">history</span> Confirmar Reabertura';
     operacaoConfirmacaoServico = handleReabrirServico;
-    mostrarModal(bsModalConfirmacaoServico);
+    if (bsModalConfirmacaoServico) mostrarModal(bsModalConfirmacaoServico);
   }
 
   async function handleReabrirServico() {
-    if (!idServicoParaAcao || !btnConfirmarAcaoServico) return;
+    if (!idServicoParaAcao || !btnConfirmarAcaoServico) {
+      console.error(
+        "[handleReabrirServico] ID do serviço para ação não encontrado."
+      );
+      return;
+    }
     const submitButton = btnConfirmarAcaoServico;
     const originalButtonHtml = submitButton.innerHTML;
     submitButton.disabled = true;
@@ -1075,7 +669,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const result = await response.json();
       alert(result.message || "Serviço reaberto com sucesso!");
-      ocultarModal(bsModalConfirmacaoServico);
+      if (bsModalConfirmacaoServico) ocultarModal(bsModalConfirmacaoServico);
       const currentParams = {};
       if (formFiltrosServicos) {
         new FormData(formFiltrosServicos).forEach((value, key) => {
@@ -1090,6 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       carregarServicos(currentParams);
     } catch (error) {
+      console.error(`[handleReabrirServico] Erro ao reabrir:`, error);
       alert(`Falha ao reabrir serviço: ${error.message}`);
     } finally {
       submitButton.disabled = false;
@@ -1108,22 +703,28 @@ document.addEventListener("DOMContentLoaded", () => {
       !processoServicoParaDesignacaoSpan ||
       !selectEncarregadoDesignar ||
       !bsModalDesignarEncarregado
-    )
+    ) {
+      console.error(
+        "[abrirModalDesignarEncarregado] Elementos do modal de designação não encontrados."
+      );
       return;
+    }
     servicoIdParaDesignacaoInput.value = servicoId;
     processoServicoParaDesignacaoSpan.textContent =
       processoServico || servicoId;
-    await popularSelectEncarregados(
-      selectEncarregadoDesignar,
-      encarregadoAtualId
-    );
+    await popularSelectEncarregadosParaDesignacao(encarregadoAtualId);
     mostrarModal(bsModalDesignarEncarregado);
-    selectEncarregadoDesignar.focus();
+    if (selectEncarregadoDesignar) selectEncarregadoDesignar.focus();
   }
 
   if (btnSalvarDesignacaoEncarregado) {
     btnSalvarDesignacaoEncarregado.addEventListener("click", async () => {
-      if (!servicoIdParaDesignacaoInput || !selectEncarregadoDesignar) return;
+      if (!servicoIdParaDesignacaoInput || !selectEncarregadoDesignar) {
+        console.error(
+          "[btnSalvarDesignacaoEncarregado] Inputs necessários não encontrados."
+        );
+        return;
+      }
       const servicoId = servicoIdParaDesignacaoInput.value;
       const encarregadoId = selectEncarregadoDesignar.value;
       const submitButton = btnSalvarDesignacaoEncarregado;
@@ -1150,7 +751,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const result = await response.json();
         alert(result.message || "Encarregado designado com sucesso!");
-        ocultarModal(bsModalDesignarEncarregado);
+        if (bsModalDesignarEncarregado)
+          ocultarModal(bsModalDesignarEncarregado);
         const currentParams = {};
         if (formFiltrosServicos) {
           new FormData(formFiltrosServicos).forEach((value, key) => {
@@ -1165,6 +767,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         carregarServicos(currentParams);
       } catch (error) {
+        console.error(
+          `[btnSalvarDesignacaoEncarregado] Erro ao salvar designação:`,
+          error
+        );
         alert(`Falha ao designar encarregado: ${error.message}`);
       } finally {
         submitButton.disabled = false;
@@ -1173,24 +779,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (btnConfirmarAcaoServico && bsModalConfirmacaoServico) {
-    btnConfirmarAcaoServico.addEventListener("click", () => {
-      if (typeof operacaoConfirmacaoServico === "function") {
-        operacaoConfirmacaoServico();
+  if (confirmacaoAnexosInput && listaNomesAnexosConclusao) {
+    confirmacaoAnexosInput.addEventListener("change", (event) => {
+      listaNomesAnexosConclusao.innerHTML = "";
+      if (event.target.files.length > 0) {
+        Array.from(event.target.files).forEach((file) => {
+          const li = document.createElement("li");
+          li.className =
+            "list-group-item d-flex justify-content-between align-items-center py-1";
+          li.innerHTML = `<div><span class="material-symbols-outlined me-1 small align-middle">draft</span>${
+            file.name
+          }</div><small class="text-muted">${(file.size / 1024).toFixed(
+            1
+          )}KB</small>`;
+          listaNomesAnexosConclusao.appendChild(li);
+        });
       }
     });
   }
 
-  function init() {
-    popularFiltroESelectSubestacoes();
-    popularSelectResponsaveisModal();
-    if (servicoEncarregadoDesignadoModalSelect) {
-      popularSelectEncarregados(servicoEncarregadoDesignadoModalSelect);
-    }
-    if (servicoEquipamentoModalSelect) {
-      servicoEquipamentoModalSelect.disabled = true;
-    }
-    carregarServicos();
+  if (btnConfirmarAcaoServico && bsModalConfirmacaoServico) {
+    btnConfirmarAcaoServico.addEventListener("click", () => {
+      if (typeof operacaoConfirmacaoServico === "function") {
+        operacaoConfirmacaoServico();
+      } else {
+        console.warn(
+          "[btnConfirmarAcaoServico] operacaoConfirmacaoServico não é uma função no momento do clique."
+        );
+      }
+    });
+  }
+
+  async function init() {
+    await popularFiltroSubestacoes();
+    await carregarServicos();
   }
   init();
 });
