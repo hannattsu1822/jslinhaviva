@@ -35,7 +35,7 @@
           <div class="custom-card-body">
             <h5 class="mb-3 section-title-form">Dados Gerais do Serviço</h5>
             <div class="row g-3">
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label for="servicoSubestacaoModal" class="form-label"
                   >Subestação:*</label
                 >
@@ -48,7 +48,7 @@
                   <option value="">Selecione...</option>
                 </select>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label for="servicoProcessoModal" class="form-label"
                   >Nº Processo/OS:*</label
                 >
@@ -59,6 +59,21 @@
                   class="form-control form-control-sm"
                   required
                 />
+              </div>
+              <div class="col-md-4">
+                <label for="servicoTipoOrdemModal" class="form-label"
+                  >Tipo de Ordem:</label
+                >
+                <select
+                  id="servicoTipoOrdemModal"
+                  name="tipo_ordem"
+                  class="form-select form-select-sm"
+                >
+                  <option value="" selected>Selecione...</option>
+                  <option value="ODI">ODI</option>
+                  <option value="ODD">ODD</option>
+                  <option value="ODS">ODS</option>
+                </select>
               </div>
               <div class="col-12">
                 <label for="servicoMotivoModal" class="form-label"

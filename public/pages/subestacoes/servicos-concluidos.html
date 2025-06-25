@@ -134,7 +134,10 @@
                     <th scope="col" class="text-center">ID</th>
                     <th scope="col">Processo</th>
                     <th scope="col">Subestação</th>
-                    <th scope="col">Motivo</th>
+                    <th scope="col">Motivo / Origem</th>
+                    <!-- MODIFICADO AQUI -->
+                    <th scope="col">Tipo Ordem</th>
+                    <!-- ADICIONADO AQUI -->
                     <th class="text-center" scope="col">Data Conclusão</th>
                     <th scope="col">Responsável Técnico</th>
                     <th class="text-center" scope="col">Status</th>
@@ -143,7 +146,9 @@
                     </th>
                   </tr>
                 </thead>
-                <tbody id="corpoTabelaServicos"></tbody>
+                <tbody id="corpoTabelaServicos">
+                  <!-- Linhas da tabela serão inseridas aqui pelo JavaScript -->
+                </tbody>
               </table>
             </div>
             <div
