@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const inspecaoResponsavelSelect = document.getElementById(
     "inspecaoResponsavel"
   );
+  const tipoInspecaoSelect = document.getElementById("tipoInspecao");
   const inspecaoDataAvaliacaoInput = document.getElementById(
     "inspecaoDataAvaliacao"
   );
@@ -630,8 +631,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ).length;
     novaLinha.setAttribute("data-dom-index", medicaoDomIndex);
 
-    // Adiciona uma entrada no array de dados para esta linha, com um ID único para as fotos
-    // Assim, mesmo se linhas forem removidas, o ID das fotos permanece ligado ao seu conjunto de dados original.
     const medicaoDataId = `med_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 5)}`;
@@ -649,7 +648,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnRemover = novaLinha.querySelector(".btn-remover-medicao");
     btnRemover.addEventListener("click", () => {
       const idDaLinha = novaLinha.getAttribute("data-medicao-id");
-      delete medicoesDinamicas_linhaFotos[idDaLinha]; // Remove os dados das fotos
+      delete medicoesDinamicas_linhaFotos[idDaLinha];
       novaLinha.remove();
       if (
         containerMedicoesDinamicas.querySelectorAll(".medicao-dinamica-item")
@@ -940,6 +939,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const dadosCabecalho = {
         subestacao_id: inspecaoSubestacaoSelect?.value,
         responsavel_levantamento_id: inspecaoResponsavelSelect?.value,
+        tipo_inspecao: tipoInspecaoSelect?.value,
         data_avaliacao: inspecaoDataAvaliacaoInput?.value,
         hora_inicial: document.getElementById("inspecaoHoraInicial")?.value,
         hora_final: document.getElementById("inspecaoHoraFinal")?.value || null,
@@ -950,6 +950,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (
         !dadosCabecalho.subestacao_id ||
         !dadosCabecalho.responsavel_levantamento_id ||
+        !dadosCabecalho.tipo_inspecao ||
         !dadosCabecalho.data_avaliacao ||
         !dadosCabecalho.hora_inicial
       ) {
@@ -1218,7 +1219,6 @@ document.addEventListener("DOMContentLoaded", () => {
     itemEvidencesData = {};
     medicoesDinamicas_linhaFotos = {};
     equipamentosObservados_linhaFotos = {};
-    verificacoesAdicionaisData = []; // Mantido para dados textuais, pois não têm fotos
     limparMedicoesDinamicas();
     limparEquipamentosObservados();
     limparVerificacoesAdicionais();

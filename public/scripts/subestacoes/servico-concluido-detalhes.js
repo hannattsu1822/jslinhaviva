@@ -31,9 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const secaoItensEscopo = document.getElementById("secaoItensEscopo");
   const containerItensEscopo = document.getElementById("containerItensEscopo");
 
-  const btnEditarServicoPagina = document.getElementById(
-    "btnEditarServicoPagina"
-  );
   const btnImprimirPagina = document.getElementById("btnImprimirPagina");
 
   const imageLightboxDetalhesEl = document.getElementById(
@@ -47,18 +44,12 @@ document.addEventListener("DOMContentLoaded", () => {
     bsImageLightboxDetalhes = new bootstrap.Modal(imageLightboxDetalhesEl);
   }
 
-  let servicoIdAtual = null;
-
   function getServicoIdFromUrl() {
     const pathParts = window.location.pathname.split("/");
     const id = pathParts[pathParts.length - 2];
     if (id && !isNaN(parseInt(id))) {
       return parseInt(id);
     }
-    console.error(
-      "Não foi possível extrair o ID do serviço da URL:",
-      window.location.pathname
-    );
     return null;
   }
 
@@ -66,15 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const response = await fetch(url, options);
       if (!response.ok) {
-        if (response.status === 403) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ message: "Acesso negado." }));
-          throw {
-            status: 403,
-            message: errorData.message || "Acesso negado a este recurso.",
-          };
-        }
         const errorData = await response
           .json()
           .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
@@ -108,6 +90,13 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     if (isNaN(dataObj.getTime())) return "Data inválida";
     return dataObj.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  }
+
+  function formatarDataHora(dataISO) {
+    if (!dataISO) return "Não informado";
+    const dataObj = new Date(dataISO);
+    if (isNaN(dataObj.getTime())) return "Data inválida";
+    return dataObj.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
   }
 
   function formatarHoraSimples(hora) {
@@ -153,12 +142,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function carregarDetalhesDoServico() {
-    servicoIdAtual = getServicoIdFromUrl();
+    const servicoIdAtual = getServicoIdFromUrl();
     if (!servicoIdAtual) {
       loadingIndicator.classList.add("d-none");
       erroCarregamento.textContent = "ID do serviço não encontrado na URL.";
       erroCarregamento.classList.remove("d-none");
-      if (btnEditarServicoPagina) btnEditarServicoPagina.disabled = true;
       return;
     }
 
@@ -180,7 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
         detalheSubestacao.textContent = `${servico.subestacao_sigla || ""} - ${
           servico.subestacao_nome || "Não informado"
         }`;
-
       if (detalheStatus) {
         const statusClasseBase = (
           servico.status || "desconhecido"
@@ -192,7 +179,6 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         detalheStatus.innerHTML = `<span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span>`;
       }
-
       if (detalheMotivo)
         detalheMotivo.textContent = servico.motivo || "Não informado";
       if (detalheResponsavel)
@@ -207,31 +193,23 @@ document.addEventListener("DOMContentLoaded", () => {
           servico.horario_inicio
         )} às ${formatarHoraSimples(servico.horario_fim)}`;
 
-      if (servico.status === "CONCLUIDO") {
-        if (detalheDataConclusao)
-          detalheDataConclusao.textContent = formatarDataSimples(
-            servico.data_conclusao
-          );
-        if (detalheHoraConclusao)
-          detalheHoraConclusao.textContent = formatarHoraSimples(
-            servico.horario_fim
-          );
-        if (detalheObsConclusao)
-          detalheObsConclusao.textContent =
-            servico.observacoes_conclusao || "Nenhuma";
-        secaoDetalhesConclusao.classList.remove("d-none");
-      } else {
-        secaoDetalhesConclusao.classList.add("d-none");
-      }
+      if (detalheDataConclusao)
+        detalheDataConclusao.textContent = formatarDataSimples(
+          servico.data_conclusao
+        );
+      if (detalheHoraConclusao)
+        detalheHoraConclusao.textContent = formatarHoraSimples(
+          servico.horario_fim
+        );
+      if (detalheObsConclusao)
+        detalheObsConclusao.textContent =
+          servico.observacoes_conclusao || "Nenhuma";
+      secaoDetalhesConclusao.classList.remove("d-none");
 
       if (listaAnexosServicoPagina && secaoAnexosServico) {
         listaAnexosServicoPagina.innerHTML = "";
-        const anexosGerais = servico.anexos.filter(
-          (anx) => anx.categoria_anexo !== "ANEXO_CONCLUSAO"
-        );
-
-        if (anexosGerais && anexosGerais.length > 0) {
-          anexosGerais.forEach((anexo) => {
+        if (servico.anexos && servico.anexos.length > 0) {
+          servico.anexos.forEach((anexo) => {
             const card = createAnexoCard(anexo);
             listaAnexosServicoPagina.appendChild(card);
           });
@@ -243,39 +221,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      renderizarItensDeEscopo(
-        servico.itens_escopo || [],
-        servico.inspecoes_vinculadas || []
-      );
+      renderizarItensDeEscopo(servico.itens_escopo || []);
 
       loadingIndicator.classList.add("d-none");
       conteudoDetalhesServico.classList.remove("d-none");
-      if (btnEditarServicoPagina) btnEditarServicoPagina.disabled = false;
     } catch (error) {
       loadingIndicator.classList.add("d-none");
-      if (error.status === 403) {
-        erroCarregamento.textContent =
-          error.message || "Acesso negado a este serviço.";
-      } else {
-        erroCarregamento.textContent = `Erro ao carregar detalhes do serviço: ${
-          error.message || "Erro desconhecido"
-        }`;
-      }
+      erroCarregamento.textContent = `Erro ao carregar detalhes do serviço: ${
+        error.message || "Erro desconhecido"
+      }`;
       erroCarregamento.classList.remove("d-none");
-      if (btnEditarServicoPagina) btnEditarServicoPagina.disabled = true;
     }
   }
 
-  function renderizarItensDeEscopo(itensEscopo, inspecoesVinculadas) {
+  function renderizarItensDeEscopo(itensEscopo) {
     if (!containerItensEscopo || !secaoItensEscopo) return;
-
     containerItensEscopo.innerHTML = "";
-
     if (itensEscopo.length === 0) {
-      secaoItensEscopo.classList.add("d-none");
+      containerItensEscopo.innerHTML =
+        "<p class='text-muted'>Este serviço não possui itens de escopo detalhados.</p>";
+      secaoItensEscopo.classList.remove("d-none");
       return;
     }
-
     secaoItensEscopo.classList.remove("d-none");
 
     itensEscopo.forEach((item) => {
@@ -286,18 +253,18 @@ document.addEventListener("DOMContentLoaded", () => {
         .toLowerCase()
         .replace("_", "");
       const statusTexto = (item.status_item_escopo || "PENDENTE").replace(
-        "_",
+        /_/g,
         " "
       );
+      const dataConclusaoItemFmt = formatarDataHora(item.data_conclusao_item);
 
-      let origemHtml = "";
-      if (item.inspecao_item_id) {
-        origemHtml = `<div class="item-origin">Origem: Inspeção #${
-          item.origem_inspecao_formulario_num || item.origem_inspecao_id
-        } - Item ${item.inspecao_item_num}</div>`;
-      }
+      let origemHtml = item.inspecao_item_id
+        ? `<div class="item-origin">Origem: Inspeção #${
+            item.origem_inspecao_formulario_num || item.origem_inspecao_id
+          } - Item ${item.inspecao_item_num}</div>`
+        : '<div class="item-origin">Origem: Serviço Avulso</div>';
 
-      let equipamentosHtml = "";
+      let equipamentosHtml = "<span>Nenhum</span>";
       if (
         item.equipamentos_associados &&
         item.equipamentos_associados.length > 0
@@ -310,26 +277,16 @@ document.addEventListener("DOMContentLoaded", () => {
               }</span>`
           )
           .join("");
-      } else {
-        equipamentosHtml = "<span>Nenhum</span>";
       }
 
-      let fotosHtml = "";
-      const inspecaoOrigem = inspecoesVinculadas.find(
-        (insp) => insp.inspecao_id === item.origem_inspecao_id
-      );
-      if (inspecaoOrigem && inspecaoOrigem.anexos_itens_inspecao) {
-        const anexosDoItem = inspecaoOrigem.anexos_itens_inspecao.filter(
-          (anx) => anx.item_num_associado == item.inspecao_item_num
-        );
-        if (anexosDoItem.length > 0) {
-          fotosHtml =
-            '<p class="mt-2 mb-1"><strong>Evidências da Inspeção:</strong></p><div class="d-flex flex-wrap gap-2 item-photos-container">';
-          anexosDoItem.forEach((anexo) => {
-            fotosHtml += `<img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" data-src="${anexo.caminho_servidor}" title="${anexo.nome_original}" />`;
-          });
-          fotosHtml += "</div>";
-        }
+      let anexosConclusaoItemHtml = "";
+      if (item.anexos_conclusao && item.anexos_conclusao.length > 0) {
+        anexosConclusaoItemHtml =
+          '<p class="mt-2 mb-1"><strong>Anexos de Conclusão do Item:</strong></p><div class="d-flex flex-wrap gap-2 item-photos-container">';
+        item.anexos_conclusao.forEach((anexo) => {
+          anexosConclusaoItemHtml += `<img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" data-src="${anexo.caminho_servidor}" title="${anexo.nome_original}" />`;
+        });
+        anexosConclusaoItemHtml += "</div>";
       }
 
       itemCard.innerHTML = `
@@ -340,23 +297,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `<p class="small text-muted mt-1 mb-2"><em>Obs. Serviço: ${item.observacao_especifica_servico}</em></p>`
                 : ""
             }
-            <div class="item-details-grid">
-                <div class="item-supervisor">
-                    <strong>Encarregado:</strong>
-                    <span>${
-                      item.encarregado_item_nome || "Nenhum designado"
-                    }</span>
-                </div>
-                <div class="item-status">
-                    <strong>Status do Item:</strong>
-                    <span class="status-badge status-${statusClasse}">${statusTexto}</span>
-                </div>
-                <div class="item-equipment">
-                    <strong>Equipamentos Associados:</strong>
-                    <div>${equipamentosHtml}</div>
-                </div>
+            <div class="item-details-grid mt-3">
+                <div class="item-supervisor"><strong>Encarregado:</strong><span>${
+                  item.encarregado_item_nome || "N/A"
+                }</span></div>
+                <div class="item-status"><strong>Status do Item:</strong><span class="status-badge status-${statusClasse}">${statusTexto}</span></div>
+                <div class="item-equipment"><strong>Equipamentos:</strong><div>${equipamentosHtml}</div></div>
+                <div class="item-conclusion-date"><strong>Data Conclusão do Item:</strong><span>${dataConclusaoItemFmt}</span></div>
             </div>
-            ${fotosHtml}
+            ${
+              item.observacoes_conclusao_item
+                ? `<div class="mt-2"><p class="mb-1"><strong>Observações de Conclusão do Item:</strong></p><p class="small fst-italic bg-light p-2 rounded">${item.observacoes_conclusao_item}</p></div>`
+                : ""
+            }
+            ${anexosConclusaoItemHtml}
         `;
 
       itemCard.querySelectorAll(".item-photos-container img").forEach((img) => {
@@ -364,14 +318,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       containerItensEscopo.appendChild(itemCard);
-    });
-  }
-
-  if (btnEditarServicoPagina) {
-    btnEditarServicoPagina.addEventListener("click", () => {
-      if (servicoIdAtual) {
-        window.location.href = `/registrar-servico-subestacao?editarId=${servicoIdAtual}`;
-      }
     });
   }
 
