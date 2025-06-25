@@ -189,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!localCorpoTabela || !localNenhumMsg) return;
 
     localCorpoTabela.innerHTML =
-      '<tr><td colspan="11" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando serviços...</td></tr>';
+      '<tr><td colspan="12" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando serviços...</td></tr>';
     localNenhumMsg.classList.add("d-none");
     const queryParams = new URLSearchParams(params);
 
@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       if (localCorpoTabela) {
         localCorpoTabela.innerHTML =
-          '<tr><td colspan="11" class="text-center text-danger p-5">Erro ao carregar os serviços. Verifique o console.</td></tr>';
+          '<tr><td colspan="12" class="text-center text-danger p-5">Erro ao carregar os serviços. Verifique o console.</td></tr>';
       }
     }
   }
@@ -239,15 +239,26 @@ document.addEventListener("DOMContentLoaded", () => {
           ? "text-success fw-bold"
           : "text-muted";
 
+      let motivoDisplay = serv.motivo || "";
+      const matchInspecao = motivoDisplay.match(/- Insp. #(\d+)/);
+      if (matchInspecao && matchInspecao[1]) {
+        motivoDisplay = `Inspeção #${matchInspecao[1]}`;
+      } else {
+        motivoDisplay =
+          motivoDisplay.substring(0, 35) +
+          (motivoDisplay.length > 35 ? "..." : "");
+      }
+
       tr.innerHTML = `
           <td data-label="ID">${serv.id || "-"}</td>
           <td data-label="Processo">${serv.processo || "-"}</td>
           <td data-label="Subestação">${
             serv.subestacao_sigla || serv.subestacao_id || "-"
           }</td>
-          <td data-label="Motivo" title="${serv.motivo || ""}">${(
-        serv.motivo || ""
-      ).substring(0, 35)}${(serv.motivo || "").length > 35 ? "..." : ""}</td>
+          <td data-label="Motivo / Origem" title="${
+            serv.motivo || ""
+          }">${motivoDisplay}</td>
+          <td data-label="Tipo Ordem">${serv.tipo_ordem || "-"}</td>
           <td data-label="Data Prevista">${dataPrevistaFormatada}</td>
           <td data-label="Horário">${
             formatarHoraParaInput(serv.horario_inicio) || "-"

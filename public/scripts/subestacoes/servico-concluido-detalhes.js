@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const detalheProcesso = document.getElementById("detalheProcesso");
   const detalheSubestacao = document.getElementById("detalheSubestacao");
+  const detalheTipoOrdem = document.getElementById("detalheTipoOrdem");
   const detalheStatus = document.getElementById("detalheStatus");
   const detalheMotivo = document.getElementById("detalheMotivo");
   const detalheResponsavel = document.getElementById("detalheResponsavel");
@@ -168,6 +169,8 @@ document.addEventListener("DOMContentLoaded", () => {
         detalheSubestacao.textContent = `${servico.subestacao_sigla || ""} - ${
           servico.subestacao_nome || "Não informado"
         }`;
+      if (detalheTipoOrdem)
+        detalheTipoOrdem.textContent = servico.tipo_ordem || "Não informado";
       if (detalheStatus) {
         const statusClasseBase = (
           servico.status || "desconhecido"

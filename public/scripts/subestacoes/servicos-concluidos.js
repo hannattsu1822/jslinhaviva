@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!corpoTabelaServicosElem || !nenhumServicoMsgElem) return;
 
     corpoTabelaServicosElem.innerHTML =
-      '<tr><td colspan="8" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando histórico...</td></tr>';
+      '<tr><td colspan="9" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando histórico...</td></tr>';
     nenhumServicoMsgElem.classList.add("d-none");
 
     if (!params.status) {
@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       if (corpoTabelaServicosElem) {
         corpoTabelaServicosElem.innerHTML =
-          '<tr><td colspan="8" class="text-center text-danger p-5">Erro ao carregar o histórico.</td></tr>';
+          '<tr><td colspan="9" class="text-center text-danger p-5">Erro ao carregar o histórico.</td></tr>';
       }
     }
   }
@@ -122,13 +122,24 @@ document.addEventListener("DOMContentLoaded", () => {
           )
         : "N/A";
 
+      let motivoDisplay = serv.motivo || "";
+      const matchInspecao = motivoDisplay.match(/- Insp. #(\d+)/);
+      if (matchInspecao && matchInspecao[1]) {
+        motivoDisplay = `Inspeção #${matchInspecao[1]}`;
+      } else {
+        motivoDisplay =
+          motivoDisplay.substring(0, 40) +
+          (motivoDisplay.length > 40 ? "..." : "");
+      }
+
       tr.innerHTML = `
           <td data-label="ID">${serv.id || "-"}</td>
           <td data-label="Processo">${serv.processo || "-"}</td>
           <td data-label="Subestação">${serv.subestacao_sigla || "-"}</td>
-          <td data-label="Motivo" title="${serv.motivo || ""}">${(
-        serv.motivo || ""
-      ).substring(0, 40)}${(serv.motivo || "").length > 40 ? "..." : ""}</td>
+          <td data-label="Motivo / Origem" title="${
+            serv.motivo || ""
+          }">${motivoDisplay}</td>
+          <td data-label="Tipo Ordem">${serv.tipo_ordem || "-"}</td>
           <td data-label="Data Conclusão" class="text-center">${dataConclusaoFormatada}</td>
           <td data-label="Responsável">${serv.responsavel_nome || "-"}</td>
           <td data-label="Status (Geral)" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>

@@ -8,6 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const servicoProcessoModalInput = document.getElementById(
     "servicoProcessoModal"
   );
+  const servicoTipoOrdemModalSelect = document.getElementById(
+    "servicoTipoOrdemModal"
+  );
   const servicoMotivoModalTextarea =
     document.getElementById("servicoMotivoModal");
   const servicoDataPrevistaModalInput = document.getElementById(
@@ -165,17 +168,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const errorData = await response
           .json()
           .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
-        console.error(
-          `[fetchData] Erro na resposta para ${url}: Status ${response.status}`,
-          errorData
-        );
         throw new Error(
           errorData.message || `Erro HTTP: ${response.status} em ${url}`
         );
       }
       return response.status === 204 ? null : await response.json();
     } catch (error) {
-      console.error(`[fetchData] Exceção ao buscar dados de ${url}:`, error);
       alert(
         `Erro ao comunicar com o servidor: ${error.message}. Verifique o console para detalhes.`
       );
@@ -204,10 +202,6 @@ document.addEventListener("DOMContentLoaded", () => {
         catalogoDefeitosCache =
           (await fetchData("/api/catalogo-defeitos-servicos")) || [];
       } catch (error) {
-        console.error(
-          "[buscarCatalogoDefeitos] Erro ao buscar catálogo:",
-          error
-        );
         catalogoDefeitosCache = [];
       }
     }
@@ -254,17 +248,13 @@ document.addEventListener("DOMContentLoaded", () => {
     subestacaoId,
     selectElement
   ) {
-    if (!selectElement) {
-      console.warn(
-        "[popularSelectEquipamentosParaItem] Select de equipamento para item não fornecido."
-      );
-      return;
-    }
+    if (!selectElement) return;
+
     selectElement.innerHTML = '<option value="">Carregando...</option>';
     selectElement.disabled = true;
     if (!subestacaoId) {
       selectElement.innerHTML =
-        '<option value="">Subestação não definida para buscar equipamentos</option>';
+        '<option value="">Subestação não definida</option>';
       selectElement.disabled = false;
       return;
     }
@@ -286,9 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )
       );
     } catch (error) {
-      selectElement.innerHTML =
-        '<option value="">Erro ao carregar equipamentos</option>';
-      console.error("[popularSelectEquipamentosParaItem] Erro:", error);
+      selectElement.innerHTML = '<option value="">Erro ao carregar</option>';
     } finally {
       if (selectElement) selectElement.disabled = false;
     }
@@ -297,24 +285,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function configurarFormularioParaServico(
     titulo = "Registrar Novo Serviço Avulso"
   ) {
-    if (
-      !formServico ||
-      !paginaTitulo ||
-      !inspecoesVinculadasContainer ||
-      !listaInspecoesVinculadasComDefeitos ||
-      !itensServicoAvulsoContainer ||
-      !listaItensServicoAvulso ||
-      !servicoStatusModalSelect ||
-      !listaNomesAnexosModal ||
-      !servicoAnexosInput ||
-      !anexosExistentesContainer ||
-      !listaAnexosExistentes
-    ) {
-      console.error(
-        "[configurarFormularioParaServico] Elemento(s) do DOM não encontrado(s)."
-      );
-      return;
-    }
+    if (!formServico) return;
+
     formServico.reset();
     selectedFiles = [];
     currentServicoIdParaEdicao = null;
@@ -334,8 +306,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     atualizarVisibilidadeConclusao();
     habilitarCamposFormulario(true);
-    const campoAnexos = servicoAnexosInput.closest(".mb-2");
-    if (campoAnexos) campoAnexos.style.display = "block";
 
     if (servicoSubestacaoModalSelect) servicoSubestacaoModalSelect.focus();
   }
@@ -344,28 +314,6 @@ document.addEventListener("DOMContentLoaded", () => {
     configurarFormularioParaServico(`Editar Serviço`);
     currentServicoIdParaEdicao = servicoId;
 
-    if (
-      !paginaTitulo ||
-      !servicoProcessoModalInput ||
-      !servicoMotivoModalTextarea ||
-      !servicoDataPrevistaModalInput ||
-      !servicoHorarioInicioModalInput ||
-      !servicoHorarioFimModalInput ||
-      !servicoResponsavelModalSelect ||
-      !servicoStatusModalSelect ||
-      !servicoSubestacaoModalSelect ||
-      !servicoObservacoesConclusaoModalTextarea ||
-      !servicoDataConclusaoModalInput ||
-      !listaAnexosExistentes ||
-      !anexosExistentesContainer ||
-      !inspecoesVinculadasContainer ||
-      !itensServicoAvulsoContainer
-    ) {
-      console.error(
-        "[carregarDadosServicoParaEdicao] Elemento(s) do DOM não encontrado(s)."
-      );
-      return;
-    }
     try {
       const servico = await fetchData(`/api/servicos-subestacoes/${servicoId}`);
       if (!servico) {
@@ -374,47 +322,39 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      if (paginaTitulo)
-        paginaTitulo.innerHTML = `<span class="material-symbols-outlined fs-1 me-2">edit_note</span> Editar Serviço ${
-          servico.processo || `#${servico.id}`
-        }`;
-      if (servicoProcessoModalInput)
-        servicoProcessoModalInput.value = servico.processo || "";
-      if (servicoMotivoModalTextarea)
-        servicoMotivoModalTextarea.value = servico.motivo || "";
-      if (servicoDataPrevistaModalInput)
-        servicoDataPrevistaModalInput.value = formatarDataParaInput(
-          servico.data_prevista
-        );
-      if (servicoHorarioInicioModalInput)
-        servicoHorarioInicioModalInput.value = formatarHoraParaInput(
-          servico.horario_inicio
-        );
-      if (servicoHorarioFimModalInput)
-        servicoHorarioFimModalInput.value = formatarHoraParaInput(
-          servico.horario_fim
-        );
-      if (servicoResponsavelModalSelect)
-        servicoResponsavelModalSelect.value = String(servico.responsavel_id);
-      if (servicoStatusModalSelect)
-        servicoStatusModalSelect.value = servico.status || "PROGRAMADO";
-      if (servicoSubestacaoModalSelect)
-        servicoSubestacaoModalSelect.value = String(servico.subestacao_id);
-      if (servicoSubestacaoModalSelect)
-        servicoSubestacaoModalSelect.dispatchEvent(new Event("change"));
+      paginaTitulo.innerHTML = `<span class="material-symbols-outlined fs-1 me-2">edit_note</span> Editar Serviço ${
+        servico.processo || `#${servico.id}`
+      }`;
+      servicoProcessoModalInput.value = servico.processo || "";
 
-      if (servicoObservacoesConclusaoModalTextarea)
-        servicoObservacoesConclusaoModalTextarea.value =
-          servico.observacoes_conclusao || "";
-      if (servicoDataConclusaoModalInput)
-        servicoDataConclusaoModalInput.value = formatarDataParaInput(
-          servico.data_conclusao
-        );
+      if (servicoTipoOrdemModalSelect) {
+        servicoTipoOrdemModalSelect.value = servico.tipo_ordem || "";
+      }
 
-      if (listaAnexosExistentes) listaAnexosExistentes.innerHTML = "";
+      servicoMotivoModalTextarea.value = servico.motivo || "";
+      servicoDataPrevistaModalInput.value = formatarDataParaInput(
+        servico.data_prevista
+      );
+      servicoHorarioInicioModalInput.value = formatarHoraParaInput(
+        servico.horario_inicio
+      );
+      servicoHorarioFimModalInput.value = formatarHoraParaInput(
+        servico.horario_fim
+      );
+      servicoResponsavelModalSelect.value = String(servico.responsavel_id);
+      servicoStatusModalSelect.value = servico.status || "PROGRAMADO";
+      servicoSubestacaoModalSelect.value = String(servico.subestacao_id);
+      servicoSubestacaoModalSelect.dispatchEvent(new Event("change"));
+
+      servicoObservacoesConclusaoModalTextarea.value =
+        servico.observacoes_conclusao || "";
+      servicoDataConclusaoModalInput.value = formatarDataParaInput(
+        servico.data_conclusao
+      );
+
+      listaAnexosExistentes.innerHTML = "";
       if (servico.anexos && servico.anexos.length > 0) {
-        if (anexosExistentesContainer)
-          anexosExistentesContainer.classList.remove("d-none");
+        anexosExistentesContainer.classList.remove("d-none");
         servico.anexos.forEach((anexo) => {
           const card = createAnexoPreviewCard({
             id: anexo.id,
@@ -423,11 +363,10 @@ document.addEventListener("DOMContentLoaded", () => {
             path: anexo.caminho_servidor,
             type: anexo.tipo_mime,
           });
-          if (listaAnexosExistentes) listaAnexosExistentes.appendChild(card);
+          listaAnexosExistentes.appendChild(card);
         });
       } else {
-        if (anexosExistentesContainer)
-          anexosExistentesContainer.classList.add("d-none");
+        anexosExistentesContainer.classList.add("d-none");
       }
 
       if (
@@ -436,36 +375,27 @@ document.addEventListener("DOMContentLoaded", () => {
       ) {
         inspecoesSelecionadasParaServicoGlobal =
           servico.inspecoes_vinculadas.map((iv) => String(iv.inspecao_id));
-        if (itensServicoAvulsoContainer)
-          itensServicoAvulsoContainer.classList.add("d-none");
-        if (inspecoesVinculadasContainer)
-          inspecoesVinculadasContainer.classList.remove("d-none");
+        itensServicoAvulsoContainer.classList.add("d-none");
+        inspecoesVinculadasContainer.classList.remove("d-none");
         await preencherFormularioComBaseEmMultiplasInspecoes(
           inspecoesSelecionadasParaServicoGlobal,
           servico.itens_escopo || []
         );
       } else if (servico.itens_escopo && servico.itens_escopo.length > 0) {
-        if (inspecoesVinculadasContainer)
-          inspecoesVinculadasContainer.classList.add("d-none");
-        if (itensServicoAvulsoContainer)
-          itensServicoAvulsoContainer.classList.remove("d-none");
+        inspecoesVinculadasContainer.classList.add("d-none");
+        itensServicoAvulsoContainer.classList.remove("d-none");
         renderizarItensDeServicoAvulso(servico.itens_escopo);
       } else {
-        if (inspecoesVinculadasContainer)
-          inspecoesVinculadasContainer.classList.add("d-none");
-        if (itensServicoAvulsoContainer)
-          itensServicoAvulsoContainer.classList.remove("d-none");
-        if (
-          listaItensServicoAvulso &&
-          listaItensServicoAvulso.children.length === 0 &&
-          btnAdicionarItemServicoAvulso
-        )
+        inspecoesVinculadasContainer.classList.add("d-none");
+        itensServicoAvulsoContainer.classList.remove("d-none");
+        if (listaItensServicoAvulso.children.length === 0) {
           adicionarNovaLinhaItemServicoAvulso();
+        }
       }
       atualizarVisibilidadeConclusao();
     } catch (error) {
-      console.error("[carregarDadosServicoParaEdicao] Erro:", error);
       alert("Erro ao carregar dados do serviço para edição.");
+      console.error("Erro em carregarDadosServicoParaEdicao:", error);
       configurarFormularioParaServico();
     }
   }
@@ -477,20 +407,15 @@ document.addEventListener("DOMContentLoaded", () => {
         el.type !== "button" &&
         el.type !== "submit" &&
         !el.classList.contains("btn-close")
-      )
+      ) {
         el.disabled = !habilitar;
+      }
     });
     if (servicoAnexosInput) servicoAnexosInput.disabled = !habilitar;
   }
 
   async function confirmarExclusaoAnexo(anexoId, cardElement) {
-    if (
-      !anexoId ||
-      !cardElement ||
-      !listaAnexosExistentes ||
-      !anexosExistentesContainer
-    )
-      return;
+    if (!anexoId || !cardElement) return;
     if (
       confirm(
         "Excluir este anexo? A remoção será permanente ao salvar as alterações do serviço."
@@ -592,16 +517,12 @@ document.addEventListener("DOMContentLoaded", () => {
     btnServicoAvulso.addEventListener("click", () => {
       if (bsModalPreSelecaoServico) ocultarModal(bsModalPreSelecaoServico);
       configurarFormularioParaServico("Registrar Novo Serviço Avulso");
-      if (inspecoesVinculadasContainer)
-        inspecoesVinculadasContainer.classList.add("d-none");
-      if (itensServicoAvulsoContainer)
+      if (itensServicoAvulsoContainer) {
         itensServicoAvulsoContainer.classList.remove("d-none");
-      if (
-        listaItensServicoAvulso &&
-        listaItensServicoAvulso.children.length === 0 &&
-        btnAdicionarItemServicoAvulso
-      )
-        adicionarNovaLinhaItemServicoAvulso();
+        if (listaItensServicoAvulso.children.length === 0) {
+          adicionarNovaLinhaItemServicoAvulso();
+        }
+      }
     });
   }
 
@@ -609,12 +530,12 @@ document.addEventListener("DOMContentLoaded", () => {
     btnServicoAPartirDeInspecao.addEventListener("click", () => {
       if (bsModalPreSelecaoServico) ocultarModal(bsModalPreSelecaoServico);
       abrirModalSelecaoInspecao();
-      if (itensServicoAvulsoContainer)
-        itensServicoAvulsoContainer.classList.add("d-none");
-      if (inspecoesVinculadasContainer)
+      if (inspecoesVinculadasContainer) {
         inspecoesVinculadasContainer.classList.remove("d-none");
+      }
     });
   }
+
   if (btnCancelarPreSelecao) {
     btnCancelarPreSelecao.addEventListener(
       "click",
@@ -623,78 +544,32 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function abrirModalSelecaoInspecao() {
-    if (
-      !bsModalSelecionarInspecao ||
-      !corpoTabelaSelecaoInspecoes ||
-      !nenhumaInspecaoParaSelecaoMsg
-    ) {
-      console.warn(
-        "[abrirModalSelecaoInspecao] Elementos do modal de seleção de inspeção não encontrados."
-      );
-      return;
-    }
-    if (
-      filtroInspecaoSubestacaoParaServicoSelect &&
-      filtroInspecaoSubestacaoParaServicoSelect.options.length <= 1
-    ) {
-      if (subestacoesCache.length > 0) {
-        filtroInspecaoSubestacaoParaServicoSelect.innerHTML =
-          '<option value="">Todas</option>';
-        subestacoesCache.forEach((sub) =>
-          filtroInspecaoSubestacaoParaServicoSelect.add(
-            new Option(`${sub.sigla} - ${sub.nome}`, sub.Id)
-          )
-        );
-      } else {
-        await popularSelectsIniciais();
-      }
-    }
+    if (!bsModalSelecionarInspecao) return;
+
+    await popularSelectsIniciais();
+
     corpoTabelaSelecaoInspecoes.innerHTML =
       '<tr><td colspan="7" class="text-center p-3">Carregando...</td></tr>';
     nenhumaInspecaoParaSelecaoMsg.classList.add("d-none");
-    if (selecionarTodasInspecoesCheckbox)
-      selecionarTodasInspecoesCheckbox.checked = false;
+    selecionarTodasInspecoesCheckbox.checked = false;
     mostrarModal(bsModalSelecionarInspecao);
-    if (filtroInspecaoStatusParaServicoSelect)
-      filtroInspecaoStatusParaServicoSelect.value = "CONCLUIDA";
+    filtroInspecaoStatusParaServicoSelect.value = "CONCLUIDA";
     await carregarInspecoesParaSelecao();
   }
 
   async function carregarInspecoesParaSelecao() {
-    if (!corpoTabelaSelecaoInspecoes || !nenhumaInspecaoParaSelecaoMsg) {
-      console.warn(
-        "[carregarInspecoesParaSelecao] Elementos da tabela de seleção não encontrados."
-      );
-      return;
-    }
+    if (!corpoTabelaSelecaoInspecoes) return;
+
     corpoTabelaSelecaoInspecoes.innerHTML =
       '<tr><td colspan="7" class="text-center p-3">Buscando...</td></tr>';
     nenhumaInspecaoParaSelecaoMsg.classList.add("d-none");
-    const params = new URLSearchParams();
-    if (
-      filtroInspecaoSubestacaoParaServicoSelect &&
-      filtroInspecaoSubestacaoParaServicoSelect.value
-    )
-      params.append(
-        "subestacao_id",
-        filtroInspecaoSubestacaoParaServicoSelect.value
-      );
-    if (
-      filtroInspecaoStatusParaServicoSelect &&
-      filtroInspecaoStatusParaServicoSelect.value
-    )
-      params.append(
-        "status_inspecao",
-        filtroInspecaoStatusParaServicoSelect.value
-      );
-    if (
-      filtroInspecaoFormularioParaServicoInput &&
-      filtroInspecaoFormularioParaServicoInput.value
-    )
-      params.append(
-        "formulario_inspecao_num_like",
-        filtroInspecaoFormularioParaServicoInput.value
-      );
+    const params = new URLSearchParams({
+      subestacao_id: filtroInspecaoSubestacaoParaServicoSelect.value,
+      status_inspecao: filtroInspecaoStatusParaServicoSelect.value,
+      formulario_inspecao_num_like:
+        filtroInspecaoFormularioParaServicoInput.value,
+    });
+
     try {
       const inspecoes = await fetchData(
         `/inspecoes-subestacoes?${params.toString()}`
@@ -703,24 +578,20 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       if (corpoTabelaSelecaoInspecoes)
         corpoTabelaSelecaoInspecoes.innerHTML =
-          '<tr><td colspan="7" class="text-center text-danger p-3">Erro ao carregar inspeções.</td></tr>';
-      console.error("[carregarInspecoesParaSelecao] Erro:", error);
+          '<tr><td colspan="7" class="text-center text-danger p-3">Erro ao carregar.</td></tr>';
     }
   }
 
   function popularTabelaSelecaoInspecoes(inspecoes) {
-    if (!corpoTabelaSelecaoInspecoes || !nenhumaInspecaoParaSelecaoMsg) {
-      console.warn(
-        "[popularTabelaSelecaoInspecoes] Elementos da tabela de seleção não encontrados."
-      );
-      return;
-    }
+    if (!corpoTabelaSelecaoInspecoes) return;
+
     corpoTabelaSelecaoInspecoes.innerHTML = "";
     if (!inspecoes || inspecoes.length === 0) {
       nenhumaInspecaoParaSelecaoMsg.classList.remove("d-none");
       return;
     }
     nenhumaInspecaoParaSelecaoMsg.classList.add("d-none");
+
     inspecoes.forEach(async (insp) => {
       const tr = document.createElement("tr");
       const dataFmt = insp.data_avaliacao
@@ -736,6 +607,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const isChecked = inspecoesSelecionadasParaServicoGlobal.includes(
         String(insp.id)
       );
+
       tr.innerHTML = `<td class="text-center"><input type="checkbox" class="form-check-input sel-insp-cb" data-inspecao-id="${
         insp.id
       }" ${isChecked ? "checked" : ""}></td><td class="text-center">${
@@ -746,6 +618,7 @@ document.addEventListener("DOMContentLoaded", () => {
         insp.responsavel_nome || "-"
       }</td><td class="text-center"><span class="status-badge status-${stCls}">${stTxt}</span></td><td class="text-center items-anormais-count">...</td>`;
       corpoTabelaSelecaoInspecoes.appendChild(tr);
+
       const countCell = tr.querySelector(".items-anormais-count");
       try {
         const detInsp = await fetchData(`/inspecoes-subestacoes/${insp.id}`);
@@ -757,36 +630,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (i.avaliacao === "A") countAn++;
               });
           });
-        if (countCell) countCell.textContent = countAn;
-        if (countAn > 0 && countCell)
-          countCell.classList.add("text-danger", "fw-bold");
-      } catch {
         if (countCell) {
-          countCell.textContent = "?";
-          countCell.title = "Erro ao obter contagem.";
+          countCell.textContent = countAn;
+          if (countAn > 0) countCell.classList.add("text-danger", "fw-bold");
         }
+      } catch {
+        if (countCell) countCell.textContent = "?";
       }
     });
   }
 
   if (selecionarTodasInspecoesCheckbox) {
     selecionarTodasInspecoesCheckbox.addEventListener("change", (e) => {
-      if (corpoTabelaSelecaoInspecoes)
-        corpoTabelaSelecaoInspecoes
-          .querySelectorAll(".sel-insp-cb")
-          .forEach((cb) => (cb.checked = e.target.checked));
+      corpoTabelaSelecaoInspecoes
+        .querySelectorAll(".sel-insp-cb")
+        .forEach((cb) => (cb.checked = e.target.checked));
     });
   }
+
   if (btnConfirmarSelecaoInspecoes) {
     btnConfirmarSelecaoInspecoes.addEventListener("click", async () => {
-      if (corpoTabelaSelecaoInspecoes) {
-        inspecoesSelecionadasParaServicoGlobal = Array.from(
-          corpoTabelaSelecaoInspecoes.querySelectorAll(".sel-insp-cb:checked")
-        ).map((cb) => cb.dataset.inspecaoId);
-      } else {
-        inspecoesSelecionadasParaServicoGlobal = [];
-      }
-
+      inspecoesSelecionadasParaServicoGlobal = Array.from(
+        corpoTabelaSelecaoInspecoes.querySelectorAll(".sel-insp-cb:checked")
+      ).map((cb) => cb.dataset.inspecaoId);
       if (
         inspecoesSelecionadasParaServicoGlobal.length === 0 &&
         !currentServicoIdParaEdicao
@@ -798,8 +664,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (bsModalSelecionarInspecao) ocultarModal(bsModalSelecionarInspecao);
       await preencherFormularioComBaseEmMultiplasInspecoes(
-        inspecoesSelecionadasParaServicoGlobal,
-        currentServicoIdParaEdicao ? [] : []
+        inspecoesSelecionadasParaServicoGlobal
       );
     });
   }
@@ -808,48 +673,22 @@ document.addEventListener("DOMContentLoaded", () => {
     listaIds,
     itensEscopoExistentes = []
   ) {
-    if (
-      !inspecoesVinculadasContainer ||
-      !listaInspecoesVinculadasComDefeitos ||
-      !paginaTitulo ||
-      !servicoSubestacaoModalSelect ||
-      !servicoMotivoModalTextarea ||
-      !servicoDataPrevistaModalInput ||
-      !servicoProcessoModalInput
-    ) {
-      console.error(
-        "[preencherFormularioComBaseEmMultiplasInspecoes] Elemento(s) DOM não encontrado(s) para preenchimento."
-      );
-      return;
-    }
+    if (!servicoMotivoModalTextarea) return;
+
     const tituloBase =
       currentServicoIdParaEdicao && servicoProcessoModalInput.value
         ? `Editar Serviço ${servicoProcessoModalInput.value}`
         : currentServicoIdParaEdicao
         ? `Editar Serviço #${currentServicoIdParaEdicao}`
         : "Registrar Novo Serviço";
-    if (paginaTitulo)
-      paginaTitulo.innerHTML = `<span class="material-symbols-outlined fs-1 me-2">playlist_add_check</span> ${tituloBase} a partir de Inspeção(ões)`;
+    paginaTitulo.innerHTML = `<span class="material-symbols-outlined fs-1 me-2">playlist_add_check</span> ${tituloBase} a partir de Inspeção(ões)`;
 
     let primSubId =
       currentServicoIdParaEdicao && servicoSubestacaoModalSelect.value
         ? servicoSubestacaoModalSelect.value
         : null;
     let motConcat =
-      currentServicoIdParaEdicao && servicoMotivoModalTextarea.value
-        ? servicoMotivoModalTextarea.value
-        : "Serviço gerado a partir da(s) inspeção(ões):\n";
-    if (
-      currentServicoIdParaEdicao &&
-      servicoMotivoModalTextarea.value &&
-      listaIds.length > 0 &&
-      !servicoMotivoModalTextarea.value.includes(
-        "Inspeções Vinculadas Adicionalmente"
-      )
-    ) {
-      motConcat += "\n\nInspeções Vinculadas Adicionalmente/Revisadas:\n";
-    }
-
+      "Serviço gerado a partir da(s) seguinte(s) inspeção(ões):\n";
     let dataMaisRec =
       currentServicoIdParaEdicao && servicoDataPrevistaModalInput.value
         ? new Date(servicoDataPrevistaModalInput.value + "T00:00:00Z")
@@ -869,16 +708,26 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!primSubId && !servicoSubestacaoModalSelect.value)
         primSubId = insp.subestacao_id;
 
+      let tipoInspecaoDisplay = (insp.tipo_inspecao || "N/A")
+        .toLowerCase()
+        .replace(/_/g, " ");
+
+      if (tipoInspecaoDisplay === "visual e termografica") {
+        tipoInspecaoDisplay = "visual e termográfica";
+      } else if (tipoInspecaoDisplay === "termografica") {
+        tipoInspecaoDisplay = "termográfica";
+      }
+
       const infoInsp = `- Insp. #${
         insp.formulario_inspecao_num || insp.id
-      } (Sub: ${insp.subestacao_sigla}, Data: ${
+      } (Tipo: ${tipoInspecaoDisplay}) - Sub: ${insp.subestacao_sigla}, Data: ${
         insp.data_avaliacao_fmt || formatarDataParaInput(insp.data_avaliacao)
-      })\n`;
-      if (!motConcat.includes(infoInsp)) {
+      }\n`;
+
+      if (!servicoMotivoModalTextarea.value.includes(infoInsp)) {
         motConcat += infoInsp;
-        if (insp.observacoes_gerais)
-          motConcat += `  Obs. Gerais da Insp.: ${insp.observacoes_gerais}\n`;
       }
+
       const dataAtual = new Date(insp.data_avaliacao + "T00:00:00Z");
       if (!isNaN(dataAtual.getTime())) {
         if (!dataMaisRec || dataAtual > dataMaisRec) dataMaisRec = dataAtual;
@@ -889,6 +738,11 @@ document.addEventListener("DOMContentLoaded", () => {
         itensEscopoExistentes
       );
     }
+
+    if (!currentServicoIdParaEdicao) {
+      servicoMotivoModalTextarea.value = motConcat.trim();
+    }
+
     if (
       servicoSubestacaoModalSelect &&
       primSubId &&
@@ -899,19 +753,21 @@ document.addEventListener("DOMContentLoaded", () => {
         new Event("change", { bubbles: true })
       );
     }
-    if (servicoMotivoModalTextarea)
-      servicoMotivoModalTextarea.value = motConcat.trim();
+
     if (
       servicoDataPrevistaModalInput &&
       dataMaisRec &&
       !isNaN(dataMaisRec.getTime()) &&
       !servicoDataPrevistaModalInput.value
-    )
+    ) {
       servicoDataPrevistaModalInput.value = dataMaisRec
         .toISOString()
         .split("T")[0];
-    if (servicoProcessoModalInput && !currentServicoIdParaEdicao)
+    }
+
+    if (servicoProcessoModalInput && !currentServicoIdParaEdicao) {
       servicoProcessoModalInput.focus();
+    }
   }
 
   async function renderizarItensAnormaisParaInspecao(
@@ -1051,11 +907,11 @@ document.addEventListener("DOMContentLoaded", () => {
                             </button>
                         </div>
                     </div>`;
-          if (divInsp) divInsp.appendChild(itemDiv);
+          divInsp.appendChild(itemDiv);
         }
       });
     });
-    if (algumAnormal && containerPai) {
+    if (algumAnormal) {
       containerPai.appendChild(divInsp);
       divInsp
         .querySelectorAll(".btn-adicionar-equip-item")
@@ -1067,7 +923,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .forEach((btn) =>
           btn.addEventListener("click", handleRemoverEquipamentoDeItem)
         );
-    } else if (containerPai) {
+    } else {
       divInsp.innerHTML +=
         '<p class="small text-muted fst-italic">Nenhum item anormal identificado nesta inspeção.</p>';
       containerPai.appendChild(divInsp);
@@ -1075,12 +931,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderizarItensDeServicoAvulso(itensAvulsos = []) {
-    if (!listaItensServicoAvulso || !itensServicoAvulsoContainer) {
-      console.warn(
-        "[renderizarItensDeServicoAvulso] Elementos DOM para itens avulsos não encontrados."
-      );
-      return;
-    }
+    if (!listaItensServicoAvulso) return;
+
     listaItensServicoAvulso.innerHTML = "";
     itensServicoAvulsoContainer.classList.remove("d-none");
 
@@ -1094,8 +946,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (
       listaItensServicoAvulso.children.length === 0 &&
-      itensServicoAvulsoContainer.classList.contains("d-none") === false &&
-      btnAdicionarItemServicoAvulso
+      !itensServicoAvulsoContainer.classList.contains("d-none")
     ) {
       adicionarNovaLinhaItemServicoAvulso();
     }
@@ -1103,16 +954,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let itemAvulsoCounter = 0;
   function adicionarNovaLinhaItemServicoAvulso(itemData = null) {
-    if (
-      !listaItensServicoAvulso ||
-      !catalogoDefeitosCache ||
-      !servicoSubestacaoModalSelect
-    ) {
-      console.warn(
-        "[adicionarNovaLinhaItemServicoAvulso] Elementos DOM ou caches necessários não encontrados."
-      );
-      return;
-    }
+    if (!listaItensServicoAvulso) return;
+
     itemAvulsoCounter++;
     const itemId = `avulso_${itemAvulsoCounter}`;
     const subestacaoIdAtual = servicoSubestacaoModalSelect.value;
@@ -1191,26 +1034,18 @@ document.addEventListener("DOMContentLoaded", () => {
             </button>
         </div>
     `;
-    if (listaItensServicoAvulso) listaItensServicoAvulso.appendChild(itemDiv);
-    const btnAddEquip = itemDiv.querySelector(".btn-adicionar-equip-item");
-    if (btnAddEquip)
-      btnAddEquip.addEventListener(
-        "click",
-        handleAbrirModalAdicionarEquipamento
-      );
-
-    const btnRemItem = itemDiv.querySelector(".btn-remover-item-avulso");
-    if (btnRemItem)
-      btnRemItem.addEventListener("click", () => {
+    listaItensServicoAvulso.appendChild(itemDiv);
+    itemDiv
+      .querySelector(".btn-adicionar-equip-item")
+      ?.addEventListener("click", handleAbrirModalAdicionarEquipamento);
+    itemDiv
+      .querySelector(".btn-remover-item-avulso")
+      ?.addEventListener("click", () => {
         itemDiv.remove();
-        if (
-          listaItensServicoAvulso &&
-          listaItensServicoAvulso.children.length === 0 &&
-          btnAdicionarItemServicoAvulso
-        )
+        if (listaItensServicoAvulso.children.length === 0) {
           adicionarNovaLinhaItemServicoAvulso();
+        }
       });
-
     itemDiv
       .querySelectorAll(".btn-remover-equip-item")
       .forEach((btn) =>
@@ -1222,27 +1057,14 @@ document.addEventListener("DOMContentLoaded", () => {
     currentItemEscopoElementParaAdicionarEquip = event.target.closest(
       ".item-anormal-servico, .item-servico-avulso"
     );
-    if (!currentItemEscopoElementParaAdicionarEquip) {
-      console.error(
-        "Elemento pai do item de escopo não encontrado ao tentar adicionar equipamento."
-      );
-      return;
-    }
-    currentSubestacaoIdParaSelecaoEquip =
-      currentItemEscopoElementParaAdicionarEquip.dataset.subestacaoIdOrigem;
+    if (!currentItemEscopoElementParaAdicionarEquip) return;
 
-    if (
-      !currentSubestacaoIdParaSelecaoEquip &&
-      servicoSubestacaoModalSelect &&
-      servicoSubestacaoModalSelect.value
-    ) {
-      currentSubestacaoIdParaSelecaoEquip = servicoSubestacaoModalSelect.value;
-    }
+    currentSubestacaoIdParaSelecaoEquip =
+      currentItemEscopoElementParaAdicionarEquip.dataset.subestacaoIdOrigem ||
+      servicoSubestacaoModalSelect.value;
 
     if (!currentSubestacaoIdParaSelecaoEquip) {
-      alert(
-        "Selecione primeiro uma subestação para o serviço para poder associar equipamentos."
-      );
+      alert("Selecione uma subestação para associar equipamentos.");
       return;
     }
     if (bsModalSelecionarEquipamentoItem && selectEquipamentoParaItem) {
@@ -1251,15 +1073,12 @@ document.addEventListener("DOMContentLoaded", () => {
         selectEquipamentoParaItem
       );
       mostrarModal(bsModalSelecionarEquipamentoItem);
-    } else {
-      console.error("Modal ou select de equipamento para item não encontrado.");
     }
   }
 
   function handleAdicionarEquipamentoAoItem() {
     if (
       !currentItemEscopoElementParaAdicionarEquip ||
-      !selectEquipamentoParaItem ||
       !selectEquipamentoParaItem.value
     ) {
       alert("Selecione um equipamento.");
@@ -1274,19 +1093,10 @@ document.addEventListener("DOMContentLoaded", () => {
         ".lista-equipamentos-item-escopo"
       );
 
-    if (!listaEquipContainer) {
-      console.error(
-        "Container de lista de equipamentos não encontrado para o item."
-      );
-      return;
-    }
+    if (!listaEquipContainer) return;
 
     const msgNenhum = listaEquipContainer.querySelector("li small.text-muted");
-    if (
-      msgNenhum &&
-      msgNenhum.parentElement &&
-      msgNenhum.parentElement.textContent.includes("Nenhum")
-    ) {
+    if (msgNenhum?.parentElement?.textContent.includes("Nenhum")) {
       msgNenhum.parentElement.remove();
     }
 
@@ -1302,14 +1112,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const li = document.createElement("li");
     li.className = "list-inline-item badge bg-secondary me-1 mb-1";
     li.innerHTML = `${equipamentoTexto}<button type="button" class="btn-close btn-close-white btn-sm ms-1 btn-remover-equip-item" data-equip-id="${equipamentoId}"></button>`;
-    const btnRemEquip = li.querySelector(".btn-remover-equip-item");
-    if (btnRemEquip)
-      btnRemEquip.addEventListener("click", handleRemoverEquipamentoDeItem);
+    li.querySelector(".btn-remover-equip-item")?.addEventListener(
+      "click",
+      handleRemoverEquipamentoDeItem
+    );
     listaEquipContainer.appendChild(li);
 
-    if (bsModalSelecionarEquipamentoItem)
-      ocultarModal(bsModalSelecionarEquipamentoItem);
+    ocultarModal(bsModalSelecionarEquipamentoItem);
   }
+
   if (btnConfirmarSelecaoEquipamentoItem)
     btnConfirmarSelecaoEquipamentoItem.addEventListener(
       "click",
@@ -1325,259 +1136,235 @@ document.addEventListener("DOMContentLoaded", () => {
         '<li class="list-inline-item"><small class="text-muted fst-italic">Nenhum</small></li>';
     }
   }
+
   if (btnFiltrarInspecoesParaServico)
     btnFiltrarInspecoesParaServico.addEventListener(
       "click",
       carregarInspecoesParaSelecao
     );
-  if (servicoSubestacaoModalSelect)
-    servicoSubestacaoModalSelect.addEventListener("change", () => {});
+
   if (servicoStatusModalSelect)
     servicoStatusModalSelect.addEventListener(
       "change",
       atualizarVisibilidadeConclusao
     );
+
   function atualizarVisibilidadeConclusao() {
-    if (!conclusaoFieldset || !servicoStatusModalSelect) return;
-    if (servicoStatusModalSelect.value === "CONCLUIDO") {
-      conclusaoFieldset.classList.remove("d-none");
-    } else {
-      conclusaoFieldset.classList.add("d-none");
-    }
+    if (!conclusaoFieldset) return;
+    conclusaoFieldset.classList.toggle(
+      "d-none",
+      servicoStatusModalSelect.value !== "CONCLUIDO"
+    );
   }
 
   if (btnAdicionarItemServicoAvulso)
     btnAdicionarItemServicoAvulso.addEventListener("click", () =>
       adicionarNovaLinhaItemServicoAvulso()
     );
+
   if (formServico && btnSalvarServicoForm)
-    btnSalvarServicoForm.addEventListener("click", () => {
-      if (formServico) formServico.requestSubmit();
-    });
+    btnSalvarServicoForm.addEventListener("click", () =>
+      formServico.requestSubmit()
+    );
 
   if (formServico)
     formServico.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const formData = new FormData(formServico);
-      const servId = currentServicoIdParaEdicao;
       if (
-        !formData.get("subestacao_id") ||
-        !formData.get("processo") ||
-        !formData.get("motivo") ||
-        !formData.get("data_prevista") ||
-        !formData.get("horario_inicio") ||
-        !formData.get("horario_fim") ||
-        !formData.get("responsavel_id")
+        !servicoSubestacaoModalSelect.value ||
+        !servicoProcessoModalInput.value.trim() ||
+        !servicoMotivoModalTextarea.value.trim() ||
+        !servicoDataPrevistaModalInput.value ||
+        !servicoHorarioInicioModalInput.value ||
+        !servicoHorarioFimModalInput.value ||
+        !servicoResponsavelModalSelect.value
       ) {
-        alert("Preencha os campos obrigatórios (*).");
+        alert("Preencha todos os campos obrigatórios (*) dos Dados Gerais.");
         return;
       }
       if (
-        formData.get("status") === "CONCLUIDO" &&
-        !formData.get("data_conclusao") &&
-        servicoDataConclusaoModalInput
+        servicoStatusModalSelect.value === "CONCLUIDO" &&
+        !servicoDataConclusaoModalInput.value
       ) {
-        alert("Data de conclusão é obrigatória se o status for CONCLUÍDO.");
-        if (servicoDataConclusaoModalInput)
-          servicoDataConclusaoModalInput.focus();
+        alert("Data de conclusão é obrigatória para serviços concluídos.");
+        servicoDataConclusaoModalInput.focus();
         return;
       }
 
-      let validacaoItensOk = true;
-      const itensEscopoParaEnviar = [];
+      const formData = new FormData();
+      const dadosFormulario = {
+        subestacao_id: servicoSubestacaoModalSelect.value,
+        processo: servicoProcessoModalInput.value.trim(),
+        tipo_ordem: servicoTipoOrdemModalSelect.value || null,
+        motivo: servicoMotivoModalTextarea.value.trim(),
+        data_prevista: servicoDataPrevistaModalInput.value,
+        horario_inicio: servicoHorarioInicioModalInput.value,
+        horario_fim: servicoHorarioFimModalInput.value,
+        responsavel_id: servicoResponsavelModalSelect.value,
+        status: servicoStatusModalSelect.value,
+        data_conclusao: servicoDataConclusaoModalInput.value || null,
+        observacoes_conclusao:
+          servicoObservacoesConclusaoModalTextarea.value.trim() || null,
+      };
+      for (const key in dadosFormulario) {
+        if (
+          dadosFormulario[key] !== null &&
+          dadosFormulario[key] !== undefined
+        ) {
+          formData.append(key, dadosFormulario[key]);
+        }
+      }
 
-      if (
-        inspecoesSelecionadasParaServicoGlobal.length > 0 &&
-        listaInspecoesVinculadasComDefeitos
-      ) {
+      const itensEscopoArray = [];
+      let itensValidos = true;
+
+      listaInspecoesVinculadasComDefeitos
+        .querySelectorAll(".item-anormal-servico")
+        .forEach((itemEl) => {
+          const inspecaoItemId = itemEl.dataset.inspecaoItemId;
+          const origemInspecaoId = itemEl.dataset.inspecaoIdOrigem;
+          const catalogoDefeitoId = itemEl.querySelector(".cat-def-sel").value;
+          const observacaoEspecifica =
+            itemEl.querySelector(".obs-serv-item").value;
+          const statusItem = itemEl.querySelector(
+            'input[name^="status_item_escopo_"]'
+          ).value;
+
+          if (!catalogoDefeitoId) {
+            alert(
+              `Selecione um código de defeito para o item originado da inspeção #${
+                origemInspecaoId || "N/A"
+              }, item #${inspecaoItemId || "N/A"}.`
+            );
+            itemEl.querySelector(".cat-def-sel").focus();
+            itensValidos = false;
+            return;
+          }
+
+          const equipamentosAssociados = Array.from(
+            itemEl.querySelectorAll(".lista-equipamentos-item-escopo li button")
+          ).map((btn) => parseInt(btn.dataset.equipId));
+
+          itensEscopoArray.push({
+            catalogo_defeito_id: catalogoDefeitoId,
+            inspecao_item_id: parseInt(inspecaoItemId),
+            origem_inspecao_id: parseInt(origemInspecaoId),
+            descricao_item_servico:
+              itemEl
+                .querySelector("p.mb-1.small strong")
+                ?.nextSibling?.textContent.trim() || "Item de inspeção",
+            observacao_especifica_servico: observacaoEspecifica || null,
+            status_item_escopo: statusItem || "PENDENTE",
+            equipamentos_associados: equipamentosAssociados,
+          });
+        });
+
+      if (!itensValidos) return;
+
+      listaItensServicoAvulso
+        .querySelectorAll(".item-servico-avulso")
+        .forEach((itemEl) => {
+          const catalogoDefeitoId = itemEl.querySelector(".cat-def-sel").value;
+          const descricaoManual = itemEl
+            .querySelector(".desc-manual-item")
+            .value.trim();
+          const observacaoEspecifica =
+            itemEl.querySelector(".obs-serv-item").value;
+          const statusItem = itemEl.querySelector(
+            'input[name^="status_item_escopo_"]'
+          ).value;
+
+          if (!catalogoDefeitoId && !descricaoManual) {
+            alert(
+              "Para itens avulsos, ou um código de defeito ou uma descrição manual é obrigatória."
+            );
+            itemEl.querySelector(".desc-manual-item").focus();
+            itensValidos = false;
+            return;
+          }
+
+          const equipamentosAssociados = Array.from(
+            itemEl.querySelectorAll(".lista-equipamentos-item-escopo li button")
+          ).map((btn) => parseInt(btn.dataset.equipId));
+
+          itensEscopoArray.push({
+            catalogo_defeito_id: catalogoDefeitoId || null,
+            descricao_item_servico: descricaoManual,
+            observacao_especifica_servico: observacaoEspecifica || null,
+            status_item_escopo: statusItem || "PENDENTE",
+            equipamentos_associados: equipamentosAssociados,
+          });
+        });
+
+      if (!itensValidos) return;
+
+      if (itensEscopoArray.length > 0) {
+        formData.append("itens_escopo", JSON.stringify(itensEscopoArray));
+      } else {
+        alert(
+          "É necessário adicionar pelo menos um item de serviço (avulso ou de inspeção)."
+        );
+        return;
+      }
+
+      if (inspecoesSelecionadasParaServicoGlobal.length > 0) {
         formData.append(
           "inspecao_ids_vinculadas",
           JSON.stringify(inspecoesSelecionadasParaServicoGlobal)
         );
-        listaInspecoesVinculadasComDefeitos
-          .querySelectorAll(".item-anormal-servico")
-          .forEach((itemEl) => {
-            if (!validacaoItensOk) return;
-            const inspItemId = itemEl.dataset.inspecaoItemId;
-            const catDefSelect = itemEl.querySelector(".cat-def-sel");
-            const catDefId = catDefSelect ? catDefSelect.value : null;
-            const obsServInput = itemEl.querySelector(".obs-serv-item");
-            const obsServ = obsServInput ? obsServInput.value : null;
-            const descOriginalInspecao =
-              itemEl
-                .querySelector("p.small strong")
-                ?.parentElement.textContent.replace(/^Item \d+:\s*/, "")
-                .trim() || "Item de inspeção";
-            const statusItemInput = itemEl.querySelector(
-              'input[name^="status_item_escopo_"]'
-            );
-            const statusItem = statusItemInput
-              ? statusItemInput.value
-              : "PENDENTE";
-
-            let equipamentosAssociadosIds = [];
-            itemEl
-              .querySelectorAll(
-                ".lista-equipamentos-item-escopo li button.btn-remover-equip-item"
-              )
-              .forEach((btn) => {
-                if (btn.dataset.equipId)
-                  equipamentosAssociadosIds.push(parseInt(btn.dataset.equipId));
-              });
-
-            if (inspItemId && !catDefId) {
-              alert(
-                `Um código de defeito deve ser selecionado para o item anormal de inspeção: "${descOriginalInspecao.substring(
-                  0,
-                  50
-                )}...".`
-              );
-              if (catDefSelect) catDefSelect.focus();
-              validacaoItensOk = false;
-              return;
-            } else if (inspItemId && catDefId) {
-              itensEscopoParaEnviar.push({
-                inspecao_item_id: parseInt(inspItemId),
-                catalogo_defeito_id: parseInt(catDefId),
-                descricao_item_servico: descOriginalInspecao,
-                observacao_especifica_servico: obsServ || null,
-                encarregado_item_id: null,
-                status_item_escopo: statusItem,
-                equipamentos_associados: equipamentosAssociadosIds,
-              });
-            }
-          });
-      }
-      if (!validacaoItensOk) return;
-
-      if (listaItensServicoAvulso) {
-        listaItensServicoAvulso
-          .querySelectorAll(".item-servico-avulso")
-          .forEach((itemEl) => {
-            if (!validacaoItensOk) return;
-            const catDefSelect = itemEl.querySelector(".cat-def-sel");
-            const catDefId = catDefSelect ? catDefSelect.value : null;
-            const descManualInput = itemEl.querySelector(".desc-manual-item");
-            const descManual = descManualInput
-              ? descManualInput.value.trim()
-              : "";
-            const obsServInput = itemEl.querySelector(".obs-serv-item");
-            const obsServ = obsServInput ? obsServInput.value : null;
-            const statusItemInput = itemEl.querySelector(
-              'input[name^="status_item_escopo_"]'
-            );
-            const statusItem = statusItemInput
-              ? statusItemInput.value
-              : "PENDENTE";
-
-            let equipamentosAssociadosIds = [];
-            itemEl
-              .querySelectorAll(
-                ".lista-equipamentos-item-escopo li button.btn-remover-equip-item"
-              )
-              .forEach((btn) => {
-                if (btn.dataset.equipId)
-                  equipamentosAssociadosIds.push(parseInt(btn.dataset.equipId));
-              });
-
-            if (!descManual && !catDefId) {
-              if (
-                listaItensServicoAvulso.children.length === 1 &&
-                descManual === "" &&
-                !catDefId
-              ) {
-              } else {
-                alert(
-                  "Para itens de serviço avulsos, forneça uma descrição detalhada ou selecione um código de defeito."
-                );
-                if (descManualInput) descManualInput.focus();
-                else if (catDefSelect) catDefSelect.focus();
-                validacaoItensOk = false;
-                return;
-              }
-            }
-            if (descManual || catDefId) {
-              itensEscopoParaEnviar.push({
-                inspecao_item_id: null,
-                catalogo_defeito_id: catDefId ? parseInt(catDefId) : null,
-                descricao_item_servico: descManual,
-                observacao_especifica_servico: obsServ || null,
-                encarregado_item_id: null,
-                status_item_escopo: statusItem,
-                equipamentos_associados: equipamentosAssociadosIds,
-              });
-            }
-          });
-      }
-      if (!validacaoItensOk) return;
-
-      if (
-        inspecoesSelecionadasParaServicoGlobal.length === 0 &&
-        itensEscopoParaEnviar.length === 0 &&
-        !currentServicoIdParaEdicao
-      ) {
-        const motivoGeral = formData.get("motivo")?.trim();
-        if (!motivoGeral || motivoGeral.length < 10) {
-          alert(
-            "Nenhum item de escopo foi definido para este novo serviço e o motivo geral é muito breve. Adicione itens de uma inspeção, itens avulsos, ou detalhe melhor o motivo geral do serviço."
-          );
-          return;
-        }
-      }
-      if (itensEscopoParaEnviar.length > 0)
-        formData.append("itens_escopo", JSON.stringify(itensEscopoParaEnviar));
-      else if (
-        inspecoesSelecionadasParaServicoGlobal.length > 0 &&
-        itensEscopoParaEnviar.length === 0
-      ) {
       }
 
-      const submitBtn = btnSalvarServicoForm;
-      const origBtnHtml = submitBtn.innerHTML;
-      submitBtn.disabled = true;
-      submitBtn.innerHTML =
-        '<span class="spinner-border spinner-border-sm"></span> Salvando...';
-      const url = servId
-        ? `/api/servicos-subestacoes/${servId}`
+      selectedFiles.forEach((file) => formData.append("anexosServico", file));
+
+      const url = currentServicoIdParaEdicao
+        ? `/api/servicos-subestacoes/${currentServicoIdParaEdicao}`
         : "/api/servicos-subestacoes";
-      const method = servId ? "PUT" : "POST";
+      const method = currentServicoIdParaEdicao ? "PUT" : "POST";
 
-      if (formData.get("status") !== "CONCLUIDO") {
-        formData.delete("data_conclusao");
-        formData.delete("observacoes_conclusao");
-      }
+      btnSalvarServicoForm.disabled = true;
+      btnSalvarServicoForm.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...`;
 
       try {
-        const resp = await fetch(url, { method: method, body: formData });
-        if (!resp.ok) {
-          const errD = await resp
-            .json()
-            .catch(() => ({ message: "Erro ao salvar serviço." }));
-          throw new Error(errD.message || `Erro HTTP: ${resp.status}`);
+        const response = await fetch(url, { method: method, body: formData });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({
+            message: "Erro desconhecido ao salvar serviço.",
+          }));
+          throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
         }
-        const res = await resp.json();
+        const result = await response.json();
         alert(
-          res.message ||
-            `Serviço ${servId ? "atualizado" : "registrado"} com sucesso!`
+          result.message ||
+            `Serviço ${
+              currentServicoIdParaEdicao ? "atualizado" : "registrado"
+            } com sucesso!`
         );
-        window.location.href = "/subestacoes-dashboard";
-      } catch (err) {
-        console.error("Erro ao salvar serviço:", err);
-        alert(`Falha ao salvar serviço: ${err.message}`);
+
+        if (currentServicoIdParaEdicao) {
+          window.location.href = `/servicos/${currentServicoIdParaEdicao}/detalhes-pagina`;
+        } else {
+          window.location.href = "/pagina-servicos-subestacoes";
+        }
+      } catch (error) {
+        alert(`Falha ao salvar serviço: ${error.message}`);
+        console.error("Erro ao salvar serviço:", error);
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = origBtnHtml;
+        btnSalvarServicoForm.disabled = false;
+        btnSalvarServicoForm.innerHTML =
+          '<span class="material-symbols-outlined">save</span> Salvar Serviço';
       }
     });
 
   if (btnCancelarServicoForm) {
     btnCancelarServicoForm.addEventListener("click", () => {
-      if (
-        confirm(
-          "Cancelar e voltar para o dashboard de subestações? Dados não salvos serão perdidos."
-        )
-      ) {
-        window.location.href = "/subestacoes-dashboard";
+      if (confirm("Cancelar e voltar? Dados não salvos serão perdidos.")) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const editarId = urlParams.get("editarId");
+        if (editarId) {
+          window.location.href = `/servicos/${editarId}/detalhes-pagina`;
+        } else {
+          window.location.href = "/pagina-servicos-subestacoes";
+        }
       }
     });
   }
@@ -1585,33 +1372,16 @@ document.addEventListener("DOMContentLoaded", () => {
   async function init() {
     await popularSelectsIniciais();
     await buscarCatalogoDefeitos();
-
     const urlParams = new URLSearchParams(window.location.search);
     const servicoIdParaEditarUrl = urlParams.get("editarId");
 
     if (servicoIdParaEditarUrl) {
-      if (itensServicoAvulsoContainer)
-        itensServicoAvulsoContainer.classList.add("d-none");
-      if (inspecoesVinculadasContainer)
-        inspecoesVinculadasContainer.classList.add("d-none");
       await carregarDadosServicoParaEdicao(servicoIdParaEditarUrl);
     } else {
       if (bsModalPreSelecaoServico) mostrarModal(bsModalPreSelecaoServico);
-      else {
-        configurarFormularioParaServico();
-        if (inspecoesVinculadasContainer)
-          inspecoesVinculadasContainer.classList.add("d-none");
-        if (itensServicoAvulsoContainer && btnAdicionarItemServicoAvulso) {
-          itensServicoAvulsoContainer.classList.remove("d-none");
-          if (
-            listaItensServicoAvulso &&
-            listaItensServicoAvulso.children.length === 0
-          ) {
-            adicionarNovaLinhaItemServicoAvulso();
-          }
-        }
-      }
+      else configurarFormularioParaServico();
     }
   }
+
   init();
 });
