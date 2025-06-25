@@ -1,54 +1,8 @@
-/* public/static/css/subestacoes/registrar-servico-subestacao.css */
-
-/* Importando ou Reutilizando Variáveis de Cor Globais (se definidas em outro lugar) */
-/* Se você tiver um arquivo CSS global com :root, pode importá-lo ou duplicar as variáveis aqui */
-:root {
-  --cor-primaria: #0056b3; /* Azul mais escuro e profissional */
-  --cor-secundaria: #007bff; /* Azul padrão Bootstrap como secundário */
-  --cor-fundo: #f4f7f9; /* Fundo ligeiramente acinzentado */
-  --cor-texto: #343a40; /* Cinza escuro para texto */
-  --cor-texto-secundario: #6c757d; /* Cinza mais claro */
-  --cor-borda: #dee2e6; /* Borda padrão Bootstrap */
-  --cor-fundo-card: #ffffff;
-  --cor-sucesso: #198754; /* Verde Bootstrap */
-  --cor-perigo: #dc3545; /* Vermelho Bootstrap */
-  --cor-aviso: #ffc107; /* Amarelo Bootstrap */
-  --cor-info: #0dcaf0; /* Ciano Bootstrap */
-}
-
-body {
-  font-family: "Poppins", sans-serif, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--cor-fundo);
-  color: var(--cor-texto);
-  line-height: 1.6;
-}
-
-.container {
-  max-width: 960px; /* Um pouco mais estreito para formulários */
-}
-
-.page-header {
-  background: linear-gradient(
-    135deg,
-    var(--cor-primaria) 0%,
-    var(--cor-secundaria) 100%
-  );
-  color: white;
-  border-bottom: 4px solid var(--cor-primaria); /* Borda mais escura */
-}
-
-.page-header h1 .material-symbols-outlined {
-  font-size: 2.5rem;
-  vertical-align: middle;
-}
-
-/* Estilo geral para os cards/seções do formulário */
 .custom-card {
-  border: 1px solid var(--cor-borda);
-  border-radius: 0.375rem; /* Bootstrap's default */
-  background-color: var(--cor-fundo-card);
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  background-color: #fff;
   margin-bottom: 1.5rem;
 }
 
@@ -57,179 +11,166 @@ body {
 }
 
 .custom-card-footer {
-  background-color: #f8f9fa; /* Um fundo leve para o rodapé */
-  border-top: 1px solid var(--cor-borda);
+  padding: 1rem 1.5rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
 }
 
-.form-label {
-  font-weight: 500;
-  margin-bottom: 0.35rem;
-  font-size: 0.9em;
-  color: var(--cor-texto-secundario);
+.page-header {
+  background-color: #e9ecef;
+  border-left: 5px solid #0d6efd;
 }
 
-.form-control-sm,
-.form-select-sm {
-  font-size: 0.875rem;
+.section-title-form {
+  border-bottom: 2px solid #0d6efd;
+  padding-bottom: 0.5rem;
+  color: #0d6efd;
 }
 
-/* Fieldsets dentro do formulário */
-.anexos-fieldset,
-#conclusaoFieldset {
-  border: 1px solid var(--cor-borda) !important; /* Forçar borda */
-  padding: 1rem 1.25rem 1.25rem !important; /* Ajustar padding */
-  border-radius: 0.25rem;
+.anexos-fieldset {
+  border-color: #ced4da;
 }
 
 .legend-sm {
-  font-size: 0.95em;
+  font-size: 0.9em;
   font-weight: 500;
-  color: var(--cor-primaria);
-  padding: 0 0.5rem; /* Espaçamento horizontal para a legenda */
-}
-.legend-sm .material-symbols-outlined {
-  vertical-align: text-bottom;
-  margin-right: 0.25rem;
-}
-
-.anexos-list {
-  max-height: 150px;
-  overflow-y: auto;
-  font-size: 0.85em;
-}
-.anexos-list .list-group-item {
-  padding: 0.4rem 0.75rem;
-}
-
-/* Seção de Inspeções Vinculadas e Defeitos */
-#inspecoesVinculadasContainer h6 .material-symbols-outlined {
-  color: var(--cor-primaria);
-  font-size: 1.3em;
-  vertical-align: middle;
-}
-#listaInspecoesVinculadasComDefeitos {
-  background-color: #f8f9fa; /* Fundo levemente diferente */
-}
-
-.inspecao-detalhes-bloco {
-  background-color: var(
-    --cor-fundo-card
-  ); /* Fundo branco para cada bloco de inspeção */
-}
-.inspecao-detalhes-bloco h6 {
-  border-bottom: 1px dashed var(--cor-borda);
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem !important; /* Adicionado !important para garantir */
-}
-.inspecao-detalhes-bloco .text-primary {
-  color: var(--cor-primaria) !important;
-}
-
-.item-anormal-servico {
-  border-left: 3px solid var(--cor-aviso); /* Destaque para itens anormais */
-}
-.item-anormal-servico .form-label-sm {
-  font-size: 0.8em;
-  margin-bottom: 0.15rem;
-}
-
-.item-anormal-fotos {
-  margin-bottom: 0.5rem;
-}
-.item-anormal-fotos img {
-  width: 45px;
-  height: 45px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-}
-
-/* Estilos para Modais Aninhados (Pré-Seleção, Seleção de Inspeção) */
-/* Reutilizando .custom-modal-content e .custom-modal-header se definidos no HTML */
-.custom-modal-content {
-  /* Se não vier do Bootstrap, defina o básico */
-  border-radius: 0.3rem;
-}
-.custom-modal-header {
-  background-color: var(--cor-primaria);
-  color: white;
-  border-bottom: 2px solid var(--cor-secundaria);
-}
-.custom-modal-header .btn-close {
-  filter: invert(1) grayscale(100%) brightness(200%); /* Para botão de fechar branco */
-}
-.custom-modal-header .material-symbols-outlined {
-  vertical-align: middle;
-}
-
-/* Modal de Seleção de Inspeção - Tabela */
-#modalSelecionarInspecao .table {
-  font-size: 0.85rem;
-}
-#modalSelecionarInspecao .table th,
-#modalSelecionarInspecao .table td {
-  padding: 0.5rem;
-  vertical-align: middle;
-}
-.col-selecao-checkbox {
-  width: 5%;
-}
-#modalSelecionarInspecao .items-anormais-count.text-danger {
-  font-weight: bold;
-}
-
-/* Botões de Ação da Página */
-.page-actions-footer {
-  /* Se você adicionar um rodapé fixo para os botões */
-  padding: 1rem 1.5rem;
-  background-color: #f8f9fa;
-  border-top: 1px solid var(--cor-borda);
-  position: sticky;
-  bottom: 0;
-  z-index: 100; /* Para ficar acima de outros elementos se houver rolagem */
 }
 
 .btn-app-clear {
-  color: var(--cor-texto-secundario);
-  border-color: var(--cor-borda);
-}
-.btn-app-clear:hover {
-  color: var(--cor-texto);
-  background-color: #e9ecef; /* Leve destaque no hover */
+  color: #6c757d;
+  background-color: transparent;
   border-color: #ced4da;
 }
-.btn-success .material-symbols-outlined,
-.btn-app-clear .material-symbols-outlined {
-  font-size: 1.2em;
-  vertical-align: text-bottom;
-  margin-right: 0.2em;
+
+.btn-app-clear:hover {
+  color: #212529;
+  background-color: #e9ecef;
+  border-color: #adb5bd;
 }
 
-/* Status Badges (reutilizado da página de detalhes, se necessário) */
-.status-badge {
-  padding: 0.3em 0.6em;
-  font-size: 0.85em;
-  font-weight: 600;
+.small-icon {
+  font-size: 1.2em;
+  vertical-align: text-bottom;
+}
+
+.custom-modal-content {
+  border-radius: 0.5rem;
+  border: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.custom-modal-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+.custom-modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+.bg-light-subtle {
+  background-color: #fcfcfd !important;
+}
+
+/* --- Estilos para Visualização dos Anexos --- */
+
+.anexos-preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.anexo-preview-card {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem;
+  position: relative;
+  background-color: #f8f9fa;
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.anexo-preview-card:hover {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.anexo-thumbnail {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  background-color: #fff;
+  border: 1px solid #e9ecef;
   border-radius: 0.25rem;
-  text-transform: uppercase;
-  color: #fff;
 }
-.status-programado {
-  background-color: var(--cor-info);
-  color: #000;
+
+.anexo-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.25rem;
 }
-.status-emandamento {
-  background-color: var(--cor-aviso);
-  color: #000;
+
+.anexo-thumbnail .material-symbols-outlined {
+  font-size: 36px;
+  color: #6c757d;
 }
-.status-concluido {
-  background-color: var(--cor-sucesso);
+
+.anexo-info {
+  text-align: center;
+  width: 100%;
 }
-.status-cancelado {
-  background-color: var(--cor-perigo);
+
+.anexo-info .file-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 2.4em;
 }
-.status-pendenteaprovacao {
-  background-color: var(--cor-texto-secundario);
+
+.anexo-info .file-size {
+  font-size: 0.75rem;
+  color: #6c757d;
 }
-.status-desconhecido {
-  background-color: #adb5bd;
+
+.anexo-preview-card .btn-remove-anexo {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background-color: #dc3545;
+  color: white;
+  border: 1px solid white;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.anexo-preview-card .btn-remove-anexo:hover {
+  opacity: 1;
+}
+
+.anexo-preview-card .btn-remove-anexo .material-symbols-outlined {
+  font-size: 16px;
 }
