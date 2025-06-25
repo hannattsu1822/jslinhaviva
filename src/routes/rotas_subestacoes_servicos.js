@@ -31,14 +31,7 @@ const podeGerenciarPaginaServicos = (req, res, next) => {
 };
 
 const podeModificarServicos = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Encarregado",
-    "Técnico",
-    "ADM",
-    "Gerente",
-  ];
+  const cargosPermitidos = ["ADMIN", "Engenheiro", "Técnico", "ADM", "Gerente"];
   if (req.user && cargosPermitidos.includes(req.user.cargo)) {
     next();
   } else {
@@ -55,7 +48,7 @@ async function verificarServicoExiste(req, res, next) {
   }
   try {
     const [servicoRows] = await promisePool.query(
-      "SELECT id, status, data_conclusao, observacoes_conclusao, processo, encarregado_designado_id FROM servicos_subestacoes WHERE id = ?",
+      "SELECT id, status, data_conclusao, observacoes_conclusao, processo FROM servicos_subestacoes WHERE id = ?",
       [servicoId]
     );
     if (servicoRows.length === 0) {
@@ -66,7 +59,6 @@ async function verificarServicoExiste(req, res, next) {
     req.servico = servicoRows[0];
     next();
   } catch (error) {
-    console.error("Erro ao verificar existência do serviço:", error);
     res.status(500).json({ message: "Erro interno ao verificar serviço." });
   }
 }
@@ -80,6 +72,20 @@ router.get(
       path.join(
         projectRootDir,
         "public/pages/subestacoes/servicos-subestacoes-servicos.html"
+      )
+    );
+  }
+);
+
+router.get(
+  "/pagina-servicos-concluidos",
+  autenticar,
+  podeGerenciarPaginaServicos,
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRootDir,
+        "public/pages/subestacoes/servicos-concluidos.html"
       )
     );
   }
@@ -103,11 +109,25 @@ router.get(
   "/servicos/:servicoId/detalhes-pagina",
   autenticar,
   podeGerenciarPaginaServicos,
-  async (req, res) => {
+  (req, res) => {
     res.sendFile(
       path.join(
         projectRootDir,
         "public/pages/subestacoes/servico-detalhes-pagina.html"
+      )
+    );
+  }
+);
+
+router.get(
+  "/servicos/:servicoId/detalhes-concluido",
+  autenticar,
+  podeGerenciarPaginaServicos,
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRootDir,
+        "public/pages/subestacoes/servico-concluido-detalhes.html"
       )
     );
   }
@@ -131,7 +151,6 @@ router.get(
       const [rows] = await promisePool.query(query, cargosRelevantes);
       res.json(rows);
     } catch (error) {
-      console.error("Erro ao buscar usuários responsáveis (API):", error);
       res
         .status(500)
         .json({ message: "Erro ao buscar usuários responsáveis." });
@@ -139,17 +158,23 @@ router.get(
   }
 );
 
-router.get("/usuarios-encarregados", autenticar, async (req, res) => {
-  try {
-    const [rows] = await promisePool.query(
-      "SELECT id, nome FROM users WHERE cargo = 'Encarregado' ORDER BY nome ASC"
-    );
-    res.json(rows);
-  } catch (error) {
-    console.error("Erro ao buscar encarregados (API):", error);
-    res.status(500).json({ message: "Erro ao buscar encarregados." });
+router.get(
+  "/usuarios-encarregados-e-inspetores",
+  autenticar,
+  async (req, res) => {
+    try {
+      const cargosParaEncarregados = ["Encarregado", "Inspetor"];
+      const placeholders = cargosParaEncarregados.map(() => "?").join(",");
+      const query = `SELECT id, nome FROM users WHERE cargo IN (${placeholders}) ORDER BY nome ASC`;
+      const [rows] = await promisePool.query(query, cargosParaEncarregados);
+      res.json(rows);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: "Erro ao buscar encarregados e inspetores." });
+    }
   }
-});
+);
 
 router.get("/api/catalogo-defeitos-servicos", autenticar, async (req, res) => {
   try {
@@ -158,13 +183,10 @@ router.get("/api/catalogo-defeitos-servicos", autenticar, async (req, res) => {
     );
     res.json(rows);
   } catch (error) {
-    console.error("Erro ao buscar catálogo de defeitos (API):", error);
-    res
-      .status(500)
-      .json({
-        message: "Erro ao buscar catálogo de defeitos.",
-        detalhes: error.message,
-      });
+    res.status(500).json({
+      message: "Erro ao buscar catálogo de defeitos.",
+      detalhes: error.message,
+    });
   }
 });
 
@@ -178,8 +200,6 @@ router.post(
       subestacao_id,
       processo,
       motivo,
-      alimentador,
-      equipamento_id,
       data_prevista,
       horario_inicio,
       horario_fim,
@@ -187,9 +207,8 @@ router.post(
       status,
       data_conclusao,
       observacoes_conclusao,
-      encarregado_designado_id,
       inspecao_ids_vinculadas,
-      mapeamento_defeitos,
+      itens_escopo,
     } = req.body;
     const arquivos = req.files;
 
@@ -202,25 +221,21 @@ router.post(
       !horario_fim ||
       !responsavel_id
     ) {
-      if (arquivos && arquivos.length > 0) {
+      if (arquivos?.length)
         arquivos.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      }
       return res.status(400).json({ message: "Campos obrigatórios faltando." });
     }
     if (status === "CONCLUIDO" && !data_conclusao) {
-      if (arquivos && arquivos.length > 0) {
+      if (arquivos?.length)
         arquivos.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      }
-      return res
-        .status(400)
-        .json({
-          message:
-            "Data de conclusão obrigatória para serviços com status CONCLUÍDO.",
-        });
+      return res.status(400).json({
+        message:
+          "Data de conclusão obrigatória para serviços com status CONCLUÍDO.",
+      });
     }
 
     let parsedInspecaoIds = [];
@@ -234,28 +249,30 @@ router.post(
           throw new Error("Formato inválido para IDs de inspeção vinculadas.");
         }
       } catch (e) {
-        return res
-          .status(400)
-          .json({
-            message: "Erro ao processar IDs de inspeção vinculadas.",
-            detalhes: e.message,
-          });
+        return res.status(400).json({
+          message: "Erro ao processar IDs de inspeção vinculadas.",
+          detalhes: e.message,
+        });
       }
     }
-    let parsedMapeamentoDefeitos = [];
-    if (mapeamento_defeitos) {
+    let parsedItensEscopo = [];
+    if (itens_escopo) {
       try {
-        parsedMapeamentoDefeitos = JSON.parse(mapeamento_defeitos);
-        if (!Array.isArray(parsedMapeamentoDefeitos)) {
-          throw new Error("Formato inválido para mapeamento_defeitos.");
+        parsedItensEscopo = JSON.parse(itens_escopo);
+        if (!Array.isArray(parsedItensEscopo))
+          throw new Error("Formato inválido para itens_escopo.");
+        for (const item of parsedItensEscopo) {
+          if (!item.descricao_item_servico && !item.catalogo_defeito_id) {
+            throw new Error(
+              "Cada item de escopo deve ter uma descrição ou um código de defeito do catálogo."
+            );
+          }
         }
       } catch (e) {
-        return res
-          .status(400)
-          .json({
-            message: "Erro ao processar mapeamento de defeitos.",
-            detalhes: e.message,
-          });
+        return res.status(400).json({
+          message: "Erro ao processar itens de escopo do serviço.",
+          detalhes: e.message,
+        });
       }
     }
 
@@ -265,30 +282,16 @@ router.post(
 
     try {
       await connection.beginTransaction();
-      const equipamentoIdFinal =
-        equipamento_id &&
-        equipamento_id !== "" &&
-        !isNaN(parseInt(equipamento_id))
-          ? parseInt(equipamento_id)
-          : null;
       const dataConclusaoFinal = status === "CONCLUIDO" ? data_conclusao : null;
       const observacoesConclusaoFinal =
         status === "CONCLUIDO" ? observacoes_conclusao : null;
-      const encarregadoIdFinal =
-        encarregado_designado_id &&
-        encarregado_designado_id !== "" &&
-        !isNaN(parseInt(encarregado_designado_id))
-          ? parseInt(encarregado_designado_id)
-          : null;
 
       const [resultServico] = await connection.query(
-        `INSERT INTO servicos_subestacoes (subestacao_id, processo, motivo, alimentador, equipamento_id, data_prevista, horario_inicio, horario_fim, responsavel_id, status, data_conclusao, observacoes_conclusao, encarregado_designado_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO servicos_subestacoes (subestacao_id, processo, motivo, data_prevista, horario_inicio, horario_fim, responsavel_id, status, data_conclusao, observacoes_conclusao) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           parseInt(subestacao_id),
           processo,
           motivo,
-          alimentador,
-          equipamentoIdFinal,
           data_prevista,
           horario_inicio,
           horario_fim,
@@ -296,7 +299,6 @@ router.post(
           status || "PROGRAMADO",
           dataConclusaoFinal,
           observacoesConclusaoFinal,
-          encarregadoIdFinal,
         ]
       );
       novoServicoId = resultServico.insertId;
@@ -311,17 +313,56 @@ router.post(
           [vinculosValues]
         );
       }
-      if (parsedMapeamentoDefeitos.length > 0) {
-        const defeitosValues = parsedMapeamentoDefeitos.map((defeito) => [
-          novoServicoId,
-          parseInt(defeito.inspecao_item_id),
-          parseInt(defeito.catalogo_defeito_id),
-          defeito.observacao_especifica_servico || null,
-        ]);
-        await connection.query(
-          "INSERT INTO servico_item_inspecao_defeito (servico_id, inspecao_item_id, catalogo_defeito_id, observacao_especifica_servico) VALUES ?",
-          [defeitosValues]
+
+      for (const itemEscopo of parsedItensEscopo) {
+        const catalogoDefeitoIdFinal =
+          itemEscopo.catalogo_defeito_id &&
+          !isNaN(parseInt(itemEscopo.catalogo_defeito_id))
+            ? parseInt(itemEscopo.catalogo_defeito_id)
+            : null;
+        const inspecaoItemIdFinal =
+          itemEscopo.inspecao_item_id &&
+          !isNaN(parseInt(itemEscopo.inspecao_item_id))
+            ? parseInt(itemEscopo.inspecao_item_id)
+            : null;
+        const encarregadoItemIdFinal =
+          itemEscopo.encarregado_item_id &&
+          itemEscopo.encarregado_item_id !== "" &&
+          !isNaN(parseInt(itemEscopo.encarregado_item_id))
+            ? parseInt(itemEscopo.encarregado_item_id)
+            : null;
+        const statusItemEscopoFinal =
+          itemEscopo.status_item_escopo || "PENDENTE";
+
+        const [resultItemEscopo] = await connection.query(
+          `INSERT INTO servico_itens_escopo (servico_id, catalogo_defeito_id, inspecao_item_id, descricao_item_servico, observacao_especifica_servico, encarregado_item_id, status_item_escopo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            novoServicoId,
+            catalogoDefeitoIdFinal,
+            inspecaoItemIdFinal,
+            itemEscopo.descricao_item_servico,
+            itemEscopo.observacao_especifica_servico || null,
+            encarregadoItemIdFinal,
+            statusItemEscopoFinal,
+          ]
         );
+        const novoItemEscopoId = resultItemEscopo.insertId;
+
+        if (
+          itemEscopo.equipamentos_associados &&
+          Array.isArray(itemEscopo.equipamentos_associados) &&
+          itemEscopo.equipamentos_associados.length > 0
+        ) {
+          const equipamentosVinculadosValues =
+            itemEscopo.equipamentos_associados.map((equipId) => [
+              novoItemEscopoId,
+              parseInt(equipId),
+            ]);
+          await connection.query(
+            "INSERT INTO servico_item_escopo_equipamentos (servico_item_escopo_id, equipamento_id) VALUES ?",
+            [equipamentosVinculadosValues]
+          );
+        }
       }
 
       let anexosSalvosInfo = [];
@@ -366,44 +407,34 @@ router.post(
         await registrarAuditoria(
           req.user.matricula,
           "CREATE_SERVICO_SUBESTACAO",
-          `Serviço ID ${novoServicoId} (Proc: ${processo}) criado. Insp: ${parsedInspecaoIds.length}, Defs: ${parsedMapeamentoDefeitos.length}`,
+          `Serviço ID ${novoServicoId} (Proc: ${processo}) criado. Insp.Vinc: ${parsedInspecaoIds.length}, ItensEscopo: ${parsedItensEscopo.length}`,
           connection
         );
       }
-      res
-        .status(201)
-        .json({
-          id: novoServicoId,
-          message: "Serviço de subestação registrado com sucesso!",
-          anexos: anexosSalvosInfo,
-        });
+      res.status(201).json({
+        id: novoServicoId,
+        message: "Serviço registrado com sucesso!",
+        anexos: anexosSalvosInfo,
+      });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao criar serviço de subestação:", error);
       for (const caminho of arquivosMovidosComSucesso) {
         try {
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      if (arquivos && arquivos.length > 0) {
-        for (const file of arquivos) {
-          if (
-            file.path &&
-            (file.path.includes("temp") || file.path.includes("upload_"))
-          ) {
+      if (arquivos?.length)
+        arquivos.forEach((f) => {
+          if (f.path?.includes("temp") || f.path?.includes("upload_")) {
             try {
-              await fs.access(file.path);
-              await fs.unlink(file.path);
+              if (fs.existsSync(f.path)) fs.unlinkSync(f.path);
             } catch (e) {}
           }
-        }
-      }
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao criar serviço de subestação.",
-          detalhes: error.message,
         });
+      res.status(500).json({
+        message: "Erro interno ao criar serviço.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -423,8 +454,6 @@ router.put(
       subestacao_id,
       processo,
       motivo,
-      alimentador,
-      equipamento_id,
       data_prevista,
       horario_inicio,
       horario_fim,
@@ -432,9 +461,8 @@ router.put(
       status,
       data_conclusao,
       observacoes_conclusao,
-      encarregado_designado_id,
       inspecao_ids_vinculadas,
-      mapeamento_defeitos,
+      itens_escopo,
     } = req.body;
     const arquivosNovos = req.files;
 
@@ -447,26 +475,24 @@ router.put(
       !horario_fim ||
       !responsavel_id
     ) {
-      if (arquivosNovos && arquivosNovos.length > 0) {
+      if (arquivosNovos?.length)
         arquivosNovos.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      }
       return res.status(400).json({ message: "Campos obrigatórios faltando." });
     }
     if (status === "CONCLUIDO" && !data_conclusao) {
-      if (arquivosNovos && arquivosNovos.length > 0) {
+      if (arquivosNovos?.length)
         arquivosNovos.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      }
       return res
         .status(400)
         .json({ message: "Data de conclusão obrigatória para CONCLUÍDO." });
     }
 
     let parsedInspecaoIds = [],
-      parsedMapeamentoDefeitos = [];
+      parsedItensEscopo = [];
     if (inspecao_ids_vinculadas)
       try {
         parsedInspecaoIds = JSON.parse(inspecao_ids_vinculadas);
@@ -476,55 +502,43 @@ router.put(
         )
           throw new Error("Formato inválido IDs inspeção");
       } catch (e) {
-        return res
-          .status(400)
-          .json({
-            message: "Erro ao processar IDs de inspeção.",
-            detalhes: e.message,
-          });
+        return res.status(400).json({
+          message: "Erro ao processar IDs de inspeção.",
+          detalhes: e.message,
+        });
       }
-    if (mapeamento_defeitos)
+    if (itens_escopo)
       try {
-        parsedMapeamentoDefeitos = JSON.parse(mapeamento_defeitos);
-        if (!Array.isArray(parsedMapeamentoDefeitos))
-          throw new Error("Formato inválido mapeamento defeitos");
+        parsedItensEscopo = JSON.parse(itens_escopo);
+        if (!Array.isArray(parsedItensEscopo))
+          throw new Error("Formato inválido itens_escopo");
+        for (const item of parsedItensEscopo) {
+          if (!item.descricao_item_servico && !item.catalogo_defeito_id)
+            throw new Error(
+              "Item de escopo deve ter descrição ou código de defeito."
+            );
+        }
       } catch (e) {
-        return res
-          .status(400)
-          .json({
-            message: "Erro ao processar mapeamento de defeitos.",
-            detalhes: e.message,
-          });
+        return res.status(400).json({
+          message: "Erro ao processar itens de escopo.",
+          detalhes: e.message,
+        });
       }
 
     const connection = await promisePool.getConnection();
     let arquivosMovidosComSucesso = [];
     try {
       await connection.beginTransaction();
-      const equipamentoIdFinal =
-        equipamento_id &&
-        equipamento_id !== "" &&
-        !isNaN(parseInt(equipamento_id))
-          ? parseInt(equipamento_id)
-          : null;
       const dataConclusaoFinal = status === "CONCLUIDO" ? data_conclusao : null;
       const observacoesConclusaoFinal =
         status === "CONCLUIDO" ? observacoes_conclusao : null;
-      const encarregadoIdFinal =
-        encarregado_designado_id &&
-        encarregado_designado_id !== "" &&
-        !isNaN(parseInt(encarregado_designado_id))
-          ? parseInt(encarregado_designado_id)
-          : null;
 
       await connection.query(
-        `UPDATE servicos_subestacoes SET subestacao_id=?,processo=?,motivo=?,alimentador=?,equipamento_id=?,data_prevista=?,horario_inicio=?,horario_fim=?,responsavel_id=?,status=?,data_conclusao=?,observacoes_conclusao=?,encarregado_designado_id=? WHERE id=?`,
+        `UPDATE servicos_subestacoes SET subestacao_id=?,processo=?,motivo=?,data_prevista=?,horario_inicio=?,horario_fim=?,responsavel_id=?,status=?,data_conclusao=?,observacoes_conclusao=? WHERE id=?`,
         [
           parseInt(subestacao_id),
           processo,
           motivo,
-          alimentador,
-          equipamentoIdFinal,
           data_prevista,
           horario_inicio,
           horario_fim,
@@ -532,17 +546,27 @@ router.put(
           status,
           dataConclusaoFinal,
           observacoesConclusaoFinal,
-          encarregadoIdFinal,
           servicoId,
         ]
       );
 
+      const [itensEscopoAntigos] = await connection.query(
+        "SELECT id FROM servico_itens_escopo WHERE servico_id = ?",
+        [servicoId]
+      );
+      if (itensEscopoAntigos.length > 0) {
+        const idsItensEscopoAntigos = itensEscopoAntigos.map((item) => item.id);
+        await connection.query(
+          "DELETE FROM servico_item_escopo_equipamentos WHERE servico_item_escopo_id IN (?)",
+          [idsItensEscopoAntigos]
+        );
+      }
       await connection.query(
-        "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
+        "DELETE FROM servico_itens_escopo WHERE servico_id = ?",
         [servicoId]
       );
       await connection.query(
-        "DELETE FROM servico_item_inspecao_defeito WHERE servico_id = ?",
+        "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
         [servicoId]
       );
 
@@ -556,17 +580,53 @@ router.put(
           [vinculosValues]
         );
       }
-      if (parsedMapeamentoDefeitos.length > 0) {
-        const defeitosValues = parsedMapeamentoDefeitos.map((defeito) => [
-          servicoId,
-          parseInt(defeito.inspecao_item_id),
-          parseInt(defeito.catalogo_defeito_id),
-          defeito.observacao_especifica_servico || null,
-        ]);
-        await connection.query(
-          "INSERT INTO servico_item_inspecao_defeito (servico_id, inspecao_item_id, catalogo_defeito_id, observacao_especifica_servico) VALUES ?",
-          [defeitosValues]
+      for (const itemEscopo of parsedItensEscopo) {
+        const catalogoDefeitoIdFinal =
+          itemEscopo.catalogo_defeito_id &&
+          !isNaN(parseInt(itemEscopo.catalogo_defeito_id))
+            ? parseInt(itemEscopo.catalogo_defeito_id)
+            : null;
+        const inspecaoItemIdFinal =
+          itemEscopo.inspecao_item_id &&
+          !isNaN(parseInt(itemEscopo.inspecao_item_id))
+            ? parseInt(itemEscopo.inspecao_item_id)
+            : null;
+        const encarregadoItemIdFinal =
+          itemEscopo.encarregado_item_id &&
+          itemEscopo.encarregado_item_id !== "" &&
+          !isNaN(parseInt(itemEscopo.encarregado_item_id))
+            ? parseInt(itemEscopo.encarregado_item_id)
+            : null;
+        const statusItemFinal = itemEscopo.status_item_escopo || "PENDENTE";
+
+        const [resultItemEscopo] = await connection.query(
+          `INSERT INTO servico_itens_escopo (servico_id, catalogo_defeito_id, inspecao_item_id, descricao_item_servico, observacao_especifica_servico, encarregado_item_id, status_item_escopo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            servicoId,
+            catalogoDefeitoIdFinal,
+            inspecaoItemIdFinal,
+            itemEscopo.descricao_item_servico,
+            itemEscopo.observacao_especifica_servico || null,
+            encarregadoItemIdFinal,
+            statusItemFinal,
+          ]
         );
+        const novoItemEscopoId = resultItemEscopo.insertId;
+        if (
+          itemEscopo.equipamentos_associados &&
+          Array.isArray(itemEscopo.equipamentos_associados) &&
+          itemEscopo.equipamentos_associados.length > 0
+        ) {
+          const equipamentosVinculadosValues =
+            itemEscopo.equipamentos_associados.map((equipId) => [
+              novoItemEscopoId,
+              parseInt(equipId),
+            ]);
+          await connection.query(
+            "INSERT INTO servico_item_escopo_equipamentos (servico_item_escopo_id, equipamento_id) VALUES ?",
+            [equipamentosVinculadosValues]
+          );
+        }
       }
 
       let anexosSalvosInfo = [];
@@ -614,36 +674,34 @@ router.put(
         );
       res.json({
         id: servicoId,
-        message: "Serviço de subestação atualizado com sucesso!",
+        message: "Serviço atualizado com sucesso!",
         anexosAdicionados: anexosSalvosInfo,
       });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao atualizar serviço de subestação:", error);
       for (const caminho of arquivosMovidosComSucesso) {
         try {
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      if (arquivosNovos && arquivosNovos.length > 0) {
+      if (arquivosNovos?.length) {
         arquivosNovos.forEach((f) => {
           if (
             f.path &&
             (f.path.includes("temp") || f.path.includes("upload_"))
           ) {
             try {
-              fs.accessSync(f.path);
-              fs.unlinkSync(f.path);
+              if (fs.existsSync(f.path)) {
+                fs.unlinkSync(f.path);
+              }
             } catch (e) {}
           }
         });
       }
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao atualizar serviço de subestação.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao atualizar serviço.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -661,14 +719,31 @@ router.delete(
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
+
+      const [itensEscopoParaDeletar] = await connection.query(
+        "SELECT id FROM servico_itens_escopo WHERE servico_id = ?",
+        [servicoId]
+      );
+      if (itensEscopoParaDeletar.length > 0) {
+        const idsItensEscopo = itensEscopoParaDeletar.map((item) => item.id);
+        await connection.query(
+          "DELETE FROM servico_item_escopo_equipamentos WHERE servico_item_escopo_id IN (?)",
+          [idsItensEscopo]
+        );
+        await connection.query(
+          "DELETE FROM servico_item_escopo_anexos WHERE item_escopo_id IN (?)",
+          [idsItensEscopo]
+        );
+      }
+      await connection.query(
+        "DELETE FROM servico_itens_escopo WHERE servico_id = ?",
+        [servicoId]
+      );
       await connection.query(
         "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
         [servicoId]
       );
-      await connection.query(
-        "DELETE FROM servico_item_inspecao_defeito WHERE servico_id = ?",
-        [servicoId]
-      );
+
       const [anexos] = await connection.query(
         "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id_servico = ?",
         [servicoId]
@@ -677,6 +752,7 @@ router.delete(
         "DELETE FROM servicos_subestacoes_anexos WHERE id_servico = ?",
         [servicoId]
       );
+
       const [result] = await connection.query(
         "DELETE FROM servicos_subestacoes WHERE id = ?",
         [servicoId]
@@ -695,6 +771,7 @@ router.delete(
           `servico_${String(servicoId)}`
         );
         for (const anexo of anexos) {
+          if (!anexo.caminho_servidor) continue;
           const caminhoRelativoNoServidor = anexo.caminho_servidor.replace(
             /^\/upload_arquivos_subestacoes\//,
             ""
@@ -731,17 +808,14 @@ router.delete(
           connection
         );
       res.json({
-        message: `Serviço ID ${servicoId} e seus dados associados foram excluídos com sucesso.`,
+        message: `Serviço ID ${servicoId} e seus dados associados excluídos com sucesso.`,
       });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao excluir serviço de subestação:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao excluir serviço de subestação.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao excluir serviço de subestação.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -756,29 +830,34 @@ router.get(
     try {
       let query = `
         SELECT 
-          ss.id, ss.processo, ss.motivo, ss.alimentador, 
+          ss.id, ss.processo, ss.motivo,
           DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, 
           ss.horario_inicio, ss.horario_fim, ss.status, 
           DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, 
           s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
-          u.nome as responsavel_nome, e.tag as equipamento_tag, 
-          ss.subestacao_id, ss.responsavel_id, ss.equipamento_id, 
-          ud.nome as encarregado_designado_nome, ss.encarregado_designado_id 
+          u.nome as responsavel_nome,
+          (SELECT GROUP_CONCAT(DISTINCT u2.nome ORDER BY u2.nome SEPARATOR ', ') 
+            FROM servico_itens_escopo sie_enc 
+            LEFT JOIN users u2 ON sie_enc.encarregado_item_id = u2.id 
+            WHERE sie_enc.servico_id = ss.id AND sie_enc.encarregado_item_id IS NOT NULL) as encarregados_itens_nomes,
+          (SELECT COUNT(*) FROM servico_itens_escopo sie_total WHERE sie_total.servico_id = ss.id) as total_itens,
+          (SELECT COUNT(*) FROM servico_itens_escopo sie_conc WHERE sie_conc.servico_id = ss.id AND sie_conc.status_item_escopo LIKE 'CONCLUIDO%') as itens_concluidos
         FROM servicos_subestacoes ss 
         JOIN subestacoes s ON ss.subestacao_id = s.Id 
         JOIN users u ON ss.responsavel_id = u.id 
-        LEFT JOIN infra_equip e ON ss.equipamento_id = e.id 
-        LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id 
         WHERE 1=1`;
-
       const params = [];
-      if (req.query.subestacao_id) {
-        query += " AND ss.subestacao_id = ?";
-        params.push(req.query.subestacao_id);
-      }
+
       if (req.query.status) {
         query += " AND ss.status = ?";
         params.push(req.query.status);
+      } else {
+        query += " AND ss.status NOT IN ('CONCLUIDO', 'CANCELADO')";
+      }
+
+      if (req.query.subestacao_id) {
+        query += " AND ss.subestacao_id = ?";
+        params.push(req.query.subestacao_id);
       }
       if (req.query.processo) {
         query += " AND ss.processo LIKE ?";
@@ -792,14 +871,23 @@ router.get(
         query += " AND ss.data_prevista <= ?";
         params.push(req.query.data_prevista_ate);
       }
+      if (req.query.data_conclusao_de) {
+        query += " AND ss.data_conclusao >= ?";
+        params.push(req.query.data_conclusao_de);
+      }
+      if (req.query.data_conclusao_ate) {
+        query += " AND ss.data_conclusao <= ?";
+        params.push(req.query.data_conclusao_ate);
+      }
 
-      const cargosComVisaoTotal = ["ADMIN", "Gerente", "Engenheiro", "ADM"]; // Exemplo de cargos que podem ver tudo, ajuste conforme necessário
+      const cargosComVisaoTotal = ["ADMIN", "Gerente", "Engenheiro", "ADM"];
       if (
         req.user &&
-        req.user.cargo === "Encarregado" &&
+        (req.user.cargo === "Encarregado" || req.user.cargo === "Inspetor") &&
         !cargosComVisaoTotal.includes(req.user.cargo)
       ) {
-        query += " AND ss.encarregado_designado_id = ?";
+        query +=
+          " AND EXISTS (SELECT 1 FROM servico_itens_escopo sie_filter WHERE sie_filter.servico_id = ss.id AND sie_filter.encarregado_item_id = ?)";
         params.push(req.user.id);
       }
 
@@ -807,7 +895,6 @@ router.get(
       const [rows] = await promisePool.query(query, params);
       res.json(rows);
     } catch (err) {
-      console.error("Erro ao listar serviços (API):", err);
       res
         .status(500)
         .json({ message: "Erro ao listar serviços.", detalhes: err.message });
@@ -825,7 +912,7 @@ router.get(
       return res.status(400).json({ message: `ID inválido: ${servicoId}` });
     try {
       const [servicoRows] = await promisePool.query(
-        `SELECT ss.id,ss.processo,ss.motivo,ss.alimentador,DATE_FORMAT(ss.data_prevista,'%Y-%m-%d') as data_prevista,ss.horario_inicio,ss.horario_fim,ss.status,DATE_FORMAT(ss.data_conclusao,'%Y-%m-%d') as data_conclusao,ss.observacoes_conclusao,s.Id as subestacao_id,s.sigla as subestacao_sigla,s.nome as subestacao_nome,u.id as responsavel_id,u.nome as responsavel_nome,e.id as equipamento_id,e.tag as equipamento_tag,ss.encarregado_designado_id,ud.nome as encarregado_designado_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id LEFT JOIN infra_equip e ON ss.equipamento_id = e.id LEFT JOIN users ud ON ss.encarregado_designado_id = ud.id WHERE ss.id = ?`,
+        `SELECT ss.id,ss.processo,ss.motivo,DATE_FORMAT(ss.data_prevista,'%Y-%m-%d') as data_prevista,ss.horario_inicio,ss.horario_fim,ss.status,DATE_FORMAT(ss.data_conclusao,'%Y-%m-%d') as data_conclusao,ss.observacoes_conclusao,s.Id as subestacao_id,s.sigla as subestacao_sigla,s.nome as subestacao_nome,u.id as responsavel_id,u.nome as responsavel_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id WHERE ss.id = ?`,
         [servicoId]
       );
       if (servicoRows.length === 0)
@@ -834,28 +921,6 @@ router.get(
           .json({ message: `Serviço ${servicoId} não encontrado.` });
       const servico = servicoRows[0];
 
-      const cargosComVisaoTotal = [
-        "ADMIN",
-        "Gerente",
-        "Engenheiro",
-        "ADM",
-        "Inspetor",
-        "Técnico",
-      ];
-      if (
-        req.user &&
-        req.user.cargo === "Encarregado" &&
-        servico.encarregado_designado_id !== req.user.id &&
-        !cargosComVisaoTotal.includes(req.user.cargo)
-      ) {
-        return res
-          .status(403)
-          .json({
-            message:
-              "Acesso negado. Este serviço não está designado a você ou você não tem permissão para visualizá-lo.",
-          });
-      }
-
       const [anexosRows] = await promisePool.query(
         `SELECT id,nome_original,caminho_servidor,tipo_mime,tamanho,categoria_anexo FROM servicos_subestacoes_anexos WHERE id_servico = ? ORDER BY id DESC`,
         [servicoId]
@@ -863,7 +928,7 @@ router.get(
       servico.anexos = anexosRows;
 
       const [inspecoesVinculadasRows] = await promisePool.query(
-        `SELECT i.id as inspecao_id,i.formulario_inspecao_num,DATE_FORMAT(i.data_avaliacao,'%d/%m/%Y') as data_avaliacao_fmt, s.sigla as subestacao_sigla FROM servicos_inspecoes_vinculadas siv JOIN inspecoes_subestacoes i ON siv.inspecao_id = i.id JOIN subestacoes s ON i.subestacao_id = s.Id WHERE siv.servico_id = ? ORDER BY i.data_avaliacao DESC, i.id DESC`,
+        `SELECT i.id as inspecao_id,i.formulario_inspecao_num,DATE_FORMAT(i.data_avaliacao,'%d/%m/%Y') as data_avaliacao_fmt, s.sigla as subestacao_sigla, s.Id as subestacao_id_inspecao FROM servicos_inspecoes_vinculadas siv JOIN inspecoes_subestacoes i ON siv.inspecao_id = i.id JOIN subestacoes s ON i.subestacao_id = s.Id WHERE siv.servico_id = ? ORDER BY i.data_avaliacao DESC, i.id DESC`,
         [servicoId]
       );
       servico.inspecoes_vinculadas = [];
@@ -880,20 +945,94 @@ router.get(
         servico.inspecoes_vinculadas.push(inspV);
       }
 
-      const [mapeamentoDefeitosRows] = await promisePool.query(
-        `SELECT siid.inspecao_item_id,siid.catalogo_defeito_id,siid.observacao_especifica_servico,cd.codigo as defeito_codigo,cd.descricao as defeito_descricao,isi.item_num as inspecao_item_num,isi.descricao_item_original as inspecao_item_descricao, ins.id as inspecao_id, ins.formulario_inspecao_num as inspecao_formulario_num FROM servico_item_inspecao_defeito siid JOIN catalogo_defeitos_servicos cd ON siid.catalogo_defeito_id = cd.id JOIN inspecoes_subestacoes_itens isi ON siid.inspecao_item_id = isi.id JOIN inspecoes_subestacoes ins ON isi.inspecao_id = ins.id WHERE siid.servico_id = ? ORDER BY ins.data_avaliacao DESC, ins.id DESC, isi.item_num ASC`,
+      const [itensEscopoRows] = await promisePool.query(
+        `SELECT 
+            sie.id as item_escopo_id, 
+            sie.catalogo_defeito_id, 
+            sie.inspecao_item_id,
+            sie.descricao_item_servico,
+            sie.observacao_especifica_servico,
+            sie.encarregado_item_id,
+            usr_enc.nome as encarregado_item_nome,
+            sie.status_item_escopo,
+            sie.data_conclusao_item,
+            sie.observacoes_conclusao_item,
+            cd.codigo as defeito_codigo,
+            cd.descricao as defeito_descricao,
+            isi.item_num as inspecao_item_num,
+            isi.descricao_item_original as inspecao_item_descricao_original,
+            ins.id as origem_inspecao_id, 
+            ins.formulario_inspecao_num as origem_inspecao_formulario_num,
+            (SELECT GROUP_CONCAT(DISTINCT JSON_OBJECT('equipamento_id', eq.id, 'tag', eq.tag, 'description', eq.description) ORDER BY eq.tag) FROM servico_item_escopo_equipamentos siee LEFT JOIN infra_equip eq ON siee.equipamento_id = eq.id WHERE siee.servico_item_escopo_id = sie.id) as equipamentos_associados_json,
+            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', anexo.id, 'nome_original', anexo.nome_original, 'caminho_servidor', anexo.caminho_servidor)) FROM servico_item_escopo_anexos anexo WHERE anexo.item_escopo_id = sie.id) as anexos_conclusao
+         FROM servico_itens_escopo sie
+         LEFT JOIN catalogo_defeitos_servicos cd ON sie.catalogo_defeito_id = cd.id
+         LEFT JOIN inspecoes_subestacoes_itens isi ON sie.inspecao_item_id = isi.id
+         LEFT JOIN inspecoes_subestacoes ins ON isi.inspecao_id = ins.id
+         LEFT JOIN users usr_enc ON sie.encarregado_item_id = usr_enc.id
+         WHERE sie.servico_id = ?
+         GROUP BY sie.id
+         ORDER BY sie.id ASC`,
         [servicoId]
       );
-      servico.mapeamento_defeitos_existentes = mapeamentoDefeitosRows;
+
+      servico.itens_escopo = itensEscopoRows.map((item) => {
+        try {
+          item.equipamentos_associados = item.equipamentos_associados_json
+            ? JSON.parse(`[${item.equipamentos_associados_json}]`)
+            : [];
+          item.equipamentos_associados = item.equipamentos_associados.filter(
+            (eq) =>
+              eq !== null &&
+              typeof eq === "object" &&
+              eq.equipamento_id !== null
+          );
+          item.anexos_conclusao = item.anexos_conclusao
+            ? JSON.parse(item.anexos_conclusao)
+            : [];
+        } catch (e) {
+          item.equipamentos_associados = [];
+          item.anexos_conclusao = [];
+        }
+        delete item.equipamentos_associados_json;
+        return item;
+      });
+
+      const cargosComVisaoTotal = [
+        "ADMIN",
+        "Gerente",
+        "Engenheiro",
+        "ADM",
+        "Inspetor",
+        "Técnico",
+      ];
+      let encarregadoPodeVer = false;
+      if (req.user && req.user.cargo === "Encarregado") {
+        if (servico.itens_escopo && servico.itens_escopo.length > 0) {
+          encarregadoPodeVer = servico.itens_escopo.some(
+            (item) => item.encarregado_item_id === req.user.id
+          );
+        }
+      }
+
+      if (
+        req.user &&
+        (req.user.cargo === "Encarregado" || req.user.cargo === "Inspetor") &&
+        !encarregadoPodeVer &&
+        !cargosComVisaoTotal.includes(req.user.cargo)
+      ) {
+        return res.status(403).json({
+          message:
+            "Acesso negado. Nenhum item deste serviço está designado a você.",
+        });
+      }
+
       res.json(servico);
     } catch (err) {
-      console.error("Erro ao buscar detalhes do serviço (API):", err);
-      res
-        .status(500)
-        .json({
-          message: "Erro ao buscar detalhes do serviço.",
-          detalhes: err.message,
-        });
+      res.status(500).json({
+        message: "Erro ao buscar detalhes do serviço.",
+        detalhes: err.message,
+      });
     }
   }
 );
@@ -901,37 +1040,38 @@ router.get(
 router.put(
   "/api/servicos-subestacoes/:servicoId/concluir",
   autenticar,
-  podeModificarServicos,
   verificarServicoExiste,
   upload.array("anexos_conclusao_servico", 5),
   async (req, res) => {
     const { servicoId } = req.params;
+    const { servico } = req;
+    const { userId, userCargo } = {
+      userId: req.user.id,
+      userCargo: req.user.cargo,
+    };
     const {
       data_conclusao_manual,
       hora_conclusao_manual,
       observacoes_conclusao_manual,
     } = req.body;
     const arquivosConclusao = req.files;
-    const { servico } = req;
 
     if (servico.status === "CONCLUIDO" || servico.status === "CANCELADO") {
-      if (arquivosConclusao && arquivosConclusao.length > 0) {
+      if (arquivosConclusao?.length)
         arquivosConclusao.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      }
       return res
         .status(400)
         .json({
-          message: `Serviço (Processo: ${servico.processo}) já está no status ${servico.status}.`,
+          message: `Serviço (Processo: ${servico.processo}) já está ${servico.status}.`,
         });
     }
     if (!data_conclusao_manual) {
-      if (arquivosConclusao && arquivosConclusao.length > 0) {
+      if (arquivosConclusao?.length)
         arquivosConclusao.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      }
       return res
         .status(400)
         .json({ message: "Data de conclusão é obrigatória." });
@@ -941,111 +1081,135 @@ router.put(
     let arquivosMovidosComSucesso = [];
     try {
       await connection.beginTransaction();
-      let dataConclusaoFinal = data_conclusao_manual;
-      let observacoesFinais =
-        observacoes_conclusao_manual || servico.observacoes_conclusao || "";
-      let horarioConclusaoFinal = hora_conclusao_manual || null;
-      if (!dataConclusaoFinal)
-        dataConclusaoFinal = new Date().toISOString().split("T")[0];
 
-      let updateQuery =
-        "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = ?";
-      const updateParams = [dataConclusaoFinal, observacoesFinais];
-      if (horarioConclusaoFinal) {
-        updateQuery += ", horario_fim = IFNULL(horario_fim, ?)";
-        updateParams.push(horarioConclusaoFinal);
-      } else {
-        const horaAtualFormatada = new Date().toLocaleTimeString("pt-BR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        });
-        updateQuery += ", horario_fim = IFNULL(horario_fim, ?)";
-        updateParams.push(horaAtualFormatada);
-      }
-      updateQuery += " WHERE id = ?";
-      updateParams.push(servicoId);
-      await connection.query(updateQuery, updateParams);
+      const cargosConclusaoGeral = [
+        "ADMIN",
+        "Engenheiro",
+        "Gerente",
+        "Técnico",
+        "ADM",
+      ];
 
-      let anexosSalvosConclusaoInfo = [];
-      if (arquivosConclusao && arquivosConclusao.length > 0) {
-        const servicoUploadDirConclusao = path.join(
-          uploadsSubestacoesDir,
-          "servicos",
-          `servico_${String(servicoId)}`,
-          "conclusao"
-        );
-        await fs.mkdir(servicoUploadDirConclusao, { recursive: true });
-        for (const file of arquivosConclusao) {
-          const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
-            /[^a-zA-Z0-9.\-_]/g,
-            "_"
-          )}`;
-          const caminhoDestino = path.join(
-            servicoUploadDirConclusao,
-            nomeUnicoArquivo
-          );
-          await fs.rename(file.path, caminhoDestino);
-          arquivosMovidosComSucesso.push(caminhoDestino);
-          const caminhoRelativoServidor = `servicos/servico_${servicoId}/conclusao/${nomeUnicoArquivo}`;
-          const [resultAnexo] = await connection.query(
-            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?,?,?,?,?,?,?)`,
-            [
-              servicoId,
-              file.originalname,
-              `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-              file.mimetype,
-              file.size,
-              "ANEXO_CONCLUSAO",
-              "Anexo de conclusão",
-            ]
-          );
-          anexosSalvosConclusaoInfo.push({
-            id: resultAnexo.insertId,
-            nome_original: file.originalname,
-            caminho_servidor: `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-          });
+      if (cargosConclusaoGeral.includes(userCargo)) {
+        let updateQuery =
+          "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = ?";
+        const updateParams = [
+          data_conclusao_manual,
+          observacoes_conclusao_manual || servico.observacoes_conclusao || "",
+        ];
+        if (hora_conclusao_manual) {
+          updateQuery += ", horario_fim = IFNULL(horario_fim, ?)";
+          updateParams.push(hora_conclusao_manual);
         }
-      }
-      if (req.user && req.user.matricula) {
-        await registrarAuditoria(
-          req.user.matricula,
-          "CONCLUDE_SERVICO_SUBESTACAO",
-          `Serviço ID ${servicoId} (Proc: ${servico.processo}) CONCLUÍDO. Data: ${dataConclusaoFinal}. Anexos: ${anexosSalvosConclusaoInfo.length}`,
-          connection
+        updateQuery += " WHERE id = ?";
+        updateParams.push(servicoId);
+        await connection.query(updateQuery, updateParams);
+
+        await connection.query(
+          "UPDATE servico_itens_escopo SET status_item_escopo = 'CONCLUIDO_AUTOMATICO' WHERE servico_id = ? AND status_item_escopo NOT LIKE 'CONCLUIDO%'",
+          [servicoId]
         );
+      } else if (userCargo === "Encarregado" || userCargo === "Inspetor") {
+        const [itensDoUsuario] = await connection.query(
+          "SELECT id FROM servico_itens_escopo WHERE servico_id = ? AND encarregado_item_id = ? AND status_item_escopo NOT LIKE 'CONCLUIDO%'",
+          [servicoId, userId]
+        );
+
+        if (itensDoUsuario.length === 0) {
+          await connection.rollback();
+          return res
+            .status(403)
+            .json({
+              message:
+                "Você não tem itens pendentes para concluir neste serviço.",
+            });
+        }
+
+        const idsItensDoUsuario = itensDoUsuario.map((item) => item.id);
+        const dataConclusaoItem = new Date();
+
+        await connection.query(
+          "UPDATE servico_itens_escopo SET status_item_escopo = 'CONCLUIDO_MANUAL', data_conclusao_item = ?, observacoes_conclusao_item = ? WHERE id IN (?)",
+          [dataConclusaoItem, observacoes_conclusao_manual, idsItensDoUsuario]
+        );
+
+        if (arquivosConclusao && arquivosConclusao.length > 0) {
+          const itemAnexoDir = path.join(
+            uploadsSubestacoesDir,
+            "servicos",
+            `servico_${String(servicoId)}`,
+            "itens_conclusao"
+          );
+          await fs.mkdir(itemAnexoDir, { recursive: true });
+
+          for (const item of itensDoUsuario) {
+            for (const file of arquivosConclusao) {
+              const nomeUnicoArq = `${Date.now()}_ITEM${
+                item.id
+              }_${file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+              const tempPath = file.path;
+              const finalPath = path.join(itemAnexoDir, nomeUnicoArq);
+              await fs.copyFile(tempPath, finalPath);
+              arquivosMovidosComSucesso.push(finalPath);
+
+              const caminhoRelServ = `servicos/servico_${servicoId}/itens_conclusao/${nomeUnicoArq}`;
+              await connection.query(
+                `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?,?,?,?,?)`,
+                [
+                  item.id,
+                  file.originalname,
+                  `/upload_arquivos_subestacoes/${caminhoRelServ}`,
+                  file.mimetype,
+                  file.size,
+                ]
+              );
+            }
+          }
+        }
+
+        const [progressoRows] = await connection.query(
+          `SELECT (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ?) as total, (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ? AND status_item_escopo LIKE 'CONCLUIDO%') as concluidos`,
+          [servicoId, servicoId]
+        );
+        if (
+          progressoRows[0].total > 0 &&
+          progressoRows[0].total === progressoRows[0].concluidos
+        ) {
+          await connection.query(
+            "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = CONCAT(IFNULL(observacoes_conclusao, ''), ' (Concluído automaticamente após finalização de todos os itens.)') WHERE id = ?",
+            [new Date().toISOString().split("T")[0], servicoId]
+          );
+        }
+      } else {
+        await connection.rollback();
+        return res
+          .status(403)
+          .json({ message: "Acesso negado. Seu cargo não permite esta ação." });
       }
+
       await connection.commit();
+      if (arquivosConclusao?.length)
+        arquivosConclusao.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       res.json({
-        message: `Serviço (Processo: ${servico.processo}) concluído com sucesso!`,
-        anexosConclusao: anexosSalvosConclusaoInfo,
+        message: `Ação de conclusão registrada para o serviço (Processo: ${servico.processo})!`,
       });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao concluir o serviço:", error);
-      if (arquivosConclusao && arquivosConclusao.length > 0) {
-        arquivosConclusao.forEach((f) => {
-          if (
-            f.path &&
-            (f.path.includes("temp") || f.path.includes("upload_"))
-          ) {
-            try {
-              fs.accessSync(f.path);
-              fs.unlinkSync(f.path);
-            } catch (e) {}
-          }
-        });
-      }
-      for (const caminho of arquivosMovidosComSucesso) {
+      arquivosMovidosComSucesso.forEach((p) => {
         try {
-          await fs.unlink(caminho);
+          if (fs.existsSync(p)) fs.unlinkSync(p);
         } catch (e) {}
-      }
+      });
+      if (arquivosConclusao?.length)
+        arquivosConclusao.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       res
         .status(500)
         .json({
-          message: "Erro interno ao concluir o serviço.",
+          message: "Erro interno ao concluir serviço.",
           detalhes: error.message,
         });
     } finally {
@@ -1063,11 +1227,9 @@ router.put(
     const { servicoId } = req.params;
     const { servico } = req;
     if (servico.status !== "CONCLUIDO" && servico.status !== "CANCELADO") {
-      return res
-        .status(400)
-        .json({
-          message: `Serviço (Processo: ${servico.processo}) no status ${servico.status} não pode ser reaberto.`,
-        });
+      return res.status(400).json({
+        message: `Serviço (Processo: ${servico.processo}) ${servico.status} não pode ser reaberto.`,
+      });
     }
     const connection = await promisePool.getConnection();
     try {
@@ -1076,27 +1238,40 @@ router.put(
         "UPDATE servicos_subestacoes SET status = 'EM_ANDAMENTO', data_conclusao = NULL, observacoes_conclusao = NULL WHERE id = ?",
         [servicoId]
       );
-      if (req.user && req.user.matricula) {
+      await connection.query(
+        "UPDATE servico_itens_escopo SET status_item_escopo = 'PENDENTE', data_conclusao_item = NULL, observacoes_conclusao_item = NULL WHERE servico_id = ? AND (status_item_escopo LIKE 'CONCLUIDO%')",
+        [servicoId]
+      );
+
+      const [itensDoServico] = await connection.query(
+        "SELECT id FROM servico_itens_escopo WHERE servico_id = ?",
+        [servicoId]
+      );
+      if (itensDoServico.length > 0) {
+        const idsItens = itensDoServico.map((i) => i.id);
+        await connection.query(
+          "DELETE FROM servico_item_escopo_anexos WHERE item_escopo_id IN (?)",
+          [idsItens]
+        );
+      }
+
+      if (req.user?.matricula) {
         await registrarAuditoria(
           req.user.matricula,
           "REOPEN_SERVICO_SUBESTACAO",
-          `Serviço ID ${servicoId} (Proc: ${servico.processo}) reaberto.`,
+          `Serviço ${servicoId} (Proc: ${servico.processo}) reaberto.`,
           connection
         );
       }
       await connection.commit();
       res.json({
-        message: `Serviço (Processo: ${servico.processo}) reaberto com sucesso! Novo status: EM ANDAMENTO.`,
+        message: `Serviço (Processo: ${servico.processo}) reaberto! Status: EM ANDAMENTO.`,
       });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao reabrir o serviço:", error);
       res
         .status(500)
-        .json({
-          message: "Erro interno ao reabrir o serviço.",
-          detalhes: error.message,
-        });
+        .json({ message: "Erro interno ao reabrir.", detalhes: error.message });
     } finally {
       if (connection) connection.release();
     }
@@ -1104,64 +1279,162 @@ router.put(
 );
 
 router.put(
-  "/api/servicos-subestacoes/:servicoId/designar-encarregado",
+  "/api/servicos/:servicoId/atualizar-encarregados-itens",
   autenticar,
   podeModificarServicos,
-  verificarServicoExiste,
   async (req, res) => {
     const { servicoId } = req.params;
-    const { encarregado_designado_id } = req.body;
-    const { servico } = req;
+    const { atualizacoes_encarregados } = req.body;
+
+    if (isNaN(parseInt(servicoId, 10))) {
+      return res.status(400).json({ message: "ID do serviço inválido." });
+    }
+    if (
+      !Array.isArray(atualizacoes_encarregados) ||
+      atualizacoes_encarregados.length === 0
+    ) {
+      return res.status(400).json({
+        message:
+          "Nenhuma atualização de encarregado fornecida ou formato inválido.",
+      });
+    }
+
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
-      const encarregadoFinalId =
-        encarregado_designado_id &&
-        encarregado_designado_id !== "" &&
-        !isNaN(parseInt(encarregado_designado_id))
-          ? parseInt(encarregado_designado_id)
-          : null;
-      await connection.query(
-        "UPDATE servicos_subestacoes SET encarregado_designado_id = ? WHERE id = ?",
-        [encarregadoFinalId, servicoId]
+
+      const [servicoInfo] = await promisePool.query(
+        "SELECT processo FROM servicos_subestacoes WHERE id = ?",
+        [servicoId]
       );
-      if (req.user && req.user.matricula) {
-        let nomeEncarregado = "Ninguém";
-        if (encarregadoFinalId) {
-          const [encarregado] = await connection.query(
-            "SELECT nome FROM users WHERE id = ?",
-            [encarregadoFinalId]
-          );
-          nomeEncarregado =
-            encarregado.length > 0
-              ? encarregado[0].nome
-              : `ID ${encarregadoFinalId}`;
+      if (servicoInfo.length === 0) {
+        await connection.rollback();
+        return res
+          .status(404)
+          .json({ message: `Serviço com ID ${servicoId} não encontrado.` });
+      }
+      const processoServico = servicoInfo[0].processo;
+
+      let logDetalhes = [
+        `Serviço Proc: ${processoServico}, Itens atualizados (Encarregados):`,
+      ];
+
+      for (const atualizacao of atualizacoes_encarregados) {
+        const itemEscopoId = parseInt(atualizacao.item_escopo_id, 10);
+        const novoEncarregadoId = atualizacao.novo_encarregado_item_id
+          ? parseInt(atualizacao.novo_encarregado_item_id, 10)
+          : null;
+
+        if (isNaN(itemEscopoId)) {
+          continue;
         }
-        const acao = encarregadoFinalId
-          ? "DESIGNATE_ENCARREGADO_SERVICO"
-          : "UNDESIGNATE_ENCARREGADO_SERVICO";
-        const detalheAcao = encarregadoFinalId
-          ? `designado para Encarregado: ${nomeEncarregado}`
-          : "encarregado desvinculado";
+
+        const [itemCheck] = await connection.query(
+          "SELECT servico_id FROM servico_itens_escopo WHERE id = ?",
+          [itemEscopoId]
+        );
+        if (
+          itemCheck.length === 0 ||
+          itemCheck[0].servico_id !== parseInt(servicoId, 10)
+        ) {
+          continue;
+        }
+
+        await connection.query(
+          "UPDATE servico_itens_escopo SET encarregado_item_id = ? WHERE id = ?",
+          [novoEncarregadoId, itemEscopoId]
+        );
+        logDetalhes.push(
+          `- ItemID ${itemEscopoId} -> EncID ${novoEncarregadoId || "Nenhum"}`
+        );
+      }
+
+      if (req.user?.matricula) {
         await registrarAuditoria(
           req.user.matricula,
-          acao,
-          `Serviço ID ${servicoId} (Proc: ${servico.processo}) ${detalheAcao}.`,
+          "UPDATE_ENCARREGADOS_ITENS_SERVICO",
+          logDetalhes.join(" "),
           connection
         );
       }
+
       await connection.commit();
-      const mensagem = encarregadoFinalId
-        ? `Serviço (Processo: ${servico.processo}) designado com sucesso!`
-        : `Encarregado desvinculado do serviço (Processo: ${servico.processo}) com sucesso!`;
-      res.json({ message: mensagem });
+      res.json({ message: "Encarregados dos itens atualizados com sucesso." });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao designar/desvincular encarregado:", error);
+      res.status(500).json({
+        message: "Erro interno ao atualizar encarregados dos itens.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.post(
+  "/api/servicos/:servicoId/anexar-posterior",
+  autenticar,
+  podeGerenciarPaginaServicos,
+  upload.array("anexosServico", 5),
+  async (req, res) => {
+    const { servicoId } = req.params;
+    const { descricao_anexo } = req.body;
+    const arquivos = req.files;
+
+    if (!arquivos || arquivos.length === 0) {
+      return res.status(400).json({ message: "Nenhum arquivo enviado." });
+    }
+
+    const connection = await promisePool.getConnection();
+    let arquivosMovidosComSucesso = [];
+    try {
+      await connection.beginTransaction();
+
+      const servicoUploadDir = path.join(
+        uploadsSubestacoesDir,
+        "servicos",
+        `servico_${String(servicoId)}`
+      );
+      await fs.mkdir(servicoUploadDir, { recursive: true });
+
+      for (const file of arquivos) {
+        const nomeUnicoArquivo = `${Date.now()}_POST_${file.originalname.replace(
+          /[^a-zA-Z0-9.\-_]/g,
+          "_"
+        )}`;
+        const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
+        await fs.rename(file.path, caminhoDestino);
+        arquivosMovidosComSucesso.push(caminhoDestino);
+
+        const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
+        await connection.query(
+          `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            servicoId,
+            file.originalname,
+            `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
+            file.mimetype,
+            file.size,
+            "ANEXO_POSTERIOR",
+            descricao_anexo || "Anexo posterior",
+          ]
+        );
+      }
+
+      await connection.commit();
+      res.status(201).json({ message: "Anexos adicionados com sucesso!" });
+    } catch (error) {
+      await connection.rollback();
+      for (const caminho of arquivosMovidosComSucesso) {
+        try {
+          await fs.unlink(caminho);
+        } catch (e) {}
+      }
       res
         .status(500)
         .json({
-          message: "Erro interno ao designar/desvincular encarregado.",
+          message: "Erro ao adicionar anexos.",
           detalhes: error.message,
         });
     } finally {

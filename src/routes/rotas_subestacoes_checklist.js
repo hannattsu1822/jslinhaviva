@@ -73,11 +73,9 @@ async function verificarInspecaoExiste(req, res, next) {
       [idParaVerificar]
     );
     if (inspecao.length === 0)
-      return res
-        .status(404)
-        .json({
-          message: `Inspeção com ID ${idParaVerificar} não encontrada.`,
-        });
+      return res.status(404).json({
+        message: `Inspeção com ID ${idParaVerificar} não encontrada.`,
+      });
     req.inspecao = inspecao[0];
     req.inspecaoId = parseInt(idParaVerificar, 10);
     next();
@@ -137,6 +135,7 @@ router.post(
     const {
       subestacao_id,
       responsavel_levantamento_id,
+      tipo_inspecao,
       data_avaliacao,
       hora_inicial,
       hora_final,
@@ -220,17 +219,16 @@ router.post(
         : [];
     } catch (e) {
       await limparArquivosTemporariosUpload(req.files);
-      return res
-        .status(400)
-        .json({
-          message: "Formato inválido para dados do formulário.",
-          detalhes: e.message,
-        });
+      return res.status(400).json({
+        message: "Formato inválido para dados do formulário.",
+        detalhes: e.message,
+      });
     }
 
     if (
       !subestacao_id ||
       !responsavel_levantamento_id ||
+      !tipo_inspecao ||
       !data_avaliacao ||
       !hora_inicial ||
       !itensDoChecklist ||
@@ -238,11 +236,9 @@ router.post(
       itensDoChecklist.length === 0
     ) {
       await limparArquivosTemporariosUpload(req.files);
-      return res
-        .status(400)
-        .json({
-          message: "Campos obrigatórios e itens do checklist são necessários.",
-        });
+      return res.status(400).json({
+        message: "Campos obrigatórios e itens do checklist são necessários.",
+      });
     }
     for (const item of itensDoChecklist) {
       if (
@@ -252,19 +248,15 @@ router.post(
         !item.avaliacao
       ) {
         await limparArquivosTemporariosUpload(req.files);
-        return res
-          .status(400)
-          .json({
-            message: `Dados incompletos para item: ${JSON.stringify(item)}`,
-          });
+        return res.status(400).json({
+          message: `Dados incompletos para item: ${JSON.stringify(item)}`,
+        });
       }
       if (!["N", "A", "NA"].includes(item.avaliacao)) {
         await limparArquivosTemporariosUpload(req.files);
-        return res
-          .status(400)
-          .json({
-            message: `Avaliação inválida ('${item.avaliacao}') item ${item.item_num}.`,
-          });
+        return res.status(400).json({
+          message: `Avaliação inválida ('${item.avaliacao}') item ${item.item_num}.`,
+        });
       }
       if (
         item.avaliacao === "A" &&
@@ -272,41 +264,33 @@ router.post(
           filesGrouped.itemPhotos[item.item_num].length === 0)
       ) {
         await limparArquivosTemporariosUpload(req.files);
-        return res
-          .status(400)
-          .json({
-            message: `Item ${item.item_num} (${item.descricao_item_original}) Anormal requer foto.`,
-          });
+        return res.status(400).json({
+          message: `Item ${item.item_num} (${item.descricao_item_original}) Anormal requer foto.`,
+        });
       }
     }
     for (const med of medicoesDinamicasJson) {
       if (!med.tipo_medicao || !med.valor_medido) {
         await limparArquivosTemporariosUpload(req.files);
-        return res
-          .status(400)
-          .json({
-            message: `Medição (idx ${med.originalDataId}), Tipo e Valor obrigatórios.`,
-          });
+        return res.status(400).json({
+          message: `Medição (idx ${med.originalDataId}), Tipo e Valor obrigatórios.`,
+        });
       }
     }
     for (const equip of equipamentosObservadosJson) {
       if (!equip.tipo_equipamento) {
         await limparArquivosTemporariosUpload(req.files);
-        return res
-          .status(400)
-          .json({
-            message: `Equipamento observado (idx ${equip.originalDataId}), Tipo obrigatório.`,
-          });
+        return res.status(400).json({
+          message: `Equipamento observado (idx ${equip.originalDataId}), Tipo obrigatório.`,
+        });
       }
     }
     for (const verif of verificacoesAdicionaisJson) {
       if (!verif.item_verificado || !verif.estado_item) {
         await limparArquivosTemporariosUpload(req.files);
-        return res
-          .status(400)
-          .json({
-            message: `Ponto de verificação, Item e Estado obrigatórios.`,
-          });
+        return res.status(400).json({
+          message: `Ponto de verificação, Item e Estado obrigatórios.`,
+        });
       }
     }
 
@@ -316,10 +300,11 @@ router.post(
     try {
       await connection.beginTransaction();
       const [rI] = await connection.query(
-        `INSERT INTO inspecoes_subestacoes (subestacao_id,responsavel_levantamento_id,data_avaliacao,hora_inicial,hora_final,status_inspecao,observacoes_gerais,formulario_inspecao_num) VALUES (?,?,?,?,?,?,?,?)`,
+        `INSERT INTO inspecoes_subestacoes (subestacao_id, responsavel_levantamento_id, tipo_inspecao, data_avaliacao, hora_inicial, hora_final, status_inspecao, observacoes_gerais, formulario_inspecao_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           subestacao_id,
           responsavel_levantamento_id,
+          tipo_inspecao,
           data_avaliacao,
           hora_inicial,
           hora_final || null,
@@ -529,14 +514,12 @@ router.post(
           `Inspeção ID ${novaInspecaoId} para subestação ID ${subestacao_id} criada.`,
           connection
         );
-      res
-        .status(201)
-        .json({
-          id: novaInspecaoId,
-          formulario_inspecao_num: String(novaInspecaoId),
-          message: "Inspeção registrada!",
-          anexos: aSI,
-        });
+      res.status(201).json({
+        id: novaInspecaoId,
+        formulario_inspecao_num: String(novaInspecaoId),
+        message: "Inspeção registrada!",
+        anexos: aSI,
+      });
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao registrar inspeção:", error);
@@ -547,18 +530,14 @@ router.post(
       }
       await limparArquivosTemporariosUpload(req.files);
       if (error.code === "ER_DUP_ENTRY")
-        return res
-          .status(409)
-          .json({
-            message: "Erro: Dados duplicados.",
-            detalhes: error.message,
-          });
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao registrar.",
+        return res.status(409).json({
+          message: "Erro: Dados duplicados.",
           detalhes: error.message,
         });
+      res.status(500).json({
+        message: "Erro interno ao registrar.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -639,12 +618,10 @@ router.post(
         } catch (e) {}
       }
       await limparArquivosTemporariosUpload(req.files);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao salvar anexos escritório.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao salvar anexos escritório.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -684,12 +661,10 @@ router.get(
       res.json(rows);
     } catch (error) {
       console.error("Erro interno ao listar inspeções:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro ao listar inspeções.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro ao listar inspeções.",
+        detalhes: error.message,
+      });
     }
   }
 );
@@ -1231,12 +1206,10 @@ router.put(
     } catch (error) {
       await connection.rollback();
       console.error("Erro ao concluir inspeção:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao concluir.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao concluir.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1267,11 +1240,9 @@ router.put(
       const sR = ["CONCLUIDA", "CANCELADA"];
       if (!sR.includes(cS)) {
         await connection.rollback();
-        return res
-          .status(400)
-          .json({
-            message: `Inspeção ${inspecaoId} (${cS}) não pode ser reaberta.`,
-          });
+        return res.status(400).json({
+          message: `Inspeção ${inspecaoId} (${cS}) não pode ser reaberta.`,
+        });
       }
       const [result] = await connection.query(
         "UPDATE inspecoes_subestacoes SET status_inspecao = 'EM_ANDAMENTO', hora_final = NULL WHERE id = ?",
@@ -1365,13 +1336,6 @@ router.delete(
         "DELETE FROM inspecoes_subestacoes_itens WHERE inspecao_id = ?",
         [inspecaoId]
       );
-
-      // Antes de excluir da tabela principal, remover dependências de servico_item_inspecao_defeito
-      // Se a FK de inspecoes_subestacoes_itens para servico_item_inspecao_defeito for ON DELETE CASCADE, não precisa.
-      // Mas como a ligação é feita por `servico_item_inspecao_defeito.inspecao_item_id -> inspecoes_subestacoes_itens.id`,
-      // ao deletar de `inspecoes_subestacoes_itens` já deve ser tratado pela FK (se ON DELETE CASCADE).
-      // A ordem de DELETE das tabelas dependentes (medicoes, equipamentos_observados, itens_verificacao, anexos_inspecao, itens_inspecao)
-      // para a tabela principal `inspecoes_subestacoes` é importante.
 
       const [result] = await connection.query(
         "DELETE FROM inspecoes_subestacoes WHERE id = ?",
