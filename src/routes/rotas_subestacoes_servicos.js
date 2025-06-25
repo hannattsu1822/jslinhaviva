@@ -209,6 +209,7 @@ router.post(
       observacoes_conclusao,
       inspecao_ids_vinculadas,
       itens_escopo,
+      tipo_ordem,
     } = req.body;
     const arquivos = req.files;
 
@@ -249,6 +250,10 @@ router.post(
           throw new Error("Formato inválido para IDs de inspeção vinculadas.");
         }
       } catch (e) {
+        if (arquivos?.length)
+          arquivos.forEach((f) => {
+            if (f.path) fs.unlink(f.path).catch(() => {});
+          });
         return res.status(400).json({
           message: "Erro ao processar IDs de inspeção vinculadas.",
           detalhes: e.message,
@@ -269,6 +274,10 @@ router.post(
           }
         }
       } catch (e) {
+        if (arquivos?.length)
+          arquivos.forEach((f) => {
+            if (f.path) fs.unlink(f.path).catch(() => {});
+          });
         return res.status(400).json({
           message: "Erro ao processar itens de escopo do serviço.",
           detalhes: e.message,
@@ -287,7 +296,7 @@ router.post(
         status === "CONCLUIDO" ? observacoes_conclusao : null;
 
       const [resultServico] = await connection.query(
-        `INSERT INTO servicos_subestacoes (subestacao_id, processo, motivo, data_prevista, horario_inicio, horario_fim, responsavel_id, status, data_conclusao, observacoes_conclusao) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO servicos_subestacoes (subestacao_id, processo, motivo, data_prevista, horario_inicio, horario_fim, responsavel_id, status, data_conclusao, observacoes_conclusao, tipo_ordem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           parseInt(subestacao_id),
           processo,
@@ -299,6 +308,7 @@ router.post(
           status || "PROGRAMADO",
           dataConclusaoFinal,
           observacoesConclusaoFinal,
+          tipo_ordem || null,
         ]
       );
       novoServicoId = resultServico.insertId;
@@ -407,7 +417,11 @@ router.post(
         await registrarAuditoria(
           req.user.matricula,
           "CREATE_SERVICO_SUBESTACAO",
-          `Serviço ID ${novoServicoId} (Proc: ${processo}) criado. Insp.Vinc: ${parsedInspecaoIds.length}, ItensEscopo: ${parsedItensEscopo.length}`,
+          `Serviço ID ${novoServicoId} (Proc: ${processo}, Tipo Ordem: ${
+            tipo_ordem || "N/A"
+          }) criado. Insp.Vinc: ${parsedInspecaoIds.length}, ItensEscopo: ${
+            parsedItensEscopo.length
+          }`,
           connection
         );
       }
@@ -431,6 +445,7 @@ router.post(
             } catch (e) {}
           }
         });
+      console.error("Erro ao criar serviço de subestação:", error);
       res.status(500).json({
         message: "Erro interno ao criar serviço.",
         detalhes: error.message,
@@ -463,6 +478,7 @@ router.put(
       observacoes_conclusao,
       inspecao_ids_vinculadas,
       itens_escopo,
+      tipo_ordem,
     } = req.body;
     const arquivosNovos = req.files;
 
@@ -502,6 +518,10 @@ router.put(
         )
           throw new Error("Formato inválido IDs inspeção");
       } catch (e) {
+        if (arquivosNovos?.length)
+          arquivosNovos.forEach((f) => {
+            if (f.path) fs.unlink(f.path).catch(() => {});
+          });
         return res.status(400).json({
           message: "Erro ao processar IDs de inspeção.",
           detalhes: e.message,
@@ -519,6 +539,10 @@ router.put(
             );
         }
       } catch (e) {
+        if (arquivosNovos?.length)
+          arquivosNovos.forEach((f) => {
+            if (f.path) fs.unlink(f.path).catch(() => {});
+          });
         return res.status(400).json({
           message: "Erro ao processar itens de escopo.",
           detalhes: e.message,
@@ -534,7 +558,7 @@ router.put(
         status === "CONCLUIDO" ? observacoes_conclusao : null;
 
       await connection.query(
-        `UPDATE servicos_subestacoes SET subestacao_id=?,processo=?,motivo=?,data_prevista=?,horario_inicio=?,horario_fim=?,responsavel_id=?,status=?,data_conclusao=?,observacoes_conclusao=? WHERE id=?`,
+        `UPDATE servicos_subestacoes SET subestacao_id=?,processo=?,motivo=?,data_prevista=?,horario_inicio=?,horario_fim=?,responsavel_id=?,status=?,data_conclusao=?,observacoes_conclusao=?, tipo_ordem=? WHERE id=?`,
         [
           parseInt(subestacao_id),
           processo,
@@ -546,6 +570,7 @@ router.put(
           status,
           dataConclusaoFinal,
           observacoesConclusaoFinal,
+          tipo_ordem || null,
           servicoId,
         ]
       );
@@ -669,7 +694,9 @@ router.put(
         await registrarAuditoria(
           req.user.matricula,
           "UPDATE_SERVICO_SUBESTACAO",
-          `Serviço ID ${servicoId} (Proc: ${processo}) atualizado.`,
+          `Serviço ID ${servicoId} (Proc: ${processo}, Tipo Ordem: ${
+            tipo_ordem || "N/A"
+          }) atualizado.`,
           connection
         );
       res.json({
@@ -698,6 +725,7 @@ router.put(
           }
         });
       }
+      console.error("Erro ao atualizar serviço de subestação:", error);
       res.status(500).json({
         message: "Erro interno ao atualizar serviço.",
         detalhes: error.message,
@@ -830,7 +858,7 @@ router.get(
     try {
       let query = `
         SELECT 
-          ss.id, ss.processo, ss.motivo,
+          ss.id, ss.processo, ss.motivo, ss.tipo_ordem,
           DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, 
           ss.horario_inicio, ss.horario_fim, ss.status, 
           DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, 
@@ -912,7 +940,7 @@ router.get(
       return res.status(400).json({ message: `ID inválido: ${servicoId}` });
     try {
       const [servicoRows] = await promisePool.query(
-        `SELECT ss.id,ss.processo,ss.motivo,DATE_FORMAT(ss.data_prevista,'%Y-%m-%d') as data_prevista,ss.horario_inicio,ss.horario_fim,ss.status,DATE_FORMAT(ss.data_conclusao,'%Y-%m-%d') as data_conclusao,ss.observacoes_conclusao,s.Id as subestacao_id,s.sigla as subestacao_sigla,s.nome as subestacao_nome,u.id as responsavel_id,u.nome as responsavel_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id WHERE ss.id = ?`,
+        `SELECT ss.id,ss.processo,ss.motivo,ss.tipo_ordem, DATE_FORMAT(ss.data_prevista,'%Y-%m-%d') as data_prevista,ss.horario_inicio,ss.horario_fim,ss.status,DATE_FORMAT(ss.data_conclusao,'%Y-%m-%d') as data_conclusao,ss.observacoes_conclusao,s.Id as subestacao_id,s.sigla as subestacao_sigla,s.nome as subestacao_nome,u.id as responsavel_id,u.nome as responsavel_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id WHERE ss.id = ?`,
         [servicoId]
       );
       if (servicoRows.length === 0)
@@ -1029,6 +1057,7 @@ router.get(
 
       res.json(servico);
     } catch (err) {
+      console.error("Erro ao buscar detalhes do serviço:", err);
       res.status(500).json({
         message: "Erro ao buscar detalhes do serviço.",
         detalhes: err.message,
@@ -1061,11 +1090,9 @@ router.put(
         arquivosConclusao.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      return res
-        .status(400)
-        .json({
-          message: `Serviço (Processo: ${servico.processo}) já está ${servico.status}.`,
-        });
+      return res.status(400).json({
+        message: `Serviço (Processo: ${servico.processo}) já está ${servico.status}.`,
+      });
     }
     if (!data_conclusao_manual) {
       if (arquivosConclusao?.length)
@@ -1117,12 +1144,14 @@ router.put(
 
         if (itensDoUsuario.length === 0) {
           await connection.rollback();
-          return res
-            .status(403)
-            .json({
-              message:
-                "Você não tem itens pendentes para concluir neste serviço.",
+          if (arquivosConclusao?.length)
+            arquivosConclusao.forEach((f) => {
+              if (f.path) fs.unlink(f.path).catch(() => {});
             });
+          return res.status(403).json({
+            message:
+              "Você não tem itens pendentes para concluir neste serviço.",
+          });
         }
 
         const idsItensDoUsuario = itensDoUsuario.map((item) => item.id);
@@ -1182,6 +1211,10 @@ router.put(
         }
       } else {
         await connection.rollback();
+        if (arquivosConclusao?.length)
+          arquivosConclusao.forEach((f) => {
+            if (f.path) fs.unlink(f.path).catch(() => {});
+          });
         return res
           .status(403)
           .json({ message: "Acesso negado. Seu cargo não permite esta ação." });
@@ -1206,12 +1239,10 @@ router.put(
         arquivosConclusao.forEach((f) => {
           if (f.path) fs.unlink(f.path).catch(() => {});
         });
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao concluir serviço.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao concluir serviço.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -1431,12 +1462,10 @@ router.post(
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      res
-        .status(500)
-        .json({
-          message: "Erro ao adicionar anexos.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro ao adicionar anexos.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
