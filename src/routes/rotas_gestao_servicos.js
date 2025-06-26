@@ -1050,7 +1050,7 @@ router.get("/api/encarregados", autenticar, async (req, res) => {
   const connection = await promisePool.getConnection();
   try {
     const [rows] = await connection.query(
-      "SELECT DISTINCT matricula, nome FROM users WHERE cargo IN ('Encarregado', 'Engenheiro', 'Técnico', 'ADM', 'ADMIN') ORDER BY nome"
+      "SELECT DISTINCT matricula, nome FROM users WHERE cargo IN ('Encarregado', 'Engenheiro', 'Técnico', 'ADM', 'ADMIN', 'Inspetor') ORDER BY nome"
     );
     res.status(200).json(rows);
   } catch (err) {
