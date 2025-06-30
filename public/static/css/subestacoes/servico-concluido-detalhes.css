@@ -45,7 +45,7 @@ body {
 }
 
 .page-header {
-  background-color: var(--cor-primaria);
+  background-color: var(--cor-secundaria);
   color: var(--cor-texto-claro);
   padding: calc(var(--espacamento-unidade) * 2)
     calc(var(--espacamento-unidade) * 3);
