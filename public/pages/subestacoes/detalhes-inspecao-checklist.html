@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalhes da Inspeção</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/subestacoes/detalhes-inspecao.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header class="page-header">
+        <div class="header-content">
+          <h1>
+            <span class="material-symbols-outlined">plagiarism</span>
+            Detalhes da Inspeção
+            <span id="inspecaoIdTitulo"></span>
+          </h1>
+        </div>
+        <div class="header-actions">
+          <button id="btnImprimir" class="btn btn-sm btn-secondary">
+            <span class="material-symbols-outlined">print</span> Imprimir
+          </button>
+        </div>
+      </header>
+
+      <main id="conteudoDetalhes">
+        <div id="loadingIndicator" class="page-state-indicator">
+          <div class="loading-spinner"></div>
+          <p>Carregando detalhes da inspeção...</p>
+        </div>
+
+        <div id="detalhesContainer" class="hidden">
+          <div id="infoGeraisContainer"></div>
+          <div id="obsGeraisContainer"></div>
+          <div id="checklistItemsContainer"></div>
+          <div id="medicoesContainer"></div>
+          <div id="equipamentosObservadosContainer"></div>
+          <div id="anexosGeraisContainer"></div>
+          <div id="anexosEscritorioContainer"></div>
+        </div>
+
+        <div
+          id="erroCarregamento"
+          class="page-state-indicator error-message hidden"
+        ></div>
+      </main>
+
+      <footer class="page-footer">
+        <a
+          href="/pagina-listagem-inspecoes-subestacoes"
+          class="btn btn-sm btn-secondary"
+        >
+          <span class="material-symbols-outlined">arrow_back</span>
+          Voltar para a Listagem
+        </a>
+      </footer>
+    </div>
+
+    <div id="imageLightbox" class="modal-lightbox hidden">
+      <button class="btn-close-lightbox" aria-label="Fechar">×</button>
+      <div class="modal-content-lightbox">
+        <img src="" alt="Imagem ampliada" id="lightboxImage" />
+      </div>
+    </div>
+
+    <script src="/scripts/subestacoes/detalhes-inspecao.js"></script>
+  </body>
+</html>

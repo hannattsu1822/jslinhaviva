@@ -5,14 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Listagem de Inspeções de Subestações</title>
     <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
-      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-      crossorigin="anonymous"
-    />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0"
     />
     <link
       rel="stylesheet"
@@ -20,44 +14,44 @@
     />
   </head>
   <body>
-    <div class="container mt-4 mb-5">
-      <header class="page-header mb-4 p-3 rounded">
-        <h1 class="h3 mb-0 d-flex align-items-center">
-          <span class="material-symbols-outlined fs-1 me-2">fact_check</span>
+    <div class="container">
+      <header class="page-header">
+        <h1>
+          <span class="material-symbols-outlined">fact_check</span>
           Inspeções Realizadas
         </h1>
       </header>
 
       <main>
-        <section class="custom-card mb-4">
+        <section class="custom-card">
           <div class="custom-card-header">
-            <h2 class="h5 mb-0 d-flex align-items-center">
-              <span class="material-symbols-outlined me-2">filter_list</span>
+            <h2>
+              <span class="material-symbols-outlined">filter_list</span>
               Filtrar Inspeções
             </h2>
           </div>
           <div class="custom-card-body">
-            <form id="formFiltrosInspecoes" class="row g-3 align-items-end">
-              <div class="col-md-6 col-lg-3">
+            <form id="formFiltrosInspecoes">
+              <div class="form-group">
                 <label for="filtroInspecaoSubestacao" class="form-label"
                   >Subestação:</label
                 >
                 <select
                   id="filtroInspecaoSubestacao"
                   name="subestacao_id"
-                  class="form-select form-select-sm"
+                  class="form-select"
                 >
                   <option value="">Todas</option>
                 </select>
               </div>
-              <div class="col-md-6 col-lg-2">
+              <div class="form-group">
                 <label for="filtroInspecaoStatus" class="form-label"
                   >Status:</label
                 >
                 <select
                   id="filtroInspecaoStatus"
                   name="status_inspecao"
-                  class="form-select form-select-sm"
+                  class="form-select"
                 >
                   <option value="">Todos</option>
                   <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
@@ -66,19 +60,29 @@
                   <option value="CANCELADA">CANCELADA</option>
                 </select>
               </div>
-              <div class="col-md-6 col-lg-3">
+              <div class="form-group">
+                <label for="filtroProcesso" class="form-label">Processo:</label>
+                <input
+                  type="text"
+                  id="filtroProcesso"
+                  name="processo"
+                  class="form-control"
+                  placeholder="Buscar por processo..."
+                />
+              </div>
+              <div class="form-group">
                 <label for="filtroInspecaoResponsavel" class="form-label"
                   >Responsável:</label
                 >
                 <select
                   id="filtroInspecaoResponsavel"
                   name="responsavel_id"
-                  class="form-select form-select-sm"
+                  class="form-select"
                 >
                   <option value="">Todos</option>
                 </select>
               </div>
-              <div class="col-md-6 col-lg-2">
+              <div class="form-group">
                 <label for="filtroInspecaoDataDe" class="form-label"
                   >Data (De):</label
                 >
@@ -86,10 +90,10 @@
                   type="date"
                   id="filtroInspecaoDataDe"
                   name="data_avaliacao_de"
-                  class="form-control form-control-sm"
+                  class="form-control"
                 />
               </div>
-              <div class="col-md-6 col-lg-2">
+              <div class="form-group">
                 <label for="filtroInspecaoDataAte" class="form-label"
                   >Data (Até):</label
                 >
@@ -97,17 +101,17 @@
                   type="date"
                   id="filtroInspecaoDataAte"
                   name="data_avaliacao_ate"
-                  class="form-control form-control-sm"
+                  class="form-control"
                 />
               </div>
-              <div class="col-12 col-lg-auto d-flex gap-2 mt-3 mt-lg-0">
-                <button type="submit" class="btn btn-primary btn-sm">
+              <div class="form-actions">
+                <button type="submit" class="btn btn-sm btn-primary">
                   <span class="material-symbols-outlined">search</span> Aplicar
                 </button>
                 <button
                   type="button"
                   id="btnLimparFiltrosInspecoes"
-                  class="btn btn-outline-secondary btn-sm"
+                  class="btn btn-sm btn-secondary"
                 >
                   <span class="material-symbols-outlined">clear_all</span>
                   Limpar
@@ -118,47 +122,38 @@
         </section>
 
         <section class="custom-card">
-          <div
-            class="custom-card-header d-flex justify-content-between align-items-center"
-          >
-            <h3 class="h5 mb-0 d-flex align-items-center">
-              <span class="material-symbols-outlined me-2">view_list</span>
+          <div class="custom-card-header">
+            <h3>
+              <span class="material-symbols-outlined">view_list</span>
               Inspeções Encontradas
             </h3>
             <a
               href="/pagina-checklist-inspecao-subestacao"
               id="btnNovaInspecaoRedirect"
-              class="btn btn-success btn-sm"
+              class="btn btn-sm btn-success"
             >
+              <span class="material-symbols-outlined">add</span>
               Nova Inspeção
             </a>
           </div>
           <div class="custom-card-body p-0">
             <div class="table-responsive">
-              <table
-                id="tabelaInspecoes"
-                class="table table-hover align-middle custom-table mb-0"
-              >
+              <table id="tabelaInspecoes" class="table">
                 <thead>
                   <tr>
-                    <th class="text-center" scope="col">ID</th>
-                    <th scope="col">Subestação</th>
-                    <th class="text-center" scope="col">Data Avaliação</th>
-                    <th scope="col">Responsável</th>
-                    <th class="text-center" scope="col">Status</th>
-                    <th class="text-center actions-column" scope="col">
-                      Utilidades
-                    </th>
+                    <th class="text-center">ID</th>
+                    <th>Processo</th>
+                    <th>Subestação</th>
+                    <th class="text-center">Data Avaliação</th>
+                    <th>Responsável</th>
+                    <th class="text-center">Status</th>
+                    <th class="actions-column">Utilidades</th>
                   </tr>
                 </thead>
                 <tbody id="corpoTabelaInspecoes"></tbody>
               </table>
             </div>
-            <div
-              id="nenhumaInspecao"
-              class="alert alert-light border m-3 d-none"
-              role="alert"
-            >
+            <div id="nenhumaInspecao" class="empty-state-text">
               Nenhuma inspeção encontrada com os filtros aplicados.
             </div>
           </div>
@@ -166,46 +161,25 @@
       </main>
     </div>
 
-    <div
-      class="modal fade"
-      id="modalDetalhesInspecao"
-      tabindex="-1"
-      aria-labelledby="modalDetalhesInspecaoLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content custom-modal-content">
-          <div class="modal-header custom-modal-header">
-            <h5
-              class="modal-title d-flex align-items-center"
-              id="modalDetalhesInspecaoTitulo"
-            >
-              <span class="material-symbols-outlined me-2">plagiarism</span>
+    <div class="modal" id="modalDetalhesInspecao" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalDetalhesInspecaoTitulo">
+              <span class="material-symbols-outlined">plagiarism</span>
               Detalhes da Inspeção
             </h5>
             <button
               type="button"
               class="btn-close"
-              data-bs-dismiss="modal"
               aria-label="Fechar"
             ></button>
           </div>
-          <div class="modal-body" id="corpoModalDetalhesInspecao">
-            {/* O conteúdo aqui é gerado pelo listagem-inspecoes.js */}
-          </div>
-          <div class="modal-footer custom-modal-footer">
+          <div class="modal-body" id="corpoModalDetalhesInspecao"></div>
+          <div class="modal-footer">
             <button
               type="button"
-              class="btn btn-info btn-sm"
-              id="btnGerarPdfInspecaoModal"
-            >
-              <span class="material-symbols-outlined">picture_as_pdf</span>
-              Gerar PDF
-            </button>
-            <button
-              type="button"
-              class="btn btn-app-clear btn-sm"
-              data-bs-dismiss="modal"
+              class="btn btn-sm btn-secondary btn-close-modal"
               id="btnFecharModalDetalhes"
             >
               Fechar
@@ -215,27 +189,17 @@
       </div>
     </div>
 
-    <div
-      class="modal fade"
-      id="modalAnexosEscritorio"
-      tabindex="-1"
-      aria-labelledby="modalAnexosEscritorioLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content custom-modal-content">
-          <div class="modal-header custom-modal-header">
-            <h5
-              class="modal-title d-flex align-items-center"
-              id="modalAnexosEscritorioTitulo"
-            >
-              <span class="material-symbols-outlined me-2">upload_file</span>
+    <div class="modal" id="modalAnexosEscritorio" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalAnexosEscritorioTitulo">
+              <span class="material-symbols-outlined">upload_file</span>
               Anexar Documentos
             </h5>
             <button
               type="button"
               class="btn-close"
-              data-bs-dismiss="modal"
               aria-label="Fechar"
             ></button>
           </div>
@@ -246,60 +210,61 @@
                 id="inspecaoIdAnexoEscritorio"
                 name="inspecao_id_anexo_escritorio"
               />
-              <p class="mb-3">
+              <p>
                 Inspeção ID:
-                <strong
-                  id="displayInspecaoIdAnexoEscritorio"
-                  class="custom-text-primary"
-                ></strong>
+                <strong id="displayInspecaoIdAnexoEscritorio"></strong>
               </p>
-              <div class="mb-3">
-                <label for="arquivosAnexoEscritorio" class="form-label"
-                  >Selecionar arquivos (máx. 5):</label
+              <div class="upload-actions">
+                <button
+                  type="button"
+                  id="btnAdicionarAnexoEscritorio"
+                  class="btn btn-primary"
                 >
+                  <span class="material-symbols-outlined">attach_file_add</span>
+                  Procurar Arquivos
+                </button>
                 <input
                   type="file"
                   id="arquivosAnexoEscritorio"
                   name="anexosEscritorio"
-                  class="form-control form-control-sm"
+                  class="visually-hidden"
                   multiple
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.csv,.heic,.heif"
                 />
-                <div class="form-text">
-                  Tipos permitidos: PDF, Documentos, Planilhas, Imagens, TXT,
-                  CSV, HEIC/HEIF.
-                </div>
               </div>
-              <ul
-                id="listaNomesAnexosEscritorio"
-                class="list-group list-group-flush mb-3"
-              ></ul>
-              <div class="mb-3">
+              <div class="form-text">
+                Tipos permitidos: PDF, Documentos, Planilhas, Imagens, etc.
+                (Máx. 5).
+              </div>
+              <div
+                id="previewAnexosEscritorio"
+                class="anexos-preview-container"
+              ></div>
+              <div class="form-group">
                 <label for="descricaoAnexoEscritorio" class="form-label"
                   >Descrição dos Anexos (Opcional):</label
                 >
                 <textarea
                   id="descricaoAnexoEscritorio"
                   name="descricao_anexo_escritorio"
-                  class="form-control form-control-sm"
+                  class="form-control"
                   rows="2"
                   placeholder="Breve descrição..."
                 ></textarea>
               </div>
             </form>
           </div>
-          <div class="modal-footer custom-modal-footer">
+          <div class="modal-footer">
             <button
               type="button"
-              class="btn btn-app-clear btn-sm"
-              data-bs-dismiss="modal"
+              class="btn btn-sm btn-secondary btn-close-modal"
             >
               Cancelar
             </button>
             <button
               type="button"
               id="btnSalvarAnexosEscritorio"
-              class="btn btn-primary btn-sm"
+              class="btn btn-sm btn-primary"
             >
               <span class="material-symbols-outlined">save</span> Salvar Anexos
             </button>
@@ -308,41 +273,30 @@
       </div>
     </div>
 
-    <div
-      class="modal fade"
-      id="modalConfirmacaoGeral"
-      tabindex="-1"
-      aria-labelledby="modalConfirmacaoGeralLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content custom-modal-content">
-          <div class="modal-header custom-modal-header">
-            <h5
-              class="modal-title d-flex align-items-center"
-              id="modalConfirmacaoGeralTituloUI"
-            >
+    <div class="modal" id="modalConfirmacaoGeral" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalConfirmacaoGeralTituloUI">
               <span
                 id="modalConfirmacaoGeralIcone"
-                class="material-symbols-outlined me-2"
+                class="material-symbols-outlined"
               ></span>
               <span id="modalConfirmacaoGeralTituloTexto">Confirmar Ação</span>
             </h5>
             <button
               type="button"
               class="btn-close"
-              data-bs-dismiss="modal"
               aria-label="Fechar"
             ></button>
           </div>
           <div class="modal-body">
-            <p id="mensagemConfirmacaoGeral" class="mb-0"></p>
+            <p id="mensagemConfirmacaoGeral"></p>
           </div>
-          <div class="modal-footer custom-modal-footer">
+          <div class="modal-footer">
             <button
               type="button"
-              class="btn btn-app-clear btn-sm"
-              data-bs-dismiss="modal"
+              class="btn btn-sm btn-secondary btn-close-modal"
             >
               Cancelar
             </button>
@@ -354,39 +308,129 @@
       </div>
     </div>
 
-    <div
-      class="modal fade anexos-preview-lightbox"
-      id="imageLightbox"
-      tabindex="-1"
-      aria-labelledby="imageLightboxLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content bg-transparent border-0">
-          <div class="modal-body p-0 text-center">
+    <div class="modal modal-lightbox" id="imageLightbox" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-xl">
+        <div class="modal-content">
+          <button
+            type="button"
+            class="btn-close btn-close-lightbox"
+            aria-label="Close"
+            id="closeLightboxBtn"
+          ></button>
+          <img src="" alt="Imagem ampliada" id="lightboxImage" />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalAnexosTermografiaItem" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalAnexosTermografiaItemLabel">
+              <span class="material-symbols-outlined">colorize</span>
+              Anexar Imagem Termográfica ao Item
+            </h5>
             <button
               type="button"
-              class="btn-close btn-close-white position-absolute top-0 end-0 m-3 fs-3 opacity-75 hover-opacity-100"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-              id="closeLightboxBtn"
+              class="btn-close"
+              aria-label="Fechar"
             ></button>
-            <img
-              src=""
-              alt="Imagem ampliada"
-              id="lightboxImage"
-              class="img-fluid rounded"
-            />
+          </div>
+          <div class="modal-body">
+            <form id="formAnexosTermografiaItem" enctype="multipart/form-data">
+              <input
+                type="hidden"
+                id="termografiaInspecaoId"
+                name="inspecao_id"
+              />
+              <input type="hidden" id="termografiaItemNum" name="item_num" />
+              <p>
+                Inspeção ID:
+                <strong id="displayTermografiaInspecaoId"></strong>
+              </p>
+              <p>
+                Item do Checklist:
+                <strong id="displayTermografiaItemNum"></strong>
+              </p>
+              <p
+                id="displayTermografiaItemDescricao"
+                class="item-description-box"
+              ></p>
+              <div class="form-group">
+                <label for="arquivosTermografiaItem" class="form-label"
+                  >Selecionar imagens termográficas (máx. 10):</label
+                >
+                <input
+                  type="file"
+                  id="arquivosTermografiaItem"
+                  name="fotosTermografiaItem"
+                  class="form-control"
+                  multiple
+                  accept="image/*"
+                />
+                <div class="form-text">
+                  Apenas imagens. Limite de 10 arquivos.
+                </div>
+              </div>
+              <div
+                id="previewAnexosTermograficosItem"
+                class="attachments-preview-grid"
+              ></div>
+              <div id="contadorAnexosTermograficosItem" class="form-text">
+                0 de 10 imagens selecionadas.
+              </div>
+              <div class="form-group">
+                <label for="descricaoAnexoTermograficoItem" class="form-label"
+                  >Descrição (Opcional):</label
+                >
+                <textarea
+                  id="descricaoAnexoTermograficoItem"
+                  name="descricao_anexo_termografico"
+                  class="form-control"
+                  rows="2"
+                  placeholder="Breve descrição ou observação sobre as imagens termográficas..."
+                ></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary btn-close-modal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              id="btnSalvarAnexoTermograficoItem"
+              class="btn btn-sm btn-primary"
+            >
+              <span class="material-symbols-outlined">photo_camera</span> Salvar
+              Termografia do Item
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-      crossorigin="anonymous"
-    ></script>
+    <template id="templateAnexoPreview">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-icon-container">
+          <img src="" class="anexo-preview-img visually-hidden" alt="preview" />
+          <span class="material-symbols-outlined anexo-preview-icon-default">
+            description
+          </span>
+        </div>
+        <div class="anexo-info">
+          <div class="anexo-name">Nome do Arquivo.jpg</div>
+          <div class="anexo-size">123 KB</div>
+        </div>
+        <button type="button" class="btn-remover-anexo" title="Remover anexo">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
+    </template>
+
     <script src="/scripts/subestacoes/listagem-inspecoes.js"></script>
   </body>
 </html>
