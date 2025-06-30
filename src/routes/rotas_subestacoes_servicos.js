@@ -194,7 +194,7 @@ router.post(
   "/api/servicos-subestacoes",
   autenticar,
   podeModificarServicos,
-  upload.array("anexosServico", 5),
+  upload.any(),
   async (req, res) => {
     const {
       subestacao_id,
@@ -205,6 +205,7 @@ router.post(
       horario_fim,
       responsavel_id,
       status,
+      prioridade,
       data_conclusao,
       observacoes_conclusao,
       inspecao_ids_vinculadas,
@@ -296,7 +297,7 @@ router.post(
         status === "CONCLUIDO" ? observacoes_conclusao : null;
 
       const [resultServico] = await connection.query(
-        `INSERT INTO servicos_subestacoes (subestacao_id, processo, motivo, data_prevista, horario_inicio, horario_fim, responsavel_id, status, data_conclusao, observacoes_conclusao, tipo_ordem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO servicos_subestacoes (subestacao_id, processo, motivo, data_prevista, horario_inicio, horario_fim, responsavel_id, status, prioridade, data_conclusao, observacoes_conclusao, tipo_ordem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           parseInt(subestacao_id),
           processo,
@@ -306,6 +307,7 @@ router.post(
           horario_fim,
           parseInt(responsavel_id),
           status || "PROGRAMADO",
+          prioridade || "MEDIA",
           dataConclusaoFinal,
           observacoesConclusaoFinal,
           tipo_ordem || null,
@@ -324,6 +326,7 @@ router.post(
         );
       }
 
+      const itemDbIdMap = new Map();
       for (const itemEscopo of parsedItensEscopo) {
         const catalogoDefeitoIdFinal =
           itemEscopo.catalogo_defeito_id &&
@@ -343,9 +346,13 @@ router.post(
             : null;
         const statusItemEscopoFinal =
           itemEscopo.status_item_escopo || "PENDENTE";
+        const catalogoEquipamentoId = itemEscopo.catalogo_equipamento_id
+          ? parseInt(itemEscopo.catalogo_equipamento_id)
+          : null;
+        const tagEquipamentoAlvo = itemEscopo.tag_equipamento_alvo || null;
 
-        const [resultItemEscopo] = await connection.query(
-          `INSERT INTO servico_itens_escopo (servico_id, catalogo_defeito_id, inspecao_item_id, descricao_item_servico, observacao_especifica_servico, encarregado_item_id, status_item_escopo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        const [resultItem] = await connection.query(
+          `INSERT INTO servico_itens_escopo (servico_id, catalogo_defeito_id, inspecao_item_id, descricao_item_servico, observacao_especifica_servico, encarregado_item_id, status_item_escopo, tag_equipamento_alvo, catalogo_equipamento_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             novoServicoId,
             catalogoDefeitoIdFinal,
@@ -354,46 +361,70 @@ router.post(
             itemEscopo.observacao_especifica_servico || null,
             encarregadoItemIdFinal,
             statusItemEscopoFinal,
+            tagEquipamentoAlvo,
+            catalogoEquipamentoId,
           ]
         );
-        const novoItemEscopoId = resultItemEscopo.insertId;
+        const novoItemEscopoId = resultItem.insertId;
+        if (itemEscopo.temp_id) {
+          itemDbIdMap.set(itemEscopo.temp_id, novoItemEscopoId);
+        }
 
-        if (
-          itemEscopo.equipamentos_associados &&
-          Array.isArray(itemEscopo.equipamentos_associados) &&
-          itemEscopo.equipamentos_associados.length > 0
-        ) {
-          const equipamentosVinculadosValues =
-            itemEscopo.equipamentos_associados.map((equipId) => [
-              novoItemEscopoId,
-              parseInt(equipId),
-            ]);
-          await connection.query(
-            "INSERT INTO servico_item_escopo_equipamentos (servico_item_escopo_id, equipamento_id) VALUES ?",
-            [equipamentosVinculadosValues]
+        if (itemEscopo.inspecao_item_id) {
+          const [anexosDaInspecao] = await connection.query(
+            `SELECT nome_original, caminho_servidor, tipo_mime, tamanho FROM inspecoes_anexos WHERE item_resposta_id = ?`,
+            [itemEscopo.inspecao_item_id]
           );
+
+          for (const anexo of anexosDaInspecao) {
+            await connection.query(
+              `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?, ?, ?, ?, ?)`,
+              [
+                novoItemEscopoId,
+                anexo.nome_original,
+                anexo.caminho_servidor,
+                anexo.tipo_mime,
+                anexo.tamanho,
+              ]
+            );
+          }
         }
       }
 
-      let anexosSalvosInfo = [];
-      if (arquivos && arquivos.length > 0) {
-        const servicoUploadDir = path.join(
-          uploadsSubestacoesDir,
-          "servicos",
-          `servico_${String(novoServicoId)}`
-        );
-        await fs.mkdir(servicoUploadDir, { recursive: true });
-        for (const file of arquivos) {
-          const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
-            /[^a-zA-Z0-9.\-_]/g,
-            "_"
-          )}`;
-          const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-          await fs.rename(file.path, caminhoDestino);
-          arquivosMovidosComSucesso.push(caminhoDestino);
-          const caminhoRelativoServidor = `servicos/servico_${novoServicoId}/${nomeUnicoArquivo}`;
-          let categoriaAnexoFinal = "DOCUMENTO_REGISTRO";
-          const [resultAnexo] = await connection.query(
+      const servicoUploadDir = path.join(
+        uploadsSubestacoesDir,
+        "servicos",
+        `servico_${String(novoServicoId)}`
+      );
+      await fs.mkdir(servicoUploadDir, { recursive: true });
+
+      for (const file of arquivos) {
+        const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
+          /[^a-zA-Z0-9.\-_]/g,
+          "_"
+        )}`;
+        const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
+        await fs.rename(file.path, caminhoDestino);
+        arquivosMovidosComSucesso.push(caminhoDestino);
+        const caminhoRelativoServidor = `servicos/servico_${novoServicoId}/${nomeUnicoArquivo}`;
+
+        if (file.fieldname.startsWith("item_anexo__")) {
+          const tempId = file.fieldname.split("__")[1];
+          const itemEscopoId = itemDbIdMap.get(tempId);
+          if (itemEscopoId) {
+            await connection.query(
+              `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?, ?, ?, ?, ?)`,
+              [
+                itemEscopoId,
+                file.originalname,
+                `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
+                file.mimetype,
+                file.size,
+              ]
+            );
+          }
+        } else {
+          await connection.query(
             `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
             [
               novoServicoId,
@@ -401,14 +432,9 @@ router.post(
               `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
               file.mimetype,
               file.size,
-              categoriaAnexoFinal,
+              "DOCUMENTO_REGISTRO",
             ]
           );
-          anexosSalvosInfo.push({
-            id: resultAnexo.insertId,
-            nome_original: file.originalname,
-            caminho_servidor: `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-          });
         }
       }
 
@@ -417,18 +443,13 @@ router.post(
         await registrarAuditoria(
           req.user.matricula,
           "CREATE_SERVICO_SUBESTACAO",
-          `Serviço ID ${novoServicoId} (Proc: ${processo}, Tipo Ordem: ${
-            tipo_ordem || "N/A"
-          }) criado. Insp.Vinc: ${parsedInspecaoIds.length}, ItensEscopo: ${
-            parsedItensEscopo.length
-          }`,
+          `Serviço ID ${novoServicoId} (Proc: ${processo}) criado.`,
           connection
         );
       }
       res.status(201).json({
         id: novoServicoId,
         message: "Serviço registrado com sucesso!",
-        anexos: anexosSalvosInfo,
       });
     } catch (error) {
       await connection.rollback();
@@ -460,7 +481,7 @@ router.put(
   "/api/servicos-subestacoes/:servicoId",
   autenticar,
   podeModificarServicos,
-  upload.array("anexosServico", 5),
+  upload.any(),
   async (req, res) => {
     const { servicoId } = req.params;
     if (isNaN(parseInt(servicoId)))
@@ -474,6 +495,7 @@ router.put(
       horario_fim,
       responsavel_id,
       status,
+      prioridade,
       data_conclusao,
       observacoes_conclusao,
       inspecao_ids_vinculadas,
@@ -482,252 +504,32 @@ router.put(
     } = req.body;
     const arquivosNovos = req.files;
 
-    if (
-      !subestacao_id ||
-      !processo ||
-      !motivo ||
-      !data_prevista ||
-      !horario_inicio ||
-      !horario_fim ||
-      !responsavel_id
-    ) {
-      if (arquivosNovos?.length)
-        arquivosNovos.forEach((f) => {
-          if (f.path) fs.unlink(f.path).catch(() => {});
-        });
-      return res.status(400).json({ message: "Campos obrigatórios faltando." });
-    }
-    if (status === "CONCLUIDO" && !data_conclusao) {
-      if (arquivosNovos?.length)
-        arquivosNovos.forEach((f) => {
-          if (f.path) fs.unlink(f.path).catch(() => {});
-        });
-      return res
-        .status(400)
-        .json({ message: "Data de conclusão obrigatória para CONCLUÍDO." });
-    }
-
-    let parsedInspecaoIds = [],
-      parsedItensEscopo = [];
-    if (inspecao_ids_vinculadas)
-      try {
-        parsedInspecaoIds = JSON.parse(inspecao_ids_vinculadas);
-        if (
-          !Array.isArray(parsedInspecaoIds) ||
-          !parsedInspecaoIds.every((id) => Number.isInteger(Number(id)))
-        )
-          throw new Error("Formato inválido IDs inspeção");
-      } catch (e) {
-        if (arquivosNovos?.length)
-          arquivosNovos.forEach((f) => {
-            if (f.path) fs.unlink(f.path).catch(() => {});
-          });
-        return res.status(400).json({
-          message: "Erro ao processar IDs de inspeção.",
-          detalhes: e.message,
-        });
-      }
-    if (itens_escopo)
-      try {
-        parsedItensEscopo = JSON.parse(itens_escopo);
-        if (!Array.isArray(parsedItensEscopo))
-          throw new Error("Formato inválido itens_escopo");
-        for (const item of parsedItensEscopo) {
-          if (!item.descricao_item_servico && !item.catalogo_defeito_id)
-            throw new Error(
-              "Item de escopo deve ter descrição ou código de defeito."
-            );
-        }
-      } catch (e) {
-        if (arquivosNovos?.length)
-          arquivosNovos.forEach((f) => {
-            if (f.path) fs.unlink(f.path).catch(() => {});
-          });
-        return res.status(400).json({
-          message: "Erro ao processar itens de escopo.",
-          detalhes: e.message,
-        });
-      }
-
     const connection = await promisePool.getConnection();
-    let arquivosMovidosComSucesso = [];
     try {
       await connection.beginTransaction();
-      const dataConclusaoFinal = status === "CONCLUIDO" ? data_conclusao : null;
-      const observacoesConclusaoFinal =
-        status === "CONCLUIDO" ? observacoes_conclusao : null;
-
-      await connection.query(
-        `UPDATE servicos_subestacoes SET subestacao_id=?,processo=?,motivo=?,data_prevista=?,horario_inicio=?,horario_fim=?,responsavel_id=?,status=?,data_conclusao=?,observacoes_conclusao=?, tipo_ordem=? WHERE id=?`,
-        [
-          parseInt(subestacao_id),
-          processo,
-          motivo,
-          data_prevista,
-          horario_inicio,
-          horario_fim,
-          parseInt(responsavel_id),
-          status,
-          dataConclusaoFinal,
-          observacoesConclusaoFinal,
-          tipo_ordem || null,
-          servicoId,
-        ]
-      );
 
       const [itensEscopoAntigos] = await connection.query(
         "SELECT id FROM servico_itens_escopo WHERE servico_id = ?",
         [servicoId]
       );
       if (itensEscopoAntigos.length > 0) {
-        const idsItensEscopoAntigos = itensEscopoAntigos.map((item) => item.id);
+        const idsItensAntigos = itensEscopoAntigos.map((item) => item.id);
         await connection.query(
-          "DELETE FROM servico_item_escopo_equipamentos WHERE servico_item_escopo_id IN (?)",
-          [idsItensEscopoAntigos]
+          "DELETE FROM servico_item_escopo_anexos WHERE item_escopo_id IN (?)",
+          [idsItensAntigos]
         );
       }
       await connection.query(
         "DELETE FROM servico_itens_escopo WHERE servico_id = ?",
         [servicoId]
       );
-      await connection.query(
-        "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
-        [servicoId]
-      );
 
-      if (parsedInspecaoIds.length > 0) {
-        const vinculosValues = parsedInspecaoIds.map((inspecaoId) => [
-          servicoId,
-          parseInt(inspecaoId),
-        ]);
-        await connection.query(
-          "INSERT INTO servicos_inspecoes_vinculadas (servico_id, inspecao_id) VALUES ?",
-          [vinculosValues]
-        );
-      }
-      for (const itemEscopo of parsedItensEscopo) {
-        const catalogoDefeitoIdFinal =
-          itemEscopo.catalogo_defeito_id &&
-          !isNaN(parseInt(itemEscopo.catalogo_defeito_id))
-            ? parseInt(itemEscopo.catalogo_defeito_id)
-            : null;
-        const inspecaoItemIdFinal =
-          itemEscopo.inspecao_item_id &&
-          !isNaN(parseInt(itemEscopo.inspecao_item_id))
-            ? parseInt(itemEscopo.inspecao_item_id)
-            : null;
-        const encarregadoItemIdFinal =
-          itemEscopo.encarregado_item_id &&
-          itemEscopo.encarregado_item_id !== "" &&
-          !isNaN(parseInt(itemEscopo.encarregado_item_id))
-            ? parseInt(itemEscopo.encarregado_item_id)
-            : null;
-        const statusItemFinal = itemEscopo.status_item_escopo || "PENDENTE";
-
-        const [resultItemEscopo] = await connection.query(
-          `INSERT INTO servico_itens_escopo (servico_id, catalogo_defeito_id, inspecao_item_id, descricao_item_servico, observacao_especifica_servico, encarregado_item_id, status_item_escopo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            servicoId,
-            catalogoDefeitoIdFinal,
-            inspecaoItemIdFinal,
-            itemEscopo.descricao_item_servico,
-            itemEscopo.observacao_especifica_servico || null,
-            encarregadoItemIdFinal,
-            statusItemFinal,
-          ]
-        );
-        const novoItemEscopoId = resultItemEscopo.insertId;
-        if (
-          itemEscopo.equipamentos_associados &&
-          Array.isArray(itemEscopo.equipamentos_associados) &&
-          itemEscopo.equipamentos_associados.length > 0
-        ) {
-          const equipamentosVinculadosValues =
-            itemEscopo.equipamentos_associados.map((equipId) => [
-              novoItemEscopoId,
-              parseInt(equipId),
-            ]);
-          await connection.query(
-            "INSERT INTO servico_item_escopo_equipamentos (servico_item_escopo_id, equipamento_id) VALUES ?",
-            [equipamentosVinculadosValues]
-          );
-        }
-      }
-
-      let anexosSalvosInfo = [];
-      if (arquivosNovos && arquivosNovos.length > 0) {
-        const servicoUploadDir = path.join(
-          uploadsSubestacoesDir,
-          "servicos",
-          `servico_${String(servicoId)}`
-        );
-        await fs.mkdir(servicoUploadDir, { recursive: true });
-        for (const file of arquivosNovos) {
-          const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
-            /[^a-zA-Z0-9.\-_]/g,
-            "_"
-          )}`;
-          const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-          await fs.rename(file.path, caminhoDestino);
-          arquivosMovidosComSucesso.push(caminhoDestino);
-          const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
-          const [resultAnexo] = await connection.query(
-            `INSERT INTO servicos_subestacoes_anexos (id_servico,nome_original,caminho_servidor,tipo_mime,tamanho,categoria_anexo) VALUES (?,?,?,?,?,?)`,
-            [
-              servicoId,
-              file.originalname,
-              `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-              file.mimetype,
-              file.size,
-              "DOCUMENTO_REGISTRO",
-            ]
-          );
-          anexosSalvosInfo.push({
-            id: resultAnexo.insertId,
-            nome_original: file.originalname,
-            caminho_servidor: `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-          });
-        }
-      }
       await connection.commit();
-      if (req.user && req.user.matricula)
-        await registrarAuditoria(
-          req.user.matricula,
-          "UPDATE_SERVICO_SUBESTACAO",
-          `Serviço ID ${servicoId} (Proc: ${processo}, Tipo Ordem: ${
-            tipo_ordem || "N/A"
-          }) atualizado.`,
-          connection
-        );
-      res.json({
-        id: servicoId,
-        message: "Serviço atualizado com sucesso!",
-        anexosAdicionados: anexosSalvosInfo,
-      });
+      res.json({ message: "Serviço atualizado com sucesso!" });
     } catch (error) {
       await connection.rollback();
-      for (const caminho of arquivosMovidosComSucesso) {
-        try {
-          await fs.unlink(caminho);
-        } catch (e) {}
-      }
-      if (arquivosNovos?.length) {
-        arquivosNovos.forEach((f) => {
-          if (
-            f.path &&
-            (f.path.includes("temp") || f.path.includes("upload_"))
-          ) {
-            try {
-              if (fs.existsSync(f.path)) {
-                fs.unlinkSync(f.path);
-              }
-            } catch (e) {}
-          }
-        });
-      }
-      console.error("Erro ao atualizar serviço de subestação:", error);
       res.status(500).json({
-        message: "Erro interno ao atualizar serviço.",
+        message: "Erro ao atualizar serviço.",
         detalhes: error.message,
       });
     } finally {
@@ -755,14 +557,11 @@ router.delete(
       if (itensEscopoParaDeletar.length > 0) {
         const idsItensEscopo = itensEscopoParaDeletar.map((item) => item.id);
         await connection.query(
-          "DELETE FROM servico_item_escopo_equipamentos WHERE servico_item_escopo_id IN (?)",
-          [idsItensEscopo]
-        );
-        await connection.query(
           "DELETE FROM servico_item_escopo_anexos WHERE item_escopo_id IN (?)",
           [idsItensEscopo]
         );
       }
+
       await connection.query(
         "DELETE FROM servico_itens_escopo WHERE servico_id = ?",
         [servicoId]
@@ -771,20 +570,15 @@ router.delete(
         "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
         [servicoId]
       );
-
-      const [anexos] = await connection.query(
-        "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id_servico = ?",
-        [servicoId]
-      );
       await connection.query(
         "DELETE FROM servicos_subestacoes_anexos WHERE id_servico = ?",
         [servicoId]
       );
-
       const [result] = await connection.query(
         "DELETE FROM servicos_subestacoes WHERE id = ?",
         [servicoId]
       );
+
       if (result.affectedRows === 0) {
         await connection.rollback();
         return res
@@ -792,41 +586,20 @@ router.delete(
           .json({ message: `Serviço ${servicoId} não encontrado.` });
       }
 
-      if (anexos.length > 0) {
-        const servicoUploadDir = path.join(
-          uploadsSubestacoesDir,
-          "servicos",
-          `servico_${String(servicoId)}`
-        );
-        for (const anexo of anexos) {
-          if (!anexo.caminho_servidor) continue;
-          const caminhoRelativoNoServidor = anexo.caminho_servidor.replace(
-            /^\/upload_arquivos_subestacoes\//,
-            ""
-          );
-          const caminhoCompleto = path.join(
-            uploadsSubestacoesDir,
-            caminhoRelativoNoServidor
-          );
-          try {
-            await fs.access(caminhoCompleto);
-            await fs.unlink(caminhoCompleto);
-          } catch (err) {
-            if (err.code !== "ENOENT")
-              console.warn(
-                `Falha ao excluir anexo ${caminhoCompleto} do serviço ${servicoId}: ${err.message}`
-              );
-          }
-        }
-        try {
-          await fs.rm(servicoUploadDir, { recursive: true, force: true });
-        } catch (err) {
+      const servicoUploadDir = path.join(
+        uploadsSubestacoesDir,
+        "servicos",
+        `servico_${String(servicoId)}`
+      );
+      await fs
+        .rm(servicoUploadDir, { recursive: true, force: true })
+        .catch((err) => {
           if (err.code !== "ENOENT")
             console.warn(
-              `Falha ao remover diretório de anexos do serviço ${servicoId} (${servicoUploadDir}): ${err.message}`
+              `Falha ao remover diretório de anexos do serviço ${servicoId}: ${err.message}`
             );
-        }
-      }
+        });
+
       await connection.commit();
       if (req.user && req.user.matricula)
         await registrarAuditoria(
@@ -858,7 +631,7 @@ router.get(
     try {
       let query = `
         SELECT 
-          ss.id, ss.processo, ss.motivo, ss.tipo_ordem,
+          ss.id, ss.processo, ss.motivo, ss.tipo_ordem, ss.prioridade,
           DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, 
           ss.horario_inicio, ss.horario_fim, ss.status, 
           DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, 
@@ -919,7 +692,8 @@ router.get(
         params.push(req.user.id);
       }
 
-      query += " ORDER BY ss.data_prevista DESC, ss.id DESC";
+      query +=
+        " ORDER BY FIELD(ss.prioridade, 'GRAVE', 'ALTA', 'MEDIA', 'BAIXA'), ss.data_prevista ASC, ss.id DESC";
       const [rows] = await promisePool.query(query, params);
       res.json(rows);
     } catch (err) {
@@ -940,7 +714,7 @@ router.get(
       return res.status(400).json({ message: `ID inválido: ${servicoId}` });
     try {
       const [servicoRows] = await promisePool.query(
-        `SELECT ss.id,ss.processo,ss.motivo,ss.tipo_ordem, DATE_FORMAT(ss.data_prevista,'%Y-%m-%d') as data_prevista,ss.horario_inicio,ss.horario_fim,ss.status,DATE_FORMAT(ss.data_conclusao,'%Y-%m-%d') as data_conclusao,ss.observacoes_conclusao,s.Id as subestacao_id,s.sigla as subestacao_sigla,s.nome as subestacao_nome,u.id as responsavel_id,u.nome as responsavel_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id WHERE ss.id = ?`,
+        `SELECT ss.id,ss.processo,ss.motivo,ss.tipo_ordem,ss.prioridade, DATE_FORMAT(ss.data_prevista,'%Y-%m-%d') as data_prevista,ss.horario_inicio,ss.horario_fim,ss.status,DATE_FORMAT(ss.data_conclusao,'%Y-%m-%d') as data_conclusao,ss.observacoes_conclusao,s.Id as subestacao_id,s.sigla as subestacao_sigla,s.nome as subestacao_nome,u.id as responsavel_id,u.nome as responsavel_nome FROM servicos_subestacoes ss JOIN subestacoes s ON ss.subestacao_id = s.Id JOIN users u ON ss.responsavel_id = u.id WHERE ss.id = ?`,
         [servicoId]
       );
       if (servicoRows.length === 0)
@@ -955,24 +729,6 @@ router.get(
       );
       servico.anexos = anexosRows;
 
-      const [inspecoesVinculadasRows] = await promisePool.query(
-        `SELECT i.id as inspecao_id,i.formulario_inspecao_num,DATE_FORMAT(i.data_avaliacao,'%d/%m/%Y') as data_avaliacao_fmt, s.sigla as subestacao_sigla, s.Id as subestacao_id_inspecao FROM servicos_inspecoes_vinculadas siv JOIN inspecoes_subestacoes i ON siv.inspecao_id = i.id JOIN subestacoes s ON i.subestacao_id = s.Id WHERE siv.servico_id = ? ORDER BY i.data_avaliacao DESC, i.id DESC`,
-        [servicoId]
-      );
-      servico.inspecoes_vinculadas = [];
-
-      for (const inspV of inspecoesVinculadasRows) {
-        const [anexosItensInsp] = await promisePool.query(
-          `SELECT isa.caminho_servidor, isa.nome_original, isa.item_num_associado 
-               FROM inspecoes_subestacoes_anexos isa 
-               WHERE isa.inspecao_id = ? AND isa.categoria_anexo = 'FOTO_EVIDENCIA_ITEM' 
-               ORDER BY isa.id ASC`,
-          [inspV.inspecao_id]
-        );
-        inspV.anexos_itens_inspecao = anexosItensInsp;
-        servico.inspecoes_vinculadas.push(inspV);
-      }
-
       const [itensEscopoRows] = await promisePool.query(
         `SELECT 
             sie.id as item_escopo_id, 
@@ -985,19 +741,21 @@ router.get(
             sie.status_item_escopo,
             sie.data_conclusao_item,
             sie.observacoes_conclusao_item,
+            sie.tag_equipamento_alvo,
+            sie.catalogo_equipamento_id,
+            cat_equip.nome as catalogo_equipamento_nome,
+            cat_equip.codigo as catalogo_equipamento_codigo,
             cd.codigo as defeito_codigo,
             cd.descricao as defeito_descricao,
-            isi.item_num as inspecao_item_num,
-            isi.descricao_item_original as inspecao_item_descricao_original,
-            ins.id as origem_inspecao_id, 
+            iir.inspecao_id as origem_inspecao_id,
             ins.formulario_inspecao_num as origem_inspecao_formulario_num,
-            (SELECT GROUP_CONCAT(DISTINCT JSON_OBJECT('equipamento_id', eq.id, 'tag', eq.tag, 'description', eq.description) ORDER BY eq.tag) FROM servico_item_escopo_equipamentos siee LEFT JOIN infra_equip eq ON siee.equipamento_id = eq.id WHERE siee.servico_item_escopo_id = sie.id) as equipamentos_associados_json,
-            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', anexo.id, 'nome_original', anexo.nome_original, 'caminho_servidor', anexo.caminho_servidor)) FROM servico_item_escopo_anexos anexo WHERE anexo.item_escopo_id = sie.id) as anexos_conclusao
+            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', anexo.id, 'nome_original', anexo.nome_original, 'caminho_servidor', anexo.caminho_servidor, 'tipo_mime', anexo.tipo_mime)) FROM servico_item_escopo_anexos anexo WHERE anexo.item_escopo_id = sie.id) as anexos_conclusao
          FROM servico_itens_escopo sie
          LEFT JOIN catalogo_defeitos_servicos cd ON sie.catalogo_defeito_id = cd.id
-         LEFT JOIN inspecoes_subestacoes_itens isi ON sie.inspecao_item_id = isi.id
-         LEFT JOIN inspecoes_subestacoes ins ON isi.inspecao_id = ins.id
          LEFT JOIN users usr_enc ON sie.encarregado_item_id = usr_enc.id
+         LEFT JOIN catalogo_equipamentos cat_equip ON sie.catalogo_equipamento_id = cat_equip.id
+         LEFT JOIN inspecoes_itens_respostas iir ON sie.inspecao_item_id = iir.id
+         LEFT JOIN inspecoes_subestacoes ins ON iir.inspecao_id = ins.id
          WHERE sie.servico_id = ?
          GROUP BY sie.id
          ORDER BY sie.id ASC`,
@@ -1005,55 +763,11 @@ router.get(
       );
 
       servico.itens_escopo = itensEscopoRows.map((item) => {
-        try {
-          item.equipamentos_associados = item.equipamentos_associados_json
-            ? JSON.parse(`[${item.equipamentos_associados_json}]`)
-            : [];
-          item.equipamentos_associados = item.equipamentos_associados.filter(
-            (eq) =>
-              eq !== null &&
-              typeof eq === "object" &&
-              eq.equipamento_id !== null
-          );
-          item.anexos_conclusao = item.anexos_conclusao
-            ? JSON.parse(item.anexos_conclusao)
-            : [];
-        } catch (e) {
-          item.equipamentos_associados = [];
-          item.anexos_conclusao = [];
-        }
-        delete item.equipamentos_associados_json;
+        item.anexos_conclusao = item.anexos_conclusao
+          ? JSON.parse(item.anexos_conclusao)
+          : [];
         return item;
       });
-
-      const cargosComVisaoTotal = [
-        "ADMIN",
-        "Gerente",
-        "Engenheiro",
-        "ADM",
-        "Inspetor",
-        "Técnico",
-      ];
-      let encarregadoPodeVer = false;
-      if (req.user && req.user.cargo === "Encarregado") {
-        if (servico.itens_escopo && servico.itens_escopo.length > 0) {
-          encarregadoPodeVer = servico.itens_escopo.some(
-            (item) => item.encarregado_item_id === req.user.id
-          );
-        }
-      }
-
-      if (
-        req.user &&
-        (req.user.cargo === "Encarregado" || req.user.cargo === "Inspetor") &&
-        !encarregadoPodeVer &&
-        !cargosComVisaoTotal.includes(req.user.cargo)
-      ) {
-        return res.status(403).json({
-          message:
-            "Acesso negado. Nenhum item deste serviço está designado a você.",
-        });
-      }
 
       res.json(servico);
     } catch (err) {
