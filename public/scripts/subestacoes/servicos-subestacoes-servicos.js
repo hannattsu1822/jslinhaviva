@@ -37,9 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const confirmacaoAnexosInput = document.getElementById(
     "confirmacaoAnexosInput"
   );
-  const listaNomesAnexosConclusao = document.getElementById(
-    "listaNomesAnexosConclusao"
-  );
   const btnConfirmarAcaoServico = document.getElementById(
     "btnConfirmarAcaoServico"
   );
@@ -63,21 +60,28 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnSalvarGerenciamentoItens"
   );
 
-  let bsModalConfirmacaoServico = null;
-  let bsModalGerenciarItensServico = null;
-
-  if (modalConfirmacaoServicoEl)
-    bsModalConfirmacaoServico = new bootstrap.Modal(modalConfirmacaoServicoEl);
-  if (modalGerenciarItensServicoEl)
-    bsModalGerenciarItensServico = new bootstrap.Modal(
-      modalGerenciarItensServicoEl
-    );
-
   let operacaoConfirmacaoServico = null;
   let idServicoParaAcao = null;
-  let subestacoesCache = [];
   let encarregadosCache = [];
   let currentUser = null;
+
+  function mostrarModal(modalEl) {
+    if (modalEl) modalEl.classList.remove("hidden");
+  }
+
+  function ocultarModal(modalEl) {
+    if (modalEl) modalEl.classList.add("hidden");
+  }
+
+  document
+    .querySelectorAll(
+      ".modal-overlay .btn-close, .modal-overlay .btn-close-modal"
+    )
+    .forEach((btn) => {
+      btn.addEventListener("click", () =>
+        ocultarModal(btn.closest(".modal-overlay"))
+      );
+    });
 
   async function fetchCurrentUser() {
     if (currentUser) return currentUser;
@@ -108,16 +112,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function mostrarModal(bsModalInstance) {
-    if (bsModalInstance) bsModalInstance.show();
-  }
-  function ocultarModal(bsModalInstance) {
-    if (bsModalInstance) bsModalInstance.hide();
-  }
   function formatarDataParaInput(dataISO) {
     if (!dataISO) return "";
     return dataISO.split("T")[0];
   }
+
   function formatarHoraParaInput(horaISO) {
     if (!horaISO) return "";
     if (typeof horaISO === "string" && horaISO.includes(":"))
@@ -131,10 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .split(",")
       .map((nome) => {
         const partes = nome.trim().split(" ");
-        if (partes.length > 1) {
-          return `${partes[0]} ${partes[1]}`;
-        }
-        return partes[0];
+        return partes.length > 1 ? `${partes[0]} ${partes[1]}` : partes[0];
       })
       .join("<br>");
   }
@@ -142,9 +138,9 @@ document.addEventListener("DOMContentLoaded", () => {
   async function popularFiltroSubestacoes() {
     if (!filtroSubestacaoSelect) return;
     try {
-      subestacoesCache = (await fetchData("/subestacoes")) || [];
+      const subestacoes = (await fetchData("/subestacoes")) || [];
       filtroSubestacaoSelect.innerHTML = '<option value="">Todas</option>';
-      subestacoesCache.forEach((sub) =>
+      subestacoes.forEach((sub) =>
         filtroSubestacaoSelect.add(
           new Option(`${sub.sigla} - ${sub.nome}`, sub.Id)
         )
@@ -183,14 +179,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function carregarServicos(params = {}) {
-    const localCorpoTabela = corpoTabelaServicosElem;
-    const localNenhumMsg = nenhumServicoMsgElem;
+    if (!corpoTabelaServicosElem || !nenhumServicoMsgElem) return;
 
-    if (!localCorpoTabela || !localNenhumMsg) return;
-
-    localCorpoTabela.innerHTML =
-      '<tr><td colspan="12" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando serviços...</td></tr>';
-    localNenhumMsg.classList.add("d-none");
+    corpoTabelaServicosElem.innerHTML =
+      '<tr><td colspan="10"><div class="feedback-message">Carregando serviços...</div></td></tr>';
+    nenhumServicoMsgElem.classList.add("d-none");
     const queryParams = new URLSearchParams(params);
 
     const url = `/api/servicos-subestacoes?${queryParams.toString()}`;
@@ -198,38 +191,32 @@ document.addEventListener("DOMContentLoaded", () => {
       const servicos = await fetchData(url);
       popularTabelaServicos(servicos);
     } catch (error) {
-      if (localCorpoTabela) {
-        localCorpoTabela.innerHTML =
-          '<tr><td colspan="12" class="text-center text-danger p-5">Erro ao carregar os serviços. Verifique o console.</td></tr>';
+      if (corpoTabelaServicosElem) {
+        corpoTabelaServicosElem.innerHTML =
+          '<tr><td colspan="10"><div class="feedback-message text-danger">Erro ao carregar os serviços.</div></td></tr>';
       }
     }
   }
 
   function popularTabelaServicos(servicos) {
-    const localCorpoTabela = corpoTabelaServicosElem;
-    const localNenhumMsg = nenhumServicoMsgElem;
-
-    localCorpoTabela.innerHTML = "";
+    corpoTabelaServicosElem.innerHTML = "";
     if (!servicos || servicos.length === 0) {
-      localNenhumMsg.classList.remove("d-none");
+      nenhumServicoMsgElem.classList.remove("d-none");
       return;
     }
-    localNenhumMsg.classList.add("d-none");
+    nenhumServicoMsgElem.classList.add("d-none");
 
     servicos.forEach((serv) => {
       const tr = document.createElement("tr");
       const statusServ = (serv.status || "").toUpperCase();
-      const statusCls = (serv.status || "desconhecido")
-        .toLowerCase()
-        .replace(/_/g, "");
-      const statusTxt = (serv.status || "DESCONHECIDO").replace("_", " ");
+      const statusCls = (serv.status || "desconhecido").toLowerCase();
+      const statusTxt = (serv.status || "DESCONHECIDO").replace(/_/g, " ");
       const dataPrevistaFormatada = serv.data_prevista
         ? new Date(serv.data_prevista + "T00:00:00Z").toLocaleDateString(
             "pt-BR",
             { timeZone: "UTC" }
           )
         : "-";
-
       const progressoItens =
         serv.total_itens > 0
           ? `${serv.itens_concluidos}/${serv.total_itens}`
@@ -238,77 +225,46 @@ document.addEventListener("DOMContentLoaded", () => {
         serv.total_itens > 0 && serv.itens_concluidos === serv.total_itens
           ? "text-success fw-bold"
           : "text-muted";
-
-      let motivoDisplay = serv.motivo || "";
-      const matchInspecao = motivoDisplay.match(/- Insp. #(\d+)/);
-      if (matchInspecao && matchInspecao[1]) {
-        motivoDisplay = `Inspeção #${matchInspecao[1]}`;
-      } else {
-        motivoDisplay =
-          motivoDisplay.substring(0, 35) +
-          (motivoDisplay.length > 35 ? "..." : "");
-      }
+      const prioridade = serv.prioridade || "MEDIA";
+      const prioridadeClasse = `prioridade-${prioridade.toLowerCase()}`;
 
       tr.innerHTML = `
-          <td data-label="ID">${serv.id || "-"}</td>
-          <td data-label="Processo">${serv.processo || "-"}</td>
-          <td data-label="Subestação">${
-            serv.subestacao_sigla || serv.subestacao_id || "-"
-          }</td>
-          <td data-label="Motivo / Origem" title="${
-            serv.motivo || ""
-          }">${motivoDisplay}</td>
-          <td data-label="Tipo Ordem">${serv.tipo_ordem || "-"}</td>
-          <td data-label="Data Prevista">${dataPrevistaFormatada}</td>
-          <td data-label="Horário">${
-            formatarHoraParaInput(serv.horario_inicio) || "-"
-          } - ${formatarHoraParaInput(serv.horario_fim) || "-"}</td>
-          <td data-label="Responsável">${serv.responsavel_nome || "-"}</td>
-          <td data-label="Encarregado(s)">${formatarNomes(
-            serv.encarregados_itens_nomes
-          )}</td>
-          <td data-label="Progresso Itens" class="text-center ${progressoClasse}">${progressoItens}</td>
-          <td data-label="Status (Geral)" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
-          <td data-label="Ações" class="actions-column">
+          <td>${serv.id || "-"}</td>
+          <td>${serv.processo || "-"}</td>
+          <td>${serv.subestacao_sigla || "-"}</td>
+          <td><span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span></td>
+          <td>${dataPrevistaFormatada}</td>
+          <td>${serv.responsavel_nome || "-"}</td>
+          <td>${formatarNomes(serv.encarregados_itens_nomes)}</td>
+          <td class="text-center ${progressoClasse}">${progressoItens}</td>
+          <td class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
+          <td class="actions-column">
               <div class="actions-wrapper">
-                  <div class="action-group">
-                      <button class="btn btn-icon text-info btn-ver-detalhes" data-id="${
-                        serv.id
-                      }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-                      <button class="btn btn-icon text-primary btn-editar-servico" data-id="${
-                        serv.id
-                      }" title="Editar Serviço"><span class="material-symbols-outlined">edit</span></button>
-                      <button class="btn btn-icon text-secondary btn-gerenciar-itens" data-id="${
-                        serv.id
-                      }" data-processo="${
+                  <button class="btn text-info btn-ver-detalhes" data-id="${
+                    serv.id
+                  }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
+                  <button class="btn text-primary btn-editar-servico" data-id="${
+                    serv.id
+                  }" title="Editar Serviço"><span class="material-symbols-outlined">edit</span></button>
+                  <button class="btn text-secondary btn-gerenciar-itens" data-id="${
+                    serv.id
+                  }" data-processo="${
         serv.processo
       }" title="Gerenciar Itens/Encarregados"><span class="material-symbols-outlined">manage_accounts</span></button>
-                  </div>
-                  <div class="action-group">
-                      <button class="btn btn-icon text-success btn-concluir-servico" data-id="${
-                        serv.id
-                      }" data-processo="${
+                  <button class="btn text-success btn-concluir-servico" data-id="${
+                    serv.id
+                  }" data-processo="${
         serv.processo
       }" title="Concluir Serviço / Meus Itens" ${
         statusServ === "CONCLUIDO" || statusServ === "CANCELADO"
           ? "disabled"
           : ""
       }><span class="material-symbols-outlined">check_circle</span></button>
-                      <button class="btn btn-icon text-warning btn-reabrir-servico" data-id="${
-                        serv.id
-                      }" data-processo="${
-        serv.processo
-      }" title="Reabrir Serviço" ${
-        statusServ !== "CONCLUIDO" && statusServ !== "CANCELADO"
-          ? "disabled"
-          : ""
-      }><span class="material-symbols-outlined">history</span></button>
-                      <button class="btn btn-icon text-danger btn-excluir-servico" data-id="${
-                        serv.id
-                      }" data-processo="${
+                  <button class="btn text-danger btn-excluir-servico" data-id="${
+                    serv.id
+                  }" data-processo="${
         serv.processo
       }" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>
-                  </div>
               </div>
           </td>`;
 
@@ -331,12 +287,6 @@ document.addEventListener("DOMContentLoaded", () => {
             e.currentTarget.dataset.processo
           )
       );
-      tr.querySelector(".btn-reabrir-servico")?.addEventListener("click", (e) =>
-        abrirModalConfirmacaoReabrirServico(
-          e.currentTarget.dataset.id,
-          e.currentTarget.dataset.processo
-        )
-      );
       tr.querySelector(".btn-gerenciar-itens")?.addEventListener("click", (e) =>
         abrirModalGerenciarItens(
           e.currentTarget.dataset.id,
@@ -350,7 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )
       );
 
-      localCorpoTabela.appendChild(tr);
+      corpoTabelaServicosElem.appendChild(tr);
     });
   }
 
@@ -377,65 +327,40 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function confirmarExclusaoServico(servicoId, processo) {
-    if (!bsModalConfirmacaoServico) return;
-    const iconElement = modalConfirmacaoServicoTitulo.querySelector(
-      ".material-symbols-outlined"
-    );
-    iconElement.textContent = "warning";
-    iconElement.className = "material-symbols-outlined me-2 text-danger";
-    const titleTextNode = Array.from(
-      modalConfirmacaoServicoTitulo.childNodes
-    ).find((node) => node.nodeType === Node.TEXT_NODE);
-    if (titleTextNode) titleTextNode.nodeValue = " Confirmar Exclusão";
-
-    mensagemConfirmacaoServico.textContent = `Tem certeza que deseja excluir o serviço do processo "${
-      processo || servicoId
-    }"? Esta ação não pode ser desfeita.`;
-    formConfirmacaoConcluirServico.classList.add("d-none");
-    btnConfirmarAcaoServico.className = "btn btn-sm btn-danger";
-    btnConfirmarAcaoServico.innerHTML =
-      '<span class="material-symbols-outlined">delete</span> Excluir';
     idServicoParaAcao = servicoId;
     operacaoConfirmacaoServico = async () => {
-      const submitButton = btnConfirmarAcaoServico;
-      const originalButtonHtmlInner = submitButton.innerHTML;
-      submitButton.disabled = true;
-      submitButton.innerHTML =
-        '<span class="spinner-border spinner-border-sm"></span> Excluindo...';
       try {
         await fetchData(`/api/servicos-subestacoes/${idServicoParaAcao}`, {
           method: "DELETE",
         });
         alert("Serviço excluído com sucesso!");
-        const currentParams = Object.fromEntries(
-          new FormData(formFiltrosServicos).entries()
+        ocultarModal(modalConfirmacaoServicoEl);
+        carregarServicos(
+          Object.fromEntries(new FormData(formFiltrosServicos).entries())
         );
-        carregarServicos(currentParams);
       } catch (error) {
         alert(`Falha ao excluir serviço: ${error.message}`);
-      } finally {
-        ocultarModal(bsModalConfirmacaoServico);
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalButtonHtmlInner;
-        idServicoParaAcao = null;
       }
     };
-    mostrarModal(bsModalConfirmacaoServico);
+
+    modalConfirmacaoServicoTitulo.innerHTML = `<span class="material-symbols-outlined text-danger">warning</span> Confirmar Exclusão`;
+    mensagemConfirmacaoServico.textContent = `Tem certeza que deseja excluir o serviço do processo "${
+      processo || servicoId
+    }"? Esta ação não pode ser desfeita.`;
+    formConfirmacaoConcluirServico.classList.add("hidden");
+    btnConfirmarAcaoServico.className = "btn btn-danger";
+    btnConfirmarAcaoServico.innerHTML = `<span class="material-symbols-outlined">delete</span> Excluir`;
+    mostrarModal(modalConfirmacaoServicoEl);
   }
 
   async function abrirModalConfirmacaoConcluirServico(
     servicoId,
     processoServico
   ) {
-    if (!bsModalConfirmacaoServico) return;
-
     formConfirmacaoConcluirServico.reset();
-    listaNomesAnexosConclusao.innerHTML = "";
-
     idServicoParaAcao = servicoId;
     const user = await fetchCurrentUser();
     const servico = await fetchData(`/api/servicos-subestacoes/${servicoId}`);
-
     const cargosConclusaoGeral = [
       "ADMIN",
       "Engenheiro",
@@ -444,171 +369,84 @@ document.addEventListener("DOMContentLoaded", () => {
       "ADM",
     ];
 
-    const iconElement = modalConfirmacaoServicoTitulo.querySelector(
-      ".material-symbols-outlined"
-    );
-    iconElement.textContent = "check_circle";
-    iconElement.className = "material-symbols-outlined me-2 text-success";
-    btnConfirmarAcaoServico.className = "btn btn-sm btn-success";
-    btnConfirmarAcaoServico.innerHTML =
-      '<span class="material-symbols-outlined">check_circle</span> Confirmar Conclusão';
-
-    const titleTextNode = Array.from(
-      modalConfirmacaoServicoTitulo.childNodes
-    ).find((node) => node.nodeType === Node.TEXT_NODE);
+    modalConfirmacaoServicoTitulo.innerHTML = `<span class="material-symbols-outlined text-success">check_circle</span> Concluir Serviço`;
+    btnConfirmarAcaoServico.className = "btn btn-success";
+    btnConfirmarAcaoServico.innerHTML = `<span class="material-symbols-outlined">check</span> Confirmar Conclusão`;
 
     if (cargosConclusaoGeral.includes(user.cargo)) {
-      if (titleTextNode) titleTextNode.nodeValue = " Concluir Serviço (Geral)";
       mensagemConfirmacaoServico.textContent = `Deseja realmente marcar o serviço do processo "${
         processoServico || servicoId
       }" como CONCLUÍDO? Todos os itens pendentes serão fechados automaticamente.`;
       listaItensParaConcluirContainer.innerHTML = "";
-      listaItensParaConcluirContainer.classList.add("d-none");
+      listaItensParaConcluirContainer.classList.add("hidden");
     } else {
-      if (titleTextNode) titleTextNode.nodeValue = " Concluir Meus Itens";
       const meusItens = servico.itens_escopo.filter(
         (item) =>
           item.encarregado_item_id === user.id &&
           !item.status_item_escopo.startsWith("CONCLUIDO")
       );
-
       if (meusItens.length === 0) {
         alert("Você não possui itens pendentes para concluir neste serviço.");
         return;
       }
-
       mensagemConfirmacaoServico.textContent =
         "Você está prestes a concluir os seguintes itens sob sua responsabilidade:";
-      let itensHtml = '<ul class="list-group list-group-flush mb-3">';
-      meusItens.forEach((item) => {
-        itensHtml += `<li class="list-group-item small">${item.descricao_item_servico}</li>`;
-      });
-      itensHtml += "</ul>";
-      listaItensParaConcluirContainer.innerHTML = itensHtml;
-      listaItensParaConcluirContainer.classList.remove("d-none");
+      listaItensParaConcluirContainer.innerHTML = `<ul class="item-list">${meusItens
+        .map((item) => `<li>${item.descricao_item_servico}</li>`)
+        .join("")}</ul>`;
+      listaItensParaConcluirContainer.classList.remove("hidden");
     }
 
-    formConfirmacaoConcluirServico.classList.remove("d-none");
+    formConfirmacaoConcluirServico.classList.remove("hidden");
     confirmacaoDataConclusaoInput.value = formatarDataParaInput(
       new Date().toISOString()
     );
-    const now = new Date();
-    confirmacaoHoraConclusaoInput.value = now.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
+    confirmacaoHoraConclusaoInput.value = new Date().toLocaleTimeString(
+      "pt-BR",
+      { hour: "2-digit", minute: "2-digit" }
+    );
     operacaoConfirmacaoServico = handleConcluirServico;
-    mostrarModal(bsModalConfirmacaoServico);
+    mostrarModal(modalConfirmacaoServicoEl);
   }
 
   async function handleConcluirServico() {
-    if (!idServicoParaAcao) return;
-    if (!confirmacaoDataConclusaoInput.value) {
+    if (!idServicoParaAcao || !confirmacaoDataConclusaoInput.value) {
       alert("A data de conclusão é obrigatória.");
-      confirmacaoDataConclusaoInput.focus();
       return;
     }
-    const submitButton = btnConfirmarAcaoServico;
-    const originalButtonHtml = submitButton.innerHTML;
-    submitButton.disabled = true;
-    submitButton.innerHTML =
-      '<span class="spinner-border spinner-border-sm"></span> Confirmando...';
-
     const formData = new FormData(formConfirmacaoConcluirServico);
-
+    btnConfirmarAcaoServico.disabled = true;
     try {
       await fetchData(
         `/api/servicos-subestacoes/${idServicoParaAcao}/concluir`,
         { method: "PUT", body: formData }
       );
       alert("Ação de conclusão registrada com sucesso!");
-      ocultarModal(bsModalConfirmacaoServico);
-      const currentParams = Object.fromEntries(
-        new FormData(formFiltrosServicos).entries()
+      ocultarModal(modalConfirmacaoServicoEl);
+      carregarServicos(
+        Object.fromEntries(new FormData(formFiltrosServicos).entries())
       );
-      carregarServicos(currentParams);
     } catch (error) {
       alert(`Falha ao registrar conclusão: ${error.message}`);
     } finally {
-      submitButton.disabled = false;
-      submitButton.innerHTML = originalButtonHtml;
-      idServicoParaAcao = null;
-    }
-  }
-
-  function abrirModalConfirmacaoReabrirServico(servicoId, processoServico) {
-    if (!bsModalConfirmacaoServico) return;
-    idServicoParaAcao = servicoId;
-    const iconElement = modalConfirmacaoServicoTitulo.querySelector(
-      ".material-symbols-outlined"
-    );
-    iconElement.textContent = "history";
-    iconElement.className = "material-symbols-outlined me-2 text-warning";
-    const titleTextNode = Array.from(
-      modalConfirmacaoServicoTitulo.childNodes
-    ).find((node) => node.nodeType === Node.TEXT_NODE);
-    if (titleTextNode) titleTextNode.nodeValue = " Confirmar Reabertura";
-
-    mensagemConfirmacaoServico.textContent = `Deseja realmente reabrir o serviço do processo "${
-      processoServico || servicoId
-    }" (voltará para EM ANDAMENTO)?`;
-    formConfirmacaoConcluirServico.classList.add("d-none");
-    btnConfirmarAcaoServico.className = "btn btn-sm btn-warning";
-    btnConfirmarAcaoServico.innerHTML =
-      '<span class="material-symbols-outlined">history</span> Confirmar Reabertura';
-    operacaoConfirmacaoServico = handleReabrirServico;
-    mostrarModal(bsModalConfirmacaoServico);
-  }
-
-  async function handleReabrirServico() {
-    if (!idServicoParaAcao) return;
-    const submitButton = btnConfirmarAcaoServico;
-    const originalButtonHtml = submitButton.innerHTML;
-    submitButton.disabled = true;
-    submitButton.innerHTML =
-      '<span class="spinner-border spinner-border-sm"></span> Reabrindo...';
-    try {
-      const result = await fetchData(
-        `/api/servicos-subestacoes/${idServicoParaAcao}/reabrir`,
-        { method: "PUT", headers: { "Content-Type": "application/json" } }
-      );
-      alert(result.message || "Serviço reaberto com sucesso!");
-      ocultarModal(bsModalConfirmacaoServico);
-      const currentParams = Object.fromEntries(
-        new FormData(formFiltrosServicos).entries()
-      );
-      carregarServicos(currentParams);
-    } catch (error) {
-      alert(`Falha ao reabrir serviço: ${error.message}`);
-    } finally {
-      submitButton.disabled = false;
-      submitButton.innerHTML = originalButtonHtml;
-      idServicoParaAcao = null;
+      btnConfirmarAcaoServico.disabled = false;
     }
   }
 
   async function abrirModalGerenciarItens(servicoId, processoServico) {
-    if (!bsModalGerenciarItensServico) return;
-
     servicoIdParaGerenciarItensInput.value = servicoId;
     processoServicoGerenciarItensSpan.textContent =
       processoServico || servicoId;
     listaItensParaGerenciamentoDiv.innerHTML =
-      '<div class="text-center p-3"><div class="spinner-border text-primary"></div></div>';
+      '<div class="feedback-message">Carregando...</div>';
     nenhumItemEscopoParaGerenciarMsg.classList.add("d-none");
-    mostrarModal(bsModalGerenciarItensServico);
+    mostrarModal(modalGerenciarItensServicoEl);
 
     try {
       const servicoDetalhes = await fetchData(
         `/api/servicos-subestacoes/${servicoId}`
       );
-      if (!servicoDetalhes || !servicoDetalhes.itens_escopo) {
-        throw new Error("Não foi possível carregar os itens de escopo.");
-      }
-
       await popularSelectEncarregados(null);
-
       listaItensParaGerenciamentoDiv.innerHTML = "";
 
       if (servicoDetalhes.itens_escopo.length === 0) {
@@ -618,88 +456,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
       servicoDetalhes.itens_escopo.forEach((item) => {
         const itemDiv = document.createElement("div");
-        itemDiv.className = "list-group-item mb-2 p-3 border rounded";
+        itemDiv.className = "item-management-card";
         itemDiv.dataset.itemEscopoId = item.item_escopo_id;
-
-        let descItem = item.descricao_item_servico;
-        if (item.inspecao_item_id) {
-          descItem = `[Origem Insp. #${
-            item.origem_inspecao_formulario_num || item.origem_inspecao_id
-          } - Item ${item.inspecao_item_num}] ${
-            item.inspecao_item_descricao_original || item.descricao_item_servico
-          }`;
-        }
-
         const selectEncarregado = document.createElement("select");
-        selectEncarregado.className = "form-select form-select-sm";
+        selectEncarregado.className = "form-select";
         popularSelectEncarregados(selectEncarregado, item.encarregado_item_id);
-
-        const statusClasse = item.status_item_escopo.startsWith("CONCLUIDO")
-          ? "success"
-          : "secondary";
-        const statusTexto = item.status_item_escopo.replace(/_/g, " ");
-
-        itemDiv.innerHTML = `
-            <div class="d-flex w-100 justify-content-between align-items-start">
-                <h6 class="mb-1 small flex-grow-1" title="${descItem}">${descItem.substring(
-          0,
-          80
-        )}${descItem.length > 80 ? "..." : ""}</h6>
-                <div class="item-status-display ms-2"><span class="badge bg-${statusClasse}">${statusTexto}</span></div>
-            </div>
-            <div class="row align-items-center mt-2">
-                <div class="col-md-12">
-                    <label class="form-label-sm small mb-1 fw-bold">Encarregado do Item:</label>
-                    <div class="select-container"></div>
-                </div>
-            </div>
-            ${
-              item.defeito_codigo
-                ? `<p class="mb-0 mt-1 small text-secondary"><strong>Defeito:</strong> ${
-                    item.defeito_codigo
-                  } - ${item.defeito_descricao.substring(0, 50)}...</p>`
-                : ""
-            }
-        `;
-
-        itemDiv
-          .querySelector(".select-container")
-          .appendChild(selectEncarregado);
+        itemDiv.innerHTML = `<h6>${item.descricao_item_servico}</h6>`;
+        itemDiv.appendChild(selectEncarregado);
         listaItensParaGerenciamentoDiv.appendChild(itemDiv);
       });
     } catch (error) {
       listaItensParaGerenciamentoDiv.innerHTML =
-        '<div class="alert alert-danger">Erro ao carregar os itens.</div>';
+        '<div class="feedback-message text-danger">Erro ao carregar os itens.</div>';
     }
   }
 
   if (btnSalvarGerenciamentoItens) {
     btnSalvarGerenciamentoItens.addEventListener("click", async () => {
       const servicoId = servicoIdParaGerenciarItensInput.value;
-      if (!servicoId) return;
-
       const atualizacoes = Array.from(
-        listaItensParaGerenciamentoDiv.querySelectorAll(".list-group-item")
-      ).map((itemEl) => {
-        const selectEncarregado = itemEl.querySelector("select");
-        return {
-          item_escopo_id: parseInt(itemEl.dataset.itemEscopoId),
-          novo_encarregado_item_id: selectEncarregado.value
-            ? parseInt(selectEncarregado.value)
-            : null,
-        };
-      });
+        listaItensParaGerenciamentoDiv.querySelectorAll(".item-management-card")
+      ).map((itemEl) => ({
+        item_escopo_id: parseInt(itemEl.dataset.itemEscopoId),
+        novo_encarregado_item_id: itemEl.querySelector("select").value
+          ? parseInt(itemEl.querySelector("select").value)
+          : null,
+      }));
 
       if (atualizacoes.length === 0) {
-        ocultarModal(bsModalGerenciarItensServico);
+        ocultarModal(modalGerenciarItensServicoEl);
         return;
       }
 
-      const originalButtonHtml = btnSalvarGerenciamentoItens.innerHTML;
       btnSalvarGerenciamentoItens.disabled = true;
-      btnSalvarGerenciamentoItens.innerHTML =
-        '<span class="spinner-border spinner-border-sm"></span> Salvando...';
-
       try {
         await fetchData(
           `/api/servicos/${servicoId}/atualizar-encarregados-itens`,
@@ -710,7 +499,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         );
         alert("Encarregados dos itens atualizados com sucesso!");
-        ocultarModal(bsModalGerenciarItensServico);
+        ocultarModal(modalGerenciarItensServicoEl);
         carregarServicos(
           Object.fromEntries(new FormData(formFiltrosServicos).entries())
         );
@@ -718,7 +507,6 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(`Falha ao atualizar encarregados: ${error.message}`);
       } finally {
         btnSalvarGerenciamentoItens.disabled = false;
-        btnSalvarGerenciamentoItens.innerHTML = originalButtonHtml;
       }
     });
   }
@@ -734,7 +522,6 @@ document.addEventListener("DOMContentLoaded", () => {
   async function init() {
     await fetchCurrentUser();
     await popularFiltroSubestacoes();
-    await popularSelectEncarregados(null);
     await carregarServicos();
   }
 

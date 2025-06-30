@@ -30,14 +30,25 @@ document.addEventListener("DOMContentLoaded", () => {
     "processoServicoAnexoPosterior"
   );
 
-  let bsModalConfirmacao = null;
-  let bsModalAnexarPosterior = null;
-  if (modalConfirmacaoEl)
-    bsModalConfirmacao = new bootstrap.Modal(modalConfirmacaoEl);
-  if (modalAnexarPosteriorEl)
-    bsModalAnexarPosterior = new bootstrap.Modal(modalAnexarPosteriorEl);
-
   let acaoConfirmadaCallback = null;
+
+  function mostrarModal(modalEl) {
+    if (modalEl) modalEl.classList.remove("hidden");
+  }
+
+  function ocultarModal(modalEl) {
+    if (modalEl) modalEl.classList.add("hidden");
+  }
+
+  document
+    .querySelectorAll(
+      ".modal-overlay .btn-close, .modal-overlay .btn-close-modal"
+    )
+    .forEach((btn) => {
+      btn.addEventListener("click", () =>
+        ocultarModal(btn.closest(".modal-overlay"))
+      );
+    });
 
   async function fetchData(url, options = {}) {
     try {
@@ -78,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!corpoTabelaServicosElem || !nenhumServicoMsgElem) return;
 
     corpoTabelaServicosElem.innerHTML =
-      '<tr><td colspan="9" class="text-center p-5"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando histórico...</td></tr>';
+      '<tr><td colspan="9"><div class="feedback-message">Carregando histórico...</div></td></tr>';
     nenhumServicoMsgElem.classList.add("d-none");
 
     if (!params.status) {
@@ -94,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       if (corpoTabelaServicosElem) {
         corpoTabelaServicosElem.innerHTML =
-          '<tr><td colspan="9" class="text-center text-danger p-5">Erro ao carregar o histórico.</td></tr>';
+          '<tr><td colspan="9"><div class="feedback-message error">Erro ao carregar o histórico.</div></td></tr>';
       }
     }
   }
@@ -133,26 +144,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       tr.innerHTML = `
-          <td data-label="ID">${serv.id || "-"}</td>
-          <td data-label="Processo">${serv.processo || "-"}</td>
-          <td data-label="Subestação">${serv.subestacao_sigla || "-"}</td>
-          <td data-label="Motivo / Origem" title="${
-            serv.motivo || ""
-          }">${motivoDisplay}</td>
-          <td data-label="Tipo Ordem">${serv.tipo_ordem || "-"}</td>
-          <td data-label="Data Conclusão" class="text-center">${dataConclusaoFormatada}</td>
-          <td data-label="Responsável">${serv.responsavel_nome || "-"}</td>
-          <td data-label="Status (Geral)" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
-          <td data-label="Ações" class="actions-column text-center">
-              <button class="btn btn-icon text-info btn-ver-detalhes" data-id="${
+          <td>${serv.id || "-"}</td>
+          <td>${serv.processo || "-"}</td>
+          <td>${serv.subestacao_sigla || "-"}</td>
+          <td title="${serv.motivo || ""}">${motivoDisplay}</td>
+          <td>${serv.tipo_ordem || "-"}</td>
+          <td class="text-center">${dataConclusaoFormatada}</td>
+          <td>${serv.responsavel_nome || "-"}</td>
+          <td class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
+          <td class="actions-column text-center">
+              <button class="btn text-info btn-ver-detalhes" data-id="${
                 serv.id
               }" title="Ver Relatório Final"><span class="material-symbols-outlined">visibility</span></button>
-              <button class="btn btn-icon text-warning btn-reabrir-servico" data-id="${
+              <button class="btn text-warning btn-reabrir-servico" data-id="${
                 serv.id
               }" data-processo="${
         serv.processo
       }" title="Reabrir Serviço"><span class="material-symbols-outlined">history</span></button>
-              <button class="btn btn-icon text-primary btn-anexar" data-id="${
+              <button class="btn text-primary btn-anexar" data-id="${
                 serv.id
               }" data-processo="${
         serv.processo
@@ -183,11 +192,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function abrirModalReabrir(servicoId, processo) {
-    if (!bsModalConfirmacao) return;
+    if (!modalConfirmacaoEl) return;
 
-    modalConfirmacaoTitulo.innerHTML = `<span class="material-symbols-outlined me-2 text-warning">history</span> Reabrir Serviço`;
+    modalConfirmacaoTitulo.innerHTML = `<span class="material-symbols-outlined text-warning">history</span> Reabrir Serviço`;
     modalConfirmacaoMensagem.textContent = `Tem certeza que deseja reabrir o serviço de processo Nº ${processo}? Ele voltará para a lista de serviços ativos com o status "EM ANDAMENTO".`;
-    btnConfirmarAcao.className = "btn btn-sm btn-warning";
+    btnConfirmarAcao.className = "btn btn-warning";
     btnConfirmarAcao.textContent = "Sim, Reabrir";
 
     acaoConfirmadaCallback = async () => {
@@ -196,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
           method: "PUT",
         });
         alert("Serviço reaberto com sucesso!");
-        bsModalConfirmacao.hide();
+        ocultarModal(modalConfirmacaoEl);
         carregarServicos(
           Object.fromEntries(new FormData(formFiltrosServicos).entries())
         );
@@ -205,15 +214,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
-    bsModalConfirmacao.show();
+    mostrarModal(modalConfirmacaoEl);
   }
 
   function abrirModalAnexar(servicoId, processo) {
-    if (!bsModalAnexarPosterior) return;
+    if (!modalAnexarPosteriorEl) return;
     formAnexarPosterior.reset();
     servicoIdAnexoPosteriorInput.value = servicoId;
     processoServicoAnexoPosteriorSpan.textContent = processo;
-    bsModalAnexarPosterior.show();
+    mostrarModal(modalAnexarPosteriorEl);
   }
 
   if (formFiltrosServicos) {
@@ -268,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: formData,
         });
         alert("Anexos enviados com sucesso!");
-        bsModalAnexarPosterior.hide();
+        ocultarModal(modalAnexarPosteriorEl);
       } catch (error) {
         alert(`Falha ao enviar anexos: ${error.message}`);
       } finally {

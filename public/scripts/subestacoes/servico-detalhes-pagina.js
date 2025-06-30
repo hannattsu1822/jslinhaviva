@@ -10,19 +10,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const detalheSubestacao = document.getElementById("detalheSubestacao");
   const detalheTipoOrdem = document.getElementById("detalheTipoOrdem");
   const detalheStatus = document.getElementById("detalheStatus");
+  const detalhePrioridade = document.getElementById("detalhePrioridade");
   const detalheMotivo = document.getElementById("detalheMotivo");
   const detalheResponsavel = document.getElementById("detalheResponsavel");
   const detalheDataPrevista = document.getElementById("detalheDataPrevista");
   const detalheHorarioPrevisto = document.getElementById(
     "detalheHorarioPrevisto"
   );
-
-  const secaoDetalhesConclusao = document.getElementById(
-    "secaoDetalhesConclusao"
-  );
-  const detalheDataConclusao = document.getElementById("detalheDataConclusao");
-  const detalheHoraConclusao = document.getElementById("detalheHoraConclusao");
-  const detalheObsConclusao = document.getElementById("detalheObsConclusao");
 
   const secaoAnexosServico = document.getElementById("secaoAnexosServico");
   const listaAnexosServicoPagina = document.getElementById(
@@ -43,10 +37,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const lightboxImageDetalhesContent = document.getElementById(
     "lightboxImageDetalhesContent"
   );
-  let bsImageLightboxDetalhes = null;
-  if (imageLightboxDetalhesEl) {
-    bsImageLightboxDetalhes = new bootstrap.Modal(imageLightboxDetalhesEl);
-  }
+  const lightboxCloseBtn = imageLightboxDetalhesEl.querySelector(
+    ".btn-close-lightbox"
+  );
 
   let servicoIdAtual = null;
 
@@ -56,26 +49,37 @@ document.addEventListener("DOMContentLoaded", () => {
     if (id && !isNaN(parseInt(id))) {
       return parseInt(id);
     }
-    console.error(
-      "Não foi possível extrair o ID do serviço da URL:",
-      window.location.pathname
-    );
     return null;
+  }
+
+  function openImageLightbox(imageUrl) {
+    if (lightboxImageDetalhesContent && imageLightboxDetalhesEl) {
+      lightboxImageDetalhesContent.src = imageUrl;
+      imageLightboxDetalhesEl.classList.remove("hidden");
+    }
+  }
+
+  function hideLightbox() {
+    if (imageLightboxDetalhesEl) {
+      imageLightboxDetalhesEl.classList.add("hidden");
+    }
+  }
+
+  if (imageLightboxDetalhesEl) {
+    imageLightboxDetalhesEl.addEventListener("click", (e) => {
+      if (e.target === imageLightboxDetalhesEl) {
+        hideLightbox();
+      }
+    });
+  }
+  if (lightboxCloseBtn) {
+    lightboxCloseBtn.addEventListener("click", hideLightbox);
   }
 
   async function fetchData(url, options = {}) {
     try {
       const response = await fetch(url, options);
       if (!response.ok) {
-        if (response.status === 403) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ message: "Acesso negado." }));
-          throw {
-            status: 403,
-            message: errorData.message || "Acesso negado a este recurso.",
-          };
-        }
         const errorData = await response
           .json()
           .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
@@ -88,18 +92,6 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Erro ao buscar dados:", error);
       throw error;
     }
-  }
-
-  function getIconForFileType(fileName) {
-    const extension = fileName.split(".").pop().toLowerCase();
-    if (
-      ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif"].includes(extension)
-    )
-      return "image";
-    if (extension === "pdf") return "picture_as_pdf";
-    if (["doc", "docx"].includes(extension)) return "article";
-    if (["xls", "xlsx", "csv"].includes(extension)) return "assessment";
-    return "draft";
   }
 
   function formatarDataSimples(dataISO) {
@@ -119,54 +111,47 @@ document.addEventListener("DOMContentLoaded", () => {
     return "Não informado";
   }
 
-  function openImageLightbox(imageUrl) {
-    if (lightboxImageDetalhesContent && bsImageLightboxDetalhes) {
-      lightboxImageDetalhesContent.src = imageUrl;
-      bsImageLightboxDetalhes.show();
-    }
-  }
-
   function createAnexoCard(anexo) {
-    const cardDiv = document.createElement("a");
-    cardDiv.className = "anexo-preview-card text-decoration-none";
-    cardDiv.href = anexo.caminho_servidor;
-    cardDiv.target = "_blank";
-    cardDiv.title = `Abrir ${anexo.nome_original}`;
+    const cardLink = document.createElement("a");
+    cardLink.className = "anexo-preview-card";
+    cardLink.href = anexo.caminho_servidor;
+    cardLink.target = "_blank";
+    cardLink.title = `Abrir ${anexo.nome_original}`;
 
-    const iconName = getIconForFileType(anexo.nome_original);
-    let thumbnailHtml = `<span class="material-symbols-outlined">${iconName}</span>`;
+    const isImage = anexo.tipo_mime && anexo.tipo_mime.startsWith("image/");
 
-    if (iconName === "image") {
-      thumbnailHtml = `<img src="${anexo.caminho_servidor}" alt="Preview de ${anexo.nome_original}" />`;
-      cardDiv.addEventListener("click", (e) => {
+    let thumbnailHtml = `<span class="material-symbols-outlined file-icon">description</span>`;
+    if (isImage) {
+      thumbnailHtml = `<img src="${anexo.caminho_servidor}" alt="Preview de ${anexo.nome_original}" class="anexo-preview-img" />`;
+      cardLink.addEventListener("click", (e) => {
         e.preventDefault();
         openImageLightbox(anexo.caminho_servidor);
       });
     }
 
-    cardDiv.innerHTML = `
+    cardLink.innerHTML = `
       <div class="anexo-thumbnail">${thumbnailHtml}</div>
-      <div class="anexo-info">
-          <div class="file-name text-decoration-underline">${anexo.nome_original}</div>
+      <div class="file-info">
+          <span class="file-name">${anexo.nome_original}</span>
       </div>
     `;
-    return cardDiv;
+    return cardLink;
   }
 
   async function carregarDetalhesDoServico() {
     servicoIdAtual = getServicoIdFromUrl();
     if (!servicoIdAtual) {
-      loadingIndicator.classList.add("d-none");
+      loadingIndicator.classList.add("hidden");
       erroCarregamento.textContent = "ID do serviço não encontrado na URL.";
-      erroCarregamento.classList.remove("d-none");
+      erroCarregamento.classList.remove("hidden");
       if (btnEditarServicoPagina) btnEditarServicoPagina.disabled = true;
       return;
     }
 
     if (servicoIdTitulo) servicoIdTitulo.textContent = `#${servicoIdAtual}`;
-    loadingIndicator.classList.remove("d-none");
-    conteudoDetalhesServico.classList.add("d-none");
-    erroCarregamento.classList.add("d-none");
+    loadingIndicator.classList.remove("hidden");
+    conteudoDetalhesServico.classList.add("hidden");
+    erroCarregamento.classList.add("hidden");
 
     try {
       const servico = await fetchData(
@@ -185,15 +170,15 @@ document.addEventListener("DOMContentLoaded", () => {
         detalheTipoOrdem.textContent = servico.tipo_ordem || "Não informado";
 
       if (detalheStatus) {
-        const statusClasseBase = (
-          servico.status || "desconhecido"
-        ).toLowerCase();
-        const statusClasseFinal = statusClasseBase.replace(/_/g, "");
-        const statusTextoDisplay = (servico.status || "DESCONHECIDO").replace(
-          "_",
-          " "
-        );
-        detalheStatus.innerHTML = `<span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span>`;
+        const statusCls = (servico.status || "desconhecido").toLowerCase();
+        const statusTxt = (servico.status || "DESCONHECIDO").replace(/_/g, " ");
+        detalheStatus.innerHTML = `<span class="status-badge status-${statusCls}">${statusTxt}</span>`;
+      }
+
+      if (detalhePrioridade) {
+        const prioridade = servico.prioridade || "MEDIA";
+        const prioridadeClasse = `prioridade-${prioridade.toLowerCase()}`;
+        detalhePrioridade.innerHTML = `<span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span>`;
       }
 
       if (detalheMotivo)
@@ -210,76 +195,43 @@ document.addEventListener("DOMContentLoaded", () => {
           servico.horario_inicio
         )} às ${formatarHoraSimples(servico.horario_fim)}`;
 
-      if (servico.status === "CONCLUIDO") {
-        if (detalheDataConclusao)
-          detalheDataConclusao.textContent = formatarDataSimples(
-            servico.data_conclusao
-          );
-        if (detalheHoraConclusao)
-          detalheHoraConclusao.textContent = formatarHoraSimples(
-            servico.horario_fim
-          );
-        if (detalheObsConclusao)
-          detalheObsConclusao.textContent =
-            servico.observacoes_conclusao || "Nenhuma";
-        secaoDetalhesConclusao.classList.remove("d-none");
-      } else {
-        secaoDetalhesConclusao.classList.add("d-none");
-      }
-
       if (listaAnexosServicoPagina && secaoAnexosServico) {
         listaAnexosServicoPagina.innerHTML = "";
         const anexosGerais = servico.anexos.filter(
           (anx) => anx.categoria_anexo !== "ANEXO_CONCLUSAO"
         );
-
         if (anexosGerais && anexosGerais.length > 0) {
           anexosGerais.forEach((anexo) => {
             const card = createAnexoCard(anexo);
             listaAnexosServicoPagina.appendChild(card);
           });
-          secaoAnexosServico.classList.remove("d-none");
-        } else {
-          listaAnexosServicoPagina.innerHTML =
-            "<p class='text-muted'>Nenhum anexo geral para este serviço.</p>";
-          secaoAnexosServico.classList.remove("d-none");
+          secaoAnexosServico.classList.remove("hidden");
         }
       }
 
-      renderizarItensDeEscopo(
-        servico.itens_escopo || [],
-        servico.inspecoes_vinculadas || []
-      );
+      renderizarItensDeEscopo(servico.itens_escopo || []);
 
-      loadingIndicator.classList.add("d-none");
-      conteudoDetalhesServico.classList.remove("d-none");
+      loadingIndicator.classList.add("hidden");
+      conteudoDetalhesServico.classList.remove("hidden");
       if (btnEditarServicoPagina) btnEditarServicoPagina.disabled = false;
     } catch (error) {
-      loadingIndicator.classList.add("d-none");
-      if (error.status === 403) {
-        erroCarregamento.textContent =
-          error.message || "Acesso negado a este serviço.";
-      } else {
-        erroCarregamento.textContent = `Erro ao carregar detalhes do serviço: ${
-          error.message || "Erro desconhecido"
-        }`;
-      }
-      erroCarregamento.classList.remove("d-none");
+      loadingIndicator.classList.add("hidden");
+      erroCarregamento.textContent = `Erro ao carregar detalhes do serviço: ${
+        error.message || "Erro desconhecido"
+      }`;
+      erroCarregamento.classList.remove("hidden");
       if (btnEditarServicoPagina) btnEditarServicoPagina.disabled = true;
     }
   }
 
-  function renderizarItensDeEscopo(itensEscopo, inspecoesVinculadas) {
+  function renderizarItensDeEscopo(itensEscopo) {
     if (!containerItensEscopo || !secaoItensEscopo) return;
-
     containerItensEscopo.innerHTML = "";
-
     if (itensEscopo.length === 0) {
-      secaoItensEscopo.classList.add("d-none");
+      secaoItensEscopo.classList.add("hidden");
       return;
     }
-
-    secaoItensEscopo.classList.remove("d-none");
+    secaoItensEscopo.classList.remove("hidden");
 
     itensEscopo.forEach((item) => {
       const itemCard = document.createElement("div");
@@ -289,83 +241,59 @@ document.addEventListener("DOMContentLoaded", () => {
         .toLowerCase()
         .replace("_", "");
       const statusTexto = (item.status_item_escopo || "PENDENTE").replace(
-        "_",
+        /_/g,
         " "
       );
 
-      let origemHtml = "";
-      if (item.inspecao_item_id) {
-        origemHtml = `<div class="item-origin">Origem: Inspeção #${
-          item.origem_inspecao_formulario_num || item.origem_inspecao_id
-        } - Item ${item.inspecao_item_num}</div>`;
-      }
+      let origemHtml = item.inspecao_item_id
+        ? `<div class="item-origin">Origem: Inspeção #${
+            item.origem_inspecao_formulario_num || item.origem_inspecao_id
+          }</div>`
+        : '<div class="item-origin">Origem: Serviço Avulso</div>';
 
-      let equipamentosHtml = "";
-      if (
-        item.equipamentos_associados &&
-        item.equipamentos_associados.length > 0
-      ) {
-        equipamentosHtml = item.equipamentos_associados
-          .map(
-            (eq) =>
-              `<span class="badge bg-secondary me-1">${
-                eq.tag || "ID " + eq.equipamento_id
-              }</span>`
-          )
-          .join("");
-      } else {
-        equipamentosHtml = "<span>Nenhum</span>";
-      }
-
-      let fotosHtml = "";
-      const inspecaoOrigem = inspecoesVinculadas.find(
-        (insp) => insp.inspecao_id === item.origem_inspecao_id
-      );
-      if (inspecaoOrigem && inspecaoOrigem.anexos_itens_inspecao) {
-        const anexosDoItem = inspecaoOrigem.anexos_itens_inspecao.filter(
-          (anx) => anx.item_num_associado == item.inspecao_item_num
-        );
-        if (anexosDoItem.length > 0) {
-          fotosHtml =
-            '<p class="mt-2 mb-1"><strong>Evidências da Inspeção:</strong></p><div class="d-flex flex-wrap gap-2 item-photos-container">';
-          anexosDoItem.forEach((anexo) => {
-            fotosHtml += `<img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" data-src="${anexo.caminho_servidor}" title="${anexo.nome_original}" />`;
-          });
-          fotosHtml += "</div>";
-        }
+      let anexosHtml = "";
+      if (item.anexos && item.anexos.length > 0) {
+        anexosHtml += '<div class="item-anexos-container">';
+        item.anexos.forEach((anexo) => {
+          const isImage =
+            anexo.caminho_servidor &&
+            anexo.caminho_servidor.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null;
+          if (isImage) {
+            const anexoElement = document.createElement("img");
+            anexoElement.src = anexo.caminho_servidor;
+            anexoElement.alt = anexo.nome_original;
+            anexoElement.className = "item-anexo-img";
+            anexoElement.title = anexo.nome_original;
+            anexoElement.onclick = () =>
+              openImageLightbox(anexo.caminho_servidor);
+            anexosHtml += anexoElement.outerHTML;
+          }
+        });
+        anexosHtml += "</div>";
       }
 
       itemCard.innerHTML = `
-            <div class="item-description">${item.descricao_item_servico}</div>
+            <p class="item-description">${item.descricao_item_servico}</p>
             ${origemHtml}
-            ${
-              item.observacao_especifica_servico
-                ? `<p class="small text-muted mt-1 mb-2"><em>Obs. Serviço: ${item.observacao_especifica_servico}</em></p>`
-                : ""
-            }
             <div class="item-details-grid">
-                <div class="item-supervisor">
-                    <strong>Encarregado:</strong>
-                    <span>${
-                      item.encarregado_item_nome || "Nenhum designado"
-                    }</span>
-                </div>
-                <div class="item-status">
-                    <strong>Status do Item:</strong>
-                    <span class="status-badge status-${statusClasse}">${statusTexto}</span>
-                </div>
-                <div class="item-equipment">
-                    <strong>Equipamentos Associados:</strong>
-                    <div>${equipamentosHtml}</div>
-                </div>
+                <div><strong>Equipamento:</strong><span>${
+                  item.catalogo_equipamento_nome || "N/A"
+                }</span></div>
+                <div><strong>TAG Alvo:</strong><span>${
+                  item.tag_equipamento_alvo || "N/A"
+                }</span></div>
+                <div><strong>Defeito:</strong><span>${
+                  item.defeito_codigo
+                    ? `${item.defeito_codigo} - ${item.defeito_descricao}`
+                    : "N/A"
+                }</span></div>
+                <div><strong>Encarregado:</strong><span>${
+                  item.encarregado_item_nome || "Nenhum designado"
+                }</span></div>
+                <div><strong>Status do Item:</strong><span class="status-badge status-${statusClasse}">${statusTexto}</span></div>
             </div>
-            ${fotosHtml}
+            ${anexosHtml}
         `;
-
-      itemCard.querySelectorAll(".item-photos-container img").forEach((img) => {
-        img.addEventListener("click", () => openImageLightbox(img.dataset.src));
-      });
-
       containerItensEscopo.appendChild(itemCard);
     });
   }
