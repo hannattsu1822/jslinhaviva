@@ -181,17 +181,28 @@
               ></strong>
             </p>
             <div class="form-group">
-              <label for="arquivosAnexoPosterior"
-                >Selecionar arquivos (máx. 5):</label
-              >
+              <label>Selecionar arquivos (máx. 5):</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAdicionarAnexoPosterior"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Procurar Arquivos
+                </button>
+              </div>
               <input
                 type="file"
                 id="arquivosAnexoPosterior"
                 name="anexosServico"
-                class="form-control"
+                class="visually-hidden"
                 multiple
-                required
               />
+              <div
+                id="previewAnexosPosterior"
+                class="anexos-preview-container"
+              ></div>
             </div>
             <div class="form-group">
               <label for="descricaoAnexoPosterior"
@@ -218,6 +229,23 @@
         </form>
       </div>
     </div>
+
+    <template id="templateAnexoPreviewPosterior">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+          <span class="file-size"></span>
+        </div>
+        <button type="button" class="btn-remove" title="Remover anexo">
+          ×
+        </button>
+      </div>
+    </template>
+
     <script src="/scripts/subestacoes/servicos-concluidos.js"></script>
   </body>
 </html>

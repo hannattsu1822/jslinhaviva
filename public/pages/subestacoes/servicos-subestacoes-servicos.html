@@ -193,13 +193,27 @@
             </div>
             <div class="form-group">
               <label>Anexos de Conclusão (Opcional):</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAnexarConclusao"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Anexar Arquivos
+                </button>
+              </div>
               <input
                 type="file"
                 id="confirmacaoAnexosInput"
                 name="anexos_conclusao_servico"
-                class="form-control"
+                class="visually-hidden"
                 multiple
               />
+              <div
+                id="previewAnexosConclusao"
+                class="anexos-preview-container"
+              ></div>
             </div>
           </form>
         </div>
@@ -255,6 +269,23 @@
         </div>
       </div>
     </div>
+
+    <template id="templateAnexoPreviewConclusao">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+          <span class="file-size"></span>
+        </div>
+        <button type="button" class="btn-remove" title="Remover anexo">
+          ×
+        </button>
+      </div>
+    </template>
+
     <script src="/scripts/subestacoes/servicos-subestacoes-servicos.js"></script>
   </body>
 </html>
