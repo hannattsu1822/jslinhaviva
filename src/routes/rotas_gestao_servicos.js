@@ -153,6 +153,8 @@ router.post(
         responsavel_matricula = "pendente",
         maps,
         ordem_obra,
+        descricao_servico,
+        observacoes,
       } = req.body;
 
       if (!data_prevista_execucao || !subestacao || !desligamento) {
@@ -181,8 +183,8 @@ router.post(
 
       if (tipo_processo === "Emergencial") {
         const [result] = await connection.query(
-          `INSERT INTO processos (tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+          `INSERT INTO processos (tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, descricao_servico, observacoes, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
           [
             tipo_processo,
             data_prevista_execucao,
@@ -195,6 +197,8 @@ router.post(
             responsavel_matricula,
             maps || null,
             ordem_obra || null,
+            descricao_servico || null,
+            observacoes || null,
           ]
         );
         insertedId = result.insertId;
@@ -220,8 +224,8 @@ router.post(
         }
         processoParaAuditoria = processo.trim();
         const [result] = await connection.query(
-          `INSERT INTO processos (processo, tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+          `INSERT INTO processos (processo, tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, descricao_servico, observacoes, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
           [
             processoParaAuditoria,
             tipo_processo,
@@ -235,6 +239,8 @@ router.post(
             responsavel_matricula,
             maps || null,
             ordem_obra || null,
+            descricao_servico || null,
+            observacoes || null,
           ]
         );
         insertedId = result.insertId;
@@ -417,6 +423,8 @@ router.put(
         maps,
         responsavel_matricula,
         ordem_obra,
+        descricao_servico,
+        observacoes,
       } = req.body;
 
       if (!subestacao) {
@@ -453,7 +461,8 @@ router.put(
 
       await connection.query(
         `UPDATE processos SET subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
-             hora_inicio = ?, hora_fim = ?, maps = ?, responsavel_matricula = ?, ordem_obra = ? WHERE id = ?`,
+             hora_inicio = ?, hora_fim = ?, maps = ?, responsavel_matricula = ?, ordem_obra = ?,
+             descricao_servico = ?, observacoes = ? WHERE id = ?`,
         [
           subestacao,
           alimentador || null,
@@ -464,6 +473,8 @@ router.put(
           maps || null,
           responsavel_matricula || "pendente",
           ordem_obra || null,
+          descricao_servico || null,
+          observacoes || null,
           servicoId,
         ]
       );
@@ -876,7 +887,7 @@ router.post(
       }
 
       await connection.commit();
-      limparArquivosTemporarios(filePathsParaLimpeza); // Limpa os não processados ou restantes
+      limparArquivosTemporarios(filePathsParaLimpeza);
 
       await registrarAuditoria(
         matricula,
