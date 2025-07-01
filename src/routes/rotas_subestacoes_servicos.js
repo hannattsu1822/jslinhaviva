@@ -163,7 +163,7 @@ router.get(
   autenticar,
   async (req, res) => {
     try {
-      const cargosParaEncarregados = ["Encarregado", "Inspetor"];
+      const cargosParaEncarregados = ["Encarregado", "Inspetor", "Técnico"];
       const placeholders = cargosParaEncarregados.map(() => "?").join(",");
       const query = `SELECT id, nome FROM users WHERE cargo IN (${placeholders}) ORDER BY nome ASC`;
       const [rows] = await promisePool.query(query, cargosParaEncarregados);
