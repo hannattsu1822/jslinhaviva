@@ -206,6 +206,28 @@ async function carregarDetalhesServico() {
       }
     }
 
+    const registroInfoCard = document.getElementById("registro-info-card");
+    const descricaoElement = document.getElementById("servico-descricao");
+    const observacoesRegistroElement = document.getElementById(
+      "servico-observacoes-registro"
+    );
+
+    if (registroInfoCard && descricaoElement && observacoesRegistroElement) {
+      const temDescricao =
+        data.descricao_servico && data.descricao_servico.trim() !== "";
+      const temObservacoes = data.observacoes && data.observacoes.trim() !== "";
+
+      if (temDescricao || temObservacoes) {
+        registroInfoCard.style.display = "block";
+        descricaoElement.textContent =
+          data.descricao_servico || "Nenhuma descrição informada.";
+        observacoesRegistroElement.textContent =
+          data.observacoes || "Nenhuma observação informada.";
+      } else {
+        registroInfoCard.style.display = "none";
+      }
+    }
+
     const dataConclusaoRow = document.getElementById("data-conclusao-row");
     const finalizacaoInfoContainer = document.getElementById(
       "finalizacao-info-container"

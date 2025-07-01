@@ -196,9 +196,10 @@ async function carregarDadosServico(servicoId) {
     document.getElementById("chaveMontante").value = data.chave_montante || "";
     document.getElementById("desligamento").value = data.desligamento || "NAO";
     document.getElementById("maps").value = data.maps || "";
-
-    // <<< LINHA ADICIONADA PARA PREENCHER ORDEM DE OBRA >>>
     document.getElementById("ordem_obra").value = data.ordem_obra || "";
+    document.getElementById("descricao_servico").value =
+      data.descricao_servico || "";
+    document.getElementById("observacoes").value = data.observacoes || "";
 
     // Carregar e definir responsável
     const selectResponsavel = document.getElementById("servico-responsavel");
@@ -372,19 +373,18 @@ async function salvarAlteracoes(servicoId) {
     document.getElementById("desligamento").value
   );
   formData.append("maps", document.getElementById("maps").value.trim());
-
-  // <<< LINHA ADICIONADA PARA ENVIAR ORDEM DE OBRA >>>
   formData.append("ordem_obra", document.getElementById("ordem_obra").value);
+  formData.append(
+    "descricao_servico",
+    document.getElementById("descricao_servico").value
+  );
+  formData.append("observacoes", document.getElementById("observacoes").value);
 
   const selectResponsavel = document.getElementById("servico-responsavel");
   if (selectResponsavel && selectResponsavel.value) {
     formData.append("responsavel_matricula", selectResponsavel.value);
   } else {
-    // Garante que, se nenhum responsável for selecionado (e o campo estiver presente),
-    // seja enviado um valor padrão, como 'pendente', ou deixe de enviar se a API trata isso.
-    // Se o campo de responsável não é editável aqui, esta lógica pode ser removida.
-    // Mas como o select é populado, é bom tratar o caso de 'nada selecionado'.
-    formData.append("responsavel_matricula", "pendente"); // Ou como a API espera um valor default
+    formData.append("responsavel_matricula", "pendente");
   }
 
   if (document.getElementById("desligamento").value === "SIM") {

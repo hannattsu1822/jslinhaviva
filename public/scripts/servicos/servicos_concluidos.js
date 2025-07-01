@@ -9,6 +9,7 @@ const elementos = {
     subestacao: null,
     alimentador: null,
     data: null,
+    status: null,
   },
 };
 
@@ -39,6 +40,7 @@ function inicializarElementos() {
     elementos.filtros.alimentador =
       document.getElementById("filtroAlimentador");
     elementos.filtros.data = document.getElementById("filtroData");
+    elementos.filtros.status = document.getElementById("filtroStatus");
 
     if (!elementos.tabela)
       throw new Error("Elemento tabela-servicos não encontrado");
@@ -85,6 +87,12 @@ function configurarEventListeners() {
     }
     if (elementos.filtros.data) {
       elementos.filtros.data.addEventListener(
+        "change",
+        aplicarFiltrosEAtualizar
+      );
+    }
+    if (elementos.filtros.status) {
+      elementos.filtros.status.addEventListener(
         "change",
         aplicarFiltrosEAtualizar
       );
@@ -177,11 +185,14 @@ function obterServicosFiltrados() {
   const filtroAlimentador =
     elementos.filtros.alimentador?.value.toLowerCase() || "";
   const filtroDataSelecionada = elementos.filtros.data?.value || "";
+  const filtroStatus = elementos.filtros.status?.value || "";
 
   return servicosData.filter((servico) => {
     const processo = servico.processo?.toString().toLowerCase() || "";
     const subestacao = servico.subestacao?.toString().toLowerCase() || "";
     const alimentador = servico.alimentador?.toString().toLowerCase() || "";
+
+    const matchesStatus = !filtroStatus || servico.status === filtroStatus;
 
     let matchesData = true;
     if (filtroDataSelecionada) {
@@ -237,7 +248,8 @@ function obterServicosFiltrados() {
       processo.includes(filtroProcesso) &&
       subestacao.includes(filtroSubestacao) &&
       alimentador.includes(filtroAlimentador) &&
-      matchesData
+      matchesData &&
+      matchesStatus
     );
   });
 }
