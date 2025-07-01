@@ -18,6 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalConfirmacaoGeralEl = document.getElementById(
     "modalConfirmacaoGeral"
   );
+  const modalAnexosTermografiaItemEl = document.getElementById(
+    "modalAnexosTermografiaItem"
+  );
 
   const formAnexosEscritorio = document.getElementById("formAnexosEscritorio");
   const inspecaoIdAnexoEscritorioInput = document.getElementById(
@@ -56,9 +59,13 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnConfirmarAcaoGeral"
   );
 
+  // Removido referências ao modal de termografia que não são mais necessárias aqui
+  // ...
+
   let idParaAcao = null;
   let callbackAcaoConfirmada = null;
   let filesToUpload = [];
+  // Removido termografiaFilesToUpload e inspecaoItensCache pois não são mais usados aqui
 
   function showModal(modalEl) {
     if (modalEl) {
@@ -207,6 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let btnExcluirHtml = `<button class="btn text-danger btn-excluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Excluir Inspeção"><span class="material-symbols-outlined">delete</span></button>`;
 
+      // *** CORREÇÃO AQUI: Botão de termografia removido ***
       tr.innerHTML = `
         <td class="text-center">${formNumId}</td>
         <td>${insp.processo || "-"}</td>
@@ -236,6 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "click",
         () => abrirModalAnexosEscritorio(insp.id)
       );
+      // Removido o event listener do botão de termografia
       tr.querySelector(".btn-concluir-inspecao")?.addEventListener(
         "click",
         (e) =>
@@ -374,16 +383,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!formAnexosEscritorio || !inspecaoIdAnexoEscritorioInput) return;
     formAnexosEscritorio.reset();
     filesToUpload = [];
-    renderAnexoPreviews();
+    renderAnexoPreviews(filesToUpload, previewAnexosEscritorio);
     inspecaoIdAnexoEscritorioInput.value = inspecaoId;
     displayInspecaoIdAnexoEscritorio.textContent = inspecaoId;
     showModal(modalAnexosEscritorioEl);
   }
 
-  function renderAnexoPreviews() {
-    if (!previewAnexosEscritorio || !templateAnexoPreview) return;
-    previewAnexosEscritorio.innerHTML = "";
-    filesToUpload.forEach((file, index) => {
+  function renderAnexoPreviews(fileList, container) {
+    if (!container || !templateAnexoPreview) return;
+    container.innerHTML = "";
+    fileList.forEach((file, index) => {
       const previewClone = templateAnexoPreview.content.cloneNode(true);
       const previewItem = previewClone.querySelector(".anexo-preview-item");
       const imgPreview = previewClone.querySelector(".anexo-preview-img");
@@ -411,11 +420,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       removeBtn.addEventListener("click", () => {
-        filesToUpload.splice(index, 1);
-        renderAnexoPreviews();
+        fileList.splice(index, 1);
+        renderAnexoPreviews(fileList, container);
       });
 
-      previewAnexosEscritorio.appendChild(previewItem);
+      container.appendChild(previewItem);
     });
   }
 
@@ -434,7 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       filesToUpload.push(...newFiles);
-      renderAnexoPreviews();
+      renderAnexoPreviews(filesToUpload, previewAnexosEscritorio);
       event.target.value = null;
     });
   }
@@ -491,6 +500,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Removida toda a lógica do modal de termografia que estava aqui
 
   if (formFiltrosInspecoes) {
     formFiltrosInspecoes.addEventListener("submit", (event) => {
