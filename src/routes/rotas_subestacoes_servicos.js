@@ -749,7 +749,7 @@ router.get(
             cd.descricao as defeito_descricao,
             iir.inspecao_id as origem_inspecao_id,
             ins.formulario_inspecao_num as origem_inspecao_formulario_num,
-            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', anexo.id, 'nome_original', anexo.nome_original, 'caminho_servidor', anexo.caminho_servidor, 'tipo_mime', anexo.tipo_mime)) FROM servico_item_escopo_anexos anexo WHERE anexo.item_escopo_id = sie.id) as anexos_conclusao
+            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', anexo.id, 'nome_original', anexo.nome_original, 'caminho_servidor', anexo.caminho_servidor, 'tipo_mime', anexo.tipo_mime)) FROM servico_item_escopo_anexos anexo WHERE anexo.item_escopo_id = sie.id) as anexos
          FROM servico_itens_escopo sie
          LEFT JOIN catalogo_defeitos_servicos cd ON sie.catalogo_defeito_id = cd.id
          LEFT JOIN users usr_enc ON sie.encarregado_item_id = usr_enc.id
@@ -763,9 +763,7 @@ router.get(
       );
 
       servico.itens_escopo = itensEscopoRows.map((item) => {
-        item.anexos_conclusao = item.anexos_conclusao
-          ? JSON.parse(item.anexos_conclusao)
-          : [];
+        item.anexos = item.anexos ? JSON.parse(item.anexos) : [];
         return item;
       });
 
