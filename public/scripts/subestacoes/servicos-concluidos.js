@@ -29,8 +29,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const processoServicoAnexoPosteriorSpan = document.getElementById(
     "processoServicoAnexoPosterior"
   );
+  const btnAdicionarAnexoPosterior = document.getElementById(
+    "btnAdicionarAnexoPosterior"
+  );
+  const arquivosAnexoPosterior = document.getElementById(
+    "arquivosAnexoPosterior"
+  );
+  const previewAnexosPosterior = document.getElementById(
+    "previewAnexosPosterior"
+  );
+  const templateAnexoPreviewPosterior = document.getElementById(
+    "templateAnexoPreviewPosterior"
+  );
 
   let acaoConfirmadaCallback = null;
+  let anexosPosteriorTemporarios = [];
 
   function mostrarModal(modalEl) {
     if (modalEl) modalEl.classList.remove("hidden");
@@ -217,12 +230,60 @@ document.addEventListener("DOMContentLoaded", () => {
     mostrarModal(modalConfirmacaoEl);
   }
 
+  function renderAnexosPosterior() {
+    if (!previewAnexosPosterior || !templateAnexoPreviewPosterior) return;
+    previewAnexosPosterior.innerHTML = "";
+    anexosPosteriorTemporarios.forEach((file, index) => {
+      const clone = templateAnexoPreviewPosterior.content.cloneNode(true);
+      const anexoItem = clone.querySelector(".anexo-preview-item");
+      const imgPreview = anexoItem.querySelector(".anexo-preview-img");
+      const iconDefault = anexoItem.querySelector(".file-icon");
+
+      anexoItem.querySelector(".file-name").textContent = file.name;
+      anexoItem.querySelector(".file-size").textContent = `${(
+        file.size / 1024
+      ).toFixed(1)} KB`;
+
+      if (file.type.startsWith("image/")) {
+        imgPreview.src = URL.createObjectURL(file);
+        imgPreview.classList.remove("hidden");
+        iconDefault.classList.add("hidden");
+      } else {
+        imgPreview.classList.add("hidden");
+        iconDefault.classList.remove("hidden");
+      }
+
+      anexoItem.querySelector(".btn-remove").addEventListener("click", () => {
+        anexosPosteriorTemporarios.splice(index, 1);
+        renderAnexosPosterior();
+      });
+
+      previewAnexosPosterior.appendChild(clone);
+    });
+  }
+
   function abrirModalAnexar(servicoId, processo) {
     if (!modalAnexarPosteriorEl) return;
     formAnexarPosterior.reset();
+    anexosPosteriorTemporarios = [];
+    renderAnexosPosterior();
     servicoIdAnexoPosteriorInput.value = servicoId;
     processoServicoAnexoPosteriorSpan.textContent = processo;
     mostrarModal(modalAnexarPosteriorEl);
+  }
+
+  if (btnAdicionarAnexoPosterior) {
+    btnAdicionarAnexoPosterior.addEventListener("click", () => {
+      arquivosAnexoPosterior.click();
+    });
+  }
+
+  if (arquivosAnexoPosterior) {
+    arquivosAnexoPosterior.addEventListener("change", (event) => {
+      anexosPosteriorTemporarios.push(...Array.from(event.target.files));
+      renderAnexosPosterior();
+      event.target.value = "";
+    });
   }
 
   if (formFiltrosServicos) {
@@ -255,15 +316,22 @@ document.addEventListener("DOMContentLoaded", () => {
     formAnexarPosterior.addEventListener("submit", async (e) => {
       e.preventDefault();
       const servicoId = servicoIdAnexoPosteriorInput.value;
-      const formData = new FormData(formAnexarPosterior);
 
-      if (
-        !formData.has("anexosServico") ||
-        formData.get("anexosServico").size === 0
-      ) {
+      if (anexosPosteriorTemporarios.length === 0) {
         alert("Por favor, selecione pelo menos um arquivo para anexar.");
         return;
       }
+
+      const formData = new FormData();
+      const descricao = document.getElementById(
+        "descricaoAnexoPosterior"
+      ).value;
+      if (descricao) {
+        formData.append("descricao_anexo", descricao);
+      }
+      anexosPosteriorTemporarios.forEach((file) => {
+        formData.append("anexosServico", file, file.name);
+      });
 
       const submitButton = formAnexarPosterior.querySelector(
         'button[type="submit"]'

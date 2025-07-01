@@ -274,14 +274,14 @@ document.addEventListener("DOMContentLoaded", () => {
           }</div>`
         : '<div class="item-origin">Origem: Serviço Avulso</div>';
 
-      let anexosConclusaoHtml = "";
-      if (item.anexos_conclusao && item.anexos_conclusao.length > 0) {
-        anexosConclusaoHtml =
+      let anexosHtml = "";
+      if (item.anexos && item.anexos.length > 0) {
+        anexosHtml =
           '<p class="item-anexos-title"><strong>Anexos de Conclusão do Item:</strong></p><div class="item-anexos-container">';
-        item.anexos_conclusao.forEach((anexo) => {
-          anexosConclusaoHtml += `<img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" class="item-anexo-img" onclick="openImageLightbox('${anexo.caminho_servidor}')" title="${anexo.nome_original}" />`;
+        item.anexos.forEach((anexo) => {
+          anexosHtml += `<img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" class="item-anexo-img" onclick="openImageLightbox('${anexo.caminho_servidor}')" title="${anexo.nome_original}" />`;
         });
-        anexosConclusaoHtml += "</div>";
+        anexosHtml += "</div>";
       }
 
       itemCard.innerHTML = `
@@ -299,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `<div class="item-obs-conclusao"><p><strong>Observações de Conclusão do Item:</strong></p><p>${item.observacoes_conclusao_item}</p></div>`
                 : ""
             }
-            ${anexosConclusaoHtml}
+            ${anexosHtml}
         `;
       containerItensEscopo.appendChild(itemCard);
     });

@@ -34,11 +34,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const confirmacaoObservacoesTextarea = document.getElementById(
     "confirmacaoObservacoesTextarea"
   );
+  const btnConfirmarAcaoServico = document.getElementById(
+    "btnConfirmarAcaoServico"
+  );
+
+  const btnAnexarConclusao = document.getElementById("btnAnexarConclusao");
   const confirmacaoAnexosInput = document.getElementById(
     "confirmacaoAnexosInput"
   );
-  const btnConfirmarAcaoServico = document.getElementById(
-    "btnConfirmarAcaoServico"
+  const previewAnexosConclusao = document.getElementById(
+    "previewAnexosConclusao"
+  );
+  const templateAnexoPreviewConclusao = document.getElementById(
+    "templateAnexoPreviewConclusao"
   );
 
   const modalGerenciarItensServicoEl = document.getElementById(
@@ -64,6 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let idServicoParaAcao = null;
   let encarregadosCache = [];
   let currentUser = null;
+  let anexosConclusaoTemporarios = [];
 
   function mostrarModal(modalEl) {
     if (modalEl) modalEl.classList.remove("hidden");
@@ -353,12 +362,61 @@ document.addEventListener("DOMContentLoaded", () => {
     mostrarModal(modalConfirmacaoServicoEl);
   }
 
+  function renderizarPreviewAnexosConclusao() {
+    if (!previewAnexosConclusao || !templateAnexoPreviewConclusao) return;
+    previewAnexosConclusao.innerHTML = "";
+    anexosConclusaoTemporarios.forEach((file, index) => {
+      const clone = templateAnexoPreviewConclusao.content.cloneNode(true);
+      const anexoItem = clone.querySelector(".anexo-preview-item");
+      const imgPreview = anexoItem.querySelector(".anexo-preview-img");
+      const iconDefault = anexoItem.querySelector(".file-icon");
+
+      anexoItem.querySelector(".file-name").textContent = file.name;
+      anexoItem.querySelector(".file-size").textContent = `${(
+        file.size / 1024
+      ).toFixed(1)} KB`;
+
+      if (file.type.startsWith("image/")) {
+        imgPreview.src = URL.createObjectURL(file);
+        imgPreview.classList.remove("hidden");
+        iconDefault.classList.add("hidden");
+      } else {
+        imgPreview.classList.add("hidden");
+        iconDefault.classList.remove("hidden");
+      }
+
+      anexoItem.querySelector(".btn-remove").addEventListener("click", () => {
+        anexosConclusaoTemporarios.splice(index, 1);
+        renderizarPreviewAnexosConclusao();
+      });
+
+      previewAnexosConclusao.appendChild(anexoItem);
+    });
+  }
+
+  if (btnAnexarConclusao) {
+    btnAnexarConclusao.addEventListener("click", () => {
+      confirmacaoAnexosInput.click();
+    });
+  }
+
+  if (confirmacaoAnexosInput) {
+    confirmacaoAnexosInput.addEventListener("change", (event) => {
+      anexosConclusaoTemporarios.push(...Array.from(event.target.files));
+      renderizarPreviewAnexosConclusao();
+      event.target.value = "";
+    });
+  }
+
   async function abrirModalConfirmacaoConcluirServico(
     servicoId,
     processoServico
   ) {
     formConfirmacaoConcluirServico.reset();
     idServicoParaAcao = servicoId;
+    anexosConclusaoTemporarios = [];
+    renderizarPreviewAnexosConclusao();
+
     const user = await fetchCurrentUser();
     const servico = await fetchData(`/api/servicos-subestacoes/${servicoId}`);
     const cargosConclusaoGeral = [
@@ -415,6 +473,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const formData = new FormData(formConfirmacaoConcluirServico);
+    anexosConclusaoTemporarios.forEach((file) => {
+      formData.append("anexos_conclusao_servico", file);
+    });
+    formData.delete("anexos_conclusao_servico_input_placeholder"); // Remover se houver um campo de input com nome diferente
+
     btnConfirmarAcaoServico.disabled = true;
     try {
       await fetchData(
