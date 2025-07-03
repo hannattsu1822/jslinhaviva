@@ -7,9 +7,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const detalhesContainer = document.getElementById("detalhesContainer");
   const infoGeraisContainer = document.getElementById("infoGeraisContainer");
   const obsGeraisContainer = document.getElementById("obsGeraisContainer");
+
   const checklistItemsContainer = document.getElementById(
     "checklistItemsContainer"
   );
+  const avulsaItemsContainer = document.getElementById("avulsaItemsContainer");
+
   const medicoesContainer = document.getElementById("medicoesContainer");
   const equipamentosObservadosContainer = document.getElementById(
     "equipamentosObservadosContainer"
@@ -25,45 +28,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const lightboxImage = document.getElementById("lightboxImage");
   const lightboxCloseBtn = imageLightboxEl.querySelector(".btn-close-lightbox");
 
-  // --- Elementos do Modal de Termografia ---
-  const modalTermografiaEl = document.getElementById(
-    "modalAnexosTermografiaItem"
-  );
-  const formTermografia = document.getElementById("formAnexosTermografiaItem");
-  const termografiaInspecaoIdInput = document.getElementById(
-    "termografiaInspecaoId"
-  );
-  const termografiaItemChecklistIdInput = document.getElementById(
-    "termografiaItemChecklistId"
-  );
-  const displayTermografiaInspecaoId = document.getElementById(
-    "displayTermografiaInspecaoId"
-  );
-  const displayTermografiaItemDescricao = document.getElementById(
-    "displayTermografiaItemDescricao"
-  );
-  const termografiaEspecificacaoSelectContainer = document.getElementById(
-    "termografiaEspecificacaoSelectContainer"
-  );
-  const termografiaEspecificacaoSelect = document.getElementById(
-    "termografiaEspecificacaoSelect"
-  );
+  const modalTermografia = document.getElementById("modalTermografia");
   const btnAdicionarAnexoTermografia = document.getElementById(
     "btnAdicionarAnexoTermografia"
   );
-  const arquivosTermografiaItemInput = document.getElementById(
-    "arquivosTermografiaItem"
+  const arquivosTermografiaInput = document.getElementById(
+    "arquivosTermografiaInput"
   );
-  const previewAnexosTermograficosItem = document.getElementById(
-    "previewAnexosTermograficosItem"
+  const previewAnexosTermografia = document.getElementById(
+    "previewAnexosTermografia"
   );
-  const btnSalvarAnexoTermograficoItem = document.getElementById(
-    "btnSalvarAnexoTermograficoItem"
+  const btnSalvarAnexosTermografia = document.getElementById(
+    "btnSalvarAnexosTermografia"
   );
   const templateAnexoPreview = document.getElementById("templateAnexoPreview");
 
   let termografiaFilesToUpload = [];
-  let inspecaoCompletaCache = null;
 
   function getInspecaoIdFromUrl() {
     const pathParts = window.location.pathname.split("/");
@@ -71,20 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
       pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
     return id && !isNaN(parseInt(id, 10)) ? parseInt(id, 10) : null;
   }
-
-  function showModal(modalEl) {
-    if (modalEl) modalEl.style.display = "flex";
-  }
-
-  function hideModal(modalEl) {
-    if (modalEl) modalEl.style.display = "none";
-  }
-
-  modalTermografiaEl
-    .querySelectorAll(".btn-close, .btn-close-modal")
-    .forEach((btn) =>
-      btn.addEventListener("click", () => hideModal(modalTermografiaEl))
-    );
 
   function showLightbox(imageUrl) {
     if (!imageLightboxEl || !lightboxImage) return;
@@ -101,40 +67,52 @@ document.addEventListener("DOMContentLoaded", () => {
   imageLightboxEl.addEventListener("click", (e) => {
     if (e.target === imageLightboxEl) hideLightbox();
   });
-  lightboxCloseBtn.addEventListener("click", hideLightbox);
+  if (lightboxCloseBtn)
+    lightboxCloseBtn.addEventListener("click", hideLightbox);
 
-  async function fetchData(url) {
+  async function fetchData(url, options = {}) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, options);
       if (!response.ok) {
         const errorData = await response
           .json()
           .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
         throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
       }
-      return response.json();
+      return response.status === 204 ? null : await response.json();
     } catch (error) {
       console.error("Erro ao buscar dados:", error);
       throw error;
     }
   }
 
+  async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append("anexo", file);
+    const response = await fetch("/api/inspecoes/upload-temporario", {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) throw new Error("Falha no upload do arquivo.");
+    return response.json();
+  }
+
   function renderAnexos(anexos, title) {
     if (!anexos || anexos.length === 0) return "";
-
     let anexosHtml = title ? `<h4 class="anexos-title">${title}</h4>` : "";
     anexosHtml += `<div class="anexos-container">`;
-
     anexos.forEach((anexo) => {
       if (!anexo || !anexo.caminho_servidor) return;
 
-      const isImage = anexo.tipo_mime && anexo.tipo_mime.startsWith("image/");
+      const isImage =
+        anexo.caminho_servidor.match(/\.(jpeg|jpg|gif|png|webp|heic|heif)$/i) !=
+        null;
       const anexoTitle = anexo.descricao_anexo || anexo.nome_original;
 
       if (isImage) {
         anexosHtml += `
           <div class="anexo-item" data-src="${anexo.caminho_servidor}" title="${anexoTitle}">
-            <img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}">
+            <img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" loading="lazy">
           </div>`;
       } else {
         anexosHtml += `
@@ -144,7 +122,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </a>`;
       }
     });
-
     anexosHtml += `</div>`;
     return anexosHtml;
   }
@@ -156,7 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusTexto = (
       inspecaoInfo.status_inspecao || "DESCONHECIDO"
     ).replace(/_/g, " ");
-
     infoGeraisContainer.innerHTML = `
       <div class="detail-card">
         <h2 class="detail-card-header">
@@ -165,40 +141,30 @@ document.addEventListener("DOMContentLoaded", () => {
         </h2>
         <div class="detail-card-body">
           <div class="info-grid">
-            <div class="info-item">
-              <strong>Nº Formulário:</strong>
-              <p>${inspecaoInfo.formulario_inspecao_num || inspecaoInfo.id}</p>
-            </div>
-            <div class="info-item">
-              <strong>Processo:</strong>
-              <p>${inspecaoInfo.processo || "N/A"}</p>
-            </div>
-            <div class="info-item">
-              <strong>Subestação:</strong>
-              <p>${inspecaoInfo.subestacao_sigla} - ${
-      inspecaoInfo.subestacao_nome
-    }</p>
-            </div>
-            <div class="info-item">
-              <strong>Responsável:</strong>
-              <p>${inspecaoInfo.responsavel_nome}</p>
-            </div>
-            <div class="info-item">
-              <strong>Data Avaliação:</strong>
-              <p>${inspecaoInfo.data_avaliacao_fmt}</p>
-            </div>
-            <div class="info-item">
-              <strong>Horário:</strong>
-              <p>${inspecaoInfo.hora_inicial.substring(0, 5)} ${
+            <div class="info-item"><strong>Nº Formulário:</strong><p>${
+              inspecaoInfo.formulario_inspecao_num || inspecaoInfo.id
+            }</p></div>
+            <div class="info-item"><strong>Processo:</strong><p>${
+              inspecaoInfo.processo || "N/A"
+            }</p></div>
+            <div class="info-item"><strong>Subestação:</strong><p>${
+              inspecaoInfo.subestacao_sigla
+            } - ${inspecaoInfo.subestacao_nome}</p></div>
+            <div class="info-item"><strong>Responsável:</strong><p>${
+              inspecaoInfo.responsavel_nome
+            }</p></div>
+            <div class="info-item"><strong>Data Avaliação:</strong><p>${
+              inspecaoInfo.data_avaliacao_fmt
+            }</p></div>
+            <div class="info-item"><strong>Horário:</strong><p>${inspecaoInfo.hora_inicial.substring(
+              0,
+              5
+            )} ${
       inspecaoInfo.hora_final
         ? " às " + inspecaoInfo.hora_final.substring(0, 5)
         : ""
-    }</p>
-            </div>
-            <div class="info-item">
-              <strong>Status:</strong>
-              <p><span class="status-badge status-${statusClasse}">${statusTexto}</span></p>
-            </div>
+    }</p></div>
+            <div class="info-item"><strong>Status:</strong><p><span class="status-badge status-${statusClasse}">${statusTexto}</span></p></div>
           </div>
         </div>
       </div>`;
@@ -222,81 +188,112 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderChecklist(inspecaoCompleta) {
-    const { itens, anexos, ...inspecaoInfo } = inspecaoCompleta;
+    const { id: inspecaoId, itens, anexos } = inspecaoCompleta;
     const gruposDeItens = itens.reduce((acc, item) => {
       const grupo = item.nome_grupo || "Itens Diversos";
       (acc[grupo] = acc[grupo] || []).push(item);
       return acc;
     }, {});
-
-    let html = `
-      <div class="detail-card">
-        <h2 class="detail-card-header">
-          <span class="material-symbols-outlined">checklist</span>
-          Itens do Checklist
-        </h2>
-        <div class="detail-card-body">`;
-
+    let html = `<div class="detail-card"><h2 class="detail-card-header"><span class="material-symbols-outlined">checklist</span>Itens do Checklist</h2><div class="detail-card-body">`;
     let itemCounter = 1;
     Object.entries(gruposDeItens).forEach(([grupoNome, itensDoGrupo]) => {
-      html += `<div class="checklist-group">
-                 <h3 class="checklist-group-header">${grupoNome}</h3>`;
+      html += `<div class="checklist-group"><h3 class="checklist-group-header">${grupoNome}</h3>`;
       itensDoGrupo.forEach((item) => {
-        html += `
-          <div class="checklist-item">
-            <div class="checklist-item-content">
-              <p class="checklist-item-header">
-                ${itemCounter++}. ${item.descricao_item}
-                <span class="avaliacao-badge ${item.avaliacao.toLowerCase()}">${
+        html += `<div class="checklist-item">
+                    <div class="checklist-item-content">
+                        <p class="checklist-item-header">
+                            <span>${itemCounter++}. ${
+          item.descricao_item
+        }</span>
+                            <span class="avaliacao-badge ${item.avaliacao.toLowerCase()}">${
           item.avaliacao
         }</span>
-              </p>`;
-
-        if (item.observacao_item) {
-          html += `<p class="item-observation">${item.observacao_item}</p>`;
-        }
+                        </p>`;
 
         const anexosGeraisDoItem = anexos.filter(
           (a) =>
-            a.item_resposta_id === item.resposta_id &&
-            !a.item_especificacao_id &&
-            a.categoria_anexo === "ITEM_ANEXO"
+            a.item_resposta_id === item.resposta_id && !a.item_especificacao_id
         );
-        html += renderAnexos(anexosGeraisDoItem);
+
+        html += `<div class="checklist-item-details">`;
+        if (item.observacao_item) {
+          html += `<p class="item-observation">${item.observacao_item}</p>`;
+        }
+        if (anexosGeraisDoItem.length > 0) {
+          html += renderAnexos(anexosGeraisDoItem, "Anexos Gerais do Item");
+        }
 
         if (item.especificacoes && item.especificacoes.length > 0) {
           item.especificacoes.forEach((spec) => {
             const anexosDaEspecificacao = anexos.filter(
               (a) => a.item_especificacao_id === spec.id
             );
-            html += `
-              <div class="especificacao-block">
-                <p><strong>Equipamento Específico:</strong> ${
-                  spec.descricao_equipamento
-                }</p>
-                ${
-                  spec.observacao
-                    ? `<p><strong>Obs:</strong> ${spec.observacao}</p>`
-                    : ""
-                }
-                ${renderAnexos(anexosDaEspecificacao)}
-              </div>`;
+            html += `<div class="especificacao-block">
+                        <div class="especificacao-block-content">
+                            <p><strong>Equipamento Específico:</strong> ${
+                              spec.descricao_equipamento
+                            }</p>
+                            ${
+                              spec.observacao
+                                ? `<p><strong>Obs:</strong> ${spec.observacao}</p>`
+                                : ""
+                            }
+                            ${renderAnexos(anexosDaEspecificacao)}
+                        </div>
+                        <button class="btn btn-sm btn-add-termografia" title="Adicionar Termografia para ${
+                          spec.descricao_equipamento
+                        }" data-inspecao-id="${inspecaoId}" data-item-id="${
+              item.item_checklist_id
+            }" data-especificacao-id="${spec.id}" data-item-desc="${
+              spec.descricao_equipamento
+            }">
+                            <span class="material-symbols-outlined">local_fire_department</span>
+                        </button>
+                     </div>`;
           });
         }
-        html += `</div>`; // Fim de .checklist-item-content
-        html += `
-            <div class="checklist-item-actions">
-              <button class="btn btn-sm btn-add-termografia" data-inspecao-id="${inspecaoInfo.id}" data-item-id="${item.item_checklist_id}" title="Anexar Termografia">
-                <span class="material-symbols-outlined">colorize</span>
-              </button>
-            </div>
-          </div>`; // Fim de .checklist-item
+        html += `</div></div>`;
+        html += `<div class="checklist-item-actions">
+                    <button class="btn btn-sm btn-add-termografia" title="Adicionar Termografia para o item geral" data-inspecao-id="${inspecaoId}" data-item-id="${item.item_checklist_id}" data-item-desc="${item.descricao_item}">
+                        <span class="material-symbols-outlined">local_fire_department</span>
+                    </button>
+                 </div></div>`;
       });
       html += `</div>`;
     });
-
     html += `</div></div>`;
     checklistItemsContainer.innerHTML = html;
+  }
+
+  function renderAvulsaItems(inspecaoCompleta) {
+    const { itens_avulsos } = inspecaoCompleta;
+    let html = `<div class="detail-card"><h2 class="detail-card-header"><span class="material-symbols-outlined">article</span>Itens da Inspeção Avulsa</h2><div class="detail-card-body">`;
+    if (!itens_avulsos || itens_avulsos.length === 0) {
+      html += "<p>Nenhum item avulso registrado para esta inspeção.</p>";
+    } else {
+      itens_avulsos.forEach((item) => {
+        html += `
+                <div class="avulsa-item-card">
+                    <div class="avulsa-item-header">
+                        <div class="avulsa-item-header-info">
+                            <p class="avulso-equipamento-tag">${
+                              item.equipamento
+                            } <span class="tag">(${item.tag})</span></p>
+                        </div>
+                        <span class="avulsa-condicao-badge ${item.condicao.toLowerCase()}">${
+          item.condicao
+        }</span>
+                    </div>
+                    <div class="avulsa-item-body">
+                        <p>${item.descricao}</p>
+                        ${renderAnexos(item.anexos)}
+                    </div>
+                </div>
+            `;
+      });
+    }
+    html += `</div></div>`;
+    avulsaItemsContainer.innerHTML = html;
   }
 
   function renderRegistrosDinamicos(
@@ -314,43 +311,28 @@ document.addEventListener("DOMContentLoaded", () => {
       container.innerHTML = "";
       return;
     }
-
-    let html = `
-      <div class="detail-card">
-        <h2 class="detail-card-header">
-          <span class="material-symbols-outlined">${icone}</span>
-          ${titulo}
-        </h2>
-        <div class="detail-card-body">`;
-
+    let html = `<div class="detail-card"><h2 class="detail-card-header"><span class="material-symbols-outlined">${icone}</span>${titulo}</h2><div class="detail-card-body">`;
     registrosFiltrados.forEach((reg) => {
       html += `<div class="registro-item-block">`;
-      if (reg.tipo_especifico) {
+      if (reg.tipo_especifico)
         html += `<p><strong>Tipo:</strong> ${reg.tipo_especifico.replace(
           /_/g,
           " "
         )}</p>`;
-      }
-      if (reg.tag_equipamento) {
+      if (reg.tag_equipamento)
         html += `<p><strong>TAG:</strong> ${reg.tag_equipamento}</p>`;
-      }
-      if (reg.valor_texto) {
+      if (reg.valor_texto)
         html += `<p><strong>Valor:</strong> ${reg.valor_texto} ${
           reg.unidade_medida || ""
         }</p>`;
-      }
-      if (reg.descricao_item) {
+      if (reg.descricao_item)
         html += `<p><strong>Observação:</strong> ${reg.descricao_item}</p>`;
-      }
-
       const anexosDoRegistro = todosAnexos.filter(
         (a) => a.registro_id === reg.id
       );
       html += renderAnexos(anexosDoRegistro);
-
       html += `</div>`;
     });
-
     html += `</div></div>`;
     container.innerHTML = html;
   }
@@ -363,7 +345,6 @@ document.addEventListener("DOMContentLoaded", () => {
       container.innerHTML = "";
       return;
     }
-
     container.innerHTML = `
       <div class="detail-card">
         <h2 class="detail-card-header">
@@ -377,8 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderizarDetalhes(inspecaoCompleta) {
-    inspecaoCompletaCache = inspecaoCompleta;
-    const { itens, registros, anexos, ...inspecaoInfo } = inspecaoCompleta;
+    const { anexos, modo_inspecao, ...inspecaoInfo } = inspecaoCompleta;
 
     if (inspecaoIdTitulo) {
       inspecaoIdTitulo.textContent = `#${
@@ -388,23 +368,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderInfoGerais(inspecaoInfo);
     renderObsGerais(inspecaoInfo.observacoes_gerais);
-    renderChecklist(inspecaoCompleta);
-    renderRegistrosDinamicos(
-      registros,
-      anexos,
-      medicoesContainer,
-      "MEDICAO",
-      "Medições de Equipamentos",
-      "rule"
-    );
-    renderRegistrosDinamicos(
-      registros,
-      anexos,
-      equipamentosObservadosContainer,
-      "EQUIPAMENTO_OBSERVADO",
-      "Equipamentos Observados",
-      "visibility"
-    );
+
+    if (modo_inspecao && modo_inspecao.toUpperCase() === "AVULSA") {
+      renderAvulsaItems(inspecaoCompleta);
+      checklistItemsContainer.innerHTML = "";
+      medicoesContainer.innerHTML = "";
+      equipamentosObservadosContainer.innerHTML = "";
+    } else {
+      renderChecklist(inspecaoCompleta);
+      renderRegistrosDinamicos(
+        inspecaoCompleta.registros,
+        anexos,
+        medicoesContainer,
+        "MEDICAO",
+        "Medições de Equipamentos",
+        "rule"
+      );
+      renderRegistrosDinamicos(
+        inspecaoCompleta.registros,
+        anexos,
+        equipamentosObservadosContainer,
+        "EQUIPAMENTO_OBSERVADO",
+        "Equipamentos Observados",
+        "visibility"
+      );
+      avulsaItemsContainer.innerHTML = "";
+    }
+
     renderAnexosContainer(
       anexos,
       anexosGeraisContainer,
@@ -426,14 +416,13 @@ document.addEventListener("DOMContentLoaded", () => {
         img.addEventListener("click", () => showLightbox(img.dataset.src));
       });
 
-    detalhesContainer
-      .querySelectorAll(".btn-add-termografia")
-      .forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          const { inspecaoId, itemId } = e.currentTarget.dataset;
-          abrirModalTermografia(inspecaoId, itemId);
-        });
-      });
+    detalhesContainer.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-add-termografia");
+      if (btn) {
+        const { inspecaoId, itemId, itemDesc, especificacaoId } = btn.dataset;
+        abrirModalTermografia(inspecaoId, itemId, itemDesc, especificacaoId);
+      }
+    });
   }
 
   async function carregarDetalhes() {
@@ -459,135 +448,151 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function abrirModalTermografia(inspecaoId, itemChecklistId) {
-    if (!modalTermografiaEl || !inspecaoCompletaCache) return;
-
-    formTermografia.reset();
+  function abrirModalTermografia(
+    inspecaoId,
+    itemId,
+    itemDesc,
+    especificacaoId = null
+  ) {
     termografiaFilesToUpload = [];
-    renderAnexoPreviewsTermografia();
-
-    const itemSelecionado = inspecaoCompletaCache.itens.find(
-      (i) => i.item_checklist_id == itemChecklistId
-    );
-    if (!itemSelecionado) {
-      alert("Item não encontrado no cache da inspeção.");
-      return;
-    }
-
-    termografiaInspecaoIdInput.value = inspecaoId;
-    termografiaItemChecklistIdInput.value = itemChecklistId;
-    displayTermografiaInspecaoId.textContent = inspecaoId;
-    displayTermografiaItemDescricao.textContent =
-      itemSelecionado.descricao_item;
-
-    termografiaEspecificacaoSelect.innerHTML = "";
-    if (
-      itemSelecionado.especificacoes &&
-      itemSelecionado.especificacoes.length > 0
-    ) {
-      termografiaEspecificacaoSelect.innerHTML =
-        '<option value="geral">Anexo Geral do Item</option>';
-      itemSelecionado.especificacoes.forEach((spec) => {
-        const option = document.createElement("option");
-        option.value = spec.id;
-        option.textContent = spec.descricao_equipamento;
-        termografiaEspecificacaoSelect.appendChild(option);
-      });
-      termografiaEspecificacaoSelectContainer.classList.remove("hidden");
-    } else {
-      termografiaEspecificacaoSelectContainer.classList.add("hidden");
-    }
-
-    showModal(modalTermografiaEl);
+    document.getElementById("termografiaInspecaoId").value = inspecaoId;
+    document.getElementById("termografiaItemId").value = itemId;
+    document.getElementById("termografiaEspecificacaoId").value =
+      especificacaoId || "";
+    document.getElementById("termografiaItemDescricao").textContent = itemDesc;
+    previewAnexosTermografia.innerHTML = "";
+    modalTermografia.classList.add("show");
   }
 
-  function renderAnexoPreviewsTermografia() {
-    previewAnexosTermograficosItem.innerHTML = "";
-    termografiaFilesToUpload.forEach((file, index) => {
+  function renderTermografiaPreviews() {
+    previewAnexosTermografia.innerHTML = "";
+    termografiaFilesToUpload.forEach((anexo, index) => {
       const clone = templateAnexoPreview.content.cloneNode(true);
-      const previewItem = clone.querySelector(".anexo-preview-item");
-      const imgPreview = previewItem.querySelector(".anexo-preview-img");
-      const iconDefault = previewItem.querySelector(
-        ".anexo-preview-icon-default"
-      );
-      const previewName = previewItem.querySelector(".anexo-name");
-      const previewSize = previewItem.querySelector(".anexo-size");
-      const removeBtn = previewItem.querySelector(".btn-remover-anexo");
+      const anexoEl = clone.querySelector(".anexo-preview-item");
 
-      previewName.textContent = file.name;
-      previewSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      const imgPreview = anexoEl.querySelector(".anexo-preview-img");
+      const iconDefault = anexoEl.querySelector(".anexo-preview-icon-default");
+      const nameEl = anexoEl.querySelector(".anexo-name");
+      const statusEl = anexoEl.querySelector(".anexo-status");
+      const removeBtn = anexoEl.querySelector(".btn-remover-anexo");
 
-      if (file.type.startsWith("image/")) {
-        imgPreview.src = URL.createObjectURL(file);
-        imgPreview.classList.remove("visually-hidden");
-        iconDefault.classList.add("visually-hidden");
+      nameEl.textContent = anexo.originalName;
+      imgPreview.src = anexo.previewUrl;
+      imgPreview.classList.remove("visually-hidden");
+      iconDefault.classList.add("visually-hidden");
+
+      if (anexo.status === "uploading") {
+        statusEl.innerHTML =
+          '<div class="loading-spinner-small"></div> Carregando...';
+        removeBtn.disabled = true;
+      } else if (anexo.status === "error") {
+        statusEl.textContent = "Falha";
+        statusEl.style.color = "red";
+        removeBtn.disabled = false;
       } else {
-        imgPreview.classList.add("visually-hidden");
-        iconDefault.classList.remove("visually-hidden");
+        statusEl.textContent = "Concluído";
+        statusEl.style.color = "green";
+        removeBtn.disabled = false;
       }
 
       removeBtn.addEventListener("click", () => {
         termografiaFilesToUpload.splice(index, 1);
-        renderAnexoPreviewsTermografia();
+        URL.revokeObjectURL(anexo.previewUrl);
+        renderTermografiaPreviews();
       });
-
-      previewAnexosTermograficosItem.appendChild(previewItem);
+      previewAnexosTermografia.appendChild(anexoEl);
     });
   }
 
-  btnAdicionarAnexoTermografia.addEventListener("click", () => {
-    arquivosTermografiaItemInput.click();
-  });
+  btnAdicionarAnexoTermografia.addEventListener("click", () =>
+    arquivosTermografiaInput.click()
+  );
 
-  arquivosTermografiaItemInput.addEventListener("change", (e) => {
-    termografiaFilesToUpload.push(...Array.from(e.target.files));
-    renderAnexoPreviewsTermografia();
+  arquivosTermografiaInput.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files);
     e.target.value = "";
+
+    const newAttachments = files.map((file) => ({
+      file,
+      originalName: file.name,
+      previewUrl: URL.createObjectURL(file),
+      status: "uploading",
+    }));
+
+    termografiaFilesToUpload.push(...newAttachments);
+    renderTermografiaPreviews();
+
+    for (const anexo of newAttachments) {
+      try {
+        const result = await uploadFile(anexo.file);
+        anexo.status = "uploaded";
+        anexo.tempFileName = result.tempFileName;
+      } catch (error) {
+        anexo.status = "error";
+      }
+      renderTermografiaPreviews();
+    }
   });
 
-  btnSalvarAnexoTermograficoItem.addEventListener("click", async () => {
-    const inspecaoId = termografiaInspecaoIdInput.value;
-    const itemChecklistId = termografiaItemChecklistIdInput.value;
-    const especificacaoId = termografiaEspecificacaoSelect.value;
-    const descricao = document.getElementById(
-      "descricaoAnexoTermograficoItem"
+  btnSalvarAnexosTermografia.addEventListener("click", async () => {
+    const inspecaoId = document.getElementById("termografiaInspecaoId").value;
+    const itemId = document.getElementById("termografiaItemId").value;
+    const especificacaoId = document.getElementById(
+      "termografiaEspecificacaoId"
     ).value;
 
-    if (termografiaFilesToUpload.length === 0) {
-      alert("Selecione pelo menos uma imagem.");
+    const uploadedFiles = termografiaFilesToUpload.filter(
+      (f) => f.status === "uploaded"
+    );
+    if (uploadedFiles.length === 0) {
+      alert(
+        "Nenhum arquivo foi carregado com sucesso. Por favor, tente novamente."
+      );
       return;
     }
 
-    const formData = new FormData();
-    formData.append("descricao_anexo_termografico", descricao);
-    formData.append("item_especificacao_id", especificacaoId);
-    termografiaFilesToUpload.forEach((file) => {
-      formData.append("fotosTermografiaItem", file);
-    });
+    const payload = {
+      anexos: uploadedFiles.map((f) => ({
+        tempFileName: f.tempFileName,
+        originalName: f.originalName,
+      })),
+    };
 
-    btnSalvarAnexoTermograficoItem.disabled = true;
-    btnSalvarAnexoTermograficoItem.innerHTML = "Salvando...";
+    if (especificacaoId) {
+      payload.item_especificacao_id = especificacaoId;
+    }
+
+    btnSalvarAnexosTermografia.disabled = true;
+    btnSalvarAnexosTermografia.innerHTML = "Salvando...";
 
     try {
-      const url = `/inspecoes-subestacoes/${inspecaoId}/item/${itemChecklistId}/anexos-termografia`;
-      const response = await fetch(url, { method: "POST", body: formData });
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Erro ao salvar." }));
-        throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
-      }
-      alert("Termografia salva com sucesso!");
-      hideModal(modalTermografiaEl);
-      carregarDetalhes(); // Recarrega os detalhes para mostrar os novos anexos
+      await fetchData(
+        `/inspecoes-subestacoes/${inspecaoId}/item/${itemId}/anexos-termografia`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      alert("Anexos de termografia salvos com sucesso!");
+      modalTermografia.classList.remove("show");
+      carregarDetalhes();
     } catch (error) {
-      alert(`Falha ao salvar: ${error.message}`);
+      alert(`Falha ao salvar anexos: ${error.message}`);
     } finally {
-      btnSalvarAnexoTermograficoItem.disabled = false;
-      btnSalvarAnexoTermograficoItem.innerHTML =
+      btnSalvarAnexosTermografia.disabled = false;
+      btnSalvarAnexosTermografia.innerHTML =
         '<span class="material-symbols-outlined">save</span> Salvar Anexos';
     }
   });
+
+  modalTermografia
+    .querySelectorAll(".btn-close, .btn-close-modal")
+    .forEach((btn) => {
+      btn.addEventListener("click", () =>
+        modalTermografia.classList.remove("show")
+      );
+    });
 
   if (btnImprimir) {
     btnImprimir.addEventListener("click", () => window.print());

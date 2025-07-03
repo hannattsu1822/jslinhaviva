@@ -18,9 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalConfirmacaoGeralEl = document.getElementById(
     "modalConfirmacaoGeral"
   );
-  const modalAnexosTermografiaItemEl = document.getElementById(
-    "modalAnexosTermografiaItem"
-  );
 
   const formAnexosEscritorio = document.getElementById("formAnexosEscritorio");
   const inspecaoIdAnexoEscritorioInput = document.getElementById(
@@ -59,13 +56,33 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnConfirmarAcaoGeral"
   );
 
-  // Removido referências ao modal de termografia que não são mais necessárias aqui
-  // ...
-
   let idParaAcao = null;
   let callbackAcaoConfirmada = null;
   let filesToUpload = [];
-  // Removido termografiaFilesToUpload e inspecaoItensCache pois não são mais usados aqui
+
+  async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append("anexo", file);
+
+    try {
+      const response = await fetch("/api/inspecoes/upload-temporario", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Erro de comunicação com o servidor." }));
+        throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Falha no upload:", error);
+      throw error;
+    }
+  }
 
   function showModal(modalEl) {
     if (modalEl) {
@@ -157,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function carregarInspecoes(params = {}) {
     if (!corpoTabelaInspecoes || !nenhumaInspecaoMsg) return;
     corpoTabelaInspecoes.innerHTML =
-      '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Carregando inspeções...</td></tr>';
+      '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Carregando inspeções...</td></tr>';
     nenhumaInspecaoMsg.style.display = "none";
 
     const queryParams = new URLSearchParams();
@@ -172,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
       popularTabelaInspecoes(inspecoes);
     } catch (error) {
       corpoTabelaInspecoes.innerHTML =
-        '<tr><td colspan="7" style="text-align: center; color: red; padding: 2rem;">Erro ao carregar inspeções.</td></tr>';
+        '<tr><td colspan="9" style="text-align: center; color: red; padding: 2rem;">Erro ao carregar inspeções.</td></tr>';
     }
   }
 
@@ -202,6 +219,12 @@ document.addEventListener("DOMContentLoaded", () => {
         insp.status_inspecao || "DESCONHECIDO"
       ).replace(/_/g, " ");
 
+      const tipoFormatado = (insp.tipo_inspecao || "N/A").replace(/_/g, " ");
+      const modoFormatado = (insp.modo_inspecao || "CHECKLIST").replace(
+        "CHECKLIST",
+        "Padrão"
+      );
+
       let btnConcluirHtml = `<button class="btn" title="Inspeção não pode ser concluída" disabled><span class="material-symbols-outlined">task_alt</span></button>`;
       if (podeConcluir) {
         btnConcluirHtml = `<button class="btn text-success btn-concluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Concluir Inspeção"><span class="material-symbols-outlined">task_alt</span></button>`;
@@ -214,11 +237,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let btnExcluirHtml = `<button class="btn text-danger btn-excluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Excluir Inspeção"><span class="material-symbols-outlined">delete</span></button>`;
 
-      // *** CORREÇÃO AQUI: Botão de termografia removido ***
       tr.innerHTML = `
         <td class="text-center">${formNumId}</td>
         <td>${insp.processo || "-"}</td>
         <td>${insp.subestacao_sigla}</td>
+        <td>${modoFormatado}</td>
+        <td>${tipoFormatado}</td>
         <td class="text-center">${dataAvaliacaoFormatada}</td>
         <td>${insp.responsavel_nome}</td>
         <td class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
@@ -226,7 +250,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <button class="btn text-info btn-ver-detalhes-inspecao" data-id="${
               insp.id
             }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-            <button class="btn text-primary btn-anexar-escritorio" data-id="${
+            <button class="btn text-primary btn-editar-inspecao" data-id="${
+              insp.id
+            }" title="Editar Inspeção"><span class="material-symbols-outlined">edit</span></button>
+            <button class="btn text-secondary btn-anexar-escritorio" data-id="${
               insp.id
             }" title="Anexar Documentos"><span class="material-symbols-outlined">attach_file</span></button>
             ${btnConcluirHtml}
@@ -240,11 +267,16 @@ document.addEventListener("DOMContentLoaded", () => {
           window.location.href = `/inspecoes-subestacoes/detalhes/${insp.id}`;
         }
       );
+      tr.querySelector(".btn-editar-inspecao")?.addEventListener(
+        "click",
+        () => {
+          window.location.href = `/pagina-checklist-inspecao-subestacao?editarId=${insp.id}`;
+        }
+      );
       tr.querySelector(".btn-anexar-escritorio")?.addEventListener(
         "click",
         () => abrirModalAnexosEscritorio(insp.id)
       );
-      // Removido o event listener do botão de termografia
       tr.querySelector(".btn-concluir-inspecao")?.addEventListener(
         "click",
         (e) =>
@@ -383,16 +415,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!formAnexosEscritorio || !inspecaoIdAnexoEscritorioInput) return;
     formAnexosEscritorio.reset();
     filesToUpload = [];
-    renderAnexoPreviews(filesToUpload, previewAnexosEscritorio);
+    renderAnexoPreviews();
     inspecaoIdAnexoEscritorioInput.value = inspecaoId;
     displayInspecaoIdAnexoEscritorio.textContent = inspecaoId;
     showModal(modalAnexosEscritorioEl);
   }
 
-  function renderAnexoPreviews(fileList, container) {
-    if (!container || !templateAnexoPreview) return;
-    container.innerHTML = "";
-    fileList.forEach((file, index) => {
+  function renderAnexoPreviews() {
+    if (!previewAnexosEscritorio || !templateAnexoPreview) return;
+    previewAnexosEscritorio.innerHTML = "";
+    filesToUpload.forEach((anexo, index) => {
       const previewClone = templateAnexoPreview.content.cloneNode(true);
       const previewItem = previewClone.querySelector(".anexo-preview-item");
       const imgPreview = previewClone.querySelector(".anexo-preview-img");
@@ -402,29 +434,41 @@ document.addEventListener("DOMContentLoaded", () => {
       const previewName = previewClone.querySelector(".anexo-name");
       const previewSize = previewClone.querySelector(".anexo-size");
       const removeBtn = previewClone.querySelector(".btn-remover-anexo");
+      const statusContainer = document.createElement("div");
+      statusContainer.className = "anexo-status";
+      previewItem.appendChild(statusContainer);
 
-      previewName.textContent = file.name;
-      previewSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      previewName.textContent = anexo.originalName;
+      previewSize.textContent = `${(anexo.file.size / 1024).toFixed(1)} KB`;
 
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          imgPreview.src = e.target.result;
-          imgPreview.classList.remove("visually-hidden");
-          iconDefault.classList.add("visually-hidden");
-        };
-        reader.readAsDataURL(file);
+      if (anexo.file.type.startsWith("image/")) {
+        imgPreview.src = anexo.previewUrl;
+        imgPreview.classList.remove("visually-hidden");
+        iconDefault.classList.add("visually-hidden");
       } else {
         imgPreview.classList.add("visually-hidden");
         iconDefault.classList.remove("visually-hidden");
       }
 
+      if (anexo.status === "uploading") {
+        statusContainer.innerHTML = '<div class="loading-spinner-small"></div>';
+        removeBtn.disabled = true;
+      } else if (anexo.status === "error") {
+        statusContainer.textContent = "Falha";
+        statusContainer.style.color = "red";
+        removeBtn.disabled = false;
+      } else if (anexo.status === "uploaded") {
+        statusContainer.textContent = "Concluído";
+        statusContainer.style.color = "green";
+        removeBtn.disabled = false;
+      }
+
       removeBtn.addEventListener("click", () => {
-        fileList.splice(index, 1);
-        renderAnexoPreviews(fileList, container);
+        filesToUpload.splice(index, 1);
+        renderAnexoPreviews();
       });
 
-      container.appendChild(previewItem);
+      previewAnexosEscritorio.appendChild(previewClone);
     });
   }
 
@@ -435,16 +479,35 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (arquivosAnexoEscritorioInput) {
-    arquivosAnexoEscritorioInput.addEventListener("change", (event) => {
+    arquivosAnexoEscritorioInput.addEventListener("change", async (event) => {
       const newFiles = Array.from(event.target.files);
       if (filesToUpload.length + newFiles.length > 5) {
         alert("Você pode anexar no máximo 5 arquivos por vez.");
         event.target.value = null;
         return;
       }
-      filesToUpload.push(...newFiles);
-      renderAnexoPreviews(filesToUpload, previewAnexosEscritorio);
+
+      const newAttachments = newFiles.map((file) => ({
+        file: file,
+        originalName: file.name,
+        previewUrl: URL.createObjectURL(file),
+        status: "uploading",
+      }));
+
+      filesToUpload.push(...newAttachments);
+      renderAnexoPreviews();
       event.target.value = null;
+
+      for (const anexo of newAttachments) {
+        try {
+          const result = await uploadFile(anexo.file);
+          anexo.status = "uploaded";
+          anexo.tempFileName = result.tempFileName;
+        } catch (error) {
+          anexo.status = "error";
+        }
+        renderAnexoPreviews();
+      }
     });
   }
 
@@ -457,18 +520,22 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("ID da Inspeção não encontrado.");
         return;
       }
-      if (filesToUpload.length === 0) {
-        alert("Selecione pelo menos um arquivo para anexar.");
+
+      const uploadedFiles = filesToUpload.filter(
+        (f) => f.status === "uploaded"
+      );
+      if (uploadedFiles.length === 0) {
+        alert("Nenhum arquivo foi carregado com sucesso para salvar.");
         return;
       }
 
-      const formData = new FormData();
-      filesToUpload.forEach((file) => {
-        formData.append("anexosEscritorio", file);
-      });
-      if (descricao) {
-        formData.append("descricao_anexo_escritorio", descricao);
-      }
+      const payload = {
+        anexos: uploadedFiles.map((f) => ({
+          tempFileName: f.tempFileName,
+          originalName: f.originalName,
+        })),
+        descricao_anexo_escritorio: descricao,
+      };
 
       const originalButtonHtml = btnSalvarAnexosEscritorio.innerHTML;
       btnSalvarAnexosEscritorio.disabled = true;
@@ -477,14 +544,22 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const response = await fetch(
           `/inspecoes-subestacoes/${inspecaoId}/anexos-escritorio`,
-          { method: "POST", body: formData }
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
         );
+
         if (!response.ok) {
           const errorData = await response
             .json()
             .catch(() => ({ message: "Erro ao salvar anexos." }));
           throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
         }
+
         const result = await response.json();
         alert(result.message || "Anexos salvos com sucesso!");
         hideModal(modalAnexosEscritorioEl);
@@ -500,8 +575,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-
-  // Removida toda a lógica do modal de termografia que estava aqui
 
   if (formFiltrosInspecoes) {
     formFiltrosInspecoes.addEventListener("submit", (event) => {
