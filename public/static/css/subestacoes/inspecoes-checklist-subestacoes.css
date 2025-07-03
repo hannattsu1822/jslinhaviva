@@ -6,6 +6,8 @@
   --c-primary-light: #e3f2fd;
   --c-success: #2e7d32;
   --c-danger: #c62828;
+  --c-info: #0288d1;
+  --c-warning: #f57c00;
   --c-secondary: #546e7a;
   --text-primary: #212529;
   --text-secondary: #5f6368;
@@ -132,7 +134,8 @@ textarea.form-control {
   gap: calc(var(--spacing-unit) / 2);
   cursor: pointer;
   text-decoration: none;
-  color: var(--text-on-dark);
+  color: #ffffff;
+  transition: all 0.2s ease-in-out;
 }
 .btn .material-symbols-outlined {
   font-size: 1.25em;
@@ -147,7 +150,6 @@ textarea.form-control {
 }
 .btn-primary:hover {
   background-color: var(--c-primary-hover);
-  border-color: var(--c-primary-hover);
 }
 .btn-success {
   background-color: var(--c-success);
@@ -156,6 +158,15 @@ textarea.form-control {
 .btn-secondary {
   background-color: var(--c-secondary);
   border-color: var(--c-secondary);
+}
+.btn-info {
+  background-color: var(--c-info);
+  border-color: var(--c-info);
+}
+.btn-warning {
+  background-color: var(--c-warning);
+  border-color: var(--c-warning);
+  color: #ffffff;
 }
 .btn-outline-secondary {
   border-color: var(--border-color);
@@ -175,6 +186,16 @@ textarea.form-control {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
+}
+
+.form-grid-avulsa {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.form-grid-avulsa .full-width {
+  grid-column: 1 / -1;
 }
 
 .checklist-grupo {
@@ -228,7 +249,7 @@ textarea.form-control {
   color: var(--text-secondary);
 }
 .item-avaliacao .btn-check:checked + .btn {
-  color: var(--text-on-dark);
+  color: #ffffff;
 }
 .item-avaliacao .btn-check:checked + .btn-n {
   background-color: var(--c-success);
@@ -247,17 +268,17 @@ textarea.form-control {
 }
 .btn-detalhes-item.anormal {
   background-color: var(--c-danger);
-  color: var(--text-on-dark);
+  color: #ffffff;
   border-color: var(--c-danger);
 }
 .btn-detalhes-item.normal {
   background-color: var(--c-success);
-  color: var(--text-on-dark);
+  color: #ffffff;
   border-color: var(--c-success);
 }
 .btn-detalhes-item.na {
   background-color: var(--c-secondary);
-  color: var(--text-on-dark);
+  color: #ffffff;
   border-color: var(--c-secondary);
 }
 .feedback-icon {
@@ -296,7 +317,8 @@ textarea.form-control {
   align-items: center;
   justify-content: center;
 }
-.modal.show {
+.modal.show,
+.modal[style*="display: flex"] {
   display: flex;
 }
 .modal-dialog {
@@ -488,4 +510,208 @@ textarea.form-control {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.modal-dialog-centered {
+  display: flex;
+  align-items: center;
+  min-height: calc(100% - 1rem);
+  margin: auto;
+}
+
+.modal-body.text-center {
+  text-align: center;
+}
+
+.modal-actions-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+  margin-top: var(--spacing-unit);
+}
+
+.modal-actions-vertical .btn {
+  padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2);
+  font-size: 1rem;
+  width: 100%;
+}
+
+.modal-actions-vertical .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-footer {
+  justify-content: center;
+}
+
+.modal-footer .btn-secondary {
+  background-color: transparent;
+  border: none;
+  color: var(--text-secondary);
+}
+.modal-footer .btn-secondary:hover {
+  background-color: #f1f1f1;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.avulso-item {
+  position: relative;
+  padding-right: calc(var(--spacing-unit) * 5);
+}
+
+.avulso-item-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.avulso-item-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.avulso-item .btn-remover-linha {
+  position: absolute;
+  top: var(--spacing-unit);
+  right: var(--spacing-unit);
+}
+
+.avulso-item-actions {
+  margin-top: var(--spacing-unit);
+  padding-top: var(--spacing-unit);
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-anexar-avulso {
+  background-color: #f0f0f0;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+.btn-anexar-avulso:hover {
+  background-color: #e0e0e0;
+  color: var(--text-primary);
+}
+
+.avulso-anexos-preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-unit);
+  margin-top: var(--spacing-unit);
+  margin-bottom: var(--spacing-unit);
+}
+
+.avulso-anexo-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--border-radius);
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.avulso-anexo-thumbnail:hover {
+  transform: scale(1.1);
+}
+
+.anexos-existentes-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-unit);
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.anexo-existente-item {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing-unit) / 2);
+  background-color: var(--c-primary-light);
+  border: 1px solid var(--c-primary);
+  color: var(--c-primary);
+  padding: calc(var(--spacing-unit) / 2) var(--spacing-unit);
+  border-radius: var(--border-radius);
+  font-size: 0.9em;
+}
+
+.anexo-existente-item.marcado-para-remocao {
+  background-color: #ffebee;
+  border-color: var(--c-danger);
+  color: var(--c-danger);
+  text-decoration: line-through;
+}
+
+.anexo-existente-link {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing-unit) / 2);
+}
+
+.anexo-existente-link:hover {
+  text-decoration: underline;
+}
+
+.anexo-icon-container {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.anexo-icon-container .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.anexo-existente-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.btn-remover-anexo-existente {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: var(--spacing-unit);
+  color: inherit;
+  display: flex;
+  align-items: center;
+}
+
+.btn-remover-anexo-existente .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+#modalDetalhesItem .modal-dialog {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#modalDetalhesItem .modal-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+#modalDetalhesItem .modal-body {
+  overflow-y: auto;
+  flex-shrink: 1;
 }
