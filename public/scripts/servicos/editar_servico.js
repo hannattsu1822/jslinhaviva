@@ -1,4 +1,3 @@
-// public/scripts/servicos/editar_servico.js
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const servicoId = urlParams.get("id");
@@ -13,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   await carregarDadosServico(servicoId);
-  await carregarResponsaveis(); // Carregar a lista de responsáveis
+  await carregarResponsaveis();
 
   const desligamentoSelect = document.getElementById("desligamento");
   if (desligamentoSelect) {
@@ -24,7 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const horaFimInput = document.getElementById("horaFim");
 
       if (horariosContainer)
-        horariosContainer.style.display = mostrarHorarios ? "flex" : "none";
+        horariosContainer.style.display = mostrarHorarios ? "block" : "none";
 
       if (mostrarHorarios) {
         if (horaInicioInput) horaInicioInput.setAttribute("required", "");
@@ -89,9 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  const cancelButton = document.querySelector(
-    ".form-header .btn-outline-secondary"
-  );
+  const cancelButton = document.getElementById("btn-voltar-detalhes");
   if (cancelButton) {
     cancelButton.href = `/detalhes_servico?id=${servicoId}`;
   }
@@ -108,10 +105,9 @@ async function carregarResponsaveis() {
     }
     const responsaveis = await response.json();
 
-    // Guardar o valor atual antes de limpar as opções
     const valorAtual = selectResponsavel.value;
     selectResponsavel.innerHTML =
-      '<option value="">Selecione um responsável...</option>'; // Limpa e adiciona a opção padrão
+      '<option value="">Selecione um responsável...</option>';
 
     responsaveis.forEach((resp) => {
       const option = document.createElement("option");
@@ -120,7 +116,6 @@ async function carregarResponsaveis() {
       selectResponsavel.appendChild(option);
     });
 
-    // Restaurar o valor se ele ainda existir na nova lista ou se for 'pendente'
     if (valorAtual) {
       if (
         Array.from(selectResponsavel.options).some(
@@ -129,7 +124,6 @@ async function carregarResponsaveis() {
       ) {
         selectResponsavel.value = valorAtual;
       } else if (valorAtual === "pendente") {
-        // Se era pendente e não há mais opção "pendente" explícita, manter como vazio/selecione
         selectResponsavel.value = "";
       }
     }
@@ -191,6 +185,14 @@ async function carregarDadosServico(servicoId) {
     }
     const data = result.data;
 
+    const processoInput = document.getElementById("processo");
+    if (processoInput) {
+      processoInput.value = data.processo || "";
+      if (data.tipo === "Emergencial") {
+        processoInput.readOnly = true;
+      }
+    }
+
     document.getElementById("subestacao").value = data.subestacao || "";
     document.getElementById("alimentador").value = data.alimentador || "";
     document.getElementById("chaveMontante").value = data.chave_montante || "";
@@ -201,22 +203,20 @@ async function carregarDadosServico(servicoId) {
       data.descricao_servico || "";
     document.getElementById("observacoes").value = data.observacoes || "";
 
-    // Carregar e definir responsável
     const selectResponsavel = document.getElementById("servico-responsavel");
     if (selectResponsavel) {
-      // Espera carregarResponsaveis ter populado o select
-      await carregarResponsaveis(); // Garante que as opções estejam lá
+      await carregarResponsaveis();
       if (data.responsavel_matricula) {
         selectResponsavel.value = data.responsavel_matricula;
       } else {
-        selectResponsavel.value = "pendente"; // Ou "" se 'pendente' não for uma opção válida explícita
+        selectResponsavel.value = "pendente";
       }
     }
 
     const desligamentoSelect = document.getElementById("desligamento");
     if (data.desligamento === "SIM") {
       const horariosContainer = document.getElementById("horariosContainer");
-      if (horariosContainer) horariosContainer.style.display = "flex";
+      if (horariosContainer) horariosContainer.style.display = "block";
       document.getElementById("horaInicio").value = data.hora_inicio
         ? data.hora_inicio.substring(0, 5)
         : "";
@@ -362,6 +362,7 @@ async function salvarAlteracoes(servicoId) {
   }
 
   const formData = new FormData();
+  formData.append("processo", document.getElementById("processo").value);
   formData.append("subestacao", document.getElementById("subestacao").value);
   formData.append("alimentador", document.getElementById("alimentador").value);
   formData.append(
