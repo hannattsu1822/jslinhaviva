@@ -560,21 +560,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
       detalhesInspecoes.forEach((insp) => {
         insp.itens_anormais.forEach((itemAnormal) => {
-          const novoItem = {
+          // Adiciona o item geral
+          const itemGeral = {
             tipo: "inspecao",
-            temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}`,
+            temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_geral`,
             descricao: itemAnormal.descricao_item,
             origem: {
               inspecao_id: insp.id,
               formulario_inspecao_num: insp.formulario_inspecao_num,
               subestacao_sigla: insp.subestacao_sigla,
               resposta_id: itemAnormal.resposta_id,
-              anexos: itemAnormal.anexos || [],
+              anexos: itemAnormal.anexos_gerais || [],
             },
             anexos: [],
           };
-          if (!itensDeServico.some((i) => i.temp_id === novoItem.temp_id)) {
-            itensDeServico.push(novoItem);
+          if (!itensDeServico.some((i) => i.temp_id === itemGeral.temp_id)) {
+            itensDeServico.push(itemGeral);
+          }
+
+          // Adiciona um item para cada equipamento específico
+          if (itemAnormal.especificacoes) {
+            itemAnormal.especificacoes.forEach((esp) => {
+              const itemEspecifico = {
+                tipo: "inspecao",
+                temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_esp_${esp.id}`,
+                descricao: `${itemAnormal.descricao_item} (Equipamento: ${esp.descricao_equipamento})`,
+                origem: {
+                  inspecao_id: insp.id,
+                  formulario_inspecao_num: insp.formulario_inspecao_num,
+                  subestacao_sigla: insp.subestacao_sigla,
+                  resposta_id: itemAnormal.resposta_id,
+                  especificacao_id: esp.id,
+                  anexos: esp.anexos || [],
+                },
+                anexos: [],
+              };
+              if (
+                !itensDeServico.some(
+                  (i) => i.temp_id === itemEspecifico.temp_id
+                )
+              ) {
+                itensDeServico.push(itemEspecifico);
+              }
+            });
           }
         });
       });
