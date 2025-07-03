@@ -39,7 +39,11 @@
         <div id="detalhesContainer" class="hidden">
           <div id="infoGeraisContainer"></div>
           <div id="obsGeraisContainer"></div>
+
           <div id="checklistItemsContainer"></div>
+
+          <div id="avulsaItemsContainer"></div>
+
           <div id="medicoesContainer"></div>
           <div id="equipamentosObservadosContainer"></div>
           <div id="anexosGeraisContainer"></div>
@@ -70,14 +74,17 @@
       </div>
     </div>
 
-    <!-- MODAL DE TERMOGRAFIA ADICIONADO AQUI -->
-    <div class="modal" id="modalAnexosTermografiaItem" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-lg">
+    <div class="modal" id="modalTermografia" aria-hidden="true">
+      <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">
-              <span class="material-symbols-outlined">colorize</span>
-              Anexar Imagem Termográfica
+              <span
+                class="material-symbols-outlined"
+                style="color: var(--c-warning)"
+                >local_fire_department</span
+              >
+              Anexar Imagens de Termografia
             </h5>
             <button
               type="button"
@@ -86,72 +93,37 @@
             ></button>
           </div>
           <div class="modal-body">
-            <form id="formAnexosTermografiaItem" enctype="multipart/form-data">
-              <input type="hidden" id="termografiaInspecaoId" />
-              <input type="hidden" id="termografiaItemChecklistId" />
-              <p>
-                Anexando à Inspeção ID:
-                <strong id="displayTermografiaInspecaoId"></strong>
-              </p>
-              <p
-                id="displayTermografiaItemDescricao"
-                class="item-description-box"
-              ></p>
+            <div class="item-description-box">
+              <strong>Item:</strong> <span id="termografiaItemDescricao"></span>
+            </div>
+            <input type="hidden" id="termografiaInspecaoId" />
+            <input type="hidden" id="termografiaItemId" />
+            <input type="hidden" id="termografiaEspecificacaoId" />
 
-              <div
-                id="termografiaEspecificacaoSelectContainer"
-                class="form-group hidden"
+            <div class="upload-actions">
+              <button
+                type="button"
+                id="btnAdicionarAnexoTermografia"
+                class="btn btn-sm btn-primary"
               >
-                <label for="termografiaEspecificacaoSelect" class="form-label"
-                  >Associar a Equipamento Específico (Opcional):</label
-                >
-                <select id="termografiaEspecificacaoSelect" class="form-select">
-                  <option value="geral">Anexo Geral do Item</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Selecionar imagens (máx. 10):</label>
-                <div class="upload-actions">
-                  <button
-                    type="button"
-                    id="btnAdicionarAnexoTermografia"
-                    class="btn btn-primary"
-                  >
-                    <span class="material-symbols-outlined"
-                      >add_photo_alternate</span
-                    >
-                    Procurar Imagens
-                  </button>
-                </div>
-                <input
-                  type="file"
-                  id="arquivosTermografiaItem"
-                  name="fotosTermografiaItem"
-                  class="visually-hidden"
-                  multiple
-                  accept="image/*"
-                />
-              </div>
-
-              <div
-                id="previewAnexosTermograficosItem"
-                class="anexos-preview-container"
-              ></div>
-
-              <div class="form-group">
-                <label for="descricaoAnexoTermograficoItem" class="form-label"
-                  >Descrição (Opcional):</label
-                >
-                <textarea
-                  id="descricaoAnexoTermograficoItem"
-                  name="descricao_anexo_termografico"
-                  class="form-control"
-                  rows="2"
-                  placeholder="Breve descrição ou observação..."
-                ></textarea>
-              </div>
-            </form>
+                <span class="material-symbols-outlined">attach_file_add</span>
+                Procurar Arquivos
+              </button>
+              <input
+                type="file"
+                id="arquivosTermografiaInput"
+                class="visually-hidden"
+                multiple
+                accept="image/*"
+              />
+            </div>
+            <div class="form-text">
+              Tipos permitidos: Imagens (JPG, PNG, HEIC, etc.).
+            </div>
+            <div
+              id="previewAnexosTermografia"
+              class="anexos-preview-container"
+            ></div>
           </div>
           <div class="modal-footer">
             <button
@@ -162,8 +134,8 @@
             </button>
             <button
               type="button"
-              id="btnSalvarAnexoTermograficoItem"
-              class="btn btn-sm btn-primary"
+              id="btnSalvarAnexosTermografia"
+              class="btn btn-sm btn-success"
             >
               <span class="material-symbols-outlined">save</span> Salvar Anexos
             </button>
@@ -182,7 +154,7 @@
         </div>
         <div class="anexo-info">
           <div class="anexo-name">Nome do Arquivo.jpg</div>
-          <div class="anexo-size">123 KB</div>
+          <div class="anexo-status"></div>
         </div>
         <button type="button" class="btn-remover-anexo" title="Remover anexo">
           <span class="material-symbols-outlined">delete</span>

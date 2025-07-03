@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Checklist de Inspeção de Subestação</title>
+    <title>Nova Inspeção de Subestação</title>
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0"
@@ -14,11 +14,50 @@
     />
   </head>
   <body>
+    <div class="modal" id="modalPreSelecaoInspecao" style="display: flex">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <span class="material-symbols-outlined">source_notes</span>
+              Tipo de Nova Inspeção
+            </h5>
+          </div>
+          <div class="modal-body text-center">
+            <p>Como você deseja criar esta inspeção?</p>
+            <div class="modal-actions-vertical">
+              <button
+                type="button"
+                id="btnInspecaoNormal"
+                class="btn btn-primary"
+              >
+                <span class="material-symbols-outlined">checklist_rtl</span>
+                Inspeção Padrão (Checklist)
+              </button>
+              <button type="button" id="btnInspecaoAvulsa" class="btn btn-info">
+                <span class="material-symbols-outlined">post_add</span>
+                Inspeção Avulsa
+              </button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              id="btnCancelarPreSelecao"
+              class="btn btn-secondary"
+            >
+              Cancelar e Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="container">
       <header class="page-header">
-        <h1>
+        <h1 id="paginaTitulo">
           <span class="material-symbols-outlined">checklist_rtl</span>
-          Checklist de Inspeção de Subestação
+          Nova Inspeção de Subestação
         </h1>
       </header>
 
@@ -65,6 +104,7 @@
                     <option value="VISUAL_E_TERMOGRAFICA">
                       Visual e Termográfica
                     </option>
+                    <option value="AVULSA">Avulsa</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -110,77 +150,101 @@
             </div>
           </section>
 
-          <div id="checklistItensContainer"></div>
-
-          <section class="custom-card">
-            <div class="custom-card-header">
-              <h2>
-                <span class="material-symbols-outlined">rule</span>
-                Medições de Equipamentos
-              </h2>
-              <button
-                type="button"
-                id="btnAdicionarMedicao"
-                class="btn btn-primary"
-              >
-                Adicionar
-              </button>
-            </div>
-            <div class="custom-card-body">
-              <div id="containerMedicoesDinamicas"></div>
-              <p id="nenhumaMedicaoAdicionada" class="empty-state-text">
-                Nenhuma medição adicionada.
-              </p>
-            </div>
-          </section>
-
-          <section class="custom-card">
-            <div class="custom-card-header">
-              <h2>
-                <span class="material-symbols-outlined">visibility</span>
-                Equipamentos Observados
-              </h2>
-              <button
-                type="button"
-                id="btnAdicionarEquipamentoObservado"
-                class="btn btn-primary"
-              >
-                Adicionar
-              </button>
-            </div>
-            <div class="custom-card-body">
-              <div id="containerEquipamentosObservados"></div>
-              <p id="nenhumEquipamentoObservado" class="empty-state-text">
-                Nenhum equipamento observado.
-              </p>
-            </div>
-          </section>
-
-          <section class="custom-card">
-            <div class="custom-card-header">
-              <h2>
-                <span class="material-symbols-outlined"
-                  >playlist_add_check</span
+          <div id="checklistContainer" class="hidden">
+            <div id="checklistItensContainer"></div>
+            <section class="custom-card" data-form-section>
+              <div class="custom-card-header">
+                <h2>
+                  <span class="material-symbols-outlined">rule</span>
+                  Medições de Equipamentos
+                </h2>
+                <button
+                  type="button"
+                  id="btnAdicionarMedicao"
+                  class="btn btn-primary"
                 >
-                Verificações Adicionais
-              </h2>
-              <button
-                type="button"
-                id="btnAdicionarVerificacao"
-                class="btn btn-primary"
-              >
-                Adicionar
-              </button>
-            </div>
-            <div class="custom-card-body">
-              <div id="containerVerificacoesAdicionais"></div>
-              <p id="nenhumaVerificacaoAdicionada" class="empty-state-text">
-                Nenhuma verificação adicionada.
-              </p>
-            </div>
-          </section>
+                  Adicionar
+                </button>
+              </div>
+              <div class="custom-card-body">
+                <div id="containerMedicoesDinamicas"></div>
+                <p id="nenhumaMedicaoAdicionada" class="empty-state-text">
+                  Nenhuma medição adicionada.
+                </p>
+              </div>
+            </section>
+            <section class="custom-card" data-form-section>
+              <div class="custom-card-header">
+                <h2>
+                  <span class="material-symbols-outlined">visibility</span>
+                  Equipamentos Observados
+                </h2>
+                <button
+                  type="button"
+                  id="btnAdicionarEquipamentoObservado"
+                  class="btn btn-primary"
+                >
+                  Adicionar
+                </button>
+              </div>
+              <div class="custom-card-body">
+                <div id="containerEquipamentosObservados"></div>
+                <p id="nenhumEquipamentoObservado" class="empty-state-text">
+                  Nenhum equipamento observado.
+                </p>
+              </div>
+            </section>
+            <section class="custom-card" data-form-section>
+              <div class="custom-card-header">
+                <h2>
+                  <span class="material-symbols-outlined"
+                    >playlist_add_check</span
+                  >
+                  Verificações Adicionais
+                </h2>
+                <button
+                  type="button"
+                  id="btnAdicionarVerificacao"
+                  class="btn btn-primary"
+                >
+                  Adicionar
+                </button>
+              </div>
+              <div class="custom-card-body">
+                <div id="containerVerificacoesAdicionais"></div>
+                <p id="nenhumaVerificacaoAdicionada" class="empty-state-text">
+                  Nenhuma verificação adicionada.
+                </p>
+              </div>
+            </section>
+          </div>
 
-          <section class="custom-card">
+          <div id="formInspecaoAvulsaContainer" class="hidden">
+            <section class="custom-card">
+              <div class="custom-card-header">
+                <h2>
+                  <span class="material-symbols-outlined">article</span>
+                  Equipamentos Inspecionados (Avulso)
+                </h2>
+                <button
+                  type="button"
+                  id="btnAdicionarEquipamentoAvulso"
+                  class="btn btn-primary"
+                >
+                  <span class="material-symbols-outlined">add</span>
+                  Adicionar Equipamento
+                </button>
+              </div>
+              <div class="custom-card-body">
+                <div id="containerEquipamentosAvulsos"></div>
+                <p id="nenhumEquipamentoAvulso" class="empty-state-text">
+                  Nenhum equipamento adicionado.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <section class="custom-card" data-form-section>
             <div class="custom-card-header">
               <h2>
                 <span class="material-symbols-outlined">attachment</span>
@@ -188,6 +252,7 @@
               </h2>
             </div>
             <div class="custom-card-body">
+              <div id="anexosGeraisExistentesContainer"></div>
               <div class="anexo-actions">
                 <button
                   type="button"
@@ -195,7 +260,7 @@
                   class="btn btn-primary"
                 >
                   <span class="material-symbols-outlined">attach_file</span>
-                  Anexar Arquivos
+                  Anexar Novos Arquivos
                 </button>
                 <button
                   type="button"
@@ -228,7 +293,7 @@
             </div>
           </section>
 
-          <section class="custom-card">
+          <section class="custom-card" data-form-section>
             <div class="custom-card-header">
               <h2>
                 <span class="material-symbols-outlined">speaker_notes</span>
@@ -255,6 +320,14 @@
               Cancelar
             </button>
             <button
+              type="button"
+              id="btnSalvarGerarServico"
+              class="btn btn-warning hidden"
+            >
+              <span class="material-symbols-outlined">bolt</span> Salvar e Gerar
+              Serviço
+            </button>
+            <button
               type="submit"
               id="btnSalvarInspecao"
               class="btn btn-success"
@@ -265,13 +338,6 @@
           </div>
         </form>
       </main>
-
-      <footer class="page-footer">
-        <a href="/subestacoes-dashboard" class="btn btn-secondary">
-          <span class="material-symbols-outlined">arrow_back</span> Voltar ao
-          Dashboard
-        </a>
-      </footer>
     </div>
 
     <div class="modal" id="modalDetalhesItem" aria-hidden="true">
@@ -355,6 +421,68 @@
               class="btn btn-primary"
             >
               Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalAnexosAvulsos" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Evidências do Equipamento</h5>
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p id="itemAvulsoModalDescricao"></p>
+            <fieldset class="fieldset-group">
+              <legend>Anexos Existentes</legend>
+              <div id="anexosAvulsosExistentesContainer"></div>
+            </fieldset>
+            <fieldset class="fieldset-group">
+              <legend>Adicionar Novos Anexos</legend>
+              <div class="anexo-actions">
+                <button
+                  type="button"
+                  id="btnAnexarAvulsoModal"
+                  class="btn btn-primary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Anexar
+                </button>
+                <button
+                  type="button"
+                  id="btnFotografarAvulsoModal"
+                  class="btn btn-primary"
+                >
+                  <span class="material-symbols-outlined">photo_camera</span>
+                  Fotografar
+                </button>
+              </div>
+              <input
+                type="file"
+                id="fotosItemAvulsoInputGeral"
+                class="visually-hidden"
+                multiple
+              />
+              <input
+                type="file"
+                id="fotosItemAvulsoInputCamera"
+                class="visually-hidden"
+                accept="image/*"
+                capture="environment"
+              />
+              <div id="anexosItemAvulsoContainer"></div>
+            </fieldset>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-close-modal">
+              Fechar
             </button>
           </div>
         </div>
@@ -544,6 +672,82 @@
           type="button"
           class="btn-remover-linha btn-remover-verificacao-adicional"
           title="Remover Ponto"
+        >
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
+    </template>
+
+    <template id="templateLinhaEquipamentoAvulso">
+      <div class="dynamic-row-item avulso-item">
+        <div class="avulso-item-grid">
+          <div class="form-group">
+            <label>Equipamento:*</label>
+            <input
+              type="text"
+              class="form-control avulso-equipamento-input"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>TAG:*</label>
+            <input type="text" class="form-control avulso-tag-input" required />
+          </div>
+          <div class="form-group">
+            <label>Condição:*</label>
+            <div class="item-avaliacao btn-group" role="group">
+              <input
+                type="radio"
+                class="btn-check avulso-condicao-radio"
+                value="Normal"
+                required
+                autocomplete="off"
+              /><label class="btn btn-n">Normal</label>
+              <input
+                type="radio"
+                class="btn-check avulso-condicao-radio"
+                value="Anormal"
+                autocomplete="off"
+              /><label class="btn btn-a">Anormal</label>
+            </div>
+          </div>
+          <div class="form-group full-width">
+            <label>Descrição da Condição / Observações:*</label>
+            <textarea
+              class="form-control avulso-descricao-textarea"
+              rows="3"
+              required
+            ></textarea>
+          </div>
+        </div>
+        <div class="avulso-anexos-preview-container"></div>
+        <div class="avulso-item-actions">
+          <button type="button" class="btn btn-secondary btn-anexar-avulso">
+            <span class="material-symbols-outlined">attachment</span> Anexos
+          </button>
+          <button
+            type="button"
+            class="btn-remover-linha"
+            title="Remover Equipamento"
+          >
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <template id="templateAnexoExistente">
+      <div class="anexo-existente-item">
+        <a href="#" target="_blank" class="anexo-existente-link">
+          <div class="anexo-icon-container">
+            <span class="material-symbols-outlined">description</span>
+          </div>
+          <span class="anexo-existente-nome"></span>
+        </a>
+        <button
+          type="button"
+          class="btn-remover-anexo-existente"
+          title="Remover este anexo"
         >
           <span class="material-symbols-outlined">delete</span>
         </button>
