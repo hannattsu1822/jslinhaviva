@@ -414,6 +414,7 @@ router.put(
     try {
       await connection.beginTransaction();
       const {
+        processo,
         subestacao,
         alimentador,
         chave_montante,
@@ -426,6 +427,16 @@ router.put(
         descricao_servico,
         observacoes,
       } = req.body;
+
+      if (!processo || processo.trim() === "") {
+        limparArquivosTemporarios(req.files);
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({
+          success: false,
+          message: "O número do processo é obrigatório.",
+        });
+      }
 
       if (!subestacao) {
         limparArquivosTemporarios(req.files);
@@ -460,10 +471,11 @@ router.put(
       }
 
       await connection.query(
-        `UPDATE processos SET subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
+        `UPDATE processos SET processo = ?, subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
              hora_inicio = ?, hora_fim = ?, maps = ?, responsavel_matricula = ?, ordem_obra = ?,
              descricao_servico = ?, observacoes = ? WHERE id = ?`,
         [
+          processo.trim(),
           subestacao,
           alimentador || null,
           chave_montante || null,
@@ -520,12 +532,12 @@ router.put(
       await registrarAuditoria(
         req.user.matricula,
         "Edição de Serviço",
-        `Serviço ${servicoId} editado`
+        `Serviço ${servicoId} editado. Processo alterado para: ${processo.trim()}`
       );
       res.json({
         success: true,
         message: "Serviço atualizado com sucesso!",
-        redirect: "/servicos_ativos",
+        redirect: `/detalhes_servico?id=${servicoId}`,
       });
     } catch (error) {
       await connection.rollback();
