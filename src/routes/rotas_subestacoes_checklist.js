@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const fs = require("fs").promises;
+const crypto = require("crypto");
 const {
   promisePool,
   upload,
@@ -73,6 +74,53 @@ async function limparArquivosTemporariosUpload(files) {
   }
 }
 
+async function moverAnexo(
+  anexo,
+  inspecaoId,
+  destinoSubpasta,
+  connection,
+  options = {}
+) {
+  const tempFilePath = path.join(
+    uploadsSubestacoesDir,
+    "temp",
+    anexo.tempFileName
+  );
+  const inspecaoRootDir = path.join(
+    uploadsSubestacoesDir,
+    "checklist",
+    `checklist_${String(inspecaoId)}`
+  );
+  const destinoDir = path.join(inspecaoRootDir, destinoSubpasta);
+  await fs.mkdir(destinoDir, { recursive: true });
+
+  const nomeUnico = `${Date.now()}_${
+    options.prefixo || ""
+  }_${anexo.originalName.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+  const caminhoDestinoFinal = path.join(destinoDir, nomeUnico);
+
+  await fs.rename(tempFilePath, caminhoDestinoFinal);
+
+  const caminhoRelativo = `checklist/checklist_${inspecaoId}/${destinoSubpasta}/${nomeUnico}`;
+
+  const [result] = await connection.query(
+    `INSERT INTO inspecoes_anexos (inspecao_id, item_resposta_id, item_especificacao_id, registro_id, item_avulso_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      inspecaoId,
+      options.item_resposta_id || null,
+      options.item_especificacao_id || null,
+      options.registro_id || null,
+      options.item_avulso_id || null,
+      anexo.originalName,
+      `/upload_arquivos_subestacoes/${caminhoRelativo}`,
+      null,
+      null,
+      options.categoria_anexo,
+    ]
+  );
+  return caminhoDestinoFinal;
+}
+
 router.get(
   "/pagina-checklist-inspecao-subestacao",
   autenticar,
@@ -115,6 +163,37 @@ router.get(
   }
 );
 
+router.post(
+  "/api/inspecoes/upload-temporario",
+  autenticar,
+  upload.single("anexo"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "Nenhum arquivo enviado." });
+    }
+
+    const tempDir = path.join(uploadsSubestacoesDir, "temp");
+    try {
+      await fs.mkdir(tempDir, { recursive: true });
+
+      const fileExtension = path.extname(req.file.originalname);
+      const tempFileName = `${crypto.randomUUID()}${fileExtension}`;
+      const tempFilePath = path.join(tempDir, tempFileName);
+
+      await fs.rename(req.file.path, tempFilePath);
+
+      res.status(201).json({
+        tempFileName: tempFileName,
+        originalName: req.file.originalname,
+      });
+    } catch (error) {
+      console.error("Erro ao salvar arquivo temporário:", error);
+      await limparArquivosTemporariosUpload([req.file]);
+      res.status(500).json({ message: "Erro ao processar upload temporário." });
+    }
+  }
+);
+
 router.get("/api/checklist/modelo/padrao", autenticar, async (req, res) => {
   try {
     const [grupos] = await promisePool.query(
@@ -141,7 +220,6 @@ router.post(
   "/inspecoes-subestacoes",
   autenticar,
   podeRealizarInspecao,
-  upload.any(),
   async (req, res) => {
     const {
       subestacao_id,
@@ -149,7 +227,13 @@ router.post(
       tipo_inspecao,
       data_avaliacao,
       hora_inicial,
+      inspection_mode,
+      anexosGerais,
+      avulsa_items,
+      checklist_items,
+      registros_dinamicos,
     } = req.body;
+
     const connection = await promisePool.getConnection();
     let novaInspecaoId;
     let arquivosMovidosComSucessoParaRollback = [];
@@ -160,28 +244,25 @@ router.post(
         !responsavel_levantamento_id ||
         !tipo_inspecao ||
         !data_avaliacao ||
-        !hora_inicial
+        !hora_inicial ||
+        !inspection_mode
       ) {
-        await limparArquivosTemporariosUpload(req.files);
         return res.status(400).json({
-          message: "Campos obrigatórios do cabeçalho não foram preenchidos.",
+          message:
+            "Campos obrigatórios do cabeçalho ou modo de inspeção não foram preenchidos.",
         });
       }
-
-      const itensDoChecklist = req.body.itens ? JSON.parse(req.body.itens) : [];
-      const registrosDinamicos = req.body.registros
-        ? JSON.parse(req.body.registros)
-        : [];
 
       await connection.beginTransaction();
 
       const [rI] = await connection.query(
-        `INSERT INTO inspecoes_subestacoes (processo, subestacao_id, responsavel_levantamento_id, tipo_inspecao, data_avaliacao, hora_inicial, hora_final, status_inspecao, observacoes_gerais, formulario_inspecao_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO inspecoes_subestacoes (processo, subestacao_id, responsavel_levantamento_id, tipo_inspecao, modo_inspecao, data_avaliacao, hora_inicial, hora_final, status_inspecao, observacoes_gerais, formulario_inspecao_num) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.body.processo || null,
           subestacao_id,
           responsavel_levantamento_id,
           tipo_inspecao,
+          inspection_mode.toUpperCase(),
           data_avaliacao,
           hora_inicial,
           req.body.hora_final || null,
@@ -196,164 +277,139 @@ router.post(
         [String(novaInspecaoId), novaInspecaoId]
       );
 
-      const inspecaoRootDir = path.join(
-        uploadsSubestacoesDir,
-        "checklist",
-        `checklist_${String(novaInspecaoId)}`
-      );
-      await fs.mkdir(inspecaoRootDir, { recursive: true });
-
-      const mapaRespostas = {};
-      const mapaEspecificacoes = {};
-
-      for (const item of itensDoChecklist) {
-        const [resultResposta] = await connection.query(
-          `INSERT INTO inspecoes_itens_respostas (inspecao_id, item_checklist_id, avaliacao, observacao_item) VALUES (?, ?, ?, ?)`,
-          [
-            novaInspecaoId,
-            item.item_checklist_id,
-            item.avaliacao,
-            item.observacao_item || null,
-          ]
-        );
-        const novaRespostaId = resultResposta.insertId;
-        mapaRespostas[item.item_checklist_id] = novaRespostaId;
-
-        if (item.especificacoes && item.especificacoes.length > 0) {
-          for (const especificacao of item.especificacoes) {
-            const [resultEsp] = await connection.query(
-              `INSERT INTO inspecoes_item_especificacoes (item_resposta_id, descricao_equipamento, observacao) VALUES (?, ?, ?)`,
-              [
-                novaRespostaId,
-                especificacao.descricao_equipamento,
-                especificacao.observacao || null,
-              ]
-            );
-            mapaEspecificacoes[especificacao.temp_id] = resultEsp.insertId;
-          }
-        }
-      }
-
-      for (const file of req.files) {
-        if (file.fieldname.startsWith("item_anexo__")) {
-          const parts = file.fieldname.split("__");
-          const itemId = parts[1];
-          const associacao = parts[2];
-
-          const respostaId = mapaRespostas[itemId];
-          if (!respostaId) continue;
-
-          const especificacaoDbId =
-            associacao === "geral" ? null : mapaEspecificacoes[associacao];
-
-          const itemAnexosDir = path.join(
-            inspecaoRootDir,
-            "respostas_itens",
-            `resposta_${respostaId}`,
-            "anexos"
-          );
-          await fs.mkdir(itemAnexosDir, { recursive: true });
-
-          const nomeUnico = `${Date.now()}_${file.originalname.replace(
-            /[^a-zA-Z0-9.\-_]/g,
-            "_"
-          )}`;
-          const caminhoDestino = path.join(itemAnexosDir, nomeUnico);
-          await fs.rename(file.path, caminhoDestino);
-          arquivosMovidosComSucessoParaRollback.push(caminhoDestino);
-
-          const caminhoRelativo = `checklist/checklist_${novaInspecaoId}/respostas_itens/resposta_${respostaId}/anexos/${nomeUnico}`;
-          await connection.query(
-            `INSERT INTO inspecoes_anexos (inspecao_id, item_resposta_id, item_especificacao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              novaInspecaoId,
-              respostaId,
-              especificacaoDbId,
-              file.originalname,
-              `/upload_arquivos_subestacoes/${caminhoRelativo}`,
-              file.mimetype,
-              file.size,
-              "ITEM_ANEXO",
-            ]
-          );
-        } else if (file.fieldname === "anexosInspecao") {
-          const anexosGeraisDir = path.join(
-            inspecaoRootDir,
-            "anexos_gerais_inspecao"
-          );
-          await fs.mkdir(anexosGeraisDir, { recursive: true });
-          const nomeUnico = `${Date.now()}_${file.originalname.replace(
-            /[^a-zA-Z0-9.\-_]/g,
-            "_"
-          )}`;
-          const caminhoDestino = path.join(anexosGeraisDir, nomeUnico);
-          await fs.rename(file.path, caminhoDestino);
-          arquivosMovidosComSucessoParaRollback.push(caminhoDestino);
-          const caminhoRelativo = `checklist/checklist_${novaInspecaoId}/anexos_gerais_inspecao/${nomeUnico}`;
-          await connection.query(
-            `INSERT INTO inspecoes_anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
-            [
-              novaInspecaoId,
-              file.originalname,
-              `/upload_arquivos_subestacoes/${caminhoRelativo}`,
-              file.mimetype,
-              file.size,
-              "INSPECAO_GERAL",
-            ]
-          );
-        }
-      }
-
-      for (const registro of registrosDinamicos) {
-        const [resultRegistro] = await connection.query(
-          `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, referencia_externa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            novaInspecaoId,
-            registro.categoria_registro,
-            registro.tipo_especifico || null,
-            registro.tag_equipamento || null,
-            registro.descricao_item || null,
-            registro.valor_numerico || null,
-            registro.valor_texto || null,
-            registro.unidade_medida || null,
-            registro.referencia_externa || null,
-          ]
-        );
-        const novoRegistroId = resultRegistro.insertId;
-
-        const anexosDoRegistro = req.files.filter(
-          (f) => f.fieldname === `registro_anexo__${registro.originalDataId}`
-        );
-
-        if (anexosDoRegistro.length > 0) {
-          const registroDir = path.join(
-            inspecaoRootDir,
-            "registros",
-            `registro_${novoRegistroId}`
-          );
-          await fs.mkdir(registroDir, { recursive: true });
-          for (const file of anexosDoRegistro) {
-            const nomeUnico = `${Date.now()}_${file.originalname.replace(
-              /[^a-zA-Z0-9.\-_]/g,
-              "_"
-            )}`;
-            const caminhoDestino = path.join(registroDir, nomeUnico);
-            await fs.rename(file.path, caminhoDestino);
-            arquivosMovidosComSucessoParaRollback.push(caminhoDestino);
-            const caminhoRelativo = `checklist/checklist_${novaInspecaoId}/registros/registro_${novoRegistroId}/${nomeUnico}`;
-            await connection.query(
-              `INSERT INTO inspecoes_anexos (inspecao_id, registro_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      if (inspection_mode === "checklist") {
+        if (checklist_items && Array.isArray(checklist_items)) {
+          for (const item of checklist_items) {
+            const [resultResposta] = await connection.query(
+              `INSERT INTO inspecoes_itens_respostas (inspecao_id, item_checklist_id, avaliacao, observacao_item) VALUES (?, ?, ?, ?)`,
               [
                 novaInspecaoId,
-                novoRegistroId,
-                file.originalname,
-                `/upload_arquivos_subestacoes/${caminhoRelativo}`,
-                file.mimetype,
-                file.size,
-                "REGISTRO_FOTO",
+                item.item_checklist_id,
+                item.avaliacao,
+                item.observacao_item || null,
               ]
             );
+            const novaRespostaId = resultResposta.insertId;
+            const mapaEspecificacoes = {};
+
+            if (item.especificacoes && item.especificacoes.length > 0) {
+              for (const especificacao of item.especificacoes) {
+                const [resultEsp] = await connection.query(
+                  `INSERT INTO inspecoes_item_especificacoes (item_resposta_id, descricao_equipamento, observacao) VALUES (?, ?, ?)`,
+                  [
+                    novaRespostaId,
+                    especificacao.descricao_equipamento,
+                    especificacao.observacao || null,
+                  ]
+                );
+                mapaEspecificacoes[especificacao.temp_id] = resultEsp.insertId;
+              }
+            }
+
+            if (item.anexos && item.anexos.length > 0) {
+              for (const anexo of item.anexos) {
+                const especificacaoDbId =
+                  anexo.associado_a === "geral"
+                    ? null
+                    : mapaEspecificacoes[anexo.associado_a];
+                const caminhoMovido = await moverAnexo(
+                  anexo,
+                  novaInspecaoId,
+                  `respostas_itens/resposta_${novaRespostaId}/anexos`,
+                  connection,
+                  {
+                    prefixo: "ITEM",
+                    categoria_anexo: "ITEM_ANEXO",
+                    item_resposta_id: novaRespostaId,
+                    item_especificacao_id: especificacaoDbId,
+                  }
+                );
+                arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
+              }
+            }
           }
+        }
+        if (registros_dinamicos && Array.isArray(registros_dinamicos)) {
+          for (const registro of registros_dinamicos) {
+            const [resultRegistro] = await connection.query(
+              `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                novaInspecaoId,
+                registro.categoria,
+                registro.tipo,
+                registro.tag,
+                registro.obs,
+                null,
+                registro.valor,
+                registro.unidade,
+              ]
+            );
+            const novoRegistroId = resultRegistro.insertId;
+            if (registro.anexos && registro.anexos.length > 0) {
+              for (const anexo of registro.anexos) {
+                const caminhoMovido = await moverAnexo(
+                  anexo,
+                  novaInspecaoId,
+                  `registros/registro_${novoRegistroId}`,
+                  connection,
+                  {
+                    prefixo: "REG",
+                    categoria_anexo: "REGISTRO_FOTO",
+                    registro_id: novoRegistroId,
+                  }
+                );
+                arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
+              }
+            }
+          }
+        }
+      } else if (inspection_mode === "avulsa") {
+        if (avulsa_items && Array.isArray(avulsa_items)) {
+          for (const item of avulsa_items) {
+            const [resultItemAvulso] = await connection.query(
+              `INSERT INTO inspecoes_avulsas_itens (inspecao_id, equipamento, tag, condicao, descricao) VALUES (?, ?, ?, ?, ?)`,
+              [
+                novaInspecaoId,
+                item.equipamento,
+                item.tag,
+                item.condicao,
+                item.descricao,
+              ]
+            );
+            const novoItemAvulsoId = resultItemAvulso.insertId;
+            if (item.anexos && Array.isArray(item.anexos)) {
+              for (const anexo of item.anexos) {
+                const caminhoMovido = await moverAnexo(
+                  anexo,
+                  novaInspecaoId,
+                  `avulso_itens/item_${novoItemAvulsoId}`,
+                  connection,
+                  {
+                    prefixo: "AVULSO",
+                    categoria_anexo: "ITEM_AVULSO",
+                    item_avulso_id: novoItemAvulsoId,
+                  }
+                );
+                arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
+              }
+            }
+          }
+        }
+      }
+
+      if (anexosGerais && Array.isArray(anexosGerais)) {
+        for (const anexo of anexosGerais) {
+          const caminhoMovido = await moverAnexo(
+            anexo,
+            novaInspecaoId,
+            "anexos_gerais_inspecao",
+            connection,
+            {
+              prefixo: "GERAL",
+              categoria_anexo: "INSPECAO_GERAL",
+            }
+          );
+          arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
         }
       }
 
@@ -361,12 +417,11 @@ router.post(
       await registrarAuditoria(
         req.user.matricula,
         "CREATE_INSPECAO_SUBESTACAO",
-        `Inspeção ID ${novaInspecaoId} criada.`,
+        `Inspeção ID ${novaInspecaoId} (Modo: ${inspection_mode}) criada.`,
         connection
       );
       res.status(201).json({
         id: novaInspecaoId,
-        formulario_inspecao_num: String(novaInspecaoId),
         message: "Inspeção registrada com sucesso!",
       });
     } catch (error) {
@@ -376,10 +431,275 @@ router.post(
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      await limparArquivosTemporariosUpload(req.files);
       console.error("Erro ao registrar inspeção:", error);
       res.status(500).json({
         message: "Erro interno ao registrar a inspeção.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.put(
+  "/inspecoes-subestacoes/:id",
+  autenticar,
+  podeRealizarInspecao,
+  verificarInspecaoExiste,
+  async (req, res) => {
+    const { id: inspecaoId } = req.params;
+    const {
+      subestacao_id,
+      responsavel_levantamento_id,
+      tipo_inspecao,
+      data_avaliacao,
+      hora_inicial,
+      inspection_mode,
+      anexosGerais,
+      avulsa_items,
+      checklist_items,
+      registros_dinamicos,
+      anexos_para_deletar,
+    } = req.body;
+
+    const connection = await promisePool.getConnection();
+    let arquivosMovidosComSucessoParaRollback = [];
+
+    try {
+      await connection.beginTransaction();
+
+      if (
+        anexos_para_deletar &&
+        Array.isArray(anexos_para_deletar) &&
+        anexos_para_deletar.length > 0
+      ) {
+        const [anexosDb] = await connection.query(
+          "SELECT id, caminho_servidor FROM inspecoes_anexos WHERE id IN (?)",
+          [anexos_para_deletar]
+        );
+        for (const anexo of anexosDb) {
+          const fullPath = path.join(
+            projectRootDir,
+            "public",
+            anexo.caminho_servidor
+          );
+          try {
+            await fs.unlink(fullPath);
+          } catch (err) {
+            if (err.code !== "ENOENT") {
+              console.warn(
+                `Falha ao deletar arquivo do anexo ${anexo.id}: ${fullPath}`
+              );
+            }
+          }
+        }
+        await connection.query("DELETE FROM inspecoes_anexos WHERE id IN (?)", [
+          anexos_para_deletar,
+        ]);
+      }
+
+      const [respostasAntigas] = await connection.query(
+        "SELECT id FROM inspecoes_itens_respostas WHERE inspecao_id = ?",
+        [inspecaoId]
+      );
+      if (respostasAntigas.length > 0) {
+        const idsRespostasAntigas = respostasAntigas.map((r) => r.id);
+        await connection.query(
+          "DELETE FROM inspecoes_item_especificacoes WHERE item_resposta_id IN (?)",
+          [idsRespostasAntigas]
+        );
+      }
+      await connection.query(
+        "DELETE FROM inspecoes_itens_respostas WHERE inspecao_id = ?",
+        [inspecaoId]
+      );
+      await connection.query(
+        "DELETE FROM inspecoes_registros WHERE inspecao_id = ?",
+        [inspecaoId]
+      );
+      await connection.query(
+        "DELETE FROM inspecoes_avulsas_itens WHERE inspecao_id = ?",
+        [inspecaoId]
+      );
+
+      await connection.query(
+        `UPDATE inspecoes_subestacoes SET 
+            processo = ?, subestacao_id = ?, responsavel_levantamento_id = ?, 
+            tipo_inspecao = ?, modo_inspecao = ?, data_avaliacao = ?, 
+            hora_inicial = ?, hora_final = ?, observacoes_gerais = ?
+         WHERE id = ?`,
+        [
+          req.body.processo || null,
+          subestacao_id,
+          responsavel_levantamento_id,
+          tipo_inspecao,
+          inspection_mode.toUpperCase(),
+          data_avaliacao,
+          hora_inicial,
+          req.body.hora_final || null,
+          req.body.observacoes_gerais || null,
+          inspecaoId,
+        ]
+      );
+
+      if (inspection_mode === "checklist") {
+        if (checklist_items && Array.isArray(checklist_items)) {
+          for (const item of checklist_items) {
+            const [resultResposta] = await connection.query(
+              `INSERT INTO inspecoes_itens_respostas (inspecao_id, item_checklist_id, avaliacao, observacao_item) VALUES (?, ?, ?, ?)`,
+              [
+                inspecaoId,
+                item.item_checklist_id,
+                item.avaliacao,
+                item.observacao_item || null,
+              ]
+            );
+            const novaRespostaId = resultResposta.insertId;
+            const mapaEspecificacoes = {};
+
+            if (item.especificacoes && item.especificacoes.length > 0) {
+              for (const especificacao of item.especificacoes) {
+                const [resultEsp] = await connection.query(
+                  `INSERT INTO inspecoes_item_especificacoes (item_resposta_id, descricao_equipamento, observacao) VALUES (?, ?, ?)`,
+                  [
+                    novaRespostaId,
+                    especificacao.descricao_equipamento,
+                    especificacao.observacao || null,
+                  ]
+                );
+                mapaEspecificacoes[especificacao.temp_id] = resultEsp.insertId;
+              }
+            }
+
+            if (item.anexos && item.anexos.length > 0) {
+              for (const anexo of item.anexos) {
+                const especificacaoDbId =
+                  anexo.associado_a === "geral"
+                    ? null
+                    : mapaEspecificacoes[anexo.associado_a];
+                const caminhoMovido = await moverAnexo(
+                  anexo,
+                  inspecaoId,
+                  `respostas_itens/resposta_${novaRespostaId}/anexos`,
+                  connection,
+                  {
+                    prefixo: "ITEM",
+                    categoria_anexo: "ITEM_ANEXO",
+                    item_resposta_id: novaRespostaId,
+                    item_especificacao_id: especificacaoDbId,
+                  }
+                );
+                arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
+              }
+            }
+          }
+        }
+        if (registros_dinamicos && Array.isArray(registros_dinamicos)) {
+          for (const registro of registros_dinamicos) {
+            const [resultRegistro] = await connection.query(
+              `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                inspecaoId,
+                registro.categoria,
+                registro.tipo,
+                registro.tag,
+                registro.obs,
+                null,
+                registro.valor,
+                registro.unidade,
+              ]
+            );
+            const novoRegistroId = resultRegistro.insertId;
+            if (registro.anexos && registro.anexos.length > 0) {
+              for (const anexo of registro.anexos) {
+                const caminhoMovido = await moverAnexo(
+                  anexo,
+                  inspecaoId,
+                  `registros/registro_${novoRegistroId}`,
+                  connection,
+                  {
+                    prefixo: "REG",
+                    categoria_anexo: "REGISTRO_FOTO",
+                    registro_id: novoRegistroId,
+                  }
+                );
+                arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
+              }
+            }
+          }
+        }
+      } else if (inspection_mode === "avulsa") {
+        if (avulsa_items && Array.isArray(avulsa_items)) {
+          for (const item of avulsa_items) {
+            const [resultItemAvulso] = await connection.query(
+              `INSERT INTO inspecoes_avulsas_itens (inspecao_id, equipamento, tag, condicao, descricao) VALUES (?, ?, ?, ?, ?)`,
+              [
+                inspecaoId,
+                item.equipamento,
+                item.tag,
+                item.condicao,
+                item.descricao,
+              ]
+            );
+            const novoItemAvulsoId = resultItemAvulso.insertId;
+            if (item.anexos && Array.isArray(item.anexos)) {
+              for (const anexo of item.anexos) {
+                const caminhoMovido = await moverAnexo(
+                  anexo,
+                  inspecaoId,
+                  `avulso_itens/item_${novoItemAvulsoId}`,
+                  connection,
+                  {
+                    prefixo: "AVULSO",
+                    categoria_anexo: "ITEM_AVULSO",
+                    item_avulso_id: novoItemAvulsoId,
+                  }
+                );
+                arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
+              }
+            }
+          }
+        }
+      }
+
+      if (anexosGerais && Array.isArray(anexosGerais)) {
+        for (const anexo of anexosGerais) {
+          const caminhoMovido = await moverAnexo(
+            anexo,
+            inspecaoId,
+            "anexos_gerais_inspecao",
+            connection,
+            {
+              prefixo: "GERAL",
+              categoria_anexo: "INSPECAO_GERAL",
+            }
+          );
+          arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
+        }
+      }
+
+      await connection.commit();
+      await registrarAuditoria(
+        req.user.matricula,
+        "UPDATE_INSPECAO_SUBESTACAO",
+        `Inspeção ID ${inspecaoId} (Modo: ${inspection_mode}) atualizada.`,
+        connection
+      );
+      res.status(200).json({
+        id: inspecaoId,
+        message: "Inspeção atualizada com sucesso!",
+      });
+    } catch (error) {
+      if (connection) await connection.rollback();
+      for (const caminho of arquivosMovidosComSucessoParaRollback) {
+        try {
+          await fs.unlink(caminho);
+        } catch (e) {}
+      }
+      console.error(`Erro ao atualizar inspeção ${inspecaoId}:`, error);
+      res.status(500).json({
+        message: "Erro interno ao atualizar a inspeção.",
         detalhes: error.message,
       });
     } finally {
@@ -402,6 +722,7 @@ router.get(
     try {
       const [inspecaoRows] = await promisePool.query(
         `SELECT i.id, i.processo, i.subestacao_id, i.formulario_inspecao_num, i.responsavel_levantamento_id, 
+                    i.tipo_inspecao, i.modo_inspecao,
                     DATE_FORMAT(i.data_avaliacao, '%d/%m/%Y') as data_avaliacao_fmt, i.data_avaliacao, 
                     i.hora_inicial, i.hora_final, i.status_inspecao, i.observacoes_gerais, 
                     s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
@@ -416,55 +737,75 @@ router.get(
         return res
           .status(404)
           .json({ message: `Inspeção ID ${id} não encontrada.` });
+
       const inspecao = inspecaoRows[0];
-
-      const [respostasRows] = await promisePool.query(
-        `SELECT
-                r.id as resposta_id, r.avaliacao, r.observacao_item,
-                ci.id as item_checklist_id, ci.descricao_item,
-                cg.nome_grupo, cg.ordem as grupo_ordem, ci.ordem as item_ordem
-            FROM inspecoes_itens_respostas r
-            JOIN checklist_itens ci ON r.item_checklist_id = ci.id
-            JOIN checklist_grupos cg ON ci.grupo_id = cg.id
-            WHERE r.inspecao_id = ? 
-            ORDER BY cg.ordem, ci.ordem ASC`,
-        [id]
-      );
-
-      const idRespostas = respostasRows.map((r) => r.resposta_id);
-      let especificacoesRows = [];
-      if (idRespostas.length > 0) {
-        [especificacoesRows] = await promisePool.query(
-          `SELECT id, item_resposta_id, descricao_equipamento, observacao 
-           FROM inspecoes_item_especificacoes WHERE item_resposta_id IN (?)`,
-          [idRespostas]
-        );
-      }
-
-      const [registrosRows] = await promisePool.query(
-        `SELECT id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, referencia_externa 
-             FROM inspecoes_registros WHERE inspecao_id = ? ORDER BY id ASC`,
-        [id]
-      );
+      const respostaFinal = {
+        ...inspecao,
+        itens: [],
+        registros: [],
+        itens_avulsos: [],
+        anexos: [],
+      };
 
       const [anexosRows] = await promisePool.query(
         `SELECT id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo, 
-                    item_resposta_id, item_especificacao_id, registro_id 
+                    item_resposta_id, item_especificacao_id, registro_id, item_avulso_id 
              FROM inspecoes_anexos WHERE inspecao_id = ?`,
         [id]
       );
+      respostaFinal.anexos = anexosRows;
 
-      const respostaFinal = {
-        ...inspecao,
-        itens: respostasRows.map((r) => ({
+      if (inspecao.modo_inspecao === "CHECKLIST") {
+        const [respostasRows] = await promisePool.query(
+          `SELECT r.id as resposta_id, r.avaliacao, r.observacao_item,
+                    ci.id as item_checklist_id, ci.descricao_item,
+                    cg.nome_grupo, cg.ordem as grupo_ordem, ci.ordem as item_ordem
+                FROM inspecoes_itens_respostas r
+                JOIN checklist_itens ci ON r.item_checklist_id = ci.id
+                JOIN checklist_grupos cg ON ci.grupo_id = cg.id
+                WHERE r.inspecao_id = ? 
+                ORDER BY cg.ordem, ci.ordem ASC`,
+          [id]
+        );
+
+        const idRespostas = respostasRows.map((r) => r.resposta_id);
+        let especificacoesRows = [];
+        if (idRespostas.length > 0) {
+          [especificacoesRows] = await promisePool.query(
+            `SELECT id, item_resposta_id, descricao_equipamento, observacao 
+               FROM inspecoes_item_especificacoes WHERE item_resposta_id IN (?)`,
+            [idRespostas]
+          );
+        }
+
+        respostaFinal.itens = respostasRows.map((r) => ({
           ...r,
           especificacoes: especificacoesRows.filter(
             (e) => e.item_resposta_id === r.resposta_id
           ),
-        })),
-        registros: registrosRows,
-        anexos: anexosRows,
-      };
+        }));
+
+        const [registrosRows] = await promisePool.query(
+          `SELECT id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, referencia_externa 
+                 FROM inspecoes_registros WHERE inspecao_id = ? ORDER BY id ASC`,
+          [id]
+        );
+        respostaFinal.registros = registrosRows;
+      } else if (inspecao.modo_inspecao === "AVULSA") {
+        const [avulsoItemsRows] = await promisePool.query(
+          `SELECT id, equipamento, tag, condicao, descricao FROM inspecoes_avulsas_itens WHERE inspecao_id = ? ORDER BY id ASC`,
+          [id]
+        );
+        const anexosAvulsos = anexosRows.filter(
+          (a) => a.item_avulso_id !== null
+        );
+        respostaFinal.itens_avulsos = avulsoItemsRows.map((item) => ({
+          ...item,
+          anexos: anexosAvulsos.filter(
+            (anexo) => anexo.item_avulso_id === item.id
+          ),
+        }));
+      }
 
       res.json(respostaFinal);
     } catch (error) {
@@ -612,49 +953,35 @@ router.post(
   autenticar,
   podeGerenciarPaginaInspecoes,
   verificarInspecaoExiste,
-  upload.array("anexosEscritorio", 5),
   async (req, res) => {
     const { inspecaoId } = req;
-    const arquivos = req.files;
-    if (!arquivos?.length)
-      return res.status(400).json({ message: "Nenhum arquivo enviado." });
+    const { anexos, descricao_anexo_escritorio } = req.body;
+
+    if (!anexos || !Array.isArray(anexos) || anexos.length === 0) {
+      return res.status(400).json({ message: "Nenhum anexo informado." });
+    }
+
     const connection = await promisePool.getConnection();
     let arquivosMovidosComSucesso = [];
     try {
       await connection.beginTransaction();
-      const iEUD = path.join(
-        uploadsSubestacoesDir,
-        "checklist",
-        `checklist_${String(inspecaoId)}`,
-        "anexos_escritorio"
-      );
-      await fs.mkdir(iEUD, { recursive: true });
+
       let aSI = [];
-      for (const f of arquivos) {
-        const nUA = `${Date.now()}_ESCRITORIO_${f.originalname.replace(
-          /[^a-zA-Z0-9.\-_]/g,
-          "_"
-        )}`;
-        const cD = path.join(iEUD, nUA);
-        const cRS = `checklist/checklist_${inspecaoId}/anexos_escritorio/${nUA}`;
-        await fs.rename(f.path, cD);
-        arquivosMovidosComSucesso.push(cD);
-        const [rA] = await connection.query(
-          `INSERT INTO inspecoes_anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            inspecaoId,
-            f.originalname,
-            `/upload_arquivos_subestacoes/${cRS}`,
-            f.mimetype,
-            f.size,
-            "ESCRITORIO",
-            req.body.descricao_anexo_escritorio || null,
-          ]
+      for (const anexo of anexos) {
+        const caminhoMovido = await moverAnexo(
+          anexo,
+          inspecaoId,
+          "anexos_escritorio",
+          connection,
+          {
+            prefixo: "ESCRITORIO",
+            categoria_anexo: "ESCRITORIO",
+          }
         );
+        arquivosMovidosComSucesso.push(caminhoMovido);
         aSI.push({
-          id: rA.insertId,
-          nome_original: f.originalname,
-          caminho_servidor: `/upload_arquivos_subestacoes/${cRS}`,
+          nome_original: anexo.originalName,
+          caminho_servidor: caminhoMovido,
         });
       }
       await connection.commit();
@@ -677,122 +1004,8 @@ router.post(
           await fs.unlink(c);
         } catch (e) {}
       }
-      await limparArquivosTemporariosUpload(req.files);
       res.status(500).json({
         message: "Erro interno ao salvar anexos escritório.",
-        detalhes: error.message,
-      });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
-router.post(
-  "/inspecoes-subestacoes/:inspecaoId/item/:itemChecklistId/anexos-termografia",
-  autenticar,
-  podeGerenciarPaginaInspecoes,
-  verificarInspecaoExiste,
-  upload.array("fotosTermografiaItem", 10),
-  async (req, res) => {
-    const { inspecaoId } = req;
-    const itemChecklistId = parseInt(req.params.itemChecklistId, 10);
-    const { descricao_anexo } = req.body;
-    const arquivos = req.files;
-
-    if (isNaN(itemChecklistId) || itemChecklistId <= 0) {
-      await limparArquivosTemporariosUpload(req.files);
-      return res.status(400).json({ message: "ID do item inválido." });
-    }
-    if (!arquivos || arquivos.length === 0) {
-      return res.status(400).json({ message: "Nenhum arquivo enviado." });
-    }
-
-    const connection = await promisePool.getConnection();
-    let arquivosMovidosComSucesso = [];
-    try {
-      await connection.beginTransaction();
-
-      const [respostaCheck] = await connection.query(
-        `SELECT id FROM inspecoes_itens_respostas WHERE inspecao_id = ? AND item_checklist_id = ?`,
-        [inspecaoId, itemChecklistId]
-      );
-      if (respostaCheck.length === 0) {
-        await limparArquivosTemporariosUpload(req.files);
-        return res.status(404).json({
-          message: `Resposta para o item ${itemChecklistId} não encontrada na inspeção ${inspecaoId}.`,
-        });
-      }
-      const itemRespostaId = respostaCheck[0].id;
-
-      const itemTermografiaUploadDir = path.join(
-        uploadsSubestacoesDir,
-        "checklist",
-        `checklist_${String(inspecaoId)}`,
-        "respostas_itens",
-        `resposta_${itemRespostaId}`,
-        "termografia"
-      );
-      await fs.mkdir(itemTermografiaUploadDir, { recursive: true });
-
-      let anexosSalvosInfo = [];
-      for (const file of arquivos) {
-        const nomeUnicoArquivo = `${Date.now()}_TERM_${file.originalname.replace(
-          /[^a-zA-Z0-9.\-_]/g,
-          "_"
-        )}`;
-        const caminhoDestino = path.join(
-          itemTermografiaUploadDir,
-          nomeUnicoArquivo
-        );
-        const caminhoRelativoServidor = `checklist/checklist_${inspecaoId}/respostas_itens/resposta_${itemRespostaId}/termografia/${nomeUnicoArquivo}`;
-
-        await fs.rename(file.path, caminhoDestino);
-        arquivosMovidosComSucesso.push(caminhoDestino);
-
-        const [resultAnexo] = await connection.query(
-          `INSERT INTO inspecoes_anexos (inspecao_id, item_resposta_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            inspecaoId,
-            itemRespostaId,
-            file.originalname,
-            `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-            file.mimetype,
-            file.size,
-            "ITEM_TERMOGRAFIA",
-            descricao_anexo || `Termografia Item ID ${itemChecklistId}`,
-          ]
-        );
-        anexosSalvosInfo.push({
-          id: resultAnexo.insertId,
-          nome_original: file.originalname,
-          caminho_servidor: `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-        });
-      }
-
-      await connection.commit();
-      if (req.user?.matricula) {
-        await registrarAuditoria(
-          req.user.matricula,
-          "UPLOAD_TERMOGRAFIA_ITEM_INSPECAO",
-          `Imagens termográficas adicionadas ao Item ID ${itemChecklistId} da Inspeção ID ${inspecaoId}.`,
-          connection
-        );
-      }
-      res.status(201).json({
-        message: "Imagens termográficas salvas com sucesso!",
-        anexos: anexosSalvosInfo,
-      });
-    } catch (error) {
-      await connection.rollback();
-      for (const caminho of arquivosMovidosComSucesso) {
-        try {
-          await fs.unlink(caminho);
-        } catch (e) {}
-      }
-      await limparArquivosTemporariosUpload(req.files);
-      res.status(500).json({
-        message: "Erro interno ao salvar imagens termográficas do item.",
         detalhes: error.message,
       });
     } finally {
@@ -812,6 +1025,8 @@ router.get(
           i.id, 
           i.processo, 
           i.formulario_inspecao_num,
+          i.tipo_inspecao,
+          i.modo_inspecao,
           DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, 
           i.status_inspecao, 
           s.sigla as subestacao_sigla, 
@@ -830,6 +1045,14 @@ router.get(
       if (req.query.status_inspecao) {
         query += " AND i.status_inspecao = ?";
         params.push(req.query.status_inspecao);
+      }
+      if (req.query.tipo_inspecao) {
+        query += " AND i.tipo_inspecao = ?";
+        params.push(req.query.tipo_inspecao);
+      }
+      if (req.query.modo_inspecao) {
+        query += " AND i.modo_inspecao = ?";
+        params.push(req.query.modo_inspecao);
       }
       if (req.query.processo) {
         query += " AND i.processo LIKE ?";
@@ -959,6 +1182,94 @@ router.post(
         message: "Erro interno ao buscar detalhes das inspeções.",
         detalhes: error.message,
       });
+    }
+  }
+);
+
+router.post(
+  "/inspecoes-subestacoes/:inspecaoId/item/:itemChecklistId/anexos-termografia",
+  autenticar,
+  podeGerenciarPaginaInspecoes,
+  verificarInspecaoExiste,
+  async (req, res) => {
+    const { inspecaoId } = req;
+    const itemChecklistId = parseInt(req.params.itemChecklistId, 10);
+    const { anexos, item_especificacao_id } = req.body;
+
+    if (isNaN(itemChecklistId) || itemChecklistId <= 0) {
+      return res.status(400).json({ message: "ID do item inválido." });
+    }
+    if (!anexos || anexos.length === 0) {
+      return res.status(400).json({ message: "Nenhum anexo enviado." });
+    }
+
+    const connection = await promisePool.getConnection();
+    let arquivosMovidosComSucesso = [];
+    try {
+      await connection.beginTransaction();
+
+      const [respostaCheck] = await connection.query(
+        `SELECT id FROM inspecoes_itens_respostas WHERE inspecao_id = ? AND item_checklist_id = ?`,
+        [inspecaoId, itemChecklistId]
+      );
+      if (respostaCheck.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({
+          message: `Resposta para o item ${itemChecklistId} não encontrada na inspeção ${inspecaoId}.`,
+        });
+      }
+      const itemRespostaId = respostaCheck[0].id;
+      const especificacaoIdFinal = item_especificacao_id
+        ? parseInt(item_especificacao_id, 10)
+        : null;
+
+      let anexosSalvosInfo = [];
+      for (const anexo of anexos) {
+        const caminhoMovido = await moverAnexo(
+          anexo,
+          inspecaoId,
+          `respostas_itens/resposta_${itemRespostaId}/termografia`,
+          connection,
+          {
+            prefixo: "TERMO",
+            categoria_anexo: "ITEM_TERMOGRAFIA",
+            item_resposta_id: itemRespostaId,
+            item_especificacao_id: especificacaoIdFinal,
+          }
+        );
+        arquivosMovidosComSucesso.push(caminhoMovido);
+        anexosSalvosInfo.push({
+          nome_original: anexo.originalName,
+          caminho_servidor: caminhoMovido,
+        });
+      }
+
+      await connection.commit();
+      if (req.user?.matricula) {
+        await registrarAuditoria(
+          req.user.matricula,
+          "UPLOAD_TERMOGRAFIA_ITEM_INSPECAO",
+          `Imagens termográficas adicionadas ao Item ID ${itemChecklistId} da Inspeção ID ${inspecaoId}.`,
+          connection
+        );
+      }
+      res.status(201).json({
+        message: "Imagens termográficas salvas com sucesso!",
+        anexos: anexosSalvosInfo,
+      });
+    } catch (error) {
+      await connection.rollback();
+      for (const caminho of arquivosMovidosComSucesso) {
+        try {
+          await fs.unlink(caminho);
+        } catch (e) {}
+      }
+      res.status(500).json({
+        message: "Erro interno ao salvar imagens termográficas do item.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
     }
   }
 );
