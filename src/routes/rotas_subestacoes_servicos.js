@@ -31,7 +31,7 @@ const podeGerenciarPaginaServicos = (req, res, next) => {
 };
 
 const podeModificarServicos = (req, res, next) => {
-  const cargosPermitidos = ["ADMIN", "Engenheiro", "Técnico", "ADM", "Gerente"];
+  const cargosPermitidos = ["ADMIN", "Engenheiro", "Técnico", "ADM", "Gerente","Inspetor"];
   if (req.user && cargosPermitidos.includes(req.user.cargo)) {
     next();
   } else {
