@@ -31,7 +31,14 @@ const podeGerenciarPaginaServicos = (req, res, next) => {
 };
 
 const podeModificarServicos = (req, res, next) => {
-  const cargosPermitidos = ["ADMIN", "Engenheiro", "Técnico", "ADM", "Gerente","Inspetor"];
+  const cargosPermitidos = [
+    "ADMIN",
+    "Engenheiro",
+    "Técnico",
+    "ADM",
+    "Gerente",
+    "Inspetor",
+  ];
   if (req.user && cargosPermitidos.includes(req.user.cargo)) {
     next();
   } else {
@@ -630,23 +637,23 @@ router.get(
   async (req, res) => {
     try {
       let query = `
-        SELECT 
-          ss.id, ss.processo, ss.motivo, ss.tipo_ordem, ss.prioridade,
-          DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, 
-          ss.horario_inicio, ss.horario_fim, ss.status, 
-          DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, 
-          s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
-          u.nome as responsavel_nome,
-          (SELECT GROUP_CONCAT(DISTINCT u2.nome ORDER BY u2.nome SEPARATOR ', ') 
-            FROM servico_itens_escopo sie_enc 
-            LEFT JOIN users u2 ON sie_enc.encarregado_item_id = u2.id 
-            WHERE sie_enc.servico_id = ss.id AND sie_enc.encarregado_item_id IS NOT NULL) as encarregados_itens_nomes,
-          (SELECT COUNT(*) FROM servico_itens_escopo sie_total WHERE sie_total.servico_id = ss.id) as total_itens,
-          (SELECT COUNT(*) FROM servico_itens_escopo sie_conc WHERE sie_conc.servico_id = ss.id AND sie_conc.status_item_escopo LIKE 'CONCLUIDO%') as itens_concluidos
-        FROM servicos_subestacoes ss 
-        JOIN subestacoes s ON ss.subestacao_id = s.Id 
-        JOIN users u ON ss.responsavel_id = u.id 
-        WHERE 1=1`;
+          SELECT 
+            ss.id, ss.processo, ss.motivo, ss.tipo_ordem, ss.prioridade,
+            DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, 
+            ss.horario_inicio, ss.horario_fim, ss.status, 
+            DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, 
+            s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
+            u.nome as responsavel_nome,
+            (SELECT GROUP_CONCAT(DISTINCT u2.nome ORDER BY u2.nome SEPARATOR ', ') 
+              FROM servico_itens_escopo sie_enc 
+              LEFT JOIN users u2 ON sie_enc.encarregado_item_id = u2.id 
+              WHERE sie_enc.servico_id = ss.id AND sie_enc.encarregado_item_id IS NOT NULL) as encarregados_itens_nomes,
+            (SELECT COUNT(*) FROM servico_itens_escopo sie_total WHERE sie_total.servico_id = ss.id) as total_itens,
+            (SELECT COUNT(*) FROM servico_itens_escopo sie_conc WHERE sie_conc.servico_id = ss.id AND sie_conc.status_item_escopo LIKE 'CONCLUIDO%') as itens_concluidos
+          FROM servicos_subestacoes ss 
+          JOIN subestacoes s ON ss.subestacao_id = s.Id 
+          JOIN users u ON ss.responsavel_id = u.id 
+          WHERE 1=1`;
       const params = [];
 
       if (req.query.status) {
@@ -731,34 +738,34 @@ router.get(
 
       const [itensEscopoRows] = await promisePool.query(
         `SELECT 
-            sie.id as item_escopo_id, 
-            sie.catalogo_defeito_id, 
-            sie.inspecao_item_id,
-            sie.descricao_item_servico,
-            sie.observacao_especifica_servico,
-            sie.encarregado_item_id,
-            usr_enc.nome as encarregado_item_nome,
-            sie.status_item_escopo,
-            sie.data_conclusao_item,
-            sie.observacoes_conclusao_item,
-            sie.tag_equipamento_alvo,
-            sie.catalogo_equipamento_id,
-            cat_equip.nome as catalogo_equipamento_nome,
-            cat_equip.codigo as catalogo_equipamento_codigo,
-            cd.codigo as defeito_codigo,
-            cd.descricao as defeito_descricao,
-            iir.inspecao_id as origem_inspecao_id,
-            ins.formulario_inspecao_num as origem_inspecao_formulario_num,
-            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', anexo.id, 'nome_original', anexo.nome_original, 'caminho_servidor', anexo.caminho_servidor, 'tipo_mime', anexo.tipo_mime)) FROM servico_item_escopo_anexos anexo WHERE anexo.item_escopo_id = sie.id) as anexos
-         FROM servico_itens_escopo sie
-         LEFT JOIN catalogo_defeitos_servicos cd ON sie.catalogo_defeito_id = cd.id
-         LEFT JOIN users usr_enc ON sie.encarregado_item_id = usr_enc.id
-         LEFT JOIN catalogo_equipamentos cat_equip ON sie.catalogo_equipamento_id = cat_equip.id
-         LEFT JOIN inspecoes_itens_respostas iir ON sie.inspecao_item_id = iir.id
-         LEFT JOIN inspecoes_subestacoes ins ON iir.inspecao_id = ins.id
-         WHERE sie.servico_id = ?
-         GROUP BY sie.id
-         ORDER BY sie.id ASC`,
+              sie.id as item_escopo_id, 
+              sie.catalogo_defeito_id, 
+              sie.inspecao_item_id,
+              sie.descricao_item_servico,
+              sie.observacao_especifica_servico,
+              sie.encarregado_item_id,
+              usr_enc.nome as encarregado_item_nome,
+              sie.status_item_escopo,
+              sie.data_conclusao_item,
+              sie.observacoes_conclusao_item,
+              sie.tag_equipamento_alvo,
+              sie.catalogo_equipamento_id,
+              cat_equip.nome as catalogo_equipamento_nome,
+              cat_equip.codigo as catalogo_equipamento_codigo,
+              cd.codigo as defeito_codigo,
+              cd.descricao as defeito_descricao,
+              iir.inspecao_id as origem_inspecao_id,
+              ins.formulario_inspecao_num as origem_inspecao_formulario_num,
+              (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', anexo.id, 'nome_original', anexo.nome_original, 'caminho_servidor', anexo.caminho_servidor, 'tipo_mime', anexo.tipo_mime)) FROM servico_item_escopo_anexos anexo WHERE anexo.item_escopo_id = sie.id) as anexos
+          FROM servico_itens_escopo sie
+          LEFT JOIN catalogo_defeitos_servicos cd ON sie.catalogo_defeito_id = cd.id
+          LEFT JOIN users usr_enc ON sie.encarregado_item_id = usr_enc.id
+          LEFT JOIN catalogo_equipamentos cat_equip ON sie.catalogo_equipamento_id = cat_equip.id
+          LEFT JOIN inspecoes_itens_respostas iir ON sie.inspecao_item_id = iir.id
+          LEFT JOIN inspecoes_subestacoes ins ON iir.inspecao_id = ins.id
+          WHERE sie.servico_id = ?
+          GROUP BY sie.id
+          ORDER BY sie.id ASC`,
         [servicoId]
       );
 
@@ -778,6 +785,7 @@ router.get(
   }
 );
 
+// ROTA MODIFICADA
 router.put(
   "/api/servicos-subestacoes/:servicoId/concluir",
   autenticar,
@@ -786,15 +794,8 @@ router.put(
   async (req, res) => {
     const { servicoId } = req.params;
     const { servico } = req;
-    const { userId, userCargo } = {
-      userId: req.user.id,
-      userCargo: req.user.cargo,
-    };
-    const {
-      data_conclusao_manual,
-      hora_conclusao_manual,
-      observacoes_conclusao_manual,
-    } = req.body;
+    const { userId } = { userId: req.user.id };
+    const { data_conclusao_manual, observacoes_conclusao_manual } = req.body;
     const arquivosConclusao = req.files;
 
     if (servico.status === "CONCLUIDO" || servico.status === "CANCELADO") {
@@ -821,141 +822,101 @@ router.put(
     try {
       await connection.beginTransaction();
 
-      const cargosConclusaoGeral = [
-        "ADMIN",
-        "Engenheiro",
-        "Gerente",
-        "Técnico",
-        "ADM",
-      ];
+      const [itensDoUsuario] = await connection.query(
+        "SELECT id FROM servico_itens_escopo WHERE servico_id = ? AND encarregado_item_id = ? AND status_item_escopo NOT LIKE 'CONCLUIDO%'",
+        [servicoId, userId]
+      );
 
-      if (cargosConclusaoGeral.includes(userCargo)) {
-        let updateQuery =
-          "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = ?";
-        const updateParams = [
-          data_conclusao_manual,
-          observacoes_conclusao_manual || servico.observacoes_conclusao || "",
-        ];
-        if (hora_conclusao_manual) {
-          updateQuery += ", horario_fim = IFNULL(horario_fim, ?)";
-          updateParams.push(hora_conclusao_manual);
-        }
-        updateQuery += " WHERE id = ?";
-        updateParams.push(servicoId);
-        await connection.query(updateQuery, updateParams);
-
-        await connection.query(
-          "UPDATE servico_itens_escopo SET status_item_escopo = 'CONCLUIDO_AUTOMATICO' WHERE servico_id = ? AND status_item_escopo NOT LIKE 'CONCLUIDO%'",
-          [servicoId]
-        );
-      } else if (userCargo === "Encarregado" || userCargo === "Inspetor") {
-        const [itensDoUsuario] = await connection.query(
-          "SELECT id FROM servico_itens_escopo WHERE servico_id = ? AND encarregado_item_id = ? AND status_item_escopo NOT LIKE 'CONCLUIDO%'",
-          [servicoId, userId]
-        );
-
-        if (itensDoUsuario.length === 0) {
-          await connection.rollback();
-          if (arquivosConclusao?.length)
-            arquivosConclusao.forEach((f) => {
-              if (f.path) fs.unlink(f.path).catch(() => {});
-            });
-          return res.status(403).json({
-            message:
-              "Você não tem itens pendentes para concluir neste serviço.",
-          });
-        }
-
-        const idsItensDoUsuario = itensDoUsuario.map((item) => item.id);
-        const dataConclusaoItem = new Date();
-
-        await connection.query(
-          "UPDATE servico_itens_escopo SET status_item_escopo = 'CONCLUIDO_MANUAL', data_conclusao_item = ?, observacoes_conclusao_item = ? WHERE id IN (?)",
-          [dataConclusaoItem, observacoes_conclusao_manual, idsItensDoUsuario]
-        );
-
-        if (arquivosConclusao && arquivosConclusao.length > 0) {
-          const itemAnexoDir = path.join(
-            uploadsSubestacoesDir,
-            "servicos",
-            `servico_${String(servicoId)}`,
-            "itens_conclusao"
-          );
-          await fs.mkdir(itemAnexoDir, { recursive: true });
-
-          for (const item of itensDoUsuario) {
-            for (const file of arquivosConclusao) {
-              const nomeUnicoArq = `${Date.now()}_ITEM${
-                item.id
-              }_${file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-              const tempPath = file.path;
-              const finalPath = path.join(itemAnexoDir, nomeUnicoArq);
-              await fs.copyFile(tempPath, finalPath);
-              arquivosMovidosComSucesso.push(finalPath);
-
-              const caminhoRelServ = `servicos/servico_${servicoId}/itens_conclusao/${nomeUnicoArq}`;
-              await connection.query(
-                `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?,?,?,?,?)`,
-                [
-                  item.id,
-                  file.originalname,
-                  `/upload_arquivos_subestacoes/${caminhoRelServ}`,
-                  file.mimetype,
-                  file.size,
-                ]
-              );
-            }
-          }
-        }
-
-        const [progressoRows] = await connection.query(
-          `SELECT (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ?) as total, (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ? AND status_item_escopo LIKE 'CONCLUIDO%') as concluidos`,
-          [servicoId, servicoId]
-        );
-        if (
-          progressoRows[0].total > 0 &&
-          progressoRows[0].total === progressoRows[0].concluidos
-        ) {
-          await connection.query(
-            "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = CONCAT(IFNULL(observacoes_conclusao, ''), ' (Concluído automaticamente após finalização de todos os itens.)') WHERE id = ?",
-            [new Date().toISOString().split("T")[0], servicoId]
-          );
-        }
-      } else {
+      if (itensDoUsuario.length === 0) {
         await connection.rollback();
         if (arquivosConclusao?.length)
           arquivosConclusao.forEach((f) => {
             if (f.path) fs.unlink(f.path).catch(() => {});
           });
-        return res
-          .status(403)
-          .json({ message: "Acesso negado. Seu cargo não permite esta ação." });
+        return res.status(403).json({
+          message: "Você não tem itens pendentes para concluir neste serviço.",
+        });
+      }
+
+      const idsItensDoUsuario = itensDoUsuario.map((item) => item.id);
+
+      await connection.query(
+        "UPDATE servico_itens_escopo SET status_item_escopo = 'CONCLUIDO_MANUAL', data_conclusao_item = ?, observacoes_conclusao_item = ? WHERE id IN (?)",
+        [data_conclusao_manual, observacoes_conclusao_manual, idsItensDoUsuario]
+      );
+
+      if (arquivosConclusao && arquivosConclusao.length > 0) {
+        const itemAnexoDir = path.join(
+          uploadsSubestacoesDir,
+          "servicos",
+          `servico_${String(servicoId)}`,
+          "itens_conclusao"
+        );
+        await fs.mkdir(itemAnexoDir, { recursive: true });
+
+        for (const item of itensDoUsuario) {
+          for (const file of arquivosConclusao) {
+            const nomeUnicoArq = `${Date.now()}_ITEM${
+              item.id
+            }_${file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+            const tempPath = file.path;
+            const finalPath = path.join(itemAnexoDir, nomeUnicoArq);
+            await fs.copyFile(tempPath, finalPath);
+            arquivosMovidosComSucesso.push(finalPath);
+
+            const caminhoRelServ = `servicos/servico_${servicoId}/itens_conclusao/${nomeUnicoArq}`;
+            await connection.query(
+              `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?,?,?,?,?)`,
+              [
+                item.id,
+                file.originalname,
+                `/upload_arquivos_subestacoes/${caminhoRelServ}`,
+                file.mimetype,
+                file.size,
+              ]
+            );
+          }
+        }
+      }
+
+      const [progressoRows] = await connection.query(
+        `SELECT 
+          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ?) as total, 
+          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ? AND status_item_escopo LIKE 'CONCLUIDO%') as concluidos`,
+        [servicoId, servicoId]
+      );
+
+      if (
+        progressoRows.length > 0 &&
+        progressoRows[0].total > 0 &&
+        progressoRows[0].total === progressoRows[0].concluidos
+      ) {
+        await connection.query(
+          "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = CONCAT(IFNULL(observacoes_conclusao, ''), ' (Concluído automaticamente após finalização de todos os itens.)') WHERE id = ?",
+          [new Date().toISOString().split("T")[0], servicoId]
+        );
       }
 
       await connection.commit();
-      if (arquivosConclusao?.length)
-        arquivosConclusao.forEach((f) => {
-          if (f.path) fs.unlink(f.path).catch(() => {});
-        });
       res.json({
         message: `Ação de conclusão registrada para o serviço (Processo: ${servico.processo})!`,
       });
     } catch (error) {
       await connection.rollback();
-      arquivosMovidosComSucesso.forEach((p) => {
+      for (const p of arquivosMovidosComSucesso) {
         try {
           if (fs.existsSync(p)) fs.unlinkSync(p);
         } catch (e) {}
-      });
-      if (arquivosConclusao?.length)
-        arquivosConclusao.forEach((f) => {
-          if (f.path) fs.unlink(f.path).catch(() => {});
-        });
+      }
       res.status(500).json({
         message: "Erro interno ao concluir serviço.",
         detalhes: error.message,
       });
     } finally {
+      if (arquivosConclusao?.length)
+        arquivosConclusao.forEach((f) => {
+          if (f.path) fs.unlink(f.path).catch(() => {});
+        });
       if (connection) connection.release();
     }
   }
