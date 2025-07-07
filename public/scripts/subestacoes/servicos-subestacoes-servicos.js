@@ -408,6 +408,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // FUNÇÃO MODIFICADA
   async function abrirModalConfirmacaoConcluirServico(
     servicoId,
     processoServico
@@ -418,42 +419,44 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizarPreviewAnexosConclusao();
 
     const user = await fetchCurrentUser();
-    const servico = await fetchData(`/api/servicos-subestacoes/${servicoId}`);
-    const cargosConclusaoGeral = [
-      "ADMIN",
-      "Engenheiro",
-      "Gerente",
-      "Técnico",
-      "ADM",
-    ];
+    if (!user) {
+      alert(
+        "Não foi possível verificar seu usuário. Por favor, recarregue a página."
+      );
+      return;
+    }
 
-    modalConfirmacaoServicoTitulo.innerHTML = `<span class="material-symbols-outlined text-success">check_circle</span> Concluir Serviço`;
+    const servico = await fetchData(`/api/servicos-subestacoes/${servicoId}`);
+    if (!servico) {
+      alert("Não foi possível carregar os detalhes do serviço.");
+      return;
+    }
+
+    modalConfirmacaoServicoTitulo.innerHTML = `<span class="material-symbols-outlined text-success">check_circle</span> Concluir Meus Itens`;
     btnConfirmarAcaoServico.className = "btn btn-success";
     btnConfirmarAcaoServico.innerHTML = `<span class="material-symbols-outlined">check</span> Confirmar Conclusão`;
 
-    if (cargosConclusaoGeral.includes(user.cargo)) {
-      mensagemConfirmacaoServico.textContent = `Deseja realmente marcar o serviço do processo "${
-        processoServico || servicoId
-      }" como CONCLUÍDO? Todos os itens pendentes serão fechados automaticamente.`;
-      listaItensParaConcluirContainer.innerHTML = "";
-      listaItensParaConcluirContainer.classList.add("hidden");
-    } else {
-      const meusItens = servico.itens_escopo.filter(
-        (item) =>
-          item.encarregado_item_id === user.id &&
-          !item.status_item_escopo.startsWith("CONCLUIDO")
-      );
-      if (meusItens.length === 0) {
-        alert("Você não possui itens pendentes para concluir neste serviço.");
-        return;
-      }
-      mensagemConfirmacaoServico.textContent =
-        "Você está prestes a concluir os seguintes itens sob sua responsabilidade:";
-      listaItensParaConcluirContainer.innerHTML = `<ul class="item-list">${meusItens
-        .map((item) => `<li>${item.descricao_item_servico}</li>`)
-        .join("")}</ul>`;
-      listaItensParaConcluirContainer.classList.remove("hidden");
+    // Lógica unificada: sempre verifica os itens pendentes do usuário logado.
+    const meusItens = servico.itens_escopo.filter(
+      (item) =>
+        item.encarregado_item_id === user.id &&
+        !item.status_item_escopo.startsWith("CONCLUIDO")
+    );
+
+    if (meusItens.length === 0) {
+      alert("Você não possui itens pendentes para concluir neste serviço.");
+      return; // Impede a abertura do modal se não há o que fazer.
     }
+
+    mensagemConfirmacaoServico.textContent =
+      "Você está prestes a concluir os seguintes itens sob sua responsabilidade:";
+    listaItensParaConcluirContainer.innerHTML = `<ul class="item-list">${meusItens
+      .map(
+        (item) =>
+          `<li>${item.descricao_item_servico || "Item sem descrição"}</li>`
+      )
+      .join("")}</ul>`;
+    listaItensParaConcluirContainer.classList.remove("hidden");
 
     formConfirmacaoConcluirServico.classList.remove("hidden");
     confirmacaoDataConclusaoInput.value = formatarDataParaInput(
