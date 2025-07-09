@@ -122,6 +122,9 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   const templateAnexoItem = document.getElementById("templateAnexoItem");
   const anexosItemContainer = document.getElementById("anexosItemContainer");
+  const anexosExistentesItemContainer = document.getElementById(
+    "anexosExistentesItemContainer"
+  );
 
   const modalAnexosAvulsosEl = document.getElementById("modalAnexosAvulsos");
   const itemAvulsoModalDescricao = document.getElementById(
@@ -584,7 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
   async function initChecklistForm(inspecaoParaEditar = null) {
-    if (!inspecaoParaEditar) {
+    if (!isEditMode) {
       await initCommonFields();
     }
 
@@ -597,33 +600,83 @@ document.addEventListener("DOMContentLoaded", () => {
       verificacoesAdicionais: [],
     };
 
-    if (inspecaoParaEditar) {
-      inspecaoParaEditar.itens.forEach((itemEditado) => {
-        checklistState.itens[itemEditado.item_checklist_id] = {
-          avaliacao: itemEditado.avaliacao,
-          observacao_item: itemEditado.observacao_item || "",
-          especificacoes:
-            itemEditado.especificacoes.map((e) => ({ ...e, temp_id: e.id })) ||
-            [],
+    checklistTemplateFromAPI.forEach((grupo) => {
+      grupo.itens.forEach((item) => {
+        checklistState.itens[item.id] = {
+          avaliacao: null,
+          observacao_item: "",
+          especificacoes: [],
           anexos: [],
-          anexos_existentes:
-            inspecaoParaEditar.anexos.filter(
-              (a) => a.item_resposta_id === itemEditado.resposta_id
-            ) || [],
+          anexos_existentes: [],
         };
       });
-    } else {
-      checklistTemplateFromAPI.forEach((grupo) => {
-        grupo.itens.forEach((item) => {
-          checklistState.itens[item.id] = {
-            avaliacao: null,
-            observacao_item: "",
-            especificacoes: [],
+    });
+
+    if (inspecaoParaEditar) {
+      inspecaoParaEditar.itens.forEach((itemEditado) => {
+        if (checklistState.itens[itemEditado.item_checklist_id]) {
+          checklistState.itens[itemEditado.item_checklist_id] = {
+            avaliacao: itemEditado.avaliacao,
+            observacao_item: itemEditado.observacao_item || "",
+            especificacoes:
+              itemEditado.especificacoes.map((e) => ({
+                ...e,
+                temp_id: e.id,
+              })) || [],
             anexos: [],
-            anexos_existentes: [],
+            anexos_existentes:
+              inspecaoParaEditar.anexos.filter(
+                (a) => a.item_resposta_id === itemEditado.resposta_id
+              ) || [],
           };
-        });
+        }
       });
+
+      if (
+        inspecaoParaEditar.registros &&
+        inspecaoParaEditar.registros.length > 0
+      ) {
+        checklistState.medicoes = inspecaoParaEditar.registros
+          .filter((r) => r.categoria_registro === "MEDICAO")
+          .map((r) => ({
+            temp_id: r.id,
+            tipo: r.tipo_especifico,
+            tag: r.tag_equipamento,
+            valor: r.valor_texto,
+            unidade: r.unidade_medida,
+            obs: r.descricao_item,
+            anexos: [],
+            anexos_existentes:
+              inspecaoParaEditar.anexos.filter((a) => a.registro_id === r.id) ||
+              [],
+          }));
+
+        checklistState.equipamentosObservados = inspecaoParaEditar.registros
+          .filter((r) => r.categoria_registro === "EQUIPAMENTO_OBSERVADO")
+          .map((r) => ({
+            temp_id: r.id,
+            tipo: r.tipo_especifico,
+            tag: r.tag_equipamento,
+            obs: r.descricao_item,
+            anexos: [],
+            anexos_existentes:
+              inspecaoParaEditar.anexos.filter((a) => a.registro_id === r.id) ||
+              [],
+          }));
+
+        checklistState.verificacoesAdicionais = inspecaoParaEditar.registros
+          .filter((r) => r.categoria_registro === "VERIFICACAO_ADICIONAL")
+          .map((r) => ({
+            temp_id: r.id,
+            item_verificado: r.descricao_item,
+            estado: r.estado_item,
+            ref_anterior: r.referencia_externa,
+            anexos: [],
+            anexos_existentes:
+              inspecaoParaEditar.anexos.filter((a) => a.registro_id === r.id) ||
+              [],
+          }));
+      }
     }
 
     gerarItensChecklist();
@@ -632,7 +685,144 @@ document.addEventListener("DOMContentLoaded", () => {
       Object.keys(checklistState.itens).forEach((itemId) => {
         atualizarEstiloBotaoDetalhes(itemId);
       });
+
+      renderMedicoes(checklistState.medicoes);
+      renderEquipamentosObservados(checklistState.equipamentosObservados);
+      renderVerificacoesAdicionais(checklistState.verificacoesAdicionais);
     }
+  }
+
+  function renderMedicoes(medicoes) {
+    if (!medicoes || medicoes.length === 0) return;
+    containerMedicoesDinamicas.innerHTML = "";
+    nenhumaMedicaoAdicionadaMsg.style.display = "none";
+
+    medicoes.forEach((medicao) => {
+      const clone = templateLinhaMedicao.content.cloneNode(true);
+      const novaLinha = clone.querySelector(".dynamic-row-item");
+      novaLinha.setAttribute("data-temp-id", medicao.temp_id);
+
+      novaLinha.querySelector(".tipo-medicao").value = medicao.tipo || "";
+      novaLinha.querySelector(".tag-equipamento-medicao").value =
+        medicao.tag || "";
+      novaLinha.querySelector(".valor-medido").value = medicao.valor || "";
+      novaLinha.querySelector(".unidade-medida").value = medicao.unidade || "";
+      novaLinha.querySelector(".obs-medicao").value = medicao.obs || "";
+
+      novaLinha
+        .querySelector(".btn-remover-linha")
+        .addEventListener("click", () => {
+          const indexToRemove = checklistState.medicoes.findIndex(
+            (i) => i.temp_id === medicao.temp_id
+          );
+          if (indexToRemove > -1)
+            checklistState.medicoes.splice(indexToRemove, 1);
+          novaLinha.remove();
+          if (containerMedicoesDinamicas.children.length === 0) {
+            nenhumaMedicaoAdicionadaMsg.style.display = "block";
+          }
+        });
+
+      const btnAnexar = novaLinha.querySelector(".btn-anexar-dinamico");
+      if (btnAnexar) {
+        if (medicao.anexos_existentes && medicao.anexos_existentes.length > 0) {
+          btnAnexar.classList.add("has-attachments");
+        }
+        btnAnexar.addEventListener("click", () => {
+          abrirModalParaItem({
+            type: "medicao",
+            id: medicao.temp_id,
+            desc: `Anexos para Medição: ${medicao.tipo}`,
+          });
+        });
+      }
+
+      containerMedicoesDinamicas.appendChild(clone);
+    });
+  }
+
+  function renderEquipamentosObservados(equipamentos) {
+    if (!equipamentos || equipamentos.length === 0) return;
+    containerEquipamentosObservados.innerHTML = "";
+    nenhumEquipamentoObservadoMsg.style.display = "none";
+
+    equipamentos.forEach((equip) => {
+      const clone = templateLinhaEquipamento.content.cloneNode(true);
+      const novaLinha = clone.querySelector(".dynamic-row-item");
+      novaLinha.setAttribute("data-temp-id", equip.temp_id);
+
+      novaLinha.querySelector(".tipo-equipamento-observado").value =
+        equip.tipo || "";
+      novaLinha.querySelector(".tag-equipamento-observado").value =
+        equip.tag || "";
+      novaLinha.querySelector(".obs-equipamento-observado").value =
+        equip.obs || "";
+
+      novaLinha
+        .querySelector(".btn-remover-linha")
+        .addEventListener("click", () => {
+          const indexToRemove = checklistState.equipamentosObservados.findIndex(
+            (i) => i.temp_id === equip.temp_id
+          );
+          if (indexToRemove > -1)
+            checklistState.equipamentosObservados.splice(indexToRemove, 1);
+          novaLinha.remove();
+          if (containerEquipamentosObservados.children.length === 0) {
+            nenhumEquipamentoObservadoMsg.style.display = "block";
+          }
+        });
+
+      const btnAnexar = novaLinha.querySelector(".btn-anexar-dinamico");
+      if (btnAnexar) {
+        if (equip.anexos_existentes && equip.anexos_existentes.length > 0) {
+          btnAnexar.classList.add("has-attachments");
+        }
+        btnAnexar.addEventListener("click", () => {
+          abrirModalParaItem({
+            type: "equipamentoObservado",
+            id: equip.temp_id,
+            desc: `Anexos para Equipamento: ${equip.tipo}`,
+          });
+        });
+      }
+
+      containerEquipamentosObservados.appendChild(clone);
+    });
+  }
+
+  function renderVerificacoesAdicionais(verificacoes) {
+    if (!verificacoes || verificacoes.length === 0) return;
+    containerVerificacoesAdicionais.innerHTML = "";
+    nenhumaVerificacaoAdicionadaMsg.style.display = "none";
+
+    verificacoes.forEach((verificacao) => {
+      const clone = templateLinhaVerificacaoAdicional.content.cloneNode(true);
+      const novaLinha = clone.querySelector(".dynamic-row-item");
+      novaLinha.setAttribute("data-temp-id", verificacao.temp_id);
+
+      novaLinha.querySelector(".item-verificado-adicional").value =
+        verificacao.item_verificado || "";
+      novaLinha.querySelector(".estado-item-adicional").value =
+        verificacao.estado || "";
+      novaLinha.querySelector(".num-formulario-anterior-adicional").value =
+        verificacao.ref_anterior || "";
+
+      novaLinha
+        .querySelector(".btn-remover-linha")
+        .addEventListener("click", () => {
+          const indexToRemove = checklistState.verificacoesAdicionais.findIndex(
+            (i) => i.temp_id === verificacao.temp_id
+          );
+          if (indexToRemove > -1)
+            checklistState.verificacoesAdicionais.splice(indexToRemove, 1);
+          novaLinha.remove();
+          if (containerVerificacoesAdicionais.children.length === 0) {
+            nenhumaVerificacaoAdicionadaMsg.style.display = "block";
+          }
+        });
+
+      containerVerificacoesAdicionais.appendChild(clone);
+    });
   }
 
   function gerarItensChecklist() {
@@ -714,6 +904,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return checklistState.equipamentosObservados.find(
         (i) => i.temp_id === context.id
       );
+    if (context.type === "verificacao")
+      return checklistState.verificacoesAdicionais.find(
+        (i) => i.temp_id === context.id
+      );
     return null;
   }
 
@@ -721,10 +915,15 @@ document.addEventListener("DOMContentLoaded", () => {
     currentEditingContext = context;
     itemDetalhesModalDescricao.textContent = `Item: ${context.desc}`;
     const isChecklistItem = context.type === "item";
+
     especificacoesFieldset.style.display = isChecklistItem ? "block" : "none";
     modalObservacaoContainer.style.display = isChecklistItem ? "block" : "none";
+
     const state = getStateObject(context);
     if (!state) return;
+
+    modalAttachments = [...state.anexos];
+
     if (isChecklistItem) {
       itemObservacaoTextarea.value = state.observacao_item;
       containerEspecificacoesItem.innerHTML = "";
@@ -732,9 +931,13 @@ document.addEventListener("DOMContentLoaded", () => {
         adicionarBlocoEspecificacaoDOM(spec)
       );
     }
-    modalAttachments = [...state.anexos];
-    renderAnexosExistentes(state.anexos_existentes, anexosItemContainer);
+
+    renderAnexosExistentes(
+      state.anexos_existentes,
+      anexosExistentesItemContainer
+    );
     renderAnexosModal();
+
     showModal(modalDetalhesItemEl);
   }
 
@@ -836,6 +1039,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (currentEditingContext.type === "item") {
         state.observacao_item = itemObservacaoTextarea.value;
         atualizarEstiloBotaoDetalhes(currentEditingContext.id);
+      } else {
+        atualizarEstiloBotaoAnexoDinamico(currentEditingContext);
       }
     }
     hideModal(modalDetalhesItemEl);
@@ -858,6 +1063,20 @@ document.addEventListener("DOMContentLoaded", () => {
     icon.classList.toggle("visible", temAnexos);
   }
 
+  function atualizarEstiloBotaoAnexoDinamico(context) {
+    const row = document.querySelector(
+      `.dynamic-row-item[data-temp-id="${context.id}"]`
+    );
+    if (!row) return;
+    const btn = row.querySelector(".btn-anexar-dinamico");
+    const state = getStateObject(context);
+    if (!state || !btn) return;
+    const temAnexos =
+      (state.anexos && state.anexos.length > 0) ||
+      (state.anexos_existentes && state.anexos_existentes.length > 0);
+    btn.classList.toggle("has-attachments", temAnexos);
+  }
+
   function adicionarNovaLinha(
     container,
     template,
@@ -872,7 +1091,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const tempId = `${typeName}_${Date.now()}`;
     novaLinha.setAttribute("data-temp-id", tempId);
     if (stateArray) {
-      const novoItemState = { temp_id: tempId, anexos: [] };
+      const novoItemState = {
+        temp_id: tempId,
+        anexos: [],
+        anexos_existentes: [],
+      };
       stateArray.push(novoItemState);
     }
     if (nenhumMsg) nenhumMsg.style.display = "none";
@@ -1042,9 +1265,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const linkEl = itemEl.querySelector(".anexo-existente-link");
       const nomeEl = itemEl.querySelector(".anexo-existente-nome");
       const btnRemover = itemEl.querySelector(".btn-remover-anexo-existente");
+      const imgPreview = itemEl.querySelector(".anexo-preview-img");
+      const iconDefault = itemEl.querySelector(".anexo-icon-default");
 
       linkEl.href = anexo.caminho_servidor;
       nomeEl.textContent = anexo.nome_original;
+
+      const isImage = /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(
+        anexo.caminho_servidor
+      );
+
+      if (isImage) {
+        imgPreview.src = anexo.caminho_servidor;
+        imgPreview.classList.remove("visually-hidden");
+        iconDefault.classList.add("visually-hidden");
+      }
 
       btnRemover.addEventListener("click", () => {
         if (itemEl.classList.toggle("marcado-para-remocao")) {
@@ -1106,25 +1341,38 @@ document.addEventListener("DOMContentLoaded", () => {
         container.querySelectorAll(".dynamic-row-item").forEach((row) => {
           const temp_id = row.dataset.tempId;
           const stateItem = stateArray.find((i) => i.temp_id === temp_id);
-          items.push({
+          if (!stateItem) return;
+
+          let data = {
             categoria: categoria,
-            tipo: row.querySelector(
-              ".tipo-medicao, .tipo-equipamento-observado"
-            )?.value,
-            tag: row.querySelector(
-              ".tag-equipamento-medicao, .tag-equipamento-observado"
-            )?.value,
-            valor: row.querySelector(".valor-medido")?.value,
-            unidade: row.querySelector(".unidade-medida")?.value,
-            obs: row.querySelector(".obs-medicao, .obs-equipamento-observado")
-              ?.value,
             anexos: stateItem.anexos
               .filter((a) => a.status === "uploaded")
               .map((a) => ({
                 tempFileName: a.tempFileName,
                 originalName: a.originalName,
               })),
-          });
+            anexos_existentes: stateItem.anexos_existentes.map((a) => a.id),
+          };
+
+          if (categoria === "MEDICAO") {
+            data.tipo = row.querySelector(".tipo-medicao")?.value;
+            data.tag = row.querySelector(".tag-equipamento-medicao")?.value;
+            data.valor = row.querySelector(".valor-medido")?.value;
+            data.unidade = row.querySelector(".unidade-medida")?.value;
+            data.obs = row.querySelector(".obs-medicao")?.value;
+          } else if (categoria === "EQUIPAMENTO_OBSERVADO") {
+            data.tipo = row.querySelector(".tipo-equipamento-observado")?.value;
+            data.tag = row.querySelector(".tag-equipamento-observado")?.value;
+            data.obs = row.querySelector(".obs-equipamento-observado")?.value;
+          } else if (categoria === "VERIFICACAO_ADICIONAL") {
+            data.obs = row.querySelector(".item-verificado-adicional")?.value;
+            data.estado = row.querySelector(".estado-item-adicional")?.value;
+            data.ref_anterior = row.querySelector(
+              ".num-formulario-anterior-adicional"
+            )?.value;
+          }
+
+          items.push(data);
         });
         return items;
       };
@@ -1139,6 +1387,11 @@ document.addEventListener("DOMContentLoaded", () => {
           containerEquipamentosObservados,
           "EQUIPAMENTO_OBSERVADO",
           checklistState.equipamentosObservados
+        ),
+        ...getDynamicRowData(
+          containerVerificacoesAdicionais,
+          "VERIFICACAO_ADICIONAL",
+          checklistState.verificacoesAdicionais
         ),
       ];
     } else if (currentInspectionType === "avulsa") {
