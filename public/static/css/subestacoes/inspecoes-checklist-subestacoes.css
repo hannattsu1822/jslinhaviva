@@ -715,3 +715,17 @@ textarea.form-control {
   overflow-y: auto;
   flex-shrink: 1;
 }
+
+/* Adicione este estilo ao seu arquivo .css */
+
+.btn-anexar-dinamico.has-attachments {
+  background-color: var(
+    --c-info
+  ); /* Usa a variável de cor azul do seu sistema */
+  color: white;
+  border-color: var(--c-info-dark);
+}
+
+.btn-anexar-dinamico.has-attachments:hover {
+  background-color: var(--c-info-dark);
+}
