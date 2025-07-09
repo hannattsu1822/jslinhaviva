@@ -1,5 +1,3 @@
-// public/scripts/trafos_reformados/trafos_reformados_importar.js
-
 document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("fileInput");
   const browseBtn = document.querySelector(".browse-btn");
@@ -102,7 +100,7 @@ function clearMessage() {
   if (messageArea) {
     messageArea.innerHTML = "";
     messageArea.className = "message-area";
-    messageArea.style.opacity = "0"; // Para transição
+    messageArea.style.opacity = "0";
     messageArea.style.height = "0";
     messageArea.style.padding = "0 1.5rem";
     messageArea.style.marginTop = "0";
@@ -122,7 +120,7 @@ function showSuccess(result) {
             }</strong>
           </div>
           <div class="d-flex justify-content-between mb-2">
-            <span>Novos transformadores cadastrados:</span>
+            <span>Novos ciclos de avaliação criados:</span>
             <strong class="text-success">${
               result.imported !== undefined ? result.imported : "N/A"
             }</strong>
@@ -134,44 +132,6 @@ function showSuccess(result) {
             }</strong>
           </div>
         </div>`;
-
-  let existingItemsSection = "";
-  if (result.duplicates_in_db && result.duplicates_in_db.length > 0) {
-    existingItemsSection = `
-          <div class="detail-section">
-            <div class="d-flex align-items-center mb-2">
-              <i class="fas fa-database text-warning me-2"></i>
-              <h5 class="m-0">Transformadores já cadastrados no sistema (não alterados):</h5>
-            </div>
-            <div class="d-flex flex-wrap">
-              ${result.duplicates_in_db
-                .map(
-                  (num) =>
-                    `<span class="serial-badge bg-warning-light">${num}</span>`
-                )
-                .join("")}
-            </div>
-          </div>`;
-  }
-
-  let duplicatesSheetSection = "";
-  if (result.duplicates_in_sheet && result.duplicates_in_sheet.length > 0) {
-    duplicatesSheetSection = `
-          <div class="detail-section">
-            <div class="d-flex align-items-center mb-2">
-              <i class="fas fa-copy text-danger me-2"></i>
-              <h5 class="m-0">Números de série duplicados na planilha (ignorados após primeira ocorrência):</h5>
-            </div>
-            <div class="d-flex flex-wrap">
-              ${result.duplicates_in_sheet
-                .map(
-                  (num) =>
-                    `<span class="serial-badge bg-danger-light">${num}</span>`
-                )
-                .join("")}
-            </div>
-          </div>`;
-  }
 
   let errorsDetailSection = "";
   if (result.errors_details && result.errors_details.length > 0) {
@@ -201,21 +161,18 @@ function showSuccess(result) {
         <div class="message-content">
           <h4>${result.message || "Importação Concluída!"}</h4>
           ${successDetails}
-          ${existingItemsSection}
-          ${duplicatesSheetSection}
           ${errorsDetailSection}
           <div class="action-buttons mt-4">
             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
               <i class="fas fa-redo me-2"></i>Nova Importação
             </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="window.location.href='/transformadores_reformados'">
-              <i class="fas fa-list me-2"></i>Ver Transformadores Reformados
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.location.href='/trafos_reformados_filtrar.html'">
+              <i class="fas fa-clipboard-check me-2"></i>Ir para Avaliações
             </button>
           </div>
         </div>`;
-  messageArea.className = "message-area success"; // Aplica classe depois de inserir conteúdo
+  messageArea.className = "message-area success";
   setTimeout(() => {
-    // Força reflow para a transição de altura funcionar
     messageArea.style.opacity = "1";
     messageArea.style.height = messageArea.scrollHeight + "px";
     messageArea.style.padding = "1.5rem";

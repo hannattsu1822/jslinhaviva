@@ -1,7 +1,6 @@
 let avaliacaoModalInstance;
 let accessDeniedModalInstance;
 let developmentModalInstance;
-let verChecklistModalInstance;
 let user = null;
 
 let currentPage = 1;
@@ -55,8 +54,6 @@ async function carregarFabricantes() {
         option.textContent = fabricante;
         select.appendChild(option);
       });
-    } else {
-      console.warn("Resposta de fabricantes não é um array:", data);
     }
   } catch (error) {
     alert("Erro ao carregar fabricantes: " + error.message);
@@ -76,34 +73,9 @@ async function carregarPotencias() {
         option.textContent = potencia;
         select.appendChild(option);
       });
-    } else {
-      console.warn("Resposta de potências não é um array:", data);
     }
   } catch (error) {
     alert("Erro ao carregar potências: " + error.message);
-  }
-}
-
-async function carregarTecnicos() {
-  try {
-    const data = await fazerRequisicao(
-      "/api/tecnicos_responsaveis_trafos_reformados"
-    );
-    const select = document.getElementById("filterTecnico");
-    if (!select) return;
-    select.innerHTML = '<option value="">Todos</option>';
-    if (Array.isArray(data)) {
-      data.forEach((tecnico) => {
-        const option = document.createElement("option");
-        option.value = tecnico.matricula;
-        option.textContent = `${tecnico.nome} (${tecnico.matricula})`;
-        select.appendChild(option);
-      });
-    } else {
-      console.warn("Resposta de técnicos não é um array:", data);
-    }
-  } catch (error) {
-    alert("Erro ao carregar técnicos: " + error.message);
   }
 }
 
@@ -125,33 +97,16 @@ async function carregarTrafos(page = 1) {
   try {
     const numeroSerieFilter =
       document.getElementById("filterNumeroSerie")?.value || "";
-    const status = document.getElementById("filterStatus")?.value || "";
     const fabricante = document.getElementById("filterFabricante")?.value || "";
     const potencia = document.getElementById("filterPotencia")?.value || "";
-    const tecnico = document.getElementById("filterTecnico")?.value || "";
-    const dataAvaliacaoInicial =
-      document.getElementById("filterDataAvaliacaoInicial")?.value || "";
-    const dataAvaliacaoFinal =
-      document.getElementById("filterDataAvaliacaoFinal")?.value || "";
-    const dataImportacaoInicial =
-      document.getElementById("filterDataImportacaoInicial")?.value || "";
-    const dataImportacaoFinal =
-      document.getElementById("filterDataImportacaoFinal")?.value || "";
 
     const params = new URLSearchParams();
+
+    params.append("status", "pendente");
+
     if (numeroSerieFilter) params.append("numero_serie", numeroSerieFilter);
-    if (status) params.append("status", status);
     if (fabricante) params.append("fabricante", fabricante);
     if (potencia) params.append("pot", potencia);
-    if (tecnico) params.append("tecnico_responsavel", tecnico);
-    if (dataAvaliacaoInicial)
-      params.append("data_avaliacao_inicial", dataAvaliacaoInicial);
-    if (dataAvaliacaoFinal)
-      params.append("data_avaliacao_final", dataAvaliacaoFinal);
-    if (dataImportacaoInicial)
-      params.append("data_importacao_inicial", dataImportacaoInicial);
-    if (dataImportacaoFinal)
-      params.append("data_importacao_final", dataImportacaoFinal);
 
     params.append("page", currentPage);
     params.append("limit", itemsPerPage);
@@ -165,9 +120,6 @@ async function carregarTrafos(page = 1) {
       if (responseData.pagination) {
         renderizarInfoPaginacao(responseData.pagination);
         renderizarControlesPaginacao(responseData.pagination);
-      } else {
-        if (paginationInfoEl)
-          paginationInfoEl.textContent = `Mostrando ${responseData.data.length} itens`;
       }
     } else {
       throw new Error(
@@ -221,7 +173,7 @@ function renderizarControlesPaginacao(pagination) {
   const prevA = document.createElement("a");
   prevA.className = "page-link";
   prevA.href = "#";
-  prevA.innerHTML = "&laquo;";
+  prevA.innerHTML = "«";
   prevA.setAttribute("aria-label", "Anterior");
   prevA.addEventListener("click", (e) => {
     e.preventDefault();
@@ -320,7 +272,7 @@ function renderizarControlesPaginacao(pagination) {
   const nextA = document.createElement("a");
   nextA.className = "page-link";
   nextA.href = "#";
-  nextA.innerHTML = "&raquo;";
+  nextA.innerHTML = "»";
   nextA.setAttribute("aria-label", "Próxima");
   nextA.addEventListener("click", (e) => {
     e.preventDefault();
@@ -340,44 +292,40 @@ function preencherTabela(trafos) {
   tbody.innerHTML = "";
 
   if (!trafos || trafos.length === 0) {
-    const paginationInfoEl = document.getElementById("paginationInfo");
-    if (
-      paginationInfoEl &&
-      paginationInfoEl.textContent === "Nenhum item encontrado"
-    ) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum transformador encontrado com os filtros aplicados.</td></tr>`;
-    } else {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum dado para exibir ou filtros resultaram em zero itens.</td></tr>`;
-    }
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum transformador pendente encontrado.</td></tr>`;
     return;
   }
 
   trafos.forEach((trafo) => {
-    let statusClass, statusText;
-    switch (trafo.status_avaliacao) {
-      case "avaliado":
-        statusClass = "bg-success text-white";
-        statusText = "Aprovado";
-        break;
-      case "reprovado":
-        statusClass = "bg-danger text-white";
-        statusText = "Reprovado";
-        break;
-      default:
-        statusClass = "bg-warning text-dark";
-        statusText = "Pendente";
-        break;
-    }
-    const dataAvaliacao = trafo.data_avaliacao
-      ? new Date(trafo.data_avaliacao).toLocaleDateString("pt-BR", {
-          timeZone: "UTC",
-        })
-      : "-";
+    const statusClass = "bg-warning text-dark";
+    const statusText = "Pendente";
     const dataImportacao = trafo.data_importacao
       ? new Date(trafo.data_importacao).toLocaleDateString("pt-BR", {
           timeZone: "UTC",
         })
       : "-";
+
+    let ultimaAvaliacaoHtml = "Nenhuma";
+    if (trafo.ultima_avaliacao_anterior) {
+      const dataFormatada = new Date(
+        trafo.ultima_avaliacao_anterior
+      ).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+      ultimaAvaliacaoHtml = `<span class="badge bg-warning text-dark">${dataFormatada}</span>`;
+    }
+
+    const actionButtonsHtml = `
+        <button onclick="window.abrirModalAvaliacao(${trafo.id})" 
+                class="btn btn-sm btn-primary" 
+                title="Avaliar">
+            <i class="fas fa-clipboard-check"></i>
+        </button>
+        <button onclick="window.confirmarExclusao(${
+          trafo.id
+        }, '${trafo.numero_serie.replace(/'/g, "\\'")}')" 
+                class="btn btn-sm btn-danger" title="Excluir">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    `;
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -387,28 +335,10 @@ function preencherTabela(trafos) {
       <td>${trafo.pot || "-"}</td>
       <td>${dataImportacao}</td>
       <td><span class="badge ${statusClass}">${statusText}</span></td>
-      <td>${dataAvaliacao}</td>
+      <td>${ultimaAvaliacaoHtml}</td>
       <td class="text-center">
         <div class="d-flex gap-1 justify-content-center">
-          <button onclick="window.abrirModalAvaliacao(${trafo.id})" 
-                  class="btn btn-sm btn-primary" 
-                  title="Avaliar" ${
-                    trafo.status_avaliacao !== "pendente" ? "disabled" : ""
-                  }>
-            <i class="fas fa-clipboard-check"></i>
-          </button>
-          <button onclick="window.abrirModalVerChecklist(${
-            trafo.id
-          }, '${trafo.numero_serie.replace(/'/g, "\\'")}')"
-                  class="btn btn-sm btn-info" title="Ver Checklist">
-            <i class="fas fa-list-check"></i>
-          </button>
-          <button onclick="window.confirmarExclusao(${
-            trafo.id
-          }, '${trafo.numero_serie.replace(/'/g, "\\'")}')" 
-                  class="btn btn-sm btn-danger" title="Excluir">
-            <i class="fas fa-trash-alt"></i>
-          </button>
+          ${actionButtonsHtml}
         </div>
       </td>`;
     tbody.appendChild(tr);
@@ -417,7 +347,9 @@ function preencherTabela(trafos) {
 
 window.confirmarExclusao = function (id, numeroSerie) {
   if (
-    confirm(`Tem certeza que deseja excluir o transformador ${numeroSerie}?`)
+    confirm(
+      `Tem certeza que deseja excluir o registro de avaliação ID ${id} (${numeroSerie})? Esta ação não pode ser desfeita.`
+    )
   ) {
     excluirTransformador(id);
   }
@@ -434,13 +366,60 @@ async function excluirTransformador(id) {
     if (!response.ok) throw new Error(data.message || "Erro ao excluir");
 
     if (data.success) {
-      alert("Transformador excluído com sucesso!");
+      alert("Registro de avaliação excluído com sucesso!");
       carregarTrafos(currentPage);
     } else {
       alert("Erro ao excluir: " + data.message);
     }
   } catch (error) {
-    alert("Erro ao excluir transformador: " + error.message);
+    alert("Erro ao excluir registro: " + error.message);
+  }
+}
+
+async function apagarTodosPendentes() {
+  const confirmacao1 = prompt(
+    'Esta ação é irreversível e irá apagar TODOS os transformadores com status "Pendente". Para confirmar, digite "APAGAR TUDO" na caixa abaixo.'
+  );
+  if (confirmacao1 !== "APAGAR TUDO") {
+    alert(
+      "Ação cancelada. A frase de confirmação não foi digitada corretamente."
+    );
+    return;
+  }
+
+  const confirmacao2 = confirm(
+    "Confirmação final: Tem certeza absoluta que deseja apagar todos os registros pendentes?"
+  );
+  if (!confirmacao2) {
+    alert("Ação cancelada.");
+    return;
+  }
+
+  const btn = document.getElementById("btnApagarPendentes");
+  btn.disabled = true;
+  btn.innerHTML =
+    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Apagando...';
+
+  try {
+    const response = await fazerRequisicao("/api/trafos_pendentes", {
+      method: "DELETE",
+    });
+    if (response.success) {
+      alert(
+        `${response.deletedCount} registros pendentes foram apagados com sucesso.`
+      );
+      carregarTrafos(1);
+    } else {
+      throw new Error(
+        response.message || "Erro desconhecido ao apagar registros."
+      );
+    }
+  } catch (error) {
+    alert("Erro ao apagar registros pendentes: " + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML =
+      '<i class="fas fa-trash-alt me-2"></i>Apagar Todos os Pendentes';
   }
 }
 
@@ -475,42 +454,10 @@ window.abrirModalAvaliacao = async function (id) {
       document.getElementById("potenciaModal").value = trafo.pot || "-";
 
       const statusSelect = document.getElementById("statusAvaliacao");
-      statusSelect.value =
-        trafo.status_avaliacao && trafo.status_avaliacao !== "pendente"
-          ? trafo.status_avaliacao
-          : "";
+      statusSelect.value = "";
 
       const obsEl = document.getElementById("observacoes");
-      if (obsEl) obsEl.value = trafo.resultado_avaliacao || "";
-
-      if (trafo.checklist_teste) {
-        document.getElementById("checkBobinaPrimariaI").value =
-          trafo.checklist_teste.bobina_primaria_i || "N/A";
-        document.getElementById("checkBobinaPrimariaII").value =
-          trafo.checklist_teste.bobina_primaria_ii || "N/A";
-        document.getElementById("checkBobinaPrimariaIII").value =
-          trafo.checklist_teste.bobina_primaria_iii || "N/A";
-        document.getElementById("checkBobinaSecundariaI").value =
-          trafo.checklist_teste.bobina_secundaria_i || "N/A";
-        document.getElementById("checkBobinaSecundariaII").value =
-          trafo.checklist_teste.bobina_secundaria_ii || "N/A";
-        document.getElementById("checkBobinaSecundariaIII").value =
-          trafo.checklist_teste.bobina_secundaria_iii || "N/A";
-        document.getElementById("valorBobinaI").value =
-          trafo.checklist_teste.valor_bobina_i || "";
-        document.getElementById("valorBobinaII").value =
-          trafo.checklist_teste.valor_bobina_ii || "";
-        document.getElementById("valorBobinaIII").value =
-          trafo.checklist_teste.valor_bobina_iii || "";
-        document.getElementById("checkEstadoFisico").value =
-          trafo.checklist_teste.estado_fisico || "N/A";
-        document.getElementById("observacoesChecklist").value =
-          trafo.checklist_teste.observacoes_checklist || "";
-      }
-
-      if (trafo.status_avaliacao === "pendente") {
-        statusSelect.value = "";
-      }
+      if (obsEl) obsEl.value = "";
 
       if (avaliacaoModalInstance) avaliacaoModalInstance.show();
     } else {
@@ -600,8 +547,9 @@ async function salvarAvaliacao() {
       );
     }
 
-    alert("Avaliação e checklist salvos com sucesso!");
+    alert("Avaliação salva com sucesso!");
     if (avaliacaoModalInstance) avaliacaoModalInstance.hide();
+
     carregarTrafos(currentPage);
   } catch (error) {
     console.error("Erro completo ao salvar avaliação:", error);
@@ -611,335 +559,6 @@ async function salvarAvaliacao() {
     btnSalvarAvaliacao.innerHTML = originalBtnHTML;
   }
 }
-
-window.abrirModalVerChecklist = async function (trafoId, numeroSerie) {
-  document.getElementById("checklistNumeroSerieModal").textContent =
-    numeroSerie;
-  document.getElementById("verChecklistTrafoId").value = trafoId;
-
-  const fieldsToClearIds = [
-    "checkId",
-    "checkDataTeste",
-    "checkTecnicoTeste",
-    "checkViewBobinaPrimariaI",
-    "checkViewBobinaPrimariaII",
-    "checkViewBobinaPrimariaIII",
-    "checkViewBobinaSecundariaI",
-    "checkViewBobinaSecundariaII",
-    "checkViewBobinaSecundariaIII",
-    "checkViewValorBobinaI",
-    "checkViewValorBobinaII",
-    "checkViewValorBobinaIII",
-    "checkViewEstadoFisico",
-    "checkViewObservacoesChecklist",
-    "checkViewConclusaoChecklist",
-  ];
-
-  fieldsToClearIds.forEach((fieldId) => {
-    const el = document.getElementById(fieldId);
-    if (el) el.textContent = "Carregando...";
-  });
-  const btnGerarPDFChecklistEl = document.getElementById(
-    "btnGerarPDFChecklist"
-  );
-  if (btnGerarPDFChecklistEl)
-    btnGerarPDFChecklistEl.style.display = "inline-block";
-
-  if (verChecklistModalInstance) verChecklistModalInstance.show();
-
-  try {
-    const response = await fazerRequisicao(
-      `/api/transformadores_reformados/${trafoId}`
-    );
-    if (response.success && response.data) {
-      const trafoInfo = response.data;
-      const checklist = response.data.checklist_teste;
-
-      const currentBtnGerarPDF = document.getElementById(
-        "btnGerarPDFChecklist"
-      );
-
-      if (checklist) {
-        if (currentBtnGerarPDF) {
-          const newBtn = currentBtnGerarPDF.cloneNode(true);
-          newBtn.innerHTML =
-            '<i class="fas fa-file-pdf"></i> Gerar PDF do Checklist';
-          newBtn.disabled = false;
-          currentBtnGerarPDF.parentNode.replaceChild(
-            newBtn,
-            currentBtnGerarPDF
-          );
-          newBtn.addEventListener("click", () =>
-            gerarPDFChecklistEspecifico(checklist, trafoInfo)
-          );
-          newBtn.style.display = "inline-block";
-        }
-
-        document.getElementById("checkId").textContent = checklist.id || "N/A";
-        document.getElementById("checkDataTeste").textContent =
-          checklist.data_teste
-            ? new Date(checklist.data_teste).toLocaleString("pt-BR", {
-                timeZone: "America/Sao_Paulo",
-              })
-            : "N/A";
-
-        let tecnicoNomeChecklist = checklist.tecnico_responsavel_teste || "N/A";
-        if (checklist.tecnico_responsavel_teste) {
-          try {
-            const userResp = await fazerRequisicao(
-              `/api/user_info/${checklist.tecnico_responsavel_teste}`
-            );
-            if (userResp && userResp.nome) {
-              tecnicoNomeChecklist = `${userResp.nome} (${checklist.tecnico_responsavel_teste})`;
-            }
-          } catch (e) {
-            console.error("Erro ao buscar nome do técnico do checklist:", e);
-          }
-        }
-        document.getElementById("checkTecnicoTeste").textContent =
-          tecnicoNomeChecklist;
-
-        document.getElementById("checkViewBobinaPrimariaI").textContent =
-          checklist.bobina_primaria_i || "N/A";
-        document.getElementById("checkViewBobinaPrimariaII").textContent =
-          checklist.bobina_primaria_ii || "N/A";
-        document.getElementById("checkViewBobinaPrimariaIII").textContent =
-          checklist.bobina_primaria_iii || "N/A";
-        document.getElementById("checkViewBobinaSecundariaI").textContent =
-          checklist.bobina_secundaria_i || "N/A";
-        document.getElementById("checkViewBobinaSecundariaII").textContent =
-          checklist.bobina_secundaria_ii || "N/A";
-        document.getElementById("checkViewBobinaSecundariaIII").textContent =
-          checklist.bobina_secundaria_iii || "N/A";
-        document.getElementById("checkViewValorBobinaI").textContent =
-          checklist.valor_bobina_i || "N/A";
-        document.getElementById("checkViewValorBobinaII").textContent =
-          checklist.valor_bobina_ii || "N/A";
-        document.getElementById("checkViewValorBobinaIII").textContent =
-          checklist.valor_bobina_iii || "N/A";
-        document.getElementById("checkViewEstadoFisico").textContent =
-          checklist.estado_fisico || "N/A";
-        document.getElementById("checkViewObservacoesChecklist").textContent =
-          checklist.observacoes_checklist || "Nenhuma";
-        document.getElementById("checkViewConclusaoChecklist").textContent =
-          checklist.conclusao_checklist || "N/A";
-      } else {
-        fieldsToClearIds.forEach((fieldId) => {
-          const el = document.getElementById(fieldId);
-          if (el && fieldId !== "checkViewObservacoesChecklist")
-            el.textContent = "N/A";
-        });
-        document.getElementById("checkViewObservacoesChecklist").textContent =
-          "Nenhum checklist registrado para este transformador.";
-        if (currentBtnGerarPDF) currentBtnGerarPDF.style.display = "none";
-      }
-    } else {
-      throw new Error(
-        response.message || "Erro ao carregar dados do checklist."
-      );
-    }
-  } catch (error) {
-    console.error("Erro ao abrir modal ver checklist:", error);
-    fieldsToClearIds.forEach((fieldId) => {
-      const el = document.getElementById(fieldId);
-      if (el && fieldId !== "checkViewObservacoesChecklist")
-        el.textContent = "Erro";
-    });
-    document.getElementById(
-      "checkViewObservacoesChecklist"
-    ).textContent = `Erro ao carregar: ${error.message}`;
-    const btnGerarPDF = document.getElementById("btnGerarPDFChecklist");
-    if (btnGerarPDF) btnGerarPDF.style.display = "none";
-  }
-};
-
-async function gerarPDFChecklistEspecifico(checklistData, trafoInfo) {
-  if (!checklistData) {
-    alert("Não há dados de checklist para gerar o PDF.");
-    return;
-  }
-
-  const btn = document.getElementById("btnGerarPDFChecklist");
-  const originalBtnHTML = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML =
-    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gerando...';
-
-  try {
-    const payload = {
-      checklist: checklistData,
-      transformador: {
-        id: trafoInfo.id,
-        numero_serie: trafoInfo.numero_serie,
-        fabricante: trafoInfo.fabricante,
-        pot: trafoInfo.pot,
-        item: trafoInfo.item,
-      },
-    };
-
-    const response = await fetch("/api/gerar_pdf_checklist_especifico", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
-      throw new Error(
-        errorData.message || "Erro ao gerar PDF do checklist no servidor"
-      );
-    }
-
-    const blob = await response.blob();
-    const urlBlob = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = urlBlob;
-    a.download = `Checklist_Trafo_${trafoInfo.numero_serie}_ID${checklistData.id}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(urlBlob);
-  } catch (error) {
-    console.error("Erro ao gerar PDF do checklist:", error);
-    alert("Erro ao gerar PDF do checklist: " + error.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalBtnHTML;
-  }
-}
-
-window.gerarPDF = async function () {
-  const btn = document.getElementById("btnGerarPDF");
-  const spinner = document.getElementById("pdfSpinner");
-  if (btn) btn.disabled = true;
-  if (spinner) spinner.style.display = "inline-block";
-
-  try {
-    const statusSelect = document.getElementById("filterStatus");
-    const numeroSerieFiltro =
-      document.getElementById("filterNumeroSerie")?.value || "";
-    const fabricanteSelect = document.getElementById("filterFabricante");
-    const potenciaSelect = document.getElementById("filterPotencia");
-    const tecnicoSelect = document.getElementById("filterTecnico");
-
-    const status = statusSelect?.value || "";
-    const fabricante = fabricanteSelect?.value || "";
-    const potencia = potenciaSelect?.value || "";
-    const tecnico = tecnicoSelect?.value || "";
-    const dataAvaliacaoInicial =
-      document.getElementById("filterDataAvaliacaoInicial")?.value || "";
-    const dataAvaliacaoFinal =
-      document.getElementById("filterDataAvaliacaoFinal")?.value || "";
-    const dataImportacaoInicial =
-      document.getElementById("filterDataImportacaoInicial")?.value || "";
-    const dataImportacaoFinal =
-      document.getElementById("filterDataImportacaoFinal")?.value || "";
-
-    const params = new URLSearchParams();
-    if (numeroSerieFiltro) params.append("numero_serie", numeroSerieFiltro);
-    if (status) params.append("status", status);
-    if (fabricante) params.append("fabricante", fabricante);
-    if (potencia) params.append("pot", potencia);
-    if (tecnico) params.append("tecnico_responsavel", tecnico);
-    if (dataAvaliacaoInicial)
-      params.append("data_avaliacao_inicial", dataAvaliacaoInicial);
-    if (dataAvaliacaoFinal)
-      params.append("data_avaliacao_final", dataAvaliacaoFinal);
-    if (dataImportacaoInicial)
-      params.append("data_importacao_inicial", dataImportacaoInicial);
-    if (dataImportacaoFinal)
-      params.append("data_importacao_final", dataImportacaoFinal);
-
-    params.append("getAll", "true");
-
-    const url = `/api/transformadores_reformados?${params.toString()}`;
-    const dataResponse = await fazerRequisicao(url);
-
-    if (!dataResponse.success || !dataResponse.data)
-      throw new Error(dataResponse.message || "Erro ao obter dados para PDF");
-
-    const filtrosTexto = {
-      numero_serie: numeroSerieFiltro,
-      status:
-        statusSelect.options[statusSelect.selectedIndex]?.textContent ||
-        "Todos",
-      fabricante:
-        fabricanteSelect.options[fabricanteSelect.selectedIndex]?.textContent ||
-        "Todos",
-      pot:
-        potenciaSelect.options[potenciaSelect.selectedIndex]?.textContent ||
-        "Todas",
-      tecnico_responsavel:
-        tecnicoSelect.options[tecnicoSelect.selectedIndex]?.textContent.split(
-          " ("
-        )[0] || "Todos",
-      data_avaliacao_inicial: dataAvaliacaoInicial
-        ? new Date(dataAvaliacaoInicial + "T00:00:00Z").toLocaleDateString(
-            "pt-BR",
-            { timeZone: "UTC" }
-          )
-        : "",
-      data_avaliacao_final: dataAvaliacaoFinal
-        ? new Date(dataAvaliacaoFinal + "T00:00:00Z").toLocaleDateString(
-            "pt-BR",
-            { timeZone: "UTC" }
-          )
-        : "",
-      data_importacao_inicial: dataImportacaoInicial
-        ? new Date(dataImportacaoInicial + "T00:00:00Z").toLocaleDateString(
-            "pt-BR",
-            { timeZone: "UTC" }
-          )
-        : "",
-      data_importacao_final: dataImportacaoFinal
-        ? new Date(dataImportacaoFinal + "T00:00:00Z").toLocaleDateString(
-            "pt-BR",
-            { timeZone: "UTC" }
-          )
-        : "",
-    };
-
-    const pdfResponse = await fetch("/api/gerar_pdf_trafos_reformados", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        dados: dataResponse.data,
-        filtros: filtrosTexto,
-      }),
-    });
-    if (!pdfResponse.ok) {
-      const errorData = await pdfResponse
-        .json()
-        .catch(() => ({ message: `Erro HTTP: ${pdfResponse.status}` }));
-      throw new Error(errorData.message || "Erro ao gerar PDF no servidor");
-    }
-    const blob = await pdfResponse.blob();
-    const urlBlob = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = urlBlob;
-    a.download = "Relatorio_Transformadores_Reformados.pdf";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(urlBlob);
-  } catch (error) {
-    console.error("Erro ao gerar PDF:", error);
-    alert("Erro ao gerar PDF: " + error.message);
-  } finally {
-    if (btn) btn.disabled = false;
-    if (spinner) spinner.style.display = "none";
-  }
-};
 
 window.navigateTo = async function (pageNameOrUrl) {
   let urlToNavigate = pageNameOrUrl;
@@ -953,22 +572,34 @@ window.navigateTo = async function (pageNameOrUrl) {
     return;
 
   try {
-    const response = await fetch(urlToNavigate);
-    if (response.ok) {
+    const response = await fetch(urlToNavigate, { method: "HEAD" });
+    if (
+      response.ok ||
+      response.status === 401 ||
+      response.status === 403 ||
+      response.redirected
+    ) {
       window.location.href = urlToNavigate;
-    } else if (response.status === 403) {
-      if (accessDeniedModalInstance) accessDeniedModalInstance.show();
-      else alert("Acesso negado!");
     } else if (response.status === 404) {
-      if (developmentModalInstance) developmentModalInstance.show();
-      else alert("Página não encontrada ou em desenvolvimento.");
+      if (developmentModalInstance) {
+        developmentModalInstance.show();
+      } else {
+        alert("Página não encontrada ou em desenvolvimento.");
+      }
     } else {
-      if (developmentModalInstance) developmentModalInstance.show();
-      else alert("Erro ao tentar acessar a página.");
+      if (accessDeniedModalInstance) {
+        accessDeniedModalInstance.show();
+      } else {
+        alert("Acesso negado ou erro ao tentar acessar a página.");
+      }
     }
   } catch (error) {
-    if (developmentModalInstance) developmentModalInstance.show();
-    else alert("Erro de rede ou falha na navegação.");
+    console.error("Erro de rede ou falha na navegação:", error);
+    if (developmentModalInstance) {
+      developmentModalInstance.show();
+    } else {
+      alert("Erro de rede ou falha na navegação.");
+    }
   }
 };
 
@@ -979,24 +610,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const avalModalEl = document.getElementById("avaliacaoModal");
     if (avalModalEl) avaliacaoModalInstance = new bootstrap.Modal(avalModalEl);
 
-    const verChecklistModalEl = document.getElementById("verChecklistModal");
-    if (verChecklistModalEl)
-      verChecklistModalInstance = new bootstrap.Modal(verChecklistModalEl);
-
     const admEl = document.getElementById("access-denied-modal");
     if (admEl) accessDeniedModalInstance = new bootstrap.Modal(admEl);
 
     const devmEl = document.getElementById("development-modal");
     if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
-  } else {
-    console.warn(
-      "Trafos Reformados Filtrar: Bootstrap não carregado, modais podem não funcionar."
-    );
   }
 
   await carregarFabricantes();
   await carregarPotencias();
-  await carregarTecnicos();
   await carregarTrafos(1);
 
   const filtroFormEl = document.getElementById("filtroForm");
@@ -1012,12 +634,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (btnSalvarAvaliacaoEl)
     btnSalvarAvaliacaoEl.addEventListener("click", salvarAvaliacao);
 
-  const btnGerarPDFEl = document.getElementById("btnGerarPDF");
-  if (btnGerarPDFEl) {
-    btnGerarPDFEl.addEventListener("click", window.gerarPDF);
+  const btnApagarPendentesEl = document.getElementById("btnApagarPendentes");
+  if (btnApagarPendentesEl) {
+    btnApagarPendentesEl.addEventListener("click", apagarTodosPendentes);
   }
 });
-
-console.log(
-  "Trafos Reformados Filtrar: Script específico da página carregado."
-);
