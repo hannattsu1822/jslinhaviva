@@ -332,7 +332,7 @@ router.post(
         if (registros_dinamicos && Array.isArray(registros_dinamicos)) {
           for (const registro of registros_dinamicos) {
             const [resultRegistro] = await connection.query(
-              `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, estado_item, referencia_externa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 novaInspecaoId,
                 registro.categoria,
@@ -342,6 +342,8 @@ router.post(
                 null,
                 registro.valor,
                 registro.unidade,
+                registro.estado,
+                registro.ref_anterior,
               ]
             );
             const novoRegistroId = resultRegistro.insertId;
@@ -598,7 +600,7 @@ router.put(
         if (registros_dinamicos && Array.isArray(registros_dinamicos)) {
           for (const registro of registros_dinamicos) {
             const [resultRegistro] = await connection.query(
-              `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, estado_item, referencia_externa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 inspecaoId,
                 registro.categoria,
@@ -608,9 +610,22 @@ router.put(
                 null,
                 registro.valor,
                 registro.unidade,
+                registro.estado,
+                registro.ref_anterior,
               ]
             );
             const novoRegistroId = resultRegistro.insertId;
+
+            if (
+              registro.anexos_existentes &&
+              registro.anexos_existentes.length > 0
+            ) {
+              await connection.query(
+                "UPDATE inspecoes_anexos SET registro_id = ? WHERE id IN (?)",
+                [novoRegistroId, registro.anexos_existentes]
+              );
+            }
+
             if (registro.anexos && registro.anexos.length > 0) {
               for (const anexo of registro.anexos) {
                 const caminhoMovido = await moverAnexo(
@@ -786,7 +801,7 @@ router.get(
         }));
 
         const [registrosRows] = await promisePool.query(
-          `SELECT id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, referencia_externa 
+          `SELECT id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, estado_item, referencia_externa 
                  FROM inspecoes_registros WHERE inspecao_id = ? ORDER BY id ASC`,
           [id]
         );
@@ -1180,7 +1195,6 @@ router.post(
         );
 
         inspecao.itens_anormais = itensAnormais.map((item) => {
-          // Função auxiliar para garantir que o valor seja um array
           const parseJsonArray = (jsonStringOrObject) => {
             if (!jsonStringOrObject) return [];
             if (Array.isArray(jsonStringOrObject)) return jsonStringOrObject;
