@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Avaliação de Transformadores Reformados</title>
+    <title>Avaliação de Transformadores Pendentes</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -19,87 +19,6 @@
     <link rel="stylesheet" href="/static/css/trafos_reformados_filtrar.css" />
     <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-    <style>
-      @media print {
-        body {
-          font-size: 10pt;
-          margin: 1cm;
-        }
-        .no-print,
-        .sidebar,
-        .sidebar-toggle-button,
-        .main-content-overlay,
-        #filtroForm,
-        #btnGerarPDF,
-        .breadcrumb,
-        .page-title a,
-        .action-buttons .btn-outline-secondary,
-        #tabelaResultados button,
-        #paginationControlsContainer,
-        #verChecklistModal .modal-footer button:not(#btnGerarPDFChecklist) {
-          display: none !important;
-        }
-        #verChecklistModal .modal-header .btn-close {
-          display: none !important;
-        }
-        .main-content {
-          margin-left: 0 !important;
-          padding: 0 !important;
-          width: 100% !important;
-        }
-        .container.py-4 {
-          padding: 0 !important;
-        }
-        .card {
-          box-shadow: none !important;
-          border: 1px solid #ccc !important;
-          margin-bottom: 15px !important;
-        }
-        .card-header {
-          background-color: #f0f0f0 !important;
-          color: #000 !important;
-          border-bottom: 1px solid #ccc !important;
-        }
-        .results-card-trafos .card-header .card-title {
-          color: #000 !important;
-        }
-        table {
-          width: 100% !important;
-        }
-        #tabelaResultados thead th {
-          position: static !important;
-          background-color: #f0f0f0 !important;
-          color: #000 !important;
-        }
-        th,
-        td {
-          font-size: 9pt !important;
-          padding: 4px !important;
-        }
-        h1.page-title-trafos-filter {
-          font-size: 16pt !important;
-          text-align: center;
-          margin-bottom: 1cm !important;
-        }
-        h3.card-title {
-          font-size: 12pt !important;
-        }
-        #paginationInfo {
-          display: block !important;
-          text-align: center !important;
-          margin-top: 10px !important;
-        }
-        #tabelaResultados th:last-child,
-        #tabelaResultados td:last-child {
-          position: static !important;
-          background-color: transparent !important;
-        }
-        #tabelaResultados thead th:last-child {
-          background-color: #f0f0f0 !important;
-          color: #000 !important;
-        }
-      }
-    </style>
   </head>
 
   <body>
@@ -294,8 +213,8 @@
       <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h1 class="page-title-trafos-filter mb-0">
-            <i class="fas fa-sync-alt me-3"></i>Avaliação de Transformadores
-            Reformados
+            <i class="fas fa-clipboard-check me-3"></i>Avaliação de
+            Transformadores Pendentes
           </h1>
           <a
             href="/transformadores_reformados"
@@ -307,11 +226,11 @@
 
         <div class="card filter-card-trafos p-4 mb-4">
           <h3 class="mb-3 card-title">
-            <i class="fas fa-filter me-2"></i>Filtrar Transformadores
+            <i class="fas fa-filter me-2"></i>Filtrar Pendentes
           </h3>
           <form id="filtroForm">
             <div class="row g-3">
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <label for="filterNumeroSerie" class="form-label"
                   >Número de Série</label
                 >
@@ -322,16 +241,7 @@
                   placeholder="Digite o Nº de Série"
                 />
               </div>
-              <div class="col-md-3">
-                <label for="filterStatus" class="form-label">Status</label>
-                <select class="form-select" id="filterStatus">
-                  <option value="">Todos</option>
-                  <option value="pendente" selected>Pendentes</option>
-                  <option value="avaliado">Aprovados</option>
-                  <option value="reprovado">Reprovados</option>
-                </select>
-              </div>
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <label for="filterFabricante" class="form-label"
                   >Fabricante</label
                 >
@@ -339,61 +249,13 @@
                   <option value="">Todos</option>
                 </select>
               </div>
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <label for="filterPotencia" class="form-label"
                   >Potência (kVA)</label
                 >
                 <select class="form-select" id="filterPotencia">
                   <option value="">Todas</option>
                 </select>
-              </div>
-              <div class="col-md-3">
-                <label for="filterTecnico" class="form-label"
-                  >Técnico Responsável</label
-                >
-                <select class="form-select" id="filterTecnico">
-                  <option value="">Todos</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <label for="filterDataAvaliacaoInicial" class="form-label"
-                  >Data Aval. Inicial</label
-                >
-                <input
-                  type="date"
-                  class="form-control"
-                  id="filterDataAvaliacaoInicial"
-                />
-              </div>
-              <div class="col-md-3">
-                <label for="filterDataAvaliacaoFinal" class="form-label"
-                  >Data Aval. Final</label
-                >
-                <input
-                  type="date"
-                  class="form-control"
-                  id="filterDataAvaliacaoFinal"
-                />
-              </div>
-              <div class="col-md-3">
-                <label for="filterDataImportacaoInicial" class="form-label"
-                  >Data Imp. Inicial</label
-                >
-                <input
-                  type="date"
-                  class="form-control"
-                  id="filterDataImportacaoInicial"
-                />
-              </div>
-              <div class="col-md-3">
-                <label for="filterDataImportacaoFinal" class="form-label"
-                  >Data Imp. Final</label
-                >
-                <input
-                  type="date"
-                  class="form-control"
-                  id="filterDataImportacaoFinal"
-                />
               </div>
               <div class="col-12 d-flex justify-content-end">
                 <button type="submit" class="btn btn-primary mt-2">
@@ -411,9 +273,8 @@
             <h3 class="mb-0 card-title" style="font-size: 1.2rem">
               <i class="fas fa-table me-2"></i>Resultados
             </h3>
-            <button class="btn btn-pdf btn-sm no-print" id="btnGerarPDF">
-              <i class="fas fa-file-pdf me-2"></i>Gerar PDF da Lista
-              <span class="loading-spinner" id="pdfSpinner"></span>
+            <button class="btn btn-danger btn-sm" id="btnApagarPendentes">
+              <i class="fas fa-trash-alt me-2"></i>Apagar Todos os Pendentes
             </button>
           </div>
           <div class="card-body p-0">
@@ -430,17 +291,11 @@
                     <th>Potência</th>
                     <th>Data Importação</th>
                     <th>Status</th>
-                    <th>Data Avaliação</th>
+                    <th>Última Avaliação</th>
                     <th class="text-center">Ações</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td colspan="8" class="text-center p-5">
-                      Aplicar filtros para visualizar os transformadores.
-                    </td>
-                  </tr>
-                </tbody>
+                <tbody></tbody>
               </table>
             </div>
           </div>
@@ -713,151 +568,6 @@
               id="btnSalvarAvaliacao"
             >
               Salvar Avaliação
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="modal fade"
-      id="verChecklistModal"
-      tabindex="-1"
-      aria-labelledby="verChecklistModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="verChecklistModalLabel">
-              Detalhes do Checklist - Série:
-              <span id="checklistNumeroSerieModal"></span>
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body" id="verChecklistModalBody">
-            <div class="row">
-              <div class="col-md-6">
-                <p>
-                  <strong>ID do Teste:</strong>
-                  <span id="checkId" class="fw-bold"></span>
-                </p>
-                <p>
-                  <strong>Data do Teste:</strong>
-                  <span id="checkDataTeste" class="fw-bold"></span>
-                </p>
-              </div>
-              <div class="col-md-6">
-                <p>
-                  <strong>Técnico Responsável:</strong>
-                  <span id="checkTecnicoTeste" class="fw-bold"></span>
-                </p>
-                <p>
-                  <strong>Conclusão:</strong>
-                  <span id="checkViewConclusaoChecklist" class="fw-bold"></span>
-                </p>
-              </div>
-            </div>
-            <hr />
-            <h6>Bobinas Primárias</h6>
-            <div class="row">
-              <div class="col-md-4">
-                <p>
-                  <strong>Primária I:</strong>
-                  <span id="checkViewBobinaPrimariaI"></span>
-                </p>
-              </div>
-              <div class="col-md-4">
-                <p>
-                  <strong>Primária II:</strong>
-                  <span id="checkViewBobinaPrimariaII"></span>
-                </p>
-              </div>
-              <div class="col-md-4">
-                <p>
-                  <strong>Primária III:</strong>
-                  <span id="checkViewBobinaPrimariaIII"></span>
-                </p>
-              </div>
-            </div>
-            <hr />
-            <h6>Bobinas Secundárias</h6>
-            <div class="row">
-              <div class="col-md-4">
-                <p>
-                  <strong>Secundária I:</strong>
-                  <span id="checkViewBobinaSecundariaI"></span>
-                </p>
-              </div>
-              <div class="col-md-4">
-                <p>
-                  <strong>Secundária II:</strong>
-                  <span id="checkViewBobinaSecundariaII"></span>
-                </p>
-              </div>
-              <div class="col-md-4">
-                <p>
-                  <strong>Secundária III:</strong>
-                  <span id="checkViewBobinaSecundariaIII"></span>
-                </p>
-              </div>
-            </div>
-            <hr />
-            <h6>Valores Obtidos Teste TTR</h6>
-            <div class="row">
-              <div class="col-md-4">
-                <p>
-                  <strong>Valor Bobina I:</strong>
-                  <span id="checkViewValorBobinaI"></span>
-                </p>
-              </div>
-              <div class="col-md-4">
-                <p>
-                  <strong>Valor Bobina II:</strong>
-                  <span id="checkViewValorBobinaII"></span>
-                </p>
-              </div>
-              <div class="col-md-4">
-                <p>
-                  <strong>Valor Bobina III:</strong>
-                  <span id="checkViewValorBobinaIII"></span>
-                </p>
-              </div>
-            </div>
-            <hr />
-            <p>
-              <strong>Estado Físico Geral:</strong>
-              <span id="checkViewEstadoFisico" class="fw-bold"></span>
-            </p>
-            <hr />
-            <h6>Observações do Checklist:</h6>
-            <p>
-              <span
-                id="checkViewObservacoesChecklist"
-                style="white-space: pre-wrap"
-              ></span>
-            </p>
-          </div>
-          <div class="modal-footer">
-            <input type="hidden" id="verChecklistTrafoId" />
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              Fechar
-            </button>
-            <button
-              type="button"
-              class="btn btn-danger no-print"
-              id="btnGerarPDFChecklist"
-            >
-              <i class="fas fa-file-pdf"></i> Gerar PDF do Checklist
             </button>
           </div>
         </div>
