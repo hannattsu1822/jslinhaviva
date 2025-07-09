@@ -54,6 +54,34 @@ router.get(
   }
 );
 
+router.get(
+  "/consultar_historicos.html",
+  autenticar,
+  verificarPermissaoPorCargo,
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/trafos/reformados/consultar_historicos.html"
+      )
+    );
+  }
+);
+
+router.get(
+  "/transformadores/historico/:numero_serie",
+  autenticar,
+  verificarPermissaoPorCargo,
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/trafos/reformados/historico_checklist.html"
+      )
+    );
+  }
+);
+
 router.get("/api/user_info/:matricula", autenticar, async (req, res) => {
   try {
     const { matricula } = req.params;
@@ -75,15 +103,15 @@ router.get("/api/user_info/:matricula", autenticar, async (req, res) => {
 router.get("/api/transformadores_reformados", autenticar, async (req, res) => {
   try {
     const {
+      id,
       status,
+      status_not_in,
       numero_serie,
       fabricante,
       pot,
       tecnico_responsavel,
       data_avaliacao_inicial,
       data_avaliacao_final,
-      data_importacao_inicial,
-      data_importacao_final,
       getAll,
     } = req.query;
 
@@ -94,18 +122,19 @@ router.get("/api/transformadores_reformados", autenticar, async (req, res) => {
     if (limit < 1 && getAll !== "true") limit = 15;
 
     let queryParams = [];
-    let countQueryParams = [];
+    let conditions = "WHERE 1=1";
 
-    let baseQuery = `
-        FROM trafos_reformados tr
-        LEFT JOIN users u ON tr.tecnico_responsavel = u.matricula
-        WHERE 1=1
-    `;
-    let conditions = "";
-
+    if (id) {
+      conditions += " AND tr.id = ?";
+      queryParams.push(id);
+    }
     if (status) {
       conditions += " AND tr.status_avaliacao = ?";
       queryParams.push(status);
+    }
+    if (status_not_in) {
+      conditions += " AND tr.status_avaliacao != ?";
+      queryParams.push(status_not_in);
     }
     if (numero_serie) {
       conditions += " AND tr.numero_serie LIKE ?";
@@ -133,22 +162,9 @@ router.get("/api/transformadores_reformados", autenticar, async (req, res) => {
       conditions += " AND DATE(tr.data_avaliacao) <= ?";
       queryParams.push(data_avaliacao_final);
     }
-    if (data_importacao_inicial && data_importacao_final) {
-      conditions += " AND DATE(tr.data_importacao) BETWEEN ? AND ?";
-      queryParams.push(data_importacao_inicial, data_importacao_final);
-    } else if (data_importacao_inicial) {
-      conditions += " AND DATE(tr.data_importacao) >= ?";
-      queryParams.push(data_importacao_inicial);
-    } else if (data_importacao_final) {
-      conditions += " AND DATE(tr.data_importacao) <= ?";
-      queryParams.push(data_importacao_final);
-    }
 
-    baseQuery += conditions;
-    countQueryParams = [...queryParams];
-
-    const countQuery = `SELECT COUNT(*) as totalItems ${baseQuery}`;
-    const [countResult] = await promisePool.query(countQuery, countQueryParams);
+    const countQuery = `SELECT COUNT(*) as totalItems FROM trafos_reformados tr ${conditions}`;
+    const [countResult] = await promisePool.query(countQuery, queryParams);
     const totalItems = countResult[0].totalItems;
 
     let totalPages = 1;
@@ -163,15 +179,29 @@ router.get("/api/transformadores_reformados", autenticar, async (req, res) => {
     let dataQuery = `
         SELECT 
             tr.*,
-            u.nome as nome_tecnico
-        ${baseQuery}
+            u.nome as nome_tecnico,
+            (
+                SELECT COUNT(*) 
+                FROM trafos_reformados tr_hist 
+                WHERE tr_hist.numero_serie = tr.numero_serie 
+            ) as total_ciclos,
+            (
+                SELECT MAX(tr_anterior.data_avaliacao)
+                FROM trafos_reformados tr_anterior
+                WHERE tr_anterior.numero_serie = tr.numero_serie
+                  AND tr_anterior.id < tr.id
+                  AND tr_anterior.status_avaliacao != 'pendente'
+            ) AS ultima_avaliacao_anterior
+        FROM 
+            trafos_reformados tr
+        LEFT JOIN users u ON tr.tecnico_responsavel = u.matricula
+        ${conditions}
         ORDER BY tr.id DESC
     `;
 
     if (getAll !== "true") {
-      const offset = (page - 1) * limit;
       dataQuery += " LIMIT ? OFFSET ?";
-      queryParams.push(limit, offset);
+      queryParams.push(limit, (page - 1) * limit);
     }
 
     const [trafos] = await promisePool.query(dataQuery, queryParams);
@@ -185,14 +215,12 @@ router.get("/api/transformadores_reformados", autenticar, async (req, res) => {
         totalItems: totalItems,
         itemsPerPage: getAll === "true" ? totalItems : limit,
       },
-      filtros: req.query,
     });
   } catch (err) {
     console.error("Erro ao buscar transformadores reformados:", err);
     res.status(500).json({
       success: false,
       message: "Erro ao buscar transformadores reformados",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }
 });
@@ -204,15 +232,7 @@ router.get(
     try {
       const { id } = req.params;
       const [rows] = await promisePool.query(
-        `
-            SELECT 
-                tr.*, 
-                u.nome as nome_tecnico,
-                u.matricula as matricula_tecnico
-            FROM trafos_reformados tr
-            LEFT JOIN users u ON tr.tecnico_responsavel = u.matricula
-            WHERE tr.id = ?
-        `,
+        "SELECT * FROM trafos_reformados WHERE id = ?",
         [id]
       );
 
@@ -222,31 +242,114 @@ router.get(
           message: "Transformador não encontrado",
         });
       }
-      const transformador = rows[0];
-
-      const [checklistRows] = await promisePool.query(
-        `SELECT * FROM trafos_reformados_testes 
-         WHERE trafos_reformados_id = ? 
-         ORDER BY data_teste DESC, id DESC LIMIT 1`,
-        [id]
-      );
-      if (checklistRows.length > 0) {
-        transformador.checklist_teste = checklistRows[0];
-      } else {
-        transformador.checklist_teste = null;
-      }
 
       res.json({
         success: true,
-        data: transformador,
+        data: rows[0],
       });
     } catch (err) {
-      console.error("Erro ao buscar transformador:", err);
+      console.error("Erro ao buscar transformador por ID:", err);
       res.status(500).json({
         success: false,
-        message: "Erro ao buscar transformador",
-        error: process.env.NODE_ENV === "development" ? err.message : undefined,
+        message: "Erro ao buscar transformador por ID",
       });
+    }
+  }
+);
+
+router.get(
+  "/api/checklist_por_registro/:registroId",
+  autenticar,
+  async (req, res) => {
+    try {
+      const { registroId } = req.params;
+      const [rows] = await promisePool.query(
+        `SELECT tst.*, u.nome as nome_tecnico 
+             FROM trafos_reformados_testes tst
+             LEFT JOIN users u ON tst.tecnico_responsavel_teste = u.matricula
+             WHERE tst.trafos_reformados_id = ?`,
+        [registroId]
+      );
+
+      if (rows.length === 0) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Nenhum checklist encontrado para este registro.",
+          });
+      }
+
+      res.json({ success: true, data: rows[0] });
+    } catch (error) {
+      console.error("Erro ao buscar checklist por registro:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erro interno ao buscar checklist." });
+    }
+  }
+);
+
+router.get(
+  "/api/historico_por_serie/:numero_serie",
+  autenticar,
+  async (req, res) => {
+    try {
+      const { numero_serie } = req.params;
+      const [checklists] = await promisePool.query(
+        `SELECT 
+                tst.*,
+                tr.numero_serie,
+                u.nome as nome_tecnico
+             FROM trafos_reformados_testes tst
+             JOIN trafos_reformados tr ON tst.trafos_reformados_id = tr.id
+             LEFT JOIN users u ON tst.tecnico_responsavel_teste = u.matricula
+             WHERE tr.numero_serie = ? 
+             ORDER BY tst.data_teste DESC, tst.id DESC`,
+        [numero_serie]
+      );
+      res.json({ success: true, data: checklists });
+    } catch (err) {
+      console.error("Erro ao buscar checklists por série:", err);
+      res
+        .status(500)
+        .json({
+          success: false,
+          message: "Erro ao buscar checklists por série",
+        });
+    }
+  }
+);
+
+router.put(
+  "/api/transformadores/:id/reverter",
+  autenticar,
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [result] = await promisePool.query(
+        "UPDATE trafos_reformados SET status_avaliacao = 'pendente' WHERE id = ?",
+        [id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Transformador não encontrado." });
+      }
+
+      await registrarAuditoria(
+        req.user.matricula,
+        "Reverter Status Trafo Reformado",
+        `Status do registro de avaliação ID ${id} revertido para 'pendente'.`
+      );
+
+      res.json({ success: true, message: "Status revertido com sucesso." });
+    } catch (error) {
+      console.error("Erro ao reverter status do transformador:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erro interno no servidor." });
     }
   }
 );
@@ -357,7 +460,6 @@ router.put(
       res.status(500).json({
         success: false,
         message: "Erro ao salvar avaliação completa: " + err.message,
-        error: process.env.NODE_ENV === "development" ? err.message : undefined,
       });
     } finally {
       connection.release();
@@ -426,7 +528,9 @@ router.post(
                 
                 <div class="info-trafo">
                     <h2>Dados do Transformador</h2>
-                    <p><strong>ID:</strong> ${transformador.id || "N/A"}</p>
+                    <p><strong>ID do Registro:</strong> ${
+                      transformador.id || "N/A"
+                    }</p>
                     <p><strong>Número de Série:</strong> ${
                       transformador.numero_serie || "N/A"
                     }</p>
@@ -557,294 +661,117 @@ router.post(
   }
 );
 
-router.post(
-  "/api/gerar_pdf_trafos_reformados",
-  autenticar,
-  async (req, res) => {
-    const { dados, filtros } = req.body;
-    try {
-      const htmlContent = `
-            <!DOCTYPE html>
-            <html lang="pt-BR">
-            <head>
-                <meta charset="UTF-8">
-                <title>Relatório de Transformadores Reformados</title>
-                <style>
-                    body { font-family: 'Poppins', sans-serif; color: #495057; padding: 20px; font-size: 10px;}
-                    h1 { color: #2a5298; text-align: center; margin-bottom: 15px; font-size: 18px;}
-                    .info-filtros { background-color: #f0f4f8; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 9px; border: 1px solid #d6e0ea;}
-                    .info-filtros strong { display: block; margin-bottom: 5px; color: #1e3c72;}
-                    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                    th { background-color: #2a5298; color: white; padding: 8px; text-align: left; font-weight: 500; font-size: 9.5px; }
-                    td { padding: 8px; border-bottom: 1px solid #dee2e6; vertical-align: middle; font-size: 9px;}
-                    tr:nth-child(even) { background-color: #f8f9fa; }
-                    .badge { padding: 4px 8px; border-radius: 10px; font-size: 8.5px; font-weight: 500; text-transform: capitalize;}
-                    .bg-success { background-color: #28a745; color: white; }
-                    .bg-warning { background-color: #ffc107; color: #212529; }
-                    .bg-danger { background-color: #dc3545; color: white; }
-                    .footer { margin-top: 25px; font-size: 8.5px; text-align: right; color: #6c757d; }
-                </style>
-            </head>
-            <body>
-                <h1>Relatório de Transformadores Reformados</h1>
-                <div class="info-filtros">
-                    <strong>Filtros aplicados:</strong><br>
-                    ${
-                      filtros.status &&
-                      filtros.status !== "Todos" &&
-                      filtros.status !== ""
-                        ? `Status: ${filtros.status}<br>`
-                        : ""
-                    }
-                    ${
-                      filtros.fabricante && filtros.fabricante !== "Todos"
-                        ? `Fabricante: ${filtros.fabricante}<br>`
-                        : ""
-                    }
-                    ${
-                      filtros.pot && filtros.pot !== "Todas"
-                        ? `Potência: ${filtros.pot} kVA<br>`
-                        : ""
-                    }
-                    ${
-                      filtros.tecnico_responsavel &&
-                      filtros.tecnico_responsavel !== "Todos"
-                        ? `Técnico: ${filtros.tecnico_responsavel}<br>`
-                        : ""
-                    }
-                    ${
-                      filtros.data_avaliacao_inicial
-                        ? `Data Avaliação De: ${filtros.data_avaliacao_inicial}<br>`
-                        : ""
-                    }
-                    ${
-                      filtros.data_avaliacao_final
-                        ? `Data Avaliação Até: ${filtros.data_avaliacao_final}<br>`
-                        : ""
-                    }
-                    ${
-                      filtros.data_importacao_inicial
-                        ? `Data Importação De: ${filtros.data_importacao_inicial}<br>`
-                        : ""
-                    }
-                    ${
-                      filtros.data_importacao_final
-                        ? `Data Importação Até: ${filtros.data_importacao_final}<br>`
-                        : ""
-                    }
-                    Data de geração: ${new Date().toLocaleDateString("pt-BR")}
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nº de Série</th>
-                            <th>Fabricante</th>
-                            <th>Potência</th>
-                            <th>Status</th>
-                            <th>Data Avaliação</th>
-                            <th>Técnico Responsável</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${dados
-                          .map((item) => {
-                            let statusClass, statusText;
-                            switch (item.status_avaliacao) {
-                              case "avaliado":
-                                statusClass = "bg-success";
-                                statusText = "Aprovado";
-                                break;
-                              case "reprovado":
-                                statusClass = "bg-danger";
-                                statusText = "Reprovado";
-                                break;
-                              default:
-                                statusClass = "bg-warning";
-                                statusText = "Pendente";
-                            }
-                            const dataAvaliacaoFormatada = item.data_avaliacao
-                              ? new Date(
-                                  item.data_avaliacao
-                                ).toLocaleDateString("pt-BR")
-                              : "-";
-                            return `
-                                <tr>
-                                    <td>${item.id}</td>
-                                    <td>${item.numero_serie}</td>
-                                    <td>${item.fabricante || "-"}</td>
-                                    <td>${item.pot || "-"}</td>
-                                    <td><span class="badge ${statusClass}">${statusText}</span></td>
-                                    <td>${dataAvaliacaoFormatada}</td>
-                                    <td>${
-                                      item.nome_tecnico ||
-                                      item.tecnico_responsavel ||
-                                      "-"
-                                    }</td>
-                                </tr>
-                            `;
-                          })
-                          .join("")}
-                    </tbody>
-                </table>
-                <div class="footer">
-                    Gerado por ${req.user.nome} (${
-        req.user.matricula
-      }) em ${new Date().toLocaleString("pt-BR")}
-                </div>
-            </body>
-            </html>
-        `;
+router.post("/api/gerar_pdf_tabela_historico", autenticar, async (req, res) => {
+  const { dados, filtros } = req.body;
 
-      const browser = await chromium.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-      const page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: "networkidle" });
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "15mm", right: "10mm", bottom: "15mm", left: "10mm" },
-      });
-      await browser.close();
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=Relatorio_Transformadores_Reformados.pdf"
-      );
-      res.send(pdfBuffer);
-    } catch (error) {
-      console.error("Erro ao gerar PDF da tabela de trafos reformados:", error);
-      res.status(500).json({
+  if (!dados || dados.length === 0) {
+    return res
+      .status(400)
+      .json({
         success: false,
-        message: "Erro ao gerar PDF da tabela de transformadores reformados",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        message: "Não há dados para gerar o relatório.",
       });
-    }
   }
-);
 
-router.get(
-  "/api/tecnicos_responsaveis_trafos_reformados",
-  autenticar,
-  async (req, res) => {
-    try {
-      const [rows] = await promisePool.query(`
-            SELECT matricula, nome, cargo
-            FROM users 
-            WHERE cargo IN ('ADMIN', 'ADM', 'Engenheiro', 'Técnico', 'Inspetor')
-            ORDER BY nome
-        `);
-      res.status(200).json(rows);
-    } catch (err) {
-      console.error("Erro ao buscar técnicos responsáveis:", err);
-      res.status(500).json({
-        success: false,
-        message: "Erro ao buscar técnicos responsáveis",
-        error: process.env.NODE_ENV === "development" ? err.message : undefined,
-      });
-    }
-  }
-);
-
-router.get(
-  "/api/fabricantes_trafos_reformados",
-  autenticar,
-  async (req, res) => {
-    try {
-      const [rows] = await promisePool.query(
-        'SELECT DISTINCT fabricante FROM trafos_reformados WHERE fabricante IS NOT NULL AND fabricante != "" ORDER BY fabricante'
-      );
-      res.setHeader("Content-Type", "application/json");
-      res.status(200).json(rows.map((row) => row.fabricante));
-    } catch (err) {
-      console.error("Erro ao buscar fabricantes:", err);
-      res.setHeader("Content-Type", "application/json");
-      res.status(500).json({
-        success: false,
-        message: "Erro ao buscar fabricantes!",
-        error: process.env.NODE_ENV === "development" ? err.message : undefined,
-      });
-    }
-  }
-);
-
-router.get("/api/potencias_trafos_reformados", autenticar, async (req, res) => {
   try {
-    const [rows] = await promisePool.query(
-      'SELECT DISTINCT pot FROM trafos_reformados WHERE pot IS NOT NULL AND pot != "" ORDER BY CAST(pot AS UNSIGNED)'
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <title>Relatório de Transformadores Avaliados</title>
+            <style>
+                body { font-family: 'Poppins', sans-serif; font-size: 9px; }
+                h1 { text-align: center; color: #2a5298; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                .info-filtros { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
+                .info-filtros span { display: inline-block; margin-right: 15px; }
+            </style>
+        </head>
+        <body>
+            <h1>Relatório de Transformadores Avaliados</h1>
+            <div class="info-filtros">
+                <strong>Filtros Aplicados:</strong><br>
+                ${Object.entries(filtros)
+                  .map(([key, value]) =>
+                    value ? `<span><b>${key}:</b> ${value}</span>` : ""
+                  )
+                  .filter(Boolean)
+                  .join("\n")}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID Registro</th>
+                        <th>Nº de Série</th>
+                        <th>Fabricante</th>
+                        <th>Potência</th>
+                        <th>Status</th>
+                        <th>Data Avaliação</th>
+                        <th>Técnico</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dados
+                      .map(
+                        (trafo) => `
+                        <tr>
+                            <td>${trafo.id}</td>
+                            <td>${trafo.numero_serie}</td>
+                            <td>${trafo.fabricante || "-"}</td>
+                            <td>${trafo.pot || "-"}</td>
+                            <td>${
+                              trafo.status_avaliacao === "avaliado"
+                                ? "Aprovado"
+                                : "Reprovado"
+                            }</td>
+                            <td>${
+                              trafo.data_avaliacao
+                                ? new Date(
+                                    trafo.data_avaliacao
+                                  ).toLocaleDateString("pt-BR")
+                                : "-"
+                            }</td>
+                            <td>${trafo.nome_tecnico || "-"}</td>
+                        </tr>
+                    `
+                      )
+                      .join("")}
+                </tbody>
+            </table>
+        </body>
+        </html>
+      `;
+
+    const browser = await chromium.launch({
+      headless: true,
+      args: ["--no-sandbox"],
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle" });
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      landscape: true,
+      margin: { top: "1cm", right: "1cm", bottom: "1cm", left: "1cm" },
+    });
+    await browser.close();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Relatorio_Checklists_Avaliados.pdf`
     );
-    res.status(200).json(rows.map((row) => row.pot));
-  } catch (err) {
-    console.error("Erro ao buscar potências:", err);
-    res.status(500).json({ message: "Erro ao buscar potências!" });
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error("Erro ao gerar PDF da tabela de históricos:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Erro interno no servidor." });
   }
 });
-
-router.delete(
-  "/api/transformadores_reformados/:id",
-  autenticar,
-  async (req, res) => {
-    const { id } = req.params;
-    const connection = await promisePool.getConnection();
-    try {
-      await connection.beginTransaction();
-
-      const [trafoRows] = await connection.query(
-        "SELECT numero_serie FROM trafos_reformados WHERE id = ?",
-        [id]
-      );
-      if (trafoRows.length === 0) {
-        await connection.rollback();
-        return res
-          .status(404)
-          .json({ success: false, message: "Transformador não encontrado!" });
-      }
-      const numero_serie = trafoRows[0].numero_serie;
-
-      await connection.query(
-        "DELETE FROM trafos_reformados_testes WHERE trafos_reformados_id = ?",
-        [id]
-      );
-      const [result] = await connection.query(
-        "DELETE FROM trafos_reformados WHERE id = ?",
-        [id]
-      );
-
-      if (result.affectedRows > 0) {
-        await connection.commit();
-        await registrarAuditoria(
-          req.user.matricula,
-          "Excluir Transformador Reformado",
-          `Transformador (reforma) excluído com ID: ${id}, Série: ${numero_serie}`
-        );
-        res.status(200).json({
-          success: true,
-          message:
-            "Transformador e todos os seus testes associados foram excluídos com sucesso!",
-        });
-      } else {
-        await connection.rollback();
-        res.status(404).json({
-          success: false,
-          message:
-            "Transformador não encontrado para exclusão após verificação!",
-        });
-      }
-    } catch (err) {
-      await connection.rollback();
-      console.error("Erro ao excluir transformador reformado:", err);
-      res.status(500).json({
-        success: false,
-        message: "Erro ao excluir transformador reformado!",
-      });
-    } finally {
-      connection.release();
-    }
-  }
-);
 
 router.post(
   "/api/importar_trafos_reformados",
@@ -927,37 +854,11 @@ router.post(
         total: data.length,
         imported: 0,
         failed: 0,
-        duplicates_in_db: [],
-        duplicates_in_sheet: [],
-        details: [],
+        errors_details: [],
       };
-      const serialNumbersInSheet = data
-        .map((row) => {
-          const colName = columnMap.numero_serie;
-          const rawValue = row[colName];
-          return rawValue ? String(rawValue).trim() : null;
-        })
-        .filter(Boolean);
-
-      const uniqueSerialsInSheet = [...new Set(serialNumbersInSheet)];
-      results.duplicates_in_sheet = serialNumbersInSheet.filter(
-        (item, index) => serialNumbersInSheet.indexOf(item) !== index
-      );
-      results.duplicates_in_sheet = [...new Set(results.duplicates_in_sheet)];
-
-      let existingSerialsInDb = [];
-      if (uniqueSerialsInSheet.length > 0) {
-        const [existingRows] = await connection.query(
-          "SELECT numero_serie FROM trafos_reformados WHERE numero_serie IN (?)",
-          [uniqueSerialsInSheet]
-        );
-        existingSerialsInDb = existingRows.map((r) => r.numero_serie);
-        results.duplicates_in_db = existingSerialsInDb;
-      }
 
       for (const [index, row] of data.entries()) {
         const linha = index + 2;
-        let status = "success";
         let errorMessage = "";
         let numeroSerie = "";
         try {
@@ -973,62 +874,48 @@ router.post(
           const itemValue = getValue("item");
           const potValue = getValue("pot");
           const fabricanteValue = getValue("fabricante");
-          if (!itemValue)
-            throw new Error("Coluna 'Item' (ou ID) é obrigatória.");
+          if (!itemValue) throw new Error("Coluna 'Item' é obrigatória.");
           if (!potValue)
             throw new Error("Coluna 'Potência (POT)' é obrigatória.");
           if (!fabricanteValue)
             throw new Error("Coluna 'Fabricante' é obrigatória.");
 
-          if (
-            results.duplicates_in_sheet.includes(numeroSerie) &&
-            serialNumbersInSheet.indexOf(numeroSerie) !== index
-          ) {
-            throw new Error(
-              "Número de série duplicado dentro da planilha (esta não é a primeira ocorrência)"
-            );
-          }
-          if (existingSerialsInDb.includes(numeroSerie)) {
-            throw new Error("Número de série já existe no banco de dados");
-          }
+          const sql = `
+            INSERT INTO trafos_reformados (item, numero_projeto, pot, numero_serie, numero_nota, t_at, t_bt, taps, fabricante, status_avaliacao, data_importacao) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', CURDATE())
+          `;
 
-          await connection.query(
-            `INSERT INTO trafos_reformados (item, numero_projeto, pot, numero_serie, numero_nota, t_at, t_bt, taps, fabricante, status_avaliacao, data_importacao) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', CURDATE())`,
-            [
-              itemValue,
-              getValue("numero_projeto"),
-              potValue,
-              numeroSerie,
-              getValue("numero_nota"),
-              getValue("t_at"),
-              getValue("t_bt"),
-              getValue("taps"),
-              fabricanteValue,
-            ]
-          );
+          const params = [
+            itemValue,
+            getValue("numero_projeto"),
+            potValue,
+            numeroSerie,
+            getValue("numero_nota"),
+            getValue("t_at"),
+            getValue("t_bt"),
+            getValue("taps"),
+            fabricanteValue,
+          ];
+
+          await connection.query(sql, params);
           results.imported++;
         } catch (error) {
-          status = "error";
           errorMessage = error.message;
           results.failed++;
-        } finally {
-          results.details.push({
+          results.errors_details.push({
             linha,
             numero_serie:
               numeroSerie ||
               (columnMap.numero_serie && row[columnMap.numero_serie]) ||
               "",
-            status,
-            message: errorMessage,
+            erro: errorMessage,
           });
         }
       }
       await connection.commit();
       res.json({
-        success:
-          results.imported > 0 || (results.failed === 0 && results.total > 0),
-        message: `Importação concluída: ${results.imported} registros importados, ${results.failed} falhas.`,
+        success: results.imported > 0,
+        message: `Importação concluída: ${results.imported} novos registros criados, ${results.failed} falhas.`,
         ...results,
       });
     } catch (error) {
@@ -1046,5 +933,148 @@ router.post(
     }
   }
 );
+
+router.delete(
+  "/api/trafos_pendentes",
+  autenticar,
+  verificarPermissaoPorCargo,
+  async (req, res) => {
+    try {
+      const [result] = await promisePool.query(
+        "DELETE FROM trafos_reformados WHERE status_avaliacao = 'pendente'"
+      );
+
+      await registrarAuditoria(
+        req.user.matricula,
+        "Limpeza de Pendentes",
+        `${result.affectedRows} registros de avaliação pendentes foram apagados.`
+      );
+
+      res.json({ success: true, deletedCount: result.affectedRows });
+    } catch (error) {
+      console.error("Erro ao apagar registros pendentes:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erro interno no servidor." });
+    }
+  }
+);
+
+router.delete(
+  "/api/transformadores_reformados/:id",
+  autenticar,
+  async (req, res) => {
+    const { id } = req.params;
+    const connection = await promisePool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [trafoRows] = await connection.query(
+        "SELECT numero_serie FROM trafos_reformados WHERE id = ?",
+        [id]
+      );
+      if (trafoRows.length === 0) {
+        await connection.rollback();
+        return res
+          .status(404)
+          .json({ success: false, message: "Transformador não encontrado!" });
+      }
+      const numero_serie = trafoRows[0].numero_serie;
+
+      await connection.query(
+        "DELETE FROM trafos_reformados_testes WHERE trafos_reformados_id = ?",
+        [id]
+      );
+      const [result] = await connection.query(
+        "DELETE FROM trafos_reformados WHERE id = ?",
+        [id]
+      );
+
+      if (result.affectedRows > 0) {
+        await connection.commit();
+        await registrarAuditoria(
+          req.user.matricula,
+          "Excluir Ciclo de Avaliação",
+          `Ciclo de avaliação (ID: ${id}) para o trafo série ${numero_serie} excluído.`
+        );
+        res.status(200).json({
+          success: true,
+          message:
+            "Ciclo de avaliação e seu checklist associado foram excluídos com sucesso!",
+        });
+      } else {
+        await connection.rollback();
+        res.status(404).json({
+          success: false,
+          message: "Ciclo de avaliação não encontrado para exclusão!",
+        });
+      }
+    } catch (err) {
+      await connection.rollback();
+      console.error("Erro ao excluir ciclo de avaliação:", err);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao excluir ciclo de avaliação!",
+      });
+    } finally {
+      connection.release();
+    }
+  }
+);
+
+router.get(
+  "/api/tecnicos_responsaveis_trafos_reformados",
+  autenticar,
+  async (req, res) => {
+    try {
+      const [rows] = await promisePool.query(`
+            SELECT DISTINCT u.matricula, u.nome 
+            FROM users u
+            JOIN trafos_reformados tr ON u.matricula = tr.tecnico_responsavel
+            ORDER BY u.nome
+        `);
+      res.status(200).json(rows);
+    } catch (err) {
+      console.error("Erro ao buscar técnicos responsáveis:", err);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao buscar técnicos responsáveis",
+      });
+    }
+  }
+);
+
+router.get(
+  "/api/fabricantes_trafos_reformados",
+  autenticar,
+  async (req, res) => {
+    try {
+      const [rows] = await promisePool.query(
+        'SELECT DISTINCT fabricante FROM trafos_reformados WHERE fabricante IS NOT NULL AND fabricante != "" ORDER BY fabricante'
+      );
+      res.setHeader("Content-Type", "application/json");
+      res.status(200).json(rows.map((row) => row.fabricante));
+    } catch (err) {
+      console.error("Erro ao buscar fabricantes:", err);
+      res.setHeader("Content-Type", "application/json");
+      res.status(500).json({
+        success: false,
+        message: "Erro ao buscar fabricantes!",
+      });
+    }
+  }
+);
+
+router.get("/api/potencias_trafos_reformados", autenticar, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(
+      'SELECT DISTINCT pot FROM trafos_reformados WHERE pot IS NOT NULL AND pot != "" ORDER BY CAST(pot AS UNSIGNED)'
+    );
+    res.status(200).json(rows.map((row) => row.pot));
+  } catch (err) {
+    console.error("Erro ao buscar potências:", err);
+    res.status(500).json({ message: "Erro ao buscar potências!" });
+  }
+});
 
 module.exports = router;
