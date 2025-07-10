@@ -808,24 +808,26 @@ router.post(
       let observacoesParaSalvar = observacoes || null;
       let motivoNaoConclusaoParaSalvar = null;
 
+      // Lógica unificada para dataConclusao e horaConclusao
+      if (!dataConclusao || !horaConclusao) {
+        limparArquivosTemporarios(req.files);
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({
+          success: false,
+          message: "Data e Hora de Conclusão são obrigatórias.",
+        });
+      }
+      dataHoraConclusaoParaSalvar = `${dataConclusao} ${horaConclusao}:00`;
+
       if (status_final === "concluido") {
-        if (!dataConclusao || !horaConclusao) {
-          limparArquivosTemporarios(req.files);
-          await connection.rollback();
-          connection.release();
-          return res.status(400).json({
-            success: false,
-            message:
-              "Data e Hora de Conclusão são obrigatórias para concluir o serviço.",
-          });
-        }
-        dataHoraConclusaoParaSalvar = `${dataConclusao} ${horaConclusao}:00`;
         auditMessage = `Serviço ${servicoId} (${servicoExistente.processo}) concluído em ${dataHoraConclusaoParaSalvar}`;
       } else {
+        // status_final === "nao_concluido"
         if (!motivo_nao_conclusao || motivo_nao_conclusao.trim() === "") {
+          limparArquivosTemporarios(req.files);
           await connection.rollback();
           connection.release();
-          limparArquivosTemporarios(req.files);
           return res.status(400).json({
             success: false,
             message: "Motivo da não conclusão é obrigatório.",
