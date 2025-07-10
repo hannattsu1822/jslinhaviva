@@ -1,3 +1,24 @@
+function debounce(func, wait) {
+  let timeout;
+  return function () {
+    const context = this,
+      args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(context, args);
+    }, wait);
+  };
+}
+
+let servicosData = [];
+let currentPage = 1;
+const itemsPerPage = 10;
+let user = null;
+let accessDeniedModalInstance;
+let developmentModalInstance;
+let currentServicoId = null;
+let aprUploadModalInstance;
+
 const elementos = {
   toastEl: null,
   toastInstance: null,
@@ -12,15 +33,6 @@ const elementos = {
     status: null,
   },
 };
-
-let servicosData = [];
-let currentPage = 1;
-const itemsPerPage = 10;
-let user = null;
-let accessDeniedModalInstance;
-let developmentModalInstance;
-let currentServicoId = null;
-let aprUploadModalInstance;
 
 function inicializarElementos() {
   try {
@@ -113,39 +125,6 @@ function aplicarFiltrosEAtualizar() {
   atualizarTabela();
 }
 
-function debounce(func, wait) {
-  let timeout;
-  return function () {
-    const context = this,
-      args = arguments;
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      func.apply(context, args);
-    }, wait);
-  };
-}
-
-async function carregarServicosConcluidos() {
-  try {
-    mostrarNotificacao("Carregando serviços finalizados...", "info", 2000);
-    const response = await fetch("/api/servicos?status=concluido");
-    if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
-    const data = await response.json();
-    if (!Array.isArray(data))
-      throw new Error("Formato de dados inválido - esperado array");
-    servicosData = data;
-    currentPage = 1;
-    atualizarTabela();
-    mostrarNotificacao("Serviços carregados com sucesso!", "success");
-  } catch (error) {
-    console.error("Erro ao carregar serviços:", error);
-    mostrarNotificacao(
-      "Erro ao carregar serviços finalizados: " + error.message,
-      "danger"
-    );
-  }
-}
-
 function mostrarNotificacao(mensagem, tipo = "success", duracao = 3000) {
   try {
     if (!elementos.toastInstance || !elementos.toastEl) {
@@ -178,6 +157,27 @@ function mostrarNotificacao(mensagem, tipo = "success", duracao = 3000) {
   }
 }
 
+async function carregarServicosConcluidos() {
+  try {
+    mostrarNotificacao("Carregando serviços finalizados...", "info", 2000);
+    const response = await fetch("/api/servicos?status=concluido");
+    if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data))
+      throw new Error("Formato de dados inválido - esperado array");
+    servicosData = data;
+    currentPage = 1;
+    atualizarTabela();
+    mostrarNotificacao("Serviços carregados com sucesso!", "success");
+  } catch (error) {
+    console.error("Erro ao carregar serviços:", error);
+    mostrarNotificacao(
+      "Erro ao carregar serviços finalizados: " + error.message,
+      "danger"
+    );
+  }
+}
+
 function obterServicosFiltrados() {
   const filtroProcesso = elementos.filtros.processo?.value.toLowerCase() || "";
   const filtroSubestacao =
@@ -196,20 +196,25 @@ function obterServicosFiltrados() {
 
     let matchesData = true;
     if (filtroDataSelecionada) {
-      if (servico.status === "concluido" && servico.data_conclusao) {
+      let dateToCompare = null;
+      if (servico.data_conclusao) {
+        dateToCompare = servico.data_conclusao;
+      }
+
+      if (dateToCompare) {
         try {
-          let dataConclusaoObj;
-          if (servico.data_conclusao.includes("T")) {
-            dataConclusaoObj = new Date(servico.data_conclusao);
+          let dataObj;
+          if (dateToCompare.includes("T")) {
+            dataObj = new Date(dateToCompare);
           } else {
-            const dataComT = servico.data_conclusao.replace(" ", "T");
-            dataConclusaoObj = new Date(dataComT);
-            if (isNaN(dataConclusaoObj.getTime())) {
-              dataConclusaoObj = new Date(servico.data_conclusao);
+            const dataComT = dateToCompare.replace(" ", "T");
+            dataObj = new Date(dataComT);
+            if (isNaN(dataObj.getTime())) {
+              dataObj = new Date(dateToCompare);
             }
           }
 
-          if (!isNaN(dataConclusaoObj.getTime())) {
+          if (!isNaN(dataObj.getTime())) {
             const formatter = new Intl.DateTimeFormat("en-CA", {
               year: "numeric",
               month: "2-digit",
@@ -217,28 +222,26 @@ function obterServicosFiltrados() {
               timeZone: "America/Sao_Paulo",
             });
 
-            const parts = formatter.formatToParts(dataConclusaoObj);
+            const parts = formatter.formatToParts(dataObj);
             let year, month, day;
             parts.forEach((part) => {
               if (part.type === "year") year = part.value;
               else if (part.type === "month") month = part.value;
               else if (part.type === "day") day = part.value;
             });
-            const dataConclusaoLocalFormatada = `${year}-${month}-${day}`;
-            matchesData = dataConclusaoLocalFormatada === filtroDataSelecionada;
+            const formattedDate = `${year}-${month}-${day}`;
+            matchesData = formattedDate === filtroDataSelecionada;
           } else {
             matchesData = false;
           }
         } catch (e) {
           console.error(
-            "Erro ao parsear ou formatar data de conclusão para filtro:",
-            servico.data_conclusao,
+            "Erro ao parsear ou formatar data para filtro:",
+            dateToCompare,
             e
           );
           matchesData = false;
         }
-      } else if (servico.status === "nao_concluido") {
-        matchesData = true;
       } else {
         matchesData = false;
       }
@@ -311,17 +314,18 @@ function atualizarTabela() {
           statusHtml = servico.status || "N/A";
         }
 
+        let dataFinalizacaoDisplay = "N/A";
+        if (servico.data_conclusao) {
+          dataFinalizacaoDisplay = formatarData(servico.data_conclusao);
+        }
+
         tr.innerHTML = `
           <td>${servico.id || "N/A"}</td>
           <td>${servico.processo || "Não informado"}</td>
           <td>${servico.subestacao || "Não informado"}</td>
           <td>${servico.alimentador || "Não informado"}</td>
           <td>${statusHtml}</td>
-          <td>${
-            servico.status === "concluido"
-              ? formatarData(servico.data_conclusao)
-              : "N/A"
-          }</td>
+          <td>${dataFinalizacaoDisplay}</td>
           <td>${
             (servico.responsavel_matricula
               ? servico.responsavel_matricula + " - "

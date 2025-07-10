@@ -510,20 +510,17 @@ function controlarCamposFinalizacao() {
   )
     return;
 
+  // Ambos os status (concluído e não concluído) agora exigem data e hora
+  camposSomenteConcluido.style.display = "block";
+  dataConclusaoInput.required = true;
+  horaConclusaoInput.required = true;
+
   if (statusFinalSelect.value === "concluido") {
-    camposSomenteConcluido.style.display = "block";
-    dataConclusaoInput.required = true;
-    horaConclusaoInput.required = true;
     observacoesFinalizacaoInput.placeholder =
       "Observações da conclusão (opcional)";
     observacoesFinalizacaoInput.required = false;
   } else {
     // nao_concluido
-    camposSomenteConcluido.style.display = "none";
-    dataConclusaoInput.required = false;
-    dataConclusaoInput.value = "";
-    horaConclusaoInput.required = false;
-    horaConclusaoInput.value = "";
     observacoesFinalizacaoInput.placeholder =
       "Motivo da não conclusão (obrigatório)";
     observacoesFinalizacaoInput.required = true;
@@ -565,6 +562,17 @@ async function submeterFinalizacaoServico() {
 
     const observacoes = document.getElementById("observacoesFinalizacao").value;
     const fotosInput = document.getElementById("fotosConclusao");
+    const dataInput = document.getElementById("dataConclusao").value;
+    const horaInput = document.getElementById("horaConclusao").value;
+
+    // Validação de data e hora para ambos os status
+    if (!dataInput || !horaInput) {
+      throw new Error(
+        "Data e Hora de Conclusão são obrigatórias para finalizar o serviço."
+      );
+    }
+    formData.append("dataConclusao", dataInput);
+    formData.append("horaConclusao", horaInput);
 
     formData.append("observacoes", observacoes);
 
@@ -574,17 +582,7 @@ async function submeterFinalizacaoServico() {
       }
     }
 
-    if (statusFinal === "concluido") {
-      const dataInput = document.getElementById("dataConclusao").value;
-      const horaInput = document.getElementById("horaConclusao").value;
-      if (!dataInput || !horaInput) {
-        throw new Error(
-          "Data e Hora de Conclusão são obrigatórias para concluir o serviço."
-        );
-      }
-      formData.append("dataConclusao", dataInput);
-      formData.append("horaConclusao", horaInput);
-    } else {
+    if (statusFinal === "nao_concluido") {
       if (!observacoes || observacoes.trim() === "") {
         throw new Error(
           "As observações (motivo da não conclusão) são obrigatórias."
