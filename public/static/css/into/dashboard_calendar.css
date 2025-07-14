@@ -1,0 +1,84 @@
+.dashboard-calendar-card {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.8em;
+  font-weight: 600;
+  color: var(--primary-blue-filter, #007bff);
+}
+
+.fc-event {
+  background-color: var(--primary-blue-filter, #007bff);
+  border-color: var(--primary-blue-filter, #007bff);
+  color: white;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.fc-event-title {
+  font-weight: 500;
+}
+
+.fc-daygrid-event-dot {
+  color: white;
+}
+
+.fc-button {
+  background-color: var(--primary-blue-filter, #007bff) !important;
+  border-color: var(--primary-blue-filter, #007bff) !important;
+  color: white !important;
+}
+
+.fc-button:hover {
+  background-color: #0056b3 !important;
+  border-color: #0056b3 !important;
+}
+
+/* ESTILOS PARA DESTAQUE DOS EVENTOS DE CHECKLIST */
+.fc-event.checklist-event-highlight {
+  background-color: #28a745; /* Um verde vibrante */
+  border-color: #28a745;
+  font-weight: bold; /* Deixa o texto mais forte */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Adiciona uma sombra sutil */
+  /* Você pode adicionar mais estilos aqui, como: */
+  /* border: 2px solid #1e7e34; */
+  /* animation: pulse 1.5s infinite alternate; */
+}
+
+/* Opcional: Animação de pulso para chamar mais atenção */
+/*
+@keyframes pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.03); }
+}
+*/
+
+/* Regras de mídia para responsividade */
+@media (max-width: 768px) {
+  .fc-event {
+    font-size: 0.75em;
+    padding: 1px 3px;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1.4em;
+  }
+  .fc .fc-button {
+    font-size: 0.8em;
+    padding: 0.3em 0.6em;
+  }
+}
+
+@media (max-width: 576px) {
+  .fc-event {
+    font-size: 0.65em;
+    padding: 0px 2px;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1.2em;
+  }
+}
