@@ -1,3 +1,5 @@
+/* public/static/css/into/dashboard_calendar.css */
+
 .dashboard-calendar-card {
   background-color: #fff;
   border-radius: 8px;
@@ -12,12 +14,13 @@
 }
 
 .fc-event {
-  background-color: var(--primary-blue-filter, #007bff);
-  border-color: var(--primary-blue-filter, #007bff);
-  color: white;
+  color: white; /* Cor do texto padrão para eventos */
   padding: 2px 5px;
   border-radius: 3px;
   font-size: 0.85em;
+  font-weight: 500; /* Padrão para todos os eventos */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Sombra sutil para todos os eventos */
+  border: none; /* Remove a borda padrão do FullCalendar */
 }
 
 .fc-event-title {
@@ -39,24 +42,57 @@
   border-color: #0056b3 !important;
 }
 
-/* ESTILOS PARA DESTAQUE DOS EVENTOS DE CHECKLIST */
-.fc-event.checklist-event-highlight {
-  background-color: #28a745; /* Um verde vibrante */
-  border-color: #28a745;
-  font-weight: bold; /* Deixa o texto mais forte */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Adiciona uma sombra sutil */
-  /* Você pode adicionar mais estilos aqui, como: */
-  /* border: 2px solid #1e7e34; */
-  /* animation: pulse 1.5s infinite alternate; */
+/* ESTILOS ESPECÍFICOS PARA CADA STATUS DO AGENDAMENTO */
+
+/* Agendado (padrão, não atrasado nem pra vencer) */
+.fc-event.status-agendado {
+  background-color: #007bff; /* Azul */
+  border-color: #007bff;
 }
 
-/* Opcional: Animação de pulso para chamar mais atenção */
-/*
-@keyframes pulse {
-  from { transform: scale(1); }
-  to { transform: scale(1.03); }
+/* Concluído */
+.fc-event.status-concluido {
+  background-color: #28a745; /* Verde */
+  border-color: #28a745;
 }
-*/
+
+/* Atrasado */
+.fc-event.status-atrasado {
+  background-color: #dc3545; /* Vermelho */
+  border-color: #dc3545;
+  animation: pulse-red 1.5s infinite alternate; /* Animação de pulso */
+}
+
+/* Pra Vencer (Amarelo) */
+.fc-event.status-pra-vencer {
+  background-color: #ffc107; /* Amarelo */
+  border-color: #ffc107;
+  color: #333; /* Texto mais escuro para contraste no amarelo */
+  font-weight: bold; /* Deixa o texto mais forte */
+  animation: pulse-yellow 1.5s infinite alternate; /* Animação de pulso */
+}
+
+/* Animações de pulso para chamar atenção */
+@keyframes pulse-red {
+  from {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(220, 53, 69, 0.4);
+  }
+  to {
+    transform: scale(1.03);
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.8);
+  }
+}
+@keyframes pulse-yellow {
+  from {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(255, 193, 7, 0.4);
+  }
+  to {
+    transform: scale(1.03);
+    box-shadow: 0 0 8px rgba(255, 193, 7, 0.8);
+  }
+}
 
 /* Regras de mídia para responsividade */
 @media (max-width: 768px) {
