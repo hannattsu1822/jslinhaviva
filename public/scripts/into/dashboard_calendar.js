@@ -39,9 +39,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   const viewAllRoles = ["ADM", "ADMIN", "Gerente", "Engenheiro", "Técnico"];
   const canViewAllChecklists = viewAllRoles.includes(loggedInUserCargo);
 
-  let allVehiclesInCycle = [];
+  let agendamentos = [];
   try {
-    const response = await fetch("/api/placas", {
+    const response = await fetch("/api/agendamentos_checklist", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
 
@@ -50,74 +50,94 @@ document.addEventListener("DOMContentLoaded", async function () {
         .json()
         .catch(() => ({ message: "Erro desconhecido" }));
       throw new Error(
-        `Erro ao carregar veículos para o calendário: ${response.status} - ${
-          errorData.message || response.statusText
-        }`
+        `Erro ao carregar agendamentos para o calendário: ${
+          response.status
+        } - ${errorData.message || response.statusText}`
       );
     }
 
-    const data = await response.json();
+    agendamentos = await response.json();
 
-    allVehiclesInCycle = data;
-
-    if (allVehiclesInCycle.length === 0) {
+    if (agendamentos.length === 0) {
       calendarEl.innerHTML =
-        '<p class="text-center text-muted py-5">Nenhum veículo configurado para agendamento de checklists semanais.</p>';
+        '<p class="text-center text-muted py-5">Nenhum agendamento de checklist encontrado.</p>';
       return;
     }
   } catch (error) {
     console.error(
-      "Erro ao carregar veículos para o calendário do dashboard:",
+      "Erro ao carregar agendamentos para o calendário do dashboard:",
       error
     );
-    calendarEl.innerHTML = `<p class="text-center text-danger py-5">Erro ao carregar veículos: ${error.message}</p>`;
+    calendarEl.innerHTML = `<p class="text-center text-danger py-5">Erro ao carregar agendamentos: ${error.message}</p>`;
     return;
   }
 
   const events = [];
-  const today = new Date();
-  const numYearsToDisplay = 2;
+  const todayNormalized = new Date();
+  todayNormalized.setHours(0, 0, 0, 0); // Normaliza a data de hoje para o início do dia
 
-  for (let yearOffset = 0; yearOffset < numYearsToDisplay; yearOffset++) {
-    const year = today.getFullYear() + yearOffset;
+  agendamentos.forEach((agendamento) => {
+    if (
+      canViewAllChecklists ||
+      agendamento.encarregado_matricula === loggedInUserMatricula
+    ) {
+      let eventColor = "#007bff"; // Cor padrão para 'Agendado'
+      let eventClassName = "checklist-event-highlight"; // Classe base para todos os eventos de checklist
 
-    for (let month = 0; month < 12; month++) {
-      let monthlyCycleCounter = 0;
-      let currentMonthStart = new Date(year, month, 1);
+      const agendamentoDate = new Date(agendamento.data_agendamento);
+      agendamentoDate.setHours(0, 0, 0, 0); // Normaliza a data do agendamento
 
-      let firstMondayOfMonth = new Date(currentMonthStart);
-      while (firstMondayOfMonth.getDay() !== 1) {
-        firstMondayOfMonth.setDate(firstMondayOfMonth.getDate() + 1);
+      const diffTime = agendamentoDate.getTime() - todayNormalized.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Calcula a diferença em dias
+
+      let statusCategory = agendamento.status_display; // Usa o status do backend
+
+      // Lógica para determinar "Pra Vencer"
+      if (statusCategory === "Agendado" && diffDays > 0 && diffDays <= 7) {
+        statusCategory = "PraVencer"; // Categoria customizada para "Pra Vencer"
       }
 
-      let currentMonday = new Date(firstMondayOfMonth);
-      while (currentMonday.getMonth() === month) {
-        const vehicleIndex = monthlyCycleCounter % allVehiclesInCycle.length;
-        const vehicleForThisWeek = allVehiclesInCycle[vehicleIndex];
-
-        if (
-          vehicleForThisWeek &&
-          (canViewAllChecklists ||
-            vehicleForThisWeek.encarregado_matricula === loggedInUserMatricula)
-        ) {
-          events.push({
-            title: `${vehicleForThisWeek.placa} (${
-              vehicleForThisWeek.encarregado_nome || "N/A"
-            })`,
-            start: currentMonday.toISOString().split("T")[0],
-            allDay: true,
-            className: "checklist-event-highlight",
-            color: "#007bff",
-          });
-        }
-
-        monthlyCycleCounter++;
-        currentMonday.setDate(currentMonday.getDate() + 7);
+      // Atribui cor e classe com base na categoria de status
+      switch (statusCategory) {
+        case "Concluído":
+          eventColor = "#28a745"; // Verde
+          eventClassName += " status-concluido";
+          break;
+        case "Atrasado":
+          eventColor = "#dc3545"; // Vermelho
+          eventClassName += " status-atrasado";
+          break;
+        case "PraVencer":
+          eventColor = "#ffc107"; // Amarelo
+          eventClassName += " status-pra-vencer";
+          break;
+        case "Agendado": // Se for 'Agendado' e não 'PraVencer'
+        default:
+          eventColor = "#007bff"; // Azul
+          eventClassName += " status-agendado";
+          break;
       }
+
+      events.push({
+        id: agendamento.id,
+        title: `${agendamento.placa} (${
+          agendamento.encarregado_nome || "N/A"
+        })`,
+        start: agendamento.data_agendamento,
+        allDay: true,
+        color: eventColor, // FullCalendar usa esta cor como primária/fallback
+        className: eventClassName, // Classes CSS customizadas
+        extendedProps: {
+          // Propriedades adicionais para depuração ou uso futuro
+          status: agendamento.status_display,
+          statusCategory: statusCategory,
+          veiculo_id: agendamento.veiculo_id,
+          encarregado_matricula: agendamento.encarregado_matricula,
+        },
+      });
     }
-  }
+  });
 
-  // CORREÇÃO AQUI: Limpar o conteúdo do elemento antes de renderizar o calendário
   calendarEl.innerHTML = "";
 
   const calendar = new FullCalendar.Calendar(calendarEl, {
