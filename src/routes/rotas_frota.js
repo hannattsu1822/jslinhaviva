@@ -26,6 +26,17 @@ router.get(
 );
 
 router.get(
+  "/agendar_checklist",
+  autenticar,
+  verificarPermissaoPorCargo,
+  (req, res) => {
+    res.sendFile(
+      path.join(__dirname, "../../public/pages/frota/agendar_checklist.html")
+    );
+  }
+);
+
+router.get(
   "/frota_controle",
   autenticar,
   verificarPermissaoPorCargo,
@@ -149,6 +160,18 @@ router.get("/api/motoristas", autenticar, async (req, res) => {
   }
 });
 
+router.get("/api/encarregados", autenticar, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT matricula, nome FROM users WHERE cargo = 'Encarregado' ORDER BY nome ASC"
+    );
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error("Erro ao buscar encarregados:", err);
+    res.status(500).json({ message: "Erro ao buscar encarregados!" });
+  }
+});
+
 router.get("/api/placas", autenticar, async (req, res) => {
   try {
     const [rows] = await promisePool.query(
@@ -172,6 +195,251 @@ router.get("/api/placas", autenticar, async (req, res) => {
   } catch (err) {
     console.error("Erro ao buscar placas:", err);
     res.status(500).json({ message: "Erro ao buscar placas!" });
+  }
+});
+
+router.post(
+  "/api/agendar_checklist",
+  autenticar,
+  verificarPermissaoPorCargo,
+  async (req, res) => {
+    const { veiculo_id, data_agendamento, encarregado_matricula, observacoes } =
+      req.body;
+    const agendado_por_matricula = req.user.matricula;
+
+    if (!veiculo_id || !data_agendamento || !encarregado_matricula) {
+      return res.status(400).json({ message: "Campos obrigatórios faltando!" });
+    }
+
+    try {
+      const query = `
+      INSERT INTO agendamentos_checklist
+      (veiculo_id, data_agendamento, encarregado_matricula, agendado_por_matricula, observacoes)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+      const [result] = await promisePool.query(query, [
+        veiculo_id,
+        data_agendamento,
+        encarregado_matricula,
+        agendado_por_matricula,
+        observacoes || null,
+      ]);
+
+      await registrarAuditoria(
+        agendado_por_matricula,
+        "Agendamento de Checklist",
+        `Agendamento criado para veículo ID: ${veiculo_id}, Data: ${data_agendamento}, Encarregado: ${encarregado_matricula}`
+      );
+
+      res.status(201).json({
+        message: "Agendamento de checklist criado com sucesso!",
+        id: result.insertId,
+      });
+    } catch (err) {
+      console.error("Erro ao agendar checklist:", err);
+      res.status(500).json({ message: "Erro ao agendar checklist!" });
+    }
+  }
+);
+
+router.get("/api/agendamentos_checklist/:id", autenticar, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const query = `
+      SELECT
+          ac.id,
+          ac.veiculo_id,
+          ac.data_agendamento,
+          ac.encarregado_matricula,
+          ac.agendado_por_matricula,
+          ac.status,
+          ac.data_conclusao,
+          ac.inspecao_id,
+          ac.observacoes,
+          v.placa,
+          v.modelo,
+          u_enc.nome AS encarregado_nome,
+          u_agend.nome AS agendado_por_nome
+      FROM
+          agendamentos_checklist ac
+      JOIN
+          veiculos v ON ac.veiculo_id = v.id
+      JOIN
+          users u_enc ON ac.encarregado_matricula = u_enc.matricula
+      JOIN
+          users u_agend ON ac.agendado_por_matricula = u_agend.matricula
+      WHERE
+          ac.id = ?
+    `;
+    const [rows] = await promisePool.query(query, [id]);
+
+    if (rows.length > 0) {
+      const agendamento = rows[0];
+      let statusDisplay = agendamento.status;
+      if (
+        agendamento.status === "Agendado" &&
+        new Date(agendamento.data_agendamento) < new Date() &&
+        !agendamento.data_conclusao
+      ) {
+        statusDisplay = "Atrasado";
+      }
+      res.status(200).json({ ...agendamento, status_display: statusDisplay });
+    } else {
+      res.status(404).json({ message: "Agendamento não encontrado!" });
+    }
+  } catch (err) {
+    console.error("Erro ao buscar agendamento específico:", err);
+    res.status(500).json({ message: "Erro ao buscar agendamento!" });
+  }
+});
+
+// NOVA ROTA: Excluir Agendamento de Checklist
+router.delete(
+  "/api/agendamentos_checklist/:id",
+  autenticar,
+  verificarPermissaoPorCargo,
+  async (req, res) => {
+    const { id } = req.params;
+    const matriculaUsuario = req.user.matricula; // Quem está excluindo
+
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "ID do agendamento é obrigatório." });
+    }
+
+    let connection;
+    try {
+      connection = await promisePool.getConnection();
+      await connection.beginTransaction();
+
+      // Opcional: Buscar detalhes para auditoria antes de excluir
+      const [agendamentoInfo] = await connection.query(
+        `SELECT ac.id, v.placa, ac.data_agendamento, u_enc.nome AS encarregado_nome
+       FROM agendamentos_checklist ac
+       JOIN veiculos v ON ac.veiculo_id = v.id
+       JOIN users u_enc ON ac.encarregado_matricula = u_enc.matricula
+       WHERE ac.id = ?`,
+        [id]
+      );
+
+      const [result] = await connection.query(
+        "DELETE FROM agendamentos_checklist WHERE id = ?",
+        [id]
+      );
+
+      if (result.affectedRows > 0) {
+        const logMessage =
+          agendamentoInfo.length > 0
+            ? `Agendamento ID ${id} (Veículo: ${
+                agendamentoInfo[0].placa
+              }, Data: ${
+                agendamentoInfo[0].data_agendamento.toISOString().split("T")[0]
+              }, Encarregado: ${agendamentoInfo[0].encarregado_nome}) excluído.`
+            : `Agendamento ID ${id} excluído (detalhes não recuperados para auditoria).`;
+
+        await registrarAuditoria(
+          matriculaUsuario,
+          "Excluir Agendamento Checklist",
+          logMessage,
+          connection
+        );
+        await connection.commit();
+        res.status(200).json({ message: "Agendamento excluído com sucesso!" });
+      } else {
+        await connection.rollback();
+        res.status(404).json({ message: "Agendamento não encontrado." });
+      }
+    } catch (err) {
+      if (connection) await connection.rollback();
+      console.error("Erro ao excluir agendamento de checklist:", err);
+      res
+        .status(500)
+        .json({ message: "Erro ao excluir agendamento de checklist!" });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.get("/api/agendamentos_checklist", autenticar, async (req, res) => {
+  try {
+    const { status, dataInicial, dataFinal, limit } = req.query;
+    let query = `
+      SELECT
+          ac.id,
+          ac.veiculo_id,
+          ac.data_agendamento,
+          ac.encarregado_matricula,
+          ac.agendado_por_matricula,
+          ac.status,
+          ac.data_conclusao,
+          ac.inspecao_id,
+          ac.observacoes,
+          v.placa,
+          v.modelo,
+          u_enc.nome AS encarregado_nome,
+          u_agend.nome AS agendado_por_nome
+      FROM
+          agendamentos_checklist ac
+      JOIN
+          veiculos v ON ac.veiculo_id = v.id
+      JOIN
+          users u_enc ON ac.encarregado_matricula = u_enc.matricula
+      JOIN
+          users u_agend ON ac.agendado_por_matricula = u_agend.matricula
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status) {
+      if (status === "Concluído") {
+        query += ` AND ac.status = ?`;
+        params.push("Concluído");
+      } else if (status === "NaoConcluido") {
+        query += ` AND ac.status = ?`;
+        params.push("Agendado");
+      } else if (status === "Atrasado") {
+        query += ` AND ac.status = 'Agendado' AND ac.data_agendamento < CURDATE()`;
+      }
+    }
+
+    if (dataInicial) {
+      query += ` AND ac.data_agendamento >= ?`;
+      params.push(dataInicial);
+    }
+    if (dataFinal) {
+      query += ` AND ac.data_agendamento <= ?`;
+      params.push(dataFinal);
+    }
+
+    query += ` ORDER BY ac.data_agendamento DESC, ac.id DESC`;
+
+    if (limit) {
+      query += ` LIMIT ?`;
+      params.push(parseInt(limit));
+    }
+
+    const [rows] = await promisePool.query(query, params);
+
+    const agendamentosFormatados = rows.map((agendamento) => {
+      let statusDisplay = agendamento.status;
+      if (
+        agendamento.status === "Agendado" &&
+        new Date(agendamento.data_agendamento) < new Date() &&
+        !agendamento.data_conclusao
+      ) {
+        statusDisplay = "Atrasado";
+      }
+      return { ...agendamento, status_display: statusDisplay };
+    });
+
+    res.status(200).json(agendamentosFormatados);
+  } catch (err) {
+    console.error("Erro ao buscar agendamentos de checklist:", err);
+    res
+      .status(500)
+      .json({ message: "Erro ao buscar agendamentos de checklist!" });
   }
 });
 
@@ -227,6 +495,7 @@ router.get("/api/inspecoes/:id", autenticar, async (req, res) => {
 
 router.post("/api/salvar_inspecao", autenticar, async (req, res) => {
   const {
+    agendamento_id,
     matricula,
     placa,
     data_inspecao,
@@ -244,7 +513,12 @@ router.post("/api/salvar_inspecao", autenticar, async (req, res) => {
       .status(400)
       .json({ message: "KM atual e horímetro devem ser valores positivos!" });
   }
+
+  let connection;
   try {
+    connection = await promisePool.getConnection();
+    await connection.beginTransaction();
+
     const campos = [
       "matricula",
       "placa",
@@ -306,16 +580,45 @@ router.post("/api/salvar_inspecao", autenticar, async (req, res) => {
     const query = `INSERT INTO inspecoes (${campos.join(
       ", "
     )}) VALUES (${placeholders})`;
-    await promisePool.query(query, values);
+    const [inspecaoResult] = await connection.query(query, values);
+    const novaInspecaoId = inspecaoResult.insertId;
+
+    if (agendamento_id) {
+      const updateAgendamentoQuery = `
+        UPDATE agendamentos_checklist
+        SET status = 'Concluído', data_conclusao = NOW(), inspecao_id = ?
+        WHERE id = ? AND status = 'Agendado'
+      `;
+      const [updateResult] = await connection.query(updateAgendamentoQuery, [
+        novaInspecaoId,
+        agendamento_id,
+      ]);
+
+      if (updateResult.affectedRows === 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          message:
+            "Agendamento não encontrado ou já foi concluído/cancelado. Inspeção não salva.",
+        });
+      }
+    }
+
     await registrarAuditoria(
       matricula,
       "Salvar Inspeção",
-      `Inspeção salva para placa: ${placa}`
+      `Inspeção salva para placa: ${placa}` +
+        (agendamento_id ? ` (Agendamento ID: ${agendamento_id})` : "")
     );
+
+    await connection.commit();
+
     res.status(201).json({ message: "Inspeção salva com sucesso!" });
   } catch (err) {
+    if (connection) await connection.rollback();
     console.error("Erro ao salvar inspeção:", err);
     res.status(500).json({ message: "Erro ao salvar inspeção!" });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -596,7 +899,7 @@ router.get("/api/ultimo_horimetro", autenticar, async (req, res) => {
   if (!placa) return res.status(400).json({ message: "Placa é obrigatória!" });
   try {
     const [rows] = await promisePool.query(
-      "SELECT horimetro FROM inspecoes WHERE placa = ? ORDER BY data_inspecao DESC, id DESC LIMIT 1",
+      "SELECT horimetro FROM inspecoes WHERE placa = ? ORDER BY data_inspecao DESC LIMIT 1",
       [placa]
     );
     if (rows.length > 0) {
@@ -1058,7 +1361,7 @@ router.post("/api/frota/estoque_crud", autenticar, async (req, res) => {
   } catch (err) {
     console.error("Erro ao cadastrar peça no estoque (CRUD):", err);
     if (err.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ message: "Código da peça já cadastrado." });
+      return res.status(409).json({ message: "Matrícula já cadastrada." });
     }
     res
       .status(500)
