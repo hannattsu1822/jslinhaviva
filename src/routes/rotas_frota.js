@@ -31,7 +31,7 @@ router.get(
   verificarPermissaoPorCargo,
   (req, res) => {
     res.sendFile(
-      path.join(__dirname, "../../public/pages/frota/frota_controle.html") //  <-- CORRIGIDO para 'frota' com 't' latino
+      path.join(__dirname, "../../public/pages/frota/frota_controle.html")
     );
   }
 );
@@ -71,8 +71,8 @@ router.get(
   (req, res) => {
     try {
       const filePath = path.join(
-        __dirname, // Diretório do arquivo de rota atual
-        "../../public/pages/frota/frota_veiculos_cadastro.html" // Caminho corrigido
+        __dirname,
+        "../../public/pages/frota/frota_veiculos_cadastro.html"
       );
       res.sendFile(filePath);
     } catch (error) {
@@ -151,7 +151,23 @@ router.get("/api/motoristas", autenticar, async (req, res) => {
 
 router.get("/api/placas", autenticar, async (req, res) => {
   try {
-    const [rows] = await promisePool.query("SELECT placa FROM veiculos");
+    const [rows] = await promisePool.query(
+      `SELECT
+        v.id,
+        v.placa,
+        v.modelo,
+        v.encarregado_matricula,
+        v.ordem_checklist_semanal,
+        u.nome AS encarregado_nome
+      FROM
+        veiculos v
+      LEFT JOIN
+        users u ON v.encarregado_matricula = u.matricula
+      WHERE
+        v.ordem_checklist_semanal IS NOT NULL
+      ORDER BY
+        v.ordem_checklist_semanal ASC`
+    );
     res.status(200).json(rows);
   } catch (err) {
     console.error("Erro ao buscar placas:", err);
@@ -980,20 +996,17 @@ router.get("/api/frota/estoque_crud", autenticar, async (req, res) => {
 
     if (req.query.cod) {
       conditions.push("cod LIKE ?");
-      queryParams.push(`${req.query.cod}%`); // Busca por códigos que começam com o digitado
+      queryParams.push(`${req.query.cod}%`);
     }
     if (req.query.nome) {
       conditions.push("nome LIKE ?");
-      queryParams.push(`%${req.query.nome}%`); // Busca por nomes que contêm o digitado
+      queryParams.push(`%${req.query.nome}%`);
     }
 
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
     query += " ORDER BY nome ASC";
-
-    // Log para depuração no backend (opcional)
-    // console.log("Executando query de estoque:", query, queryParams);
 
     const [rows] = await promisePool.query(query, queryParams);
     res.json(rows);
