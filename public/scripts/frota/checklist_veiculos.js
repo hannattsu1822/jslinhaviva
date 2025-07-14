@@ -49,21 +49,33 @@ const checklistItems = [
   { id: "nivel_oleo_sky", label: "Nível de Óleo do Sky" },
 ];
 
+const placaSelect = document.getElementById("placa");
+const dataInspecaoInput = document.getElementById("data_inspecao");
+const agendamentoAbertoSelect = document.getElementById("agendamentoAberto");
+const agendamentoIdHiddenInput = document.getElementById("agendamentoId");
+const agendamentoMessage = document.getElementById("agendamentoMessage");
+const matriculaSelect = document.getElementById("matricula");
+const checklistFormEl = document.getElementById("checklistForm");
+
+let loadedOpenAgendamentos = [];
+
 async function carregarMotoristas() {
+  console.log("Carregando motoristas...");
   try {
     const response = await fetch("/api/motoristas");
     if (!response.ok) throw new Error("Erro ao carregar motoristas.");
     const data = await response.json();
-    const select = document.getElementById("matricula");
-    if (!select) return;
+    if (!matriculaSelect) return;
 
-    select.innerHTML = '<option value="">Selecione a matrícula</option>';
+    matriculaSelect.innerHTML =
+      '<option value="">Selecione a matrícula</option>';
     data.forEach((motorista) => {
       const option = document.createElement("option");
       option.value = motorista.matricula;
       option.textContent = `${motorista.matricula} - ${motorista.nome}`;
-      select.appendChild(option);
+      matriculaSelect.appendChild(option);
     });
+    console.log("Motoristas carregados com sucesso.");
   } catch (error) {
     console.error("Erro ao carregar motoristas:", error);
     exibirMensagem("Erro ao carregar motoristas: " + error.message, "erro");
@@ -71,20 +83,21 @@ async function carregarMotoristas() {
 }
 
 async function carregarPlacas() {
+  console.log("Carregando placas...");
   try {
     const response = await fetch("/api/placas");
     if (!response.ok) throw new Error("Erro ao carregar placas.");
     const data = await response.json();
-    const select = document.getElementById("placa");
-    if (!select) return;
+    if (!placaSelect) return;
 
-    select.innerHTML = '<option value="">Selecione a placa</option>';
+    placaSelect.innerHTML = '<option value="">Selecione a placa</option>';
     data.forEach((veiculo) => {
       const option = document.createElement("option");
       option.value = veiculo.placa;
       option.textContent = veiculo.placa;
-      select.appendChild(option);
+      placaSelect.appendChild(option);
     });
+    console.log("Placas carregadas com sucesso.");
   } catch (error) {
     console.error("Erro ao carregar placas:", error);
     exibirMensagem("Erro ao carregar placas: " + error.message, "erro");
@@ -92,6 +105,7 @@ async function carregarPlacas() {
 }
 
 function carregarItensChecklist() {
+  console.log("Carregando itens do checklist...");
   const container = document.getElementById("checklist-items");
   if (!container) return;
   container.innerHTML = "";
@@ -108,7 +122,7 @@ function carregarItensChecklist() {
     inputHidden.type = "hidden";
     inputHidden.name = item.id;
     inputHidden.id = `${item.id}_input`;
-    inputHidden.value = ""; // Inicializa como vazio (não selecionado)
+    inputHidden.value = "";
 
     const optionsDiv = document.createElement("div");
     optionsDiv.className = "checklist-options";
@@ -118,7 +132,7 @@ function carregarItensChecklist() {
     conformeBtn.className = "option-btn conforme";
     conformeBtn.textContent = "Conforme";
     conformeBtn.addEventListener("click", () => {
-      inputHidden.value = "1"; // Valor para 'Conforme'
+      inputHidden.value = "1";
       conformeBtn.classList.add("active");
       naoConformeBtn.classList.remove("active");
     });
@@ -128,7 +142,7 @@ function carregarItensChecklist() {
     naoConformeBtn.className = "option-btn nao-conforme";
     naoConformeBtn.textContent = "Não Conforme";
     naoConformeBtn.addEventListener("click", () => {
-      inputHidden.value = "0"; // Valor para 'Não Conforme'
+      inputHidden.value = "0";
       naoConformeBtn.classList.add("active");
       conformeBtn.classList.remove("active");
     });
@@ -142,6 +156,115 @@ function carregarItensChecklist() {
 
     container.appendChild(itemDiv);
   });
+  console.log("Itens do checklist carregados.");
+}
+
+async function carregarAgendamentosAbertos() {
+  const placa = placaSelect.value;
+  const data = dataInspecaoInput.value;
+
+  console.log(
+    `Tentando carregar agendamentos abertos para Placa: ${placa}, Data: ${data}`
+  );
+
+  agendamentoAbertoSelect.innerHTML =
+    '<option value="">Carregando agendamentos...</option>';
+  agendamentoAbertoSelect.disabled = true;
+  agendamentoMessage.textContent = "";
+  agendamentoMessage.className = "agendamento-message";
+  agendamentoIdHiddenInput.value = "";
+
+  placaSelect.disabled = false;
+  dataInspecaoInput.disabled = false;
+  matriculaSelect.disabled = false;
+
+  if (!placa || !data) {
+    console.log(
+      "Placa ou data não selecionadas, pulando busca de agendamentos abertos."
+    );
+    agendamentoAbertoSelect.innerHTML =
+      '<option value="">Selecione um agendamento ou preencha manualmente</option>';
+    agendamentoAbertoSelect.disabled = false;
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `/api/agendamentos_abertos?placa=${placa}&data=${data}`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      }
+    );
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || "Erro ao buscar agendamentos em aberto."
+      );
+    }
+    loadedOpenAgendamentos = await response.json();
+    console.log("Agendamentos abertos carregados:", loadedOpenAgendamentos);
+
+    agendamentoAbertoSelect.innerHTML =
+      '<option value="">Selecione um agendamento ou preencha manualmente</option>';
+
+    if (loadedOpenAgendamentos.length === 0) {
+      agendamentoMessage.textContent =
+        "Nenhum agendamento em aberto para esta placa e data.";
+      agendamentoMessage.classList.add("info");
+      console.log("Nenhum agendamento em aberto encontrado.");
+    } else {
+      agendamentoMessage.textContent = `${loadedOpenAgendamentos.length} agendamento(s) em aberto encontrado(s).`;
+      agendamentoMessage.classList.add("success");
+      loadedOpenAgendamentos.forEach((agendamento) => {
+        const option = document.createElement("option");
+        option.value = agendamento.id;
+        option.textContent = `ID: ${agendamento.id} - Encarregado: ${
+          agendamento.encarregado_nome || "N/A"
+        } (Status: ${agendamento.status_display})`;
+        agendamentoAbertoSelect.appendChild(option);
+      });
+      console.log("Dropdown de agendamentos abertos populado.");
+    }
+  } catch (error) {
+    console.error("Erro ao carregar agendamentos abertos:", error);
+    agendamentoAbertoSelect.innerHTML =
+      '<option value="">Erro ao carregar agendamentos</option>';
+    agendamentoMessage.textContent =
+      "Erro ao carregar agendamentos em aberto: " + error.message;
+    agendamentoMessage.classList.add("error");
+  } finally {
+    agendamentoAbertoSelect.disabled = false;
+  }
+}
+
+function preencherFormularioComAgendamento() {
+  const selectedAgendamentoId = agendamentoAbertoSelect.value;
+  const selectedAgendamento = loadedOpenAgendamentos.find(
+    (ag) => String(ag.id) === selectedAgendamentoId
+  );
+
+  console.log("Agendamento selecionado no dropdown:", selectedAgendamento);
+
+  if (selectedAgendamento) {
+    agendamentoIdHiddenInput.value = selectedAgendamento.id;
+
+    placaSelect.value = selectedAgendamento.placa;
+    placaSelect.disabled = true;
+
+    dataInspecaoInput.value =
+      selectedAgendamento.data_agendamento.split("T")[0];
+    dataInspecaoInput.disabled = true;
+
+    exibirMensagem(
+      `Agendamento ID ${selectedAgendamento.id} selecionado.`,
+      "sucesso"
+    );
+  } else {
+    agendamentoIdHiddenInput.value = "";
+    placaSelect.disabled = false;
+    dataInspecaoInput.disabled = false;
+    exibirMensagem("Modo de inspeção manual ativado.", "info");
+  }
 }
 
 async function salvarInspecao(event) {
@@ -149,6 +272,7 @@ async function salvarInspecao(event) {
 
   const botao = document.querySelector('#checklistForm button[type="submit"]');
   const textoOriginal = botao.innerHTML;
+  const originalBgColor = botao.style.backgroundColor; // Captura a cor original do botão
   botao.disabled = true;
   botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
@@ -157,8 +281,6 @@ async function salvarInspecao(event) {
   const dados = {};
 
   for (const [chave, valor] of formData.entries()) {
-    // Converte '1' para 1 (true) e '0' para 0 (false) para os itens do checklist
-    // Mantém outros valores como estão (ex: datas, números, texto de observações)
     if (valor === "1" && checklistItems.some((item) => item.id === chave)) {
       dados[chave] = 1;
     } else if (
@@ -170,15 +292,33 @@ async function salvarInspecao(event) {
       valor === "" &&
       checklistItems.some((item) => item.id === chave)
     ) {
-      // Se um item do checklist não foi selecionado (nem conforme, nem não conforme)
-      // o valor do input hidden será ''. Você pode querer tratar isso como null ou um valor padrão.
-      dados[chave] = null; // Ou conforme sua API/banco espera
+      dados[chave] = null;
     } else {
       dados[chave] = valor.trim() === "" ? null : valor;
     }
   }
 
-  // Validação básica
+  if (placaSelect.disabled) {
+    dados.placa = placaSelect.value;
+  }
+  if (dataInspecaoInput.disabled) {
+    dados.data_inspecao = dataInspecaoInput.value;
+  }
+
+  dados.agendamento_id = agendamentoIdHiddenInput.value || null;
+  console.log("Dados a serem enviados para salvar inspeção:", dados);
+
+  if (loadedOpenAgendamentos.length > 0 && !dados.agendamento_id) {
+    exibirMensagem(
+      "Existem agendamentos em aberto para esta placa e data. Por favor, selecione um agendamento ou ajuste a placa/data para realizar uma inspeção manual.",
+      "erro"
+    );
+    botao.disabled = false;
+    botao.innerHTML = textoOriginal;
+    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
+    return;
+  }
+
   if (
     !dados.matricula ||
     !dados.placa ||
@@ -192,13 +332,12 @@ async function salvarInspecao(event) {
     );
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
+    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
     return;
   }
-  // Adiciona validação para que todos os itens do checklist tenham uma seleção
   let checklistCompleto = true;
   checklistItems.forEach((item) => {
     if (dados[item.id] === null || dados[item.id] === "") {
-      // Verifica se está nulo ou string vazia
       checklistCompleto = false;
     }
   });
@@ -210,40 +349,57 @@ async function salvarInspecao(event) {
     );
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
+    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
     return;
   }
 
   try {
+    console.log("Enviando requisição para /api/salvar_inspecao...");
     const response = await fetch("/api/salvar_inspecao", {
-      // Assegure-se que esta API existe
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`, // Adiciona token se a API for protegida
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
       body: JSON.stringify(dados),
     });
+    console.log("Resposta bruta da API salvar_inspecao:", response);
 
     const resultado = await response.json();
+    console.log("Resultado JSON da API salvar_inspecao:", resultado);
 
     if (response.ok) {
       exibirMensagem(
         resultado.message || "Inspeção salva com sucesso!",
         "sucesso"
       );
-      form.reset(); // Limpa o formulário
-      carregarItensChecklist(); // Recarrega os botões para o estado inicial
-      // Redireciona para a página de frota ou filtrar inspeções
-      setTimeout(() => (window.location.href = "/frota"), 2000);
+
+      // Animação de sucesso no botão
+      botao.innerHTML = '<i class="fas fa-check"></i> Salvo!';
+      botao.style.backgroundColor = "#28a745"; // Cor verde de sucesso
+
+      form.reset();
+      carregarItensChecklist();
+
+      // Redireciona após um pequeno atraso para a animação ser visível
+      setTimeout(() => {
+        if (dados.agendamento_id) {
+          window.location.href = "/agendar_checklist"; // Volta para a página de gestão de agendamentos
+        } else {
+          window.location.href = "/frota"; // Comportamento padrão se não for de um agendamento
+        }
+      }, 1500); // 1.5 segundos para ver a animação
     } else {
       throw new Error(resultado.message || "Erro ao salvar inspeção");
     }
   } catch (error) {
-    console.error("Erro ao salvar inspeção:", error);
+    console.error("Erro na requisição fetch para salvar inspeção:", error);
     exibirMensagem(error.message, "erro");
-  } finally {
+
+    // Restaura o botão imediatamente em caso de erro
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
+    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
   }
 }
 
@@ -251,25 +407,34 @@ function exibirMensagem(texto, tipo = "sucesso") {
   const div = document.getElementById("mensagem");
   if (!div) return;
   div.textContent = texto;
-  div.className = `mensagem ${tipo}`; // Adiciona a classe para estilização
-  // Remove a mensagem após alguns segundos
+  div.className = `mensagem ${tipo}`;
   setTimeout(() => {
     div.textContent = "";
-    div.className = "mensagem"; // Limpa a classe
+    div.className = "mensagem";
   }, 5000);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  // O 'user' do localStorage não é usado diretamente neste script,
-  // mas a proteção da rota no backend deve garantir que apenas usuários logados acessem.
-  // Se precisar de dados do usuário aqui, pode obtê-los do localStorage.
-
-  carregarMotoristas();
-  carregarPlacas();
+document.addEventListener("DOMContentLoaded", async () => {
+  await carregarMotoristas();
+  await carregarPlacas();
   carregarItensChecklist();
 
-  const checklistFormEl = document.getElementById("checklistForm");
+  if (placaSelect) {
+    placaSelect.addEventListener("change", carregarAgendamentosAbertos);
+  }
+  if (dataInspecaoInput) {
+    dataInspecaoInput.addEventListener("change", carregarAgendamentosAbertos);
+  }
+  if (agendamentoAbertoSelect) {
+    agendamentoAbertoSelect.addEventListener(
+      "change",
+      preencherFormularioComAgendamento
+    );
+  }
+
   if (checklistFormEl) {
     checklistFormEl.addEventListener("submit", salvarInspecao);
   }
+
+  carregarAgendamentosAbertos();
 });
