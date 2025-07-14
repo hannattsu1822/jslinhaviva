@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Checklist de Veículos</title>
-    <link rel="stylesheet" href="/static/css/checklist.css" />
+    <!-- CAMINHO DO CSS ATUALIZADO -->
+    <link rel="stylesheet" href="/static/css/frota/checklist.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
       rel="stylesheet"
@@ -22,20 +23,16 @@
       </div>
 
       <form id="checklistForm" class="checklist-form">
-        <div class="form-section">
-          <h2><i class="fas fa-user"></i> Dados do Motorista</h2>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="matricula">Matrícula</label>
-              <select id="matricula" name="matricula" required>
-                <option value="">Selecione a matrícula</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        <!-- Campo oculto para o ID do agendamento -->
+        <input
+          type="hidden"
+          id="agendamentoId"
+          name="agendamento_id"
+          value=""
+        />
 
         <div class="form-section">
-          <h2><i class="fas fa-car"></i> Dados do Veículo</h2>
+          <h2><i class="fas fa-car"></i> Dados do Veículo e Agendamento</h2>
           <div class="form-row">
             <div class="form-group">
               <label for="placa">Placa</label>
@@ -53,6 +50,34 @@
               />
             </div>
           </div>
+          <!-- NOVO DROPDOWN PARA AGENDAMENTOS EM ABERTO -->
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="agendamentoAberto">Agendamento em Aberto:</label>
+              <select id="agendamentoAberto" name="agendamentoAberto">
+                <option value="">
+                  Selecione um agendamento ou preencha manualmente
+                </option>
+              </select>
+              <p id="agendamentoMessage" class="agendamento-message"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-user"></i> Dados do Motorista</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="matricula">Matrícula</label>
+              <select id="matricula" name="matricula" required>
+                <option value="">Selecione a matrícula</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2><i class="fas fa-tachometer-alt"></i> KM e Horímetro</h2>
           <div class="form-row">
             <div class="form-group">
               <label for="km_atual">KM Atual</label>
