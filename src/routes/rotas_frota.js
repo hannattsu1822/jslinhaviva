@@ -186,10 +186,8 @@ router.get("/api/placas", autenticar, async (req, res) => {
         veiculos v
       LEFT JOIN
         users u ON v.encarregado_matricula = u.matricula
-      WHERE
-        v.ordem_checklist_semanal IS NOT NULL
       ORDER BY
-        v.ordem_checklist_semanal ASC`
+        v.placa ASC`
     );
     res.status(200).json(rows);
   } catch (err) {
@@ -293,14 +291,13 @@ router.get("/api/agendamentos_checklist/:id", autenticar, async (req, res) => {
   }
 });
 
-// NOVA ROTA: Excluir Agendamento de Checklist
 router.delete(
   "/api/agendamentos_checklist/:id",
   autenticar,
   verificarPermissaoPorCargo,
   async (req, res) => {
     const { id } = req.params;
-    const matriculaUsuario = req.user.matricula; // Quem está excluindo
+    const matriculaUsuario = req.user.matricula;
 
     if (!id) {
       return res
@@ -313,7 +310,6 @@ router.delete(
       connection = await promisePool.getConnection();
       await connection.beginTransaction();
 
-      // Opcional: Buscar detalhes para auditoria antes de excluir
       const [agendamentoInfo] = await connection.query(
         `SELECT ac.id, v.placa, ac.data_agendamento, u_enc.nome AS encarregado_nome
        FROM agendamentos_checklist ac
