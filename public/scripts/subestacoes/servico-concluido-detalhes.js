@@ -168,8 +168,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `/api/servicos-subestacoes/${servicoIdAtual}`
       );
 
-      if (servicoIdTitulo)
-        servicoIdTitulo.textContent = `Nº ${servico.processo || servico.id}`;
+      // LINHA ALTERADA AQUI
+      if (servicoIdTitulo) servicoIdTitulo.textContent = `#${servico.id}`;
+
       if (detalheProcesso)
         detalheProcesso.textContent = servico.processo || "Não informado";
       if (detalheSubestacao)
@@ -205,7 +206,11 @@ document.addEventListener("DOMContentLoaded", () => {
           servico.horario_inicio
         )} às ${formatarHoraSimples(servico.horario_fim)}`;
 
-      if (servico.status === "CONCLUIDO" || servico.status === "CANCELADO") {
+      if (
+        servico.status === "CONCLUIDO" ||
+        servico.status === "CANCELADO" ||
+        servico.status === "CONCLUIDO_COM_RESSALVAS"
+      ) {
         secaoDetalhesConclusao.classList.remove("hidden");
         if (detalheDataConclusao)
           detalheDataConclusao.textContent = formatarDataSimples(
@@ -257,7 +262,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     itensEscopo.forEach((item) => {
       const itemCard = document.createElement("div");
-      itemCard.className = "service-item-card";
+
+      const statusClasseItem = (item.status_item_escopo || "pendente")
+        .toLowerCase()
+        .replace(/_/g, "-");
+      itemCard.className = `service-item-card status-${statusClasseItem}`;
 
       const statusClasse = (item.status_item_escopo || "pendente")
         .toLowerCase()
