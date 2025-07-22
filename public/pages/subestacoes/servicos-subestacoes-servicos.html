@@ -145,58 +145,78 @@
       </footer>
     </div>
 
-    <div id="modalConfirmacaoServico" class="modal-overlay hidden">
+    <div id="modalConcluirItem" class="modal-overlay hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h3 id="modalConfirmacaoServicoTitulo" class="modal-title">
-            <span class="material-symbols-outlined"></span> Confirmar Ação
+          <h3 id="modalConcluirItemTitulo" class="modal-title">
+            <span class="material-symbols-outlined">check_circle</span> Concluir
+            Item de Serviço
           </h3>
           <button type="button" class="btn-close" aria-label="Fechar"></button>
         </div>
-        <div class="modal-body">
-          <p id="mensagemConfirmacaoServico"></p>
-          <form id="formConfirmacaoConcluirServico" class="hidden">
-            <div id="listaItensParaConcluirContainer" class="mb-3"></div>
+        <form id="formConcluirItem">
+          <div class="modal-body">
+            <input type="hidden" id="servicoIdParaConclusao" />
+            <p>Serviço: <strong id="servicoProcessoParaConclusao"></strong></p>
             <div class="form-group">
-              <label for="confirmacaoDataConclusaoInput"
-                >Data de Conclusão:*</label
+              <label for="selectItemParaConcluir"
+                >Selecione o item a concluir:*</label
               >
+              <select
+                id="selectItemParaConcluir"
+                class="form-select"
+                required
+              ></select>
+            </div>
+            <div class="form-group">
+              <label for="statusConclusaoItem">Status da Conclusão:*</label>
+              <select
+                id="statusConclusaoItem"
+                name="status_item"
+                class="form-select"
+                required
+              >
+                <option value="CONCLUIDO">Concluído</option>
+                <option value="CONCLUIDO_COM_PENDENCIA">
+                  Concluído com Pendência
+                </option>
+                <option value="NAO_CONCLUIDO">Não Concluído</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="dataConclusaoItem">Data da Conclusão:*</label>
               <input
                 type="date"
-                id="confirmacaoDataConclusaoInput"
-                name="data_conclusao_manual"
+                id="dataConclusaoItem"
+                name="data_conclusao"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group">
-              <label for="confirmacaoHoraConclusaoInput"
-                >Hora de Conclusão (Opcional):</label
-              >
+              <label for="horaConclusaoItem">Hora da Conclusão:</label>
               <input
                 type="time"
-                id="confirmacaoHoraConclusaoInput"
-                name="hora_conclusao_manual"
+                id="horaConclusaoItem"
+                name="hora_conclusao"
                 class="form-control"
               />
             </div>
             <div class="form-group">
-              <label for="confirmacaoObservacoesTextarea"
-                >Observações (Opcional):</label
-              >
+              <label for="observacoesConclusaoItem">Observações:</label>
               <textarea
-                id="confirmacaoObservacoesTextarea"
-                name="observacoes_conclusao_manual"
+                id="observacoesConclusaoItem"
+                name="observacoes_conclusao"
                 class="form-control"
                 rows="2"
               ></textarea>
             </div>
             <div class="form-group">
-              <label>Anexos de Conclusão (Opcional):</label>
+              <label>Anexos de Evidência:</label>
               <div class="botoes-anexo">
                 <button
                   type="button"
-                  id="btnAnexarConclusao"
+                  id="btnAnexarEvidencia"
                   class="btn btn-secondary"
                 >
                   <span class="material-symbols-outlined">attach_file</span>
@@ -205,26 +225,31 @@
               </div>
               <input
                 type="file"
-                id="confirmacaoAnexosInput"
-                name="anexos_conclusao_servico"
+                id="anexosConclusaoItemInput"
+                name="anexos_conclusao_item"
                 class="visually-hidden"
                 multiple
               />
               <div
-                id="previewAnexosConclusao"
+                id="previewAnexosConclusaoItem"
                 class="anexos-preview-container"
               ></div>
             </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-close-modal">
-            Cancelar
-          </button>
-          <button type="button" id="btnConfirmarAcaoServico" class="btn">
-            Confirmar
-          </button>
-        </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-close-modal">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              id="btnConfirmarConclusaoItem"
+              class="btn btn-success"
+            >
+              <span class="material-symbols-outlined">check</span> Concluir Item
+              Selecionado
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
