@@ -3,11 +3,7 @@ const path = require("path");
 const xlsx = require("xlsx");
 const fs = require("fs");
 const { promisePool, upload } = require("../init");
-const {
-  autenticar,
-  verificarPermissaoPorCargo,
-  registrarAuditoria,
-} = require("../auth");
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
@@ -82,20 +78,15 @@ function excelSerialDateToJSDate(input) {
   return null;
 }
 
-router.get(
-  "/transformadores",
-  autenticar,
-  verificarPermissaoPorCargo,
-  (req, res) => {
-    res.sendFile(
-      path.join(__dirname, "../../public/pages/trafos/transformadores.html")
-    );
-  }
-);
+router.get("/transformadores", autenticar, verificarNivel(3), (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "../../public/pages/trafos/transformadores.html")
+  );
+});
 router.get(
   "/upload_transformadores",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -108,7 +99,7 @@ router.get(
 router.get(
   "/formulario_transformadores",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -121,7 +112,7 @@ router.get(
 router.get(
   "/filtrar_transformadores",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -140,6 +131,7 @@ router.get("/relatorio_formulario", (req, res) => {
 router.post(
   "/api/upload_transformadores",
   autenticar,
+  verificarNivel(3),
   upload.single("planilha"),
   async (req, res) => {
     if (!req.file) {
@@ -161,12 +153,10 @@ router.post(
       });
 
       if (!data || data.length === 0) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Planilha vazia ou formato inválido",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Planilha vazia ou formato inválido",
+        });
       }
 
       const headers = data.length > 0 ? Object.keys(data[0]) : [];
@@ -555,18 +545,16 @@ router.post(
       });
     } catch (error) {
       console.error("Erro crítico no upload:", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erro crítico no servidor: " + error.message,
-          data: {
-            details: [
-              { status: "error", message: "Erro crítico: " + error.message },
-            ],
-            total_rows: data.length,
-          },
-        });
+      res.status(500).json({
+        success: false,
+        message: "Erro crítico no servidor: " + error.message,
+        data: {
+          details: [
+            { status: "error", message: "Erro crítico: " + error.message },
+          ],
+          total_rows: data.length,
+        },
+      });
     } finally {
       if (req.file?.path && fs.existsSync(req.file.path))
         fs.unlinkSync(req.file.path);
@@ -574,31 +562,42 @@ router.post(
   }
 );
 
-router.get("/api/responsaveis", autenticar, async (req, res) => {
-  try {
-    const [rows] = await promisePool.query(
-      "SELECT matricula, nome FROM users WHERE cargo IN ('Engenheiro', 'Técnico', 'Gerente', 'ADMIN', 'ADM', 'Inspetor') ORDER BY nome"
-    );
-    res.status(200).json(rows);
-  } catch (err) {
-    res.status(500).json({ message: "Erro ao buscar responsáveis!" });
+router.get(
+  "/api/responsaveis",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [rows] = await promisePool.query(
+        "SELECT matricula, nome FROM users WHERE cargo IN ('Engenheiro', 'Técnico', 'Gerente', 'ADMIN', 'ADM', 'Inspetor') ORDER BY nome"
+      );
+      res.status(200).json(rows);
+    } catch (err) {
+      res.status(500).json({ message: "Erro ao buscar responsáveis!" });
+    }
   }
-});
+);
 
-router.get("/api/supervisores", autenticar, async (req, res) => {
-  try {
-    const [rows] = await promisePool.query(
-      "SELECT matricula, nome FROM users WHERE cargo IN ('Engenheiro', 'Gerente', 'ADMIN', 'ADM') ORDER BY nome"
-    );
-    res.status(200).json(rows);
-  } catch (err) {
-    res.status(500).json({ message: "Erro ao buscar supervisores!" });
+router.get(
+  "/api/supervisores",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [rows] = await promisePool.query(
+        "SELECT matricula, nome FROM users WHERE cargo IN ('Engenheiro', 'Gerente', 'ADMIN', 'ADM') ORDER BY nome"
+      );
+      res.status(200).json(rows);
+    } catch (err) {
+      res.status(500).json({ message: "Erro ao buscar supervisores!" });
+    }
   }
-});
+);
 
 router.get(
   "/api/transformadores_sem_checklist",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const [rows] = await promisePool.query(
@@ -616,14 +615,13 @@ router.get(
 router.get(
   "/api/trafos_da_remessa_para_checklist_v2",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { dataRemessaInicial, dataRemessaFinal } = req.query;
     if (!dataRemessaInicial || !dataRemessaFinal) {
-      return res
-        .status(400)
-        .json({
-          message: "Período de data de processamento da remessa é obrigatório.",
-        });
+      return res.status(400).json({
+        message: "Período de data de processamento da remessa é obrigatório.",
+      });
     }
     try {
       const query = `
@@ -667,6 +665,7 @@ router.get(
 router.get(
   "/api/historico_remessas_transformador/:numero_serie",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { numero_serie } = req.params;
     try {
@@ -689,88 +688,93 @@ router.get(
   }
 );
 
-router.post("/api/salvar_checklist", autenticar, async (req, res) => {
-  const {
-    numero_serie,
-    data_fabricacao,
-    reformado,
-    data_reformado,
-    detalhes_tanque,
-    corrosao_tanque,
-    buchas_primarias,
-    buchas_secundarias,
-    conectores,
-    avaliacao_bobina_i,
-    avaliacao_bobina_ii,
-    avaliacao_bobina_iii,
-    conclusao,
-    transformador_destinado,
-    matricula_responsavel,
-    matricula_supervisor,
-    observacoes,
-  } = req.body;
-  if (
-    !numero_serie ||
-    !matricula_responsavel ||
-    !conclusao ||
-    !transformador_destinado
-  ) {
-    return res
-      .status(400)
-      .json({ message: "Campos obrigatórios não preenchidos!" });
-  }
-  try {
-    const isReformado =
-      String(reformado).toLowerCase() === "true" ||
-      reformado === true ||
-      reformado === 1;
-    let dataFabricacaoFormatada = data_fabricacao
-      ? excelSerialDateToJSDate(data_fabricacao)
-      : null;
-    if (data_fabricacao && /^\d{4}$/.test(data_fabricacao))
-      dataFabricacaoFormatada = `${data_fabricacao}-01-01`;
-    let dataReformadoFormatada =
-      isReformado && data_reformado
-        ? excelSerialDateToJSDate(data_reformado)
+router.post(
+  "/api/salvar_checklist",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const {
+      numero_serie,
+      data_fabricacao,
+      reformado,
+      data_reformado,
+      detalhes_tanque,
+      corrosao_tanque,
+      buchas_primarias,
+      buchas_secundarias,
+      conectores,
+      avaliacao_bobina_i,
+      avaliacao_bobina_ii,
+      avaliacao_bobina_iii,
+      conclusao,
+      transformador_destinado,
+      matricula_responsavel,
+      matricula_supervisor,
+      observacoes,
+    } = req.body;
+    if (
+      !numero_serie ||
+      !matricula_responsavel ||
+      !conclusao ||
+      !transformador_destinado
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Campos obrigatórios não preenchidos!" });
+    }
+    try {
+      const isReformado =
+        String(reformado).toLowerCase() === "true" ||
+        reformado === true ||
+        reformado === 1;
+      let dataFabricacaoFormatada = data_fabricacao
+        ? excelSerialDateToJSDate(data_fabricacao)
         : null;
-    if (isReformado && data_reformado && /^\d{4}$/.test(data_reformado))
-      dataReformadoFormatada = `${data_reformado}-01-01`;
+      if (data_fabricacao && /^\d{4}$/.test(data_fabricacao))
+        dataFabricacaoFormatada = `${data_fabricacao}-01-01`;
+      let dataReformadoFormatada =
+        isReformado && data_reformado
+          ? excelSerialDateToJSDate(data_reformado)
+          : null;
+      if (isReformado && data_reformado && /^\d{4}$/.test(data_reformado))
+        dataReformadoFormatada = `${data_reformado}-01-01`;
 
-    await promisePool.query(
-      `INSERT INTO checklist_transformadores (numero_serie, data_fabricacao, reformado, data_reformado, detalhes_tanque, corrosao_tanque, buchas_primarias, buchas_secundarias, conectores, avaliacao_bobina_i, avaliacao_bobina_ii, avaliacao_bobina_iii, conclusao, transformador_destinado, matricula_responsavel, supervisor_tecnico, observacoes, data_checklist) 
+      await promisePool.query(
+        `INSERT INTO checklist_transformadores (numero_serie, data_fabricacao, reformado, data_reformado, detalhes_tanque, corrosao_tanque, buchas_primarias, buchas_secundarias, conectores, avaliacao_bobina_i, avaliacao_bobina_ii, avaliacao_bobina_iii, conclusao, transformador_destinado, matricula_responsavel, supervisor_tecnico, observacoes, data_checklist) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [
-        numero_serie,
-        dataFabricacaoFormatada,
-        isReformado,
-        dataReformadoFormatada,
-        detalhes_tanque,
-        corrosao_tanque || "NENHUMA",
-        buchas_primarias,
-        buchas_secundarias,
-        conectores,
-        avaliacao_bobina_i,
-        avaliacao_bobina_ii,
-        avaliacao_bobina_iii,
-        conclusao,
-        transformador_destinado,
-        matricula_responsavel,
-        matricula_supervisor,
-        observacoes,
-      ]
-    );
-    await registrarAuditoria(
-      req.user.matricula,
-      "Salvar Checklist",
-      `Checklist manual: ${numero_serie}`
-    );
-    res.status(201).json({ message: "Checklist salvo com sucesso!" });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Erro ao salvar checklist: " + error.message });
+        [
+          numero_serie,
+          dataFabricacaoFormatada,
+          isReformado,
+          dataReformadoFormatada,
+          detalhes_tanque,
+          corrosao_tanque || "NENHUMA",
+          buchas_primarias,
+          buchas_secundarias,
+          conectores,
+          avaliacao_bobina_i,
+          avaliacao_bobina_ii,
+          avaliacao_bobina_iii,
+          conclusao,
+          transformador_destinado,
+          matricula_responsavel,
+          matricula_supervisor,
+          observacoes,
+        ]
+      );
+      await registrarAuditoria(
+        req.user.matricula,
+        "Salvar Checklist",
+        `Checklist manual: ${numero_serie}`
+      );
+      res.status(201).json({ message: "Checklist salvo com sucesso!" });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: "Erro ao salvar checklist: " + error.message });
+    }
   }
-});
+);
 
 router.get("/api/checklist_transformadores_publico/:id", async (req, res) => {
   const { id } = req.params;
@@ -828,6 +832,7 @@ router.get("/api/checklist_transformadores_publico/:id", async (req, res) => {
 router.delete(
   "/api/excluir_transformador/:id",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -851,28 +856,29 @@ router.delete(
         .json({ message: "Checklist de transformador excluído com sucesso!" });
     } catch (err) {
       if (err.code === "ER_ROW_IS_REFERENCED_2")
-        return res
-          .status(400)
-          .json({
-            message:
-              "Não é possível excluir: referenciado em outros registros.",
-          });
+        return res.status(400).json({
+          message: "Não é possível excluir: referenciado em outros registros.",
+        });
       res.status(500).json({ message: "Erro ao excluir checklist!" });
     }
   }
 );
 
-router.post("/api/filtrar_transformadores", autenticar, async (req, res) => {
-  const {
-    numero_serie,
-    matricula_responsavel,
-    dataInicial,
-    dataFinal,
-    dataRemessaInicial,
-    dataRemessaFinal,
-  } = req.body;
-  try {
-    let query = `
+router.post(
+  "/api/filtrar_transformadores",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const {
+      numero_serie,
+      matricula_responsavel,
+      dataInicial,
+      dataFinal,
+      dataRemessaInicial,
+      dataRemessaFinal,
+    } = req.body;
+    try {
+      let query = `
             SELECT ct.id, t.numero_serie, t.potencia, t.marca,
                    DATE_FORMAT(ct.data_checklist, '%d/%m/%Y %H:%i') as data_formulario, 
                    ct.matricula_responsavel, u.nome as nome_responsavel, ct.transformador_destinado,
@@ -881,104 +887,110 @@ router.post("/api/filtrar_transformadores", autenticar, async (req, res) => {
             INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
             INNER JOIN users u ON ct.matricula_responsavel = u.matricula
             WHERE 1=1`;
-    const params = [];
-    if (numero_serie) {
-      query += " AND t.numero_serie LIKE ?";
-      params.push(`%${numero_serie.trim()}%`);
+      const params = [];
+      if (numero_serie) {
+        query += " AND t.numero_serie LIKE ?";
+        params.push(`%${numero_serie.trim()}%`);
+      }
+      if (matricula_responsavel) {
+        query += " AND ct.matricula_responsavel = ?";
+        params.push(matricula_responsavel.trim());
+      }
+      if (dataInicial) {
+        query += " AND DATE(ct.data_checklist) >= ?";
+        params.push(dataInicial);
+      }
+      if (dataFinal) {
+        query += " AND DATE(ct.data_checklist) <= ?";
+        params.push(dataFinal);
+      }
+      if (dataRemessaInicial && dataRemessaFinal) {
+        query += " AND t.data_processamento_remessa BETWEEN ? AND ?";
+        params.push(dataRemessaInicial, dataRemessaFinal);
+      }
+      query += " ORDER BY ct.data_checklist DESC, ct.id DESC";
+      const [rows] = await promisePool.query(query, params);
+      res.status(200).json(rows);
+    } catch (err) {
+      console.error("Erro ao filtrar checklists:", err);
+      res.status(500).json({ message: "Erro ao filtrar checklists" });
     }
-    if (matricula_responsavel) {
-      query += " AND ct.matricula_responsavel = ?";
-      params.push(matricula_responsavel.trim());
-    }
-    if (dataInicial) {
-      query += " AND DATE(ct.data_checklist) >= ?";
-      params.push(dataInicial);
-    }
-    if (dataFinal) {
-      query += " AND DATE(ct.data_checklist) <= ?";
-      params.push(dataFinal);
-    }
-    if (dataRemessaInicial && dataRemessaFinal) {
-      query += " AND t.data_processamento_remessa BETWEEN ? AND ?";
-      params.push(dataRemessaInicial, dataRemessaFinal);
-    }
-    query += " ORDER BY ct.data_checklist DESC, ct.id DESC";
-    const [rows] = await promisePool.query(query, params);
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error("Erro ao filtrar checklists:", err);
-    res.status(500).json({ message: "Erro ao filtrar checklists" });
   }
-});
+);
 
-router.get("/api/gerar_pdf/:id", autenticar, async (req, res) => {
-  const { id } = req.params;
-  let browser;
-  try {
-    const [chkRows] = await promisePool.query(
-      "SELECT t.marca, t.numero_serie FROM checklist_transformadores ct INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie WHERE ct.id = ?",
-      [id]
-    );
-    if (chkRows.length === 0)
-      return res.status(404).json({ message: "Checklist não encontrado!" });
-    const { marca, numero_serie } = chkRows[0];
-    const sanitize = (str, fb = "val") =>
-      str == null || String(str).trim() === ""
-        ? fb
-        : String(str)
-            .replace(/[^a-zA-Z0-9\-_]/g, "_")
-            .replace(/_{2,}/g, "_")
-            .replace(/^_|_$/g, "");
-    const nomeArquivo = `Checklist_${sanitize(id, `ID${id}`)}_${sanitize(
-      marca,
-      "MarcaDesconhecida"
-    )}_${sanitize(numero_serie, "SerieDesconhecida")}.pdf`;
+router.get(
+  "/api/gerar_pdf/:id",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { id } = req.params;
+    let browser;
+    try {
+      const [chkRows] = await promisePool.query(
+        "SELECT t.marca, t.numero_serie FROM checklist_transformadores ct INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie WHERE ct.id = ?",
+        [id]
+      );
+      if (chkRows.length === 0)
+        return res.status(404).json({ message: "Checklist não encontrado!" });
+      const { marca, numero_serie } = chkRows[0];
+      const sanitize = (str, fb = "val") =>
+        str == null || String(str).trim() === ""
+          ? fb
+          : String(str)
+              .replace(/[^a-zA-Z0-9\-_]/g, "_")
+              .replace(/_{2,}/g, "_")
+              .replace(/^_|_$/g, "");
+      const nomeArquivo = `Checklist_${sanitize(id, `ID${id}`)}_${sanitize(
+        marca,
+        "MarcaDesconhecida"
+      )}_${sanitize(numero_serie, "SerieDesconhecida")}.pdf`;
 
-    const { chromium } = require("playwright");
-    browser = await chromium.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-gpu",
-        "--disable-dev-shm-usage",
-      ],
-    });
-    const page = await (
-      await browser.newContext({ javaScriptEnabled: true, bypassCSP: true })
-    ).newPage();
-    await page.goto(
-      `${req.protocol}://${req.get("host")}/relatorio_formulario?id=${id}`,
-      { waitUntil: "networkidle", timeout: 90000 }
-    );
-    await page.waitForTimeout(1500);
+      const { chromium } = require("playwright");
+      browser = await chromium.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-gpu",
+          "--disable-dev-shm-usage",
+        ],
+      });
+      const page = await (
+        await browser.newContext({ javaScriptEnabled: true, bypassCSP: true })
+      ).newPage();
+      await page.goto(
+        `${req.protocol}://${req.get("host")}/relatorio_formulario?id=${id}`,
+        { waitUntil: "networkidle", timeout: 90000 }
+      );
+      await page.waitForTimeout(1500);
 
-    const hfStyle = `font-family:'Poppins',Arial,sans-serif;font-size:9px;color:#333;width:100%;`;
-    const primaryColor = "#2a5298";
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "30mm", right: "10mm", bottom: "20mm", left: "10mm" },
-      displayHeaderFooter: true,
-      headerTemplate: `<div style="${hfStyle}padding:0 10mm;height:20mm;display:flex;flex-direction:column;justify-content:center;align-items:center;border-bottom:1px solid #ddd;"><div style="font-size:14px;color:${primaryColor};font-weight:600;">Relatório de Inspeção de Transformador</div><div style="font-size:10px;color:#555;">SULGIPE - Linha Viva System</div></div>`,
-      footerTemplate: `<div style="${hfStyle}padding:0 10mm;height:10mm;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;"><span>Gerado em: <span class="date"></span></span><span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>`,
-      timeout: 90000,
-    });
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${nomeArquivo}"`
-    );
-    res.send(pdfBuffer);
-  } catch (err) {
-    if (!res.headersSent)
-      res
-        .status(500)
-        .json({ message: "Erro ao gerar PDF!", error: err.message });
-  } finally {
-    if (browser) await browser.close();
+      const hfStyle = `font-family:'Poppins',Arial,sans-serif;font-size:9px;color:#333;width:100%;`;
+      const primaryColor = "#2a5298";
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "30mm", right: "10mm", bottom: "20mm", left: "10mm" },
+        displayHeaderFooter: true,
+        headerTemplate: `<div style="${hfStyle}padding:0 10mm;height:20mm;display:flex;flex-direction:column;justify-content:center;align-items:center;border-bottom:1px solid #ddd;"><div style="font-size:14px;color:${primaryColor};font-weight:600;">Relatório de Inspeção de Transformador</div><div style="font-size:10px;color:#555;">SULGIPE - Linha Viva System</div></div>`,
+        footerTemplate: `<div style="${hfStyle}padding:0 10mm;height:10mm;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;"><span>Gerado em: <span class="date"></span></span><span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>`,
+        timeout: 90000,
+      });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${nomeArquivo}"`
+      );
+      res.send(pdfBuffer);
+    } catch (err) {
+      if (!res.headersSent)
+        res
+          .status(500)
+          .json({ message: "Erro ao gerar PDF!", error: err.message });
+    } finally {
+      if (browser) await browser.close();
+    }
   }
-});
+);
 
 function formatarDataParaPDFRelatorioTabela(dataISO) {
   if (!dataISO) return "N/A";
@@ -1002,6 +1014,7 @@ function formatarDataParaPDFRelatorioTabela(dataISO) {
 router.post(
   "/api/gerar_pdf_tabela_transformadores",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { dados, filtros } = req.body;
     let browser;
@@ -1116,13 +1129,11 @@ router.post(
       res.send(pdfBuffer);
     } catch (error) {
       if (!res.headersSent)
-        res
-          .status(500)
-          .json({
-            success: false,
-            message: "Erro ao gerar PDF da tabela.",
-            error: error.message,
-          });
+        res.status(500).json({
+          success: false,
+          message: "Erro ao gerar PDF da tabela.",
+          error: error.message,
+        });
     } finally {
       if (browser) await browser.close();
     }

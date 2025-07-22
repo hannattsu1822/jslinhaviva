@@ -1,12 +1,8 @@
 const express = require("express");
-const path = require("path"); // CORRIGIDO AQUI
+const path = require("path");
 const { chromium } = require("playwright");
 const { promisePool } = require("../init");
-const {
-  autenticar,
-  verificarPermissaoPorCargo,
-  registrarAuditoria,
-} = require("../auth");
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
@@ -22,48 +18,33 @@ const TIPOS_STATUS_PERMITIDOS = [
   "OUTRO",
 ];
 
-router.get("/gestao-turmas", autenticar, (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Gerente",
-    "Encarregado",
-    "Inspetor",
-    "Engenheiro",
-    "Técnico",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
+router.get(
+  "/gestao-turmas",
+  autenticar,
+  verificarNivel(3),
+  (req, res, next) => {
     res.sendFile(
       path.join(
         __dirname,
         "../../public/pages/gestao_turmas/gestao-turmas.html"
       )
     );
-  } else {
-    res.status(403).json({ message: "Acesso negado!" });
   }
-});
+);
 
-router.get("/diarias", autenticar, verificarPermissaoPorCargo, (req, res) => {
+router.get("/diarias", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/gestao_turmas/diarias.html")
   );
 });
 
-router.get(
-  "/turmas_ativas",
-  autenticar,
-  verificarPermissaoPorCargo,
-  (req, res) => {
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../public/pages/gestao_turmas/turmas_ativas.html"
-      )
-    );
-  }
-);
+router.get("/turmas_ativas", autenticar, verificarNivel(4), (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "../../public/pages/gestao_turmas/turmas_ativas.html")
+  );
+});
 
-router.get("/api/turmas", autenticar, async (req, res) => {
+router.get("/api/turmas", autenticar, verificarNivel(3), async (req, res) => {
   try {
     const [rows] = await promisePool.query(
       "SELECT id, matricula, nome, cargo, turma_encarregado FROM turmas ORDER BY turma_encarregado, nome"
@@ -81,7 +62,7 @@ router.get("/api/turmas", autenticar, async (req, res) => {
 router.post(
   "/api/turmas/adicionar",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(4),
   async (req, res) => {
     const { matricula, nome, cargo, turma_encarregado } = req.body;
 
@@ -132,7 +113,7 @@ router.post(
 router.put(
   "/api/turmas/:id",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(4),
   async (req, res) => {
     const { id } = req.params;
     const { turma_encarregado, nome, cargo, matricula } = req.body;
@@ -210,7 +191,7 @@ router.put(
 router.delete(
   "/api/turmas/:id",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(4),
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -242,6 +223,7 @@ router.delete(
 router.get(
   "/api/funcionarios_por_turma/:turma_encarregado_id",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const { turma_encarregado_id } = req.params;
@@ -299,6 +281,7 @@ router.get(
 router.get(
   "/api/funcionarios/:matricula/ultimos-processos",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { matricula } = req.params;
 
@@ -329,7 +312,7 @@ router.get(
   }
 );
 
-router.post("/api/diarias", autenticar, async (req, res) => {
+router.post("/api/diarias", autenticar, verificarNivel(3), async (req, res) => {
   const { data, processo, matricula, qs, qd } = req.body;
   const loggedInUserMatricula = req.user.matricula;
   const loggedInUserCargo = req.user.cargo;
@@ -473,7 +456,7 @@ router.post("/api/diarias", autenticar, async (req, res) => {
   }
 });
 
-router.get("/api/diarias", autenticar, async (req, res) => {
+router.get("/api/diarias", autenticar, verificarNivel(3), async (req, res) => {
   try {
     let query =
       "SELECT d.id, d.matricula, d.nome, d.cargo, d.data, d.processo, d.qs, d.qd FROM diarias d";
@@ -574,64 +557,73 @@ router.get("/api/diarias", autenticar, async (req, res) => {
   }
 });
 
-router.delete("/api/diarias/:id", autenticar, async (req, res) => {
-  const diariaId = req.params.id;
-  const usuarioAuditoria = req.user.matricula;
+router.delete(
+  "/api/diarias/:id",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const diariaId = req.params.id;
+    const usuarioAuditoria = req.user.matricula;
 
-  if (!diariaId) {
-    return res.status(400).json({ message: "ID da diária não fornecido." });
-  }
-
-  try {
-    const [diariaExistente] = await promisePool.query(
-      "SELECT matricula, processo, data FROM diarias WHERE id = ?",
-      [diariaId]
-    );
-
-    if (diariaExistente.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "Diária não encontrada para remoção." });
+    if (!diariaId) {
+      return res.status(400).json({ message: "ID da diária não fornecido." });
     }
 
-    const [result] = await promisePool.query(
-      "DELETE FROM diarias WHERE id = ?",
-      [diariaId]
-    );
-
-    if (result.affectedRows > 0) {
-      const detalhesDiaria = diariaExistente[0];
-      await registrarAuditoria(
-        usuarioAuditoria,
-        "Remover Diária",
-        `ID Diária: ${diariaId}, Matrícula Func: ${
-          detalhesDiaria.matricula
-        }, Processo: ${detalhesDiaria.processo}, Data: ${new Date(
-          detalhesDiaria.data
-        ).toLocaleDateString("pt-BR")}`
+    try {
+      const [diariaExistente] = await promisePool.query(
+        "SELECT matricula, processo, data FROM diarias WHERE id = ?",
+        [diariaId]
       );
-      res.status(200).json({ message: "Diária removida com sucesso!" });
-    } else {
-      res
-        .status(404)
-        .json({ message: "Diária não encontrada ou já removida." });
-    }
-  } catch (err) {
-    console.error("Erro ao remover diária do banco:", err);
-    res.status(500).json({
-      message: "Erro ao remover diária!",
-      error:
-        process.env.NODE_ENV === "development"
-          ? err.message
-          : "Erro interno do servidor",
-    });
-  }
-});
 
-router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
-  try {
-    const { diarias, filtros, usuario } = req.body;
-    const htmlContent = `
+      if (diariaExistente.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Diária não encontrada para remoção." });
+      }
+
+      const [result] = await promisePool.query(
+        "DELETE FROM diarias WHERE id = ?",
+        [diariaId]
+      );
+
+      if (result.affectedRows > 0) {
+        const detalhesDiaria = diariaExistente[0];
+        await registrarAuditoria(
+          usuarioAuditoria,
+          "Remover Diária",
+          `ID Diária: ${diariaId}, Matrícula Func: ${
+            detalhesDiaria.matricula
+          }, Processo: ${detalhesDiaria.processo}, Data: ${new Date(
+            detalhesDiaria.data
+          ).toLocaleDateString("pt-BR")}`
+        );
+        res.status(200).json({ message: "Diária removida com sucesso!" });
+      } else {
+        res
+          .status(404)
+          .json({ message: "Diária não encontrada ou já removida." });
+      }
+    } catch (err) {
+      console.error("Erro ao remover diária do banco:", err);
+      res.status(500).json({
+        message: "Erro ao remover diária!",
+        error:
+          process.env.NODE_ENV === "development"
+            ? err.message
+            : "Erro interno do servidor",
+      });
+    }
+  }
+);
+
+router.post(
+  "/api/gerar_pdf_diarias",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const { diarias, filtros, usuario } = req.body;
+      const htmlContent = `
             <!DOCTYPE html>
             <html lang="pt-BR">
             <head>
@@ -730,96 +722,96 @@ router.post("/api/gerar_pdf_diarias", autenticar, async (req, res) => {
                     )}</p>
                     <div class="assinatura">
                         <p>Gerado por: ${usuario.nome} (${
-      usuario.matricula
-    })</p>
+        usuario.matricula
+      })</p>
                     </div>
                 </div>
             </body>
             </html>
         `;
 
-    const browser = await chromium.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
-    });
-    await browser.close();
+      const browser = await chromium.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: "networkidle" });
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+      });
+      await browser.close();
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=Relatorio_Diarias.pdf"
-    );
-    res.send(pdfBuffer);
-  } catch (error) {
-    console.error("Erro ao gerar PDF de diárias:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erro ao gerar PDF",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  }
-});
-
-router.get("/api/user-team-details", autenticar, async (req, res) => {
-  try {
-    if (!req.user || !req.user.matricula) {
-      return res.status(400).json({
-        message: "Matrícula do usuário não encontrada na requisição.",
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=Relatorio_Diarias.pdf"
+      );
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Erro ao gerar PDF de diárias:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao gerar PDF",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
-    const [userTurmaEntry] = await promisePool.query(
-      "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
-      [req.user.matricula]
-    );
-    if (userTurmaEntry.length > 0) {
-      res.json({ turma_encarregado: userTurmaEntry[0].turma_encarregado });
-    } else {
-      res.json({ turma_encarregado: null });
-    }
-  } catch (error) {
-    console.error("Erro ao buscar detalhes da turma do usuário:", error);
-    res
-      .status(500)
-      .json({ message: "Erro interno ao processar a solicitação." });
   }
-});
+);
 
-router.get("/controle-status", autenticar, (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Gerente",
-    "Encarregado",
-    "Inspetor",
-    "Engenheiro",
-    "Técnico",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
+router.get(
+  "/api/user-team-details",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      if (!req.user || !req.user.matricula) {
+        return res.status(400).json({
+          message: "Matrícula do usuário não encontrada na requisição.",
+        });
+      }
+      const [userTurmaEntry] = await promisePool.query(
+        "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+        [req.user.matricula]
+      );
+      if (userTurmaEntry.length > 0) {
+        res.json({ turma_encarregado: userTurmaEntry[0].turma_encarregado });
+      } else {
+        res.json({ turma_encarregado: null });
+      }
+    } catch (error) {
+      console.error("Erro ao buscar detalhes da turma do usuário:", error);
+      res
+        .status(500)
+        .json({ message: "Erro interno ao processar a solicitação." });
+    }
+  }
+);
+
+router.get(
+  "/controle-status",
+  autenticar,
+  verificarNivel(3),
+  (req, res, next) => {
     res.sendFile(
       path.join(
         __dirname,
         "../../public/pages/gestao_turmas/controle-status.html"
       )
     );
-  } else {
-    res.status(403).json({ message: "Acesso negado!" });
   }
-});
+);
 
-router.get("/api/status-tipos", autenticar, (req, res) => {
+router.get("/api/status-tipos", autenticar, verificarNivel(3), (req, res) => {
   res.json(TIPOS_STATUS_PERMITIDOS);
 });
 
 router.post(
   "/api/controle-status",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   async (req, res) => {
     const {
       matricula_funcionario,
@@ -956,99 +948,104 @@ router.post(
   }
 );
 
-router.get("/api/controle-status", autenticar, async (req, res) => {
-  try {
-    let query = `
+router.get(
+  "/api/controle-status",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      let query = `
             SELECT csf.*, t.nome as nome_funcionario, t.cargo as cargo_funcionario, t.turma_encarregado 
             FROM controle_status_funcionarios csf
             LEFT JOIN turmas t ON csf.matricula_funcionario = t.matricula
         `;
-    const params = [];
-    const whereClauses = [];
+      const params = [];
+      const whereClauses = [];
 
-    const privilegedRoles = [
-      "ADMIN",
-      "Gerente",
-      "Inspetor",
-      "Engenheiro",
-      "Técnico",
-    ];
-    let userTurmaEncarregado = null;
+      const privilegedRoles = [
+        "ADMIN",
+        "Gerente",
+        "Inspetor",
+        "Engenheiro",
+        "Técnico",
+      ];
+      let userTurmaEncarregado = null;
 
-    if (req.user && req.user.matricula) {
-      const [userTurmaDetails] = await promisePool.query(
-        "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
-        [req.user.matricula]
-      );
-      if (userTurmaDetails.length > 0) {
-        userTurmaEncarregado = userTurmaDetails[0].turma_encarregado;
+      if (req.user && req.user.matricula) {
+        const [userTurmaDetails] = await promisePool.query(
+          "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+          [req.user.matricula]
+        );
+        if (userTurmaDetails.length > 0) {
+          userTurmaEncarregado = userTurmaDetails[0].turma_encarregado;
+        }
       }
-    }
 
-    const isGenerallyPrivileged =
-      privilegedRoles.includes(req.user.cargo) ||
-      (userTurmaEncarregado && userTurmaEncarregado.toString() === "2193");
+      const isGenerallyPrivileged =
+        privilegedRoles.includes(req.user.cargo) ||
+        (userTurmaEncarregado && userTurmaEncarregado.toString() === "2193");
 
-    if (req.user.cargo === "Encarregado" && !isGenerallyPrivileged) {
-      if (userTurmaEncarregado) {
+      if (req.user.cargo === "Encarregado" && !isGenerallyPrivileged) {
+        if (userTurmaEncarregado) {
+          whereClauses.push("t.turma_encarregado = ?");
+          params.push(userTurmaEncarregado);
+        } else {
+          return res.json([]);
+        }
+      } else if (req.query.turma && isGenerallyPrivileged) {
         whereClauses.push("t.turma_encarregado = ?");
-        params.push(userTurmaEncarregado);
-      } else {
-        return res.json([]);
+        params.push(req.query.turma);
       }
-    } else if (req.query.turma && isGenerallyPrivileged) {
-      whereClauses.push("t.turma_encarregado = ?");
-      params.push(req.query.turma);
-    }
 
-    if (req.query.matricula) {
-      whereClauses.push("csf.matricula_funcionario LIKE ?");
-      params.push(`%${req.query.matricula}%`);
-    }
-    if (req.query.dataInicial) {
-      whereClauses.push("csf.data_fim >= ?");
-      params.push(req.query.dataInicial);
-    }
-    if (req.query.dataFinal) {
-      whereClauses.push("csf.data_inicio <= ?");
-      params.push(req.query.dataFinal);
-    }
-    if (req.query.tipo_status) {
-      whereClauses.push("csf.tipo_status = ?");
-      params.push(req.query.tipo_status);
-    }
+      if (req.query.matricula) {
+        whereClauses.push("csf.matricula_funcionario LIKE ?");
+        params.push(`%${req.query.matricula}%`);
+      }
+      if (req.query.dataInicial) {
+        whereClauses.push("csf.data_fim >= ?");
+        params.push(req.query.dataInicial);
+      }
+      if (req.query.dataFinal) {
+        whereClauses.push("csf.data_inicio <= ?");
+        params.push(req.query.dataFinal);
+      }
+      if (req.query.tipo_status) {
+        whereClauses.push("csf.tipo_status = ?");
+        params.push(req.query.tipo_status);
+      }
 
-    if (whereClauses.length > 0) {
-      query += " WHERE " + whereClauses.join(" AND ");
+      if (whereClauses.length > 0) {
+        query += " WHERE " + whereClauses.join(" AND ");
+      }
+
+      query += " ORDER BY csf.data_inicio DESC, t.nome ASC";
+
+      const [rows] = await promisePool.query(query, params);
+      const statusFormatados = rows.map((s) => ({
+        ...s,
+        data_inicio_formatada: new Date(s.data_inicio).toLocaleDateString(
+          "pt-BR",
+          { timeZone: "UTC" }
+        ),
+        data_fim_formatada: new Date(s.data_fim).toLocaleDateString("pt-BR", {
+          timeZone: "UTC",
+        }),
+      }));
+      res.status(200).json(statusFormatados);
+    } catch (err) {
+      console.error("Erro ao buscar registros de status:", err);
+      res.status(500).json({
+        message: "Erro ao buscar registros!",
+        error: process.env.NODE_ENV === "development" ? err.message : undefined,
+      });
     }
-
-    query += " ORDER BY csf.data_inicio DESC, t.nome ASC";
-
-    const [rows] = await promisePool.query(query, params);
-    const statusFormatados = rows.map((s) => ({
-      ...s,
-      data_inicio_formatada: new Date(s.data_inicio).toLocaleDateString(
-        "pt-BR",
-        { timeZone: "UTC" }
-      ),
-      data_fim_formatada: new Date(s.data_fim).toLocaleDateString("pt-BR", {
-        timeZone: "UTC",
-      }),
-    }));
-    res.status(200).json(statusFormatados);
-  } catch (err) {
-    console.error("Erro ao buscar registros de status:", err);
-    res.status(500).json({
-      message: "Erro ao buscar registros!",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined,
-    });
   }
-});
+);
 
 router.put(
   "/api/controle-status/:id",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     const { data_inicio, data_fim, tipo_status, observacao } = req.body;
@@ -1211,7 +1208,7 @@ router.put(
 router.delete(
   "/api/controle-status/:id",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     const removido_por_matricula = req.user.matricula;
@@ -1310,34 +1307,39 @@ router.delete(
   }
 );
 
-router.get("/api/user-info", autenticar, async (req, res) => {
-  if (req.user) {
-    try {
-      const [results] = await promisePool.query(
-        "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
-        [req.user.matricula]
-      );
-      const userInfo = {
-        matricula: req.user.matricula,
-        nome: req.user.nome,
-        cargo: req.user.cargo,
-        turma_encarregado:
-          results.length > 0 ? results[0].turma_encarregado : null,
-      };
-      res.json(userInfo);
-    } catch (err) {
-      console.error("Erro ao buscar turma do usuário para user-info:", err);
-      res.json({
-        matricula: req.user.matricula,
-        nome: req.user.nome,
-        cargo: req.user.cargo,
-        turma_encarregado: null,
-        error_turma: "Não foi possível obter a turma do encarregado",
-      });
+router.get(
+  "/api/user-info",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    if (req.user) {
+      try {
+        const [results] = await promisePool.query(
+          "SELECT turma_encarregado FROM turmas WHERE matricula = ? LIMIT 1",
+          [req.user.matricula]
+        );
+        const userInfo = {
+          matricula: req.user.matricula,
+          nome: req.user.nome,
+          cargo: req.user.cargo,
+          turma_encarregado:
+            results.length > 0 ? results[0].turma_encarregado : null,
+        };
+        res.json(userInfo);
+      } catch (err) {
+        console.error("Erro ao buscar turma do usuário para user-info:", err);
+        res.json({
+          matricula: req.user.matricula,
+          nome: req.user.nome,
+          cargo: req.user.cargo,
+          turma_encarregado: null,
+          error_turma: "Não foi possível obter a turma do encarregado",
+        });
+      }
+    } else {
+      res.status(401).json({ message: "Usuário não autenticado" });
     }
-  } else {
-    res.status(401).json({ message: "Usuário não autenticado" });
   }
-});
+);
 
 module.exports = router;

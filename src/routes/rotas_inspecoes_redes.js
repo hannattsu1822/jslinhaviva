@@ -1,11 +1,11 @@
 // src/routes/rotas_inspecoes_redes.js
 const express = require("express");
 const path = require("path");
-const { autenticar } = require("../auth"); // Ajuste o caminho se necessário
+const { autenticar, verificarNivel } = require("../auth");
 const router = express.Router();
 
 // Rota para servir a página principal de Inspeções de Redes
-router.get("/inspecoes-redes", autenticar, (req, res) => {
+router.get("/inspecoes-redes", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
     path.join(
       __dirname,

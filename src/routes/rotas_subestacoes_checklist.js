@@ -9,34 +9,7 @@ const {
   projectRootDir,
   uploadsSubestacoesDir,
 } = require("../init");
-const { autenticar, registrarAuditoria } = require("../auth");
-
-const podeRealizarInspecao = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Técnico",
-    "Inspetor",
-    "Encarregado",
-    "Estagiário",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) next();
-  else res.status(403).json({ message: "Acesso negado." });
-};
-
-const podeGerenciarPaginaInspecoes = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Técnico",
-    "Inspetor",
-    "Gerente",
-    "Encarregado",
-    "Estagiário",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) next();
-  else res.status(403).json({ message: "Acesso negado." });
-};
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 async function verificarInspecaoExiste(req, res, next) {
   const idParaVerificar = req.params.inspecaoId || req.params.id;
@@ -124,7 +97,7 @@ async function moverAnexo(
 router.get(
   "/pagina-checklist-inspecao-subestacao",
   autenticar,
-  podeRealizarInspecao,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -138,7 +111,7 @@ router.get(
 router.get(
   "/pagina-listagem-inspecoes-subestacoes",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -152,7 +125,7 @@ router.get(
 router.get(
   "/inspecoes-subestacoes/detalhes/:id",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -166,6 +139,7 @@ router.get(
 router.post(
   "/api/inspecoes/upload-temporario",
   autenticar,
+  verificarNivel(3),
   upload.single("anexo"),
   async (req, res) => {
     if (!req.file) {
@@ -194,32 +168,37 @@ router.post(
   }
 );
 
-router.get("/api/checklist/modelo/padrao", autenticar, async (req, res) => {
-  try {
-    const [grupos] = await promisePool.query(
-      `SELECT id, nome_grupo, icone FROM checklist_grupos WHERE modelo_id = 1 ORDER BY ordem ASC`
-    );
-    for (const grupo of grupos) {
-      const [itens] = await promisePool.query(
-        `SELECT id, descricao_item, ordem FROM checklist_itens WHERE grupo_id = ? ORDER BY ordem ASC`,
-        [grupo.id]
+router.get(
+  "/api/checklist/modelo/padrao",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [grupos] = await promisePool.query(
+        `SELECT id, nome_grupo, icone FROM checklist_grupos WHERE modelo_id = 1 ORDER BY ordem ASC`
       );
-      grupo.itens = itens;
+      for (const grupo of grupos) {
+        const [itens] = await promisePool.query(
+          `SELECT id, descricao_item, ordem FROM checklist_itens WHERE grupo_id = ? ORDER BY ordem ASC`,
+          [grupo.id]
+        );
+        grupo.itens = itens;
+      }
+      res.json(grupos);
+    } catch (error) {
+      console.error("Erro ao buscar modelo de checklist:", error);
+      res.status(500).json({
+        message: "Erro interno ao buscar modelo de checklist.",
+        detalhes: error.message,
+      });
     }
-    res.json(grupos);
-  } catch (error) {
-    console.error("Erro ao buscar modelo de checklist:", error);
-    res.status(500).json({
-      message: "Erro interno ao buscar modelo de checklist.",
-      detalhes: error.message,
-    });
   }
-});
+);
 
 router.post(
   "/inspecoes-subestacoes",
   autenticar,
-  podeRealizarInspecao,
+  verificarNivel(3),
   async (req, res) => {
     const {
       subestacao_id,
@@ -447,7 +426,7 @@ router.post(
 router.put(
   "/inspecoes-subestacoes/:id",
   autenticar,
-  podeRealizarInspecao,
+  verificarNivel(3),
   verificarInspecaoExiste,
   async (req, res) => {
     const { id: inspecaoId } = req.params;
@@ -726,7 +705,7 @@ router.put(
 router.get(
   "/inspecoes-subestacoes/:id",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id, 10)))
@@ -836,7 +815,7 @@ router.get(
 router.put(
   "/inspecoes-subestacoes/:inspecaoId/concluir",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   verificarInspecaoExiste,
   async (req, res) => {
     const { inspecaoId } = req;
@@ -908,7 +887,7 @@ router.put(
 router.put(
   "/inspecoes-subestacoes/:inspecaoId/reabrir",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   verificarInspecaoExiste,
   async (req, res) => {
     const { inspecaoId } = req;
@@ -966,7 +945,7 @@ router.put(
 router.post(
   "/inspecoes-subestacoes/:inspecaoId/anexos-escritorio",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   verificarInspecaoExiste,
   async (req, res) => {
     const { inspecaoId } = req;
@@ -1032,7 +1011,7 @@ router.post(
 router.get(
   "/inspecoes-subestacoes",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   async (req, res) => {
     try {
       let query = `
@@ -1103,7 +1082,7 @@ router.get(
 router.delete(
   "/inspecoes-subestacoes/:inspecaoId",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   verificarInspecaoExiste,
   async (req, res) => {
     const { inspecaoId, inspecao: inspecaoInfo } = req;
@@ -1153,7 +1132,7 @@ router.delete(
 router.post(
   "/api/inspecoes/detalhes-para-servico",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   async (req, res) => {
     const { inspecao_ids } = req.body;
 
@@ -1230,7 +1209,7 @@ router.post(
 router.post(
   "/inspecoes-subestacoes/:inspecaoId/item/:itemChecklistId/anexos-termografia",
   autenticar,
-  podeGerenciarPaginaInspecoes,
+  verificarNivel(3),
   verificarInspecaoExiste,
   async (req, res) => {
     const { inspecaoId } = req;

@@ -1,7 +1,7 @@
 const express = require("express");
 const path = require("path");
 const { promisePool } = require("../init");
-const { autenticar } = require("../auth");
+const { autenticar, verificarNivel } = require("../auth");
 
 const router = express.Router();
 
@@ -62,6 +62,7 @@ function adicionarFiltrosComuns(
 router.get(
   "/api/relatorios/servicos-por-encarregado",
   autenticar,
+  verificarNivel(4),
   async (req, res) => {
     try {
       const params = [];
@@ -75,15 +76,8 @@ router.get(
         omitResponsible: !!req.query.responsavel_matricula ? false : true,
       });
 
-      // Se nenhum filtro de responsável foi aplicado pela URL, não precisa adicionar de novo.
-      // A função adicionarFiltrosComuns já tem a opção de omitir o filtro de responsável se ele não for desejado como filtro principal.
-      // Para este gráfico em específico, queremos agrupar por responsável, então o filtro de responsável é aplicado SE existir na query.
-
       sql +=
         " GROUP BY p.responsavel_matricula, u.nome ORDER BY total_servicos DESC";
-
-      // console.log("DEBUG SQL (Encarregado):", sql);
-      // console.log("DEBUG Params (Encarregado):", params);
 
       const [rows] = await promisePool.query(sql, params);
       res.json(rows);
@@ -100,6 +94,7 @@ router.get(
 router.get(
   "/api/relatorios/servicos-por-desligamento",
   autenticar,
+  verificarNivel(4),
   async (req, res) => {
     try {
       const params = [];
@@ -125,6 +120,7 @@ router.get(
 router.get(
   "/api/relatorios/servicos-concluidos-por-mes",
   autenticar,
+  verificarNivel(4),
   async (req, res) => {
     try {
       const ano = req.query.ano || new Date().getFullYear();
@@ -165,6 +161,7 @@ router.get(
 router.get(
   "/api/relatorios/status-finalizacao",
   autenticar,
+  verificarNivel(4),
   async (req, res) => {
     try {
       const params = [];
@@ -187,10 +184,18 @@ router.get(
   }
 );
 
-router.get("/relatorios-servicos", autenticar, (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "../../public/pages/servicos/relatorios_servicos.html")
-  );
-});
+router.get(
+  "/relatorios-servicos",
+  autenticar,
+  verificarNivel(4),
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/servicos/relatorios_servicos.html"
+      )
+    );
+  }
+);
 
 module.exports = router;

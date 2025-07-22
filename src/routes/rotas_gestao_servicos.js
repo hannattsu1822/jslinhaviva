@@ -4,7 +4,7 @@ const fs = require("fs");
 const fsPromises = require("fs").promises;
 const { PDFDocument } = require("pdf-lib");
 const { promisePool, upload } = require("../init");
-const { autenticar, registrarAuditoria } = require("../auth");
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
@@ -30,43 +30,59 @@ function formatarTamanhoArquivo(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-router.get("/gestao-servicos", autenticar, (req, res) => {
+router.get("/gestao-servicos", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/gestao_servico.html")
   );
 });
 
-router.get("/registro_servicos", autenticar, (req, res) => {
+router.get("/registro_servicos", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/registro_servicos.html")
   );
 });
 
-router.get("/servicos_ativos", autenticar, (req, res) => {
+router.get("/servicos_ativos", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/servicos_ativos.html")
   );
 });
 
-router.get("/servicos_concluidos", autenticar, (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "../../public/pages/servicos/servicos_concluidos.html")
-  );
-});
+router.get(
+  "/servicos_concluidos",
+  autenticar,
+  verificarNivel(3),
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/servicos/servicos_concluidos.html"
+      )
+    );
+  }
+);
 
-router.get("/detalhes_servico", autenticar, (req, res) => {
+router.get("/detalhes_servico", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/detalhes_servico.html")
   );
 });
 
-router.get("/servicos_atribuidos", autenticar, (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "../../public/pages/servicos/servicos_atribuidos.html")
-  );
-});
+router.get(
+  "/servicos_atribuidos",
+  autenticar,
+  verificarNivel(3),
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/servicos/servicos_atribuidos.html"
+      )
+    );
+  }
+);
 
-router.get("/editar_servico", autenticar, (req, res) => {
+router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/editar_servico.html")
   );
@@ -135,6 +151,7 @@ async function determinarNomePastaParaServicoExistente(connection, servicoId) {
 router.post(
   "/api/servicos",
   autenticar,
+  verificarNivel(4),
   upload.array("anexos", 5),
   async (req, res) => {
     const connection = await promisePool.getConnection();
@@ -322,7 +339,7 @@ router.post(
   }
 );
 
-router.get("/api/servicos", autenticar, async (req, res) => {
+router.get("/api/servicos", autenticar, verificarNivel(3), async (req, res) => {
   try {
     const { status } = req.query;
     let query = `
@@ -363,50 +380,57 @@ router.get("/api/servicos", autenticar, async (req, res) => {
   }
 });
 
-router.get("/api/servicos/:id", autenticar, async (req, res) => {
-  const connection = await promisePool.getConnection();
-  try {
-    const { id } = req.params;
-    const [servicoRows] = await connection.query(
-      `SELECT p.*, u.nome as responsavel_nome FROM processos p LEFT JOIN users u ON p.responsavel_matricula = u.matricula WHERE p.id = ?`,
-      [id]
-    );
+router.get(
+  "/api/servicos/:id",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const connection = await promisePool.getConnection();
+    try {
+      const { id } = req.params;
+      const [servicoRows] = await connection.query(
+        `SELECT p.*, u.nome as responsavel_nome FROM processos p LEFT JOIN users u ON p.responsavel_matricula = u.matricula WHERE p.id = ?`,
+        [id]
+      );
 
-    if (servicoRows.length === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Serviço não encontrado" });
-    }
+      if (servicoRows.length === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Serviço não encontrado" });
+      }
 
-    const [anexos] = await connection.query(
-      `SELECT id, nome_original as nomeOriginal, caminho_servidor as caminho, tamanho, tipo_anexo as tipo, DATE_FORMAT(data_upload, '%d/%m/%Y %H:%i') as dataUpload 
+      const [anexos] = await connection.query(
+        `SELECT id, nome_original as nomeOriginal, caminho_servidor as caminho, tamanho, tipo_anexo as tipo, DATE_FORMAT(data_upload, '%d/%m/%Y %H:%i') as dataUpload 
        FROM processos_anexos WHERE processo_id = ? ORDER BY data_upload DESC`,
-      [id]
-    );
+        [id]
+      );
 
-    const resultado = {
-      ...servicoRows[0],
-      anexos: anexos.map((anexo) => ({
-        ...anexo,
-        tamanho: formatarTamanhoArquivo(anexo.tamanho),
-      })),
-    };
-    res.status(200).json({ success: true, data: resultado });
-  } catch (error) {
-    console.error("Erro ao buscar detalhes do serviço:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erro ao buscar detalhes do serviço",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  } finally {
-    if (connection) connection.release();
+      const resultado = {
+        ...servicoRows[0],
+        anexos: anexos.map((anexo) => ({
+          ...anexo,
+          tamanho: formatarTamanhoArquivo(anexo.tamanho),
+        })),
+      };
+      res.status(200).json({ success: true, data: resultado });
+    } catch (error) {
+      console.error("Erro ao buscar detalhes do serviço:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao buscar detalhes do serviço",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
   }
-});
+);
 
 router.put(
   "/api/servicos/:id",
   autenticar,
+  verificarNivel(4),
   upload.array("anexos", 5),
   async (req, res) => {
     const { id: servicoId } = req.params;
@@ -558,6 +582,7 @@ router.put(
 router.post(
   "/api/servicos/:servicoId/upload-apr",
   autenticar,
+  verificarNivel(3),
   upload.single("apr_file"),
   async (req, res) => {
     const { servicoId } = req.params;
@@ -651,108 +676,100 @@ router.post(
   }
 );
 
-router.delete("/api/servicos/:id", autenticar, async (req, res) => {
-  const connection = await promisePool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const { id } = req.params;
-    const user = req.user;
-    const cargosPermitidos = [
-      "ADMIN",
-      "Gerente",
-      "Supervisor",
-      "Engenheiro",
-      "Técnico",
-      "Inspetor",
-    ];
-    if (!cargosPermitidos.includes(user.cargo)) {
-      await connection.rollback();
-      connection.release();
-      return res
-        .status(403)
-        .json({ success: false, message: "Acesso negado para exclusão." });
-    }
-
-    const [servicoRows] = await connection.query(
-      "SELECT id, processo, data_prevista_execucao FROM processos WHERE id = ?",
-      [id]
-    );
-    if (servicoRows.length === 0) {
-      await connection.rollback();
-      connection.release();
-      return res
-        .status(404)
-        .json({ success: false, message: "Serviço não encontrado" });
-    }
-    const servico = servicoRows[0];
-    const nomeProcessoOriginalParaAuditoria = servico.processo;
-
-    let nomeDaPastaParaExcluir;
+router.delete(
+  "/api/servicos/:id",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const connection = await promisePool.getConnection();
     try {
-      nomeDaPastaParaExcluir = await determinarNomePastaParaServicoExistente(
-        connection,
-        id
-      );
-    } catch (e) {
-      console.warn(
-        `Não foi possível determinar o nome da pasta para o serviço ID ${id} durante a exclusão. A exclusão de arquivos/pasta pode não ocorrer. Erro: ${e.message}`
-      );
-      nomeDaPastaParaExcluir = null;
-    }
+      await connection.beginTransaction();
+      const { id } = req.params;
+      const user = req.user;
 
-    await connection.query(
-      "DELETE FROM processos_anexos WHERE processo_id = ?",
-      [id]
-    );
-    await connection.query("DELETE FROM processos WHERE id = ?", [id]);
-
-    if (nomeDaPastaParaExcluir) {
-      const diretorioDoProcesso = path.join(
-        __dirname,
-        "../../upload_arquivos",
-        nomeDaPastaParaExcluir
+      const [servicoRows] = await connection.query(
+        "SELECT id, processo, data_prevista_execucao FROM processos WHERE id = ?",
+        [id]
       );
-      if (fs.existsSync(diretorioDoProcesso)) {
-        try {
-          await fsPromises.rm(diretorioDoProcesso, {
-            recursive: true,
-            force: true,
-          });
-        } catch (errPasta) {
-          console.error(
-            `Erro ao excluir pasta ${diretorioDoProcesso}:`,
-            errPasta
-          );
+      if (servicoRows.length === 0) {
+        await connection.rollback();
+        connection.release();
+        return res
+          .status(404)
+          .json({ success: false, message: "Serviço não encontrado" });
+      }
+      const servico = servicoRows[0];
+      const nomeProcessoOriginalParaAuditoria = servico.processo;
+
+      let nomeDaPastaParaExcluir;
+      try {
+        nomeDaPastaParaExcluir = await determinarNomePastaParaServicoExistente(
+          connection,
+          id
+        );
+      } catch (e) {
+        console.warn(
+          `Não foi possível determinar o nome da pasta para o serviço ID ${id} durante a exclusão. A exclusão de arquivos/pasta pode não ocorrer. Erro: ${e.message}`
+        );
+        nomeDaPastaParaExcluir = null;
+      }
+
+      await connection.query(
+        "DELETE FROM processos_anexos WHERE processo_id = ?",
+        [id]
+      );
+      await connection.query("DELETE FROM processos WHERE id = ?", [id]);
+
+      if (nomeDaPastaParaExcluir) {
+        const diretorioDoProcesso = path.join(
+          __dirname,
+          "../../upload_arquivos",
+          nomeDaPastaParaExcluir
+        );
+        if (fs.existsSync(diretorioDoProcesso)) {
+          try {
+            await fsPromises.rm(diretorioDoProcesso, {
+              recursive: true,
+              force: true,
+            });
+          } catch (errPasta) {
+            console.error(
+              `Erro ao excluir pasta ${diretorioDoProcesso}:`,
+              errPasta
+            );
+          }
         }
       }
-    }
 
-    await connection.commit();
-    await registrarAuditoria(
-      user.matricula,
-      "Exclusão de Serviço",
-      `Serviço excluído - ID: ${id}, Processo: ${nomeProcessoOriginalParaAuditoria}`
-    );
-    res.json({
-      success: true,
-      message: "Serviço e seus anexos/pasta foram excluídos com sucesso",
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error("Erro ao excluir serviço:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erro ao excluir serviço",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  } finally {
-    if (connection) connection.release();
+      await connection.commit();
+      await registrarAuditoria(
+        user.matricula,
+        "Exclusão de Serviço",
+        `Serviço excluído - ID: ${id}, Processo: ${nomeProcessoOriginalParaAuditoria}`
+      );
+      res.json({
+        success: true,
+        message: "Serviço e seus anexos/pasta foram excluídos com sucesso",
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error("Erro ao excluir serviço:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao excluir serviço",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
   }
-});
+);
 
 router.post(
   "/api/servicos/:id/concluir",
   autenticar,
+  verificarNivel(3),
   upload.array("fotos_conclusao", 5),
   async (req, res) => {
     const { id: servicoId } = req.params;
@@ -808,7 +825,6 @@ router.post(
       let observacoesParaSalvar = observacoes || null;
       let motivoNaoConclusaoParaSalvar = null;
 
-      // Lógica unificada para dataConclusao e horaConclusao
       if (!dataConclusao || !horaConclusao) {
         limparArquivosTemporarios(req.files);
         await connection.rollback();
@@ -823,7 +839,6 @@ router.post(
       if (status_final === "concluido") {
         auditMessage = `Serviço ${servicoId} (${servicoExistente.processo}) concluído em ${dataHoraConclusaoParaSalvar}`;
       } else {
-        // status_final === "nao_concluido"
         if (!motivo_nao_conclusao || motivo_nao_conclusao.trim() === "") {
           limparArquivosTemporarios(req.files);
           await connection.rollback();
@@ -936,29 +951,34 @@ router.post(
   }
 );
 
-router.patch("/api/servicos/:id/reativar", autenticar, async (req, res) => {
-  const connection = await promisePool.getConnection();
-  try {
-    const [result] = await connection.query(
-      'UPDATE processos SET status = "ativo", data_conclusao = NULL, observacoes_conclusao = NULL, motivo_nao_conclusao = NULL WHERE id = ?',
-      [req.params.id]
-    );
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Serviço não encontrado" });
+router.patch(
+  "/api/servicos/:id/reativar",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const connection = await promisePool.getConnection();
+    try {
+      const [result] = await connection.query(
+        'UPDATE processos SET status = "ativo", data_conclusao = NULL, observacoes_conclusao = NULL, motivo_nao_conclusao = NULL WHERE id = ?',
+        [req.params.id]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Serviço não encontrado" });
+      }
+      await registrarAuditoria(
+        req.user.matricula,
+        "Reativação de Serviço",
+        `Serviço ${req.params.id} retornado para ativo.`
+      );
+      res.json({ message: "Serviço reativado com sucesso" });
+    } catch (error) {
+      console.error("Erro ao reativar serviço:", error);
+      res.status(500).json({ message: "Erro ao reativar serviço" });
+    } finally {
+      if (connection) connection.release();
     }
-    await registrarAuditoria(
-      req.user.matricula,
-      "Reativação de Serviço",
-      `Serviço ${req.params.id} retornado para ativo.`
-    );
-    res.json({ message: "Serviço reativado com sucesso" });
-  } catch (error) {
-    console.error("Erro ao reativar serviço:", error);
-    res.status(500).json({ message: "Erro ao reativar serviço" });
-  } finally {
-    if (connection) connection.release();
   }
-});
+);
 
 router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
   const { identificador, filename } = req.params;
@@ -995,6 +1015,7 @@ router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
 router.delete(
   "/api/servicos/:servicoId/anexos/:anexoId",
   autenticar,
+  verificarNivel(4),
   async (req, res) => {
     const { servicoId, anexoId } = req.params;
     const connection = await promisePool.getConnection();
@@ -1047,101 +1068,126 @@ router.delete(
   }
 );
 
-router.get("/api/servicos/contador", autenticar, async (req, res) => {
-  const connection = await promisePool.getConnection();
-  try {
-    const { status } = req.query;
-    let query = "SELECT COUNT(*) as total FROM processos";
-    const params = [];
-    if (status) {
-      if (status === "concluido") {
-        query += " WHERE status IN ('concluido', 'nao_concluido')";
-      } else {
-        query += " WHERE status = ?";
-        params.push(status);
+router.get(
+  "/api/servicos/contador",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const connection = await promisePool.getConnection();
+    try {
+      const { status } = req.query;
+      let query = "SELECT COUNT(*) as total FROM processos";
+      const params = [];
+      if (status) {
+        if (status === "concluido") {
+          query += " WHERE status IN ('concluido', 'nao_concluido')";
+        } else {
+          query += " WHERE status = ?";
+          params.push(status);
+        }
       }
+      const [result] = await connection.query(query, params);
+      res.json({ total: result[0].total });
+    } catch (error) {
+      console.error("Erro ao contar serviços:", error);
+      res.status(500).json({ message: "Erro ao contar serviços" });
+    } finally {
+      if (connection) connection.release();
     }
-    const [result] = await connection.query(query, params);
-    res.json({ total: result[0].total });
-  } catch (error) {
-    console.error("Erro ao contar serviços:", error);
-    res.status(500).json({ message: "Erro ao contar serviços" });
-  } finally {
-    if (connection) connection.release();
   }
-});
+);
 
-router.get("/api/encarregados", autenticar, async (req, res) => {
-  const connection = await promisePool.getConnection();
-  try {
-    const [rows] = await connection.query(
-      "SELECT DISTINCT matricula, nome FROM users WHERE cargo IN ('Encarregado', 'Engenheiro', 'Técnico', 'ADM', 'ADMIN', 'Inspetor') ORDER BY nome"
-    );
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error("Erro ao buscar encarregados:", err);
-    res.status(500).json({ message: "Erro ao buscar encarregados!" });
-  } finally {
-    if (connection) connection.release();
-  }
-});
-
-router.get("/api/subestacoes", autenticar, async (req, res) => {
-  const connection = await promisePool.getConnection();
-  try {
-    const [rows] = await connection.query(
-      'SELECT DISTINCT subestacao as nome FROM processos WHERE subestacao IS NOT NULL AND subestacao != "" ORDER BY subestacao'
-    );
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error("Erro ao buscar subestações:", err);
-    res.status(500).json({ message: "Erro ao buscar subestações!" });
-  } finally {
-    if (connection) connection.release();
-  }
-});
-
-router.patch("/api/servicos/:id/responsavel", autenticar, async (req, res) => {
-  const { id } = req.params;
-  const { responsavel_matricula } = req.body;
-  if (!responsavel_matricula) {
-    return res.status(400).json({
-      success: false,
-      message: "Matrícula do responsável é obrigatória.",
-    });
-  }
-  const connection = await promisePool.getConnection();
-  try {
-    const [result] = await connection.query(
-      "UPDATE processos SET responsavel_matricula = ? WHERE id = ?",
-      [responsavel_matricula, id]
-    );
-    if (result.affectedRows === 0) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Serviço não encontrado." });
+router.get(
+  "/api/encarregados",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const connection = await promisePool.getConnection();
+    try {
+      const [rows] = await connection.query(
+        "SELECT DISTINCT matricula, nome FROM users WHERE cargo IN ('Encarregado', 'Engenheiro', 'Técnico', 'ADM', 'ADMIN', 'Inspetor') ORDER BY nome"
+      );
+      res.status(200).json(rows);
+    } catch (err) {
+      console.error("Erro ao buscar encarregados:", err);
+      res.status(500).json({ message: "Erro ao buscar encarregados!" });
+    } finally {
+      if (connection) connection.release();
     }
-    await registrarAuditoria(
-      req.user.matricula,
-      "Atribuição de Responsável",
-      `Serviço ID ${id} atribuído a ${responsavel_matricula}`
-    );
-    res.json({ success: true, message: "Responsável atualizado com sucesso." });
-  } catch (error) {
-    console.error("Erro ao atualizar responsável:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erro ao atualizar responsável",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
-  } finally {
-    if (connection) connection.release();
   }
-});
+);
+
+router.get(
+  "/api/subestacoes",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const connection = await promisePool.getConnection();
+    try {
+      const [rows] = await connection.query(
+        'SELECT DISTINCT subestacao as nome FROM processos WHERE subestacao IS NOT NULL AND subestacao != "" ORDER BY subestacao'
+      );
+      res.status(200).json(rows);
+    } catch (err) {
+      console.error("Erro ao buscar subestações:", err);
+      res.status(500).json({ message: "Erro ao buscar subestações!" });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.patch(
+  "/api/servicos/:id/responsavel",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { id } = req.params;
+    const { responsavel_matricula } = req.body;
+    if (!responsavel_matricula) {
+      return res.status(400).json({
+        success: false,
+        message: "Matrícula do responsável é obrigatória.",
+      });
+    }
+    const connection = await promisePool.getConnection();
+    try {
+      const [result] = await connection.query(
+        "UPDATE processos SET responsavel_matricula = ? WHERE id = ?",
+        [responsavel_matricula, id]
+      );
+      if (result.affectedRows === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Serviço não encontrado." });
+      }
+      await registrarAuditoria(
+        req.user.matricula,
+        "Atribuição de Responsável",
+        `Serviço ID ${id} atribuído a ${responsavel_matricula}`
+      );
+      res.json({
+        success: true,
+        message: "Responsável atualizado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar responsável:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao atualizar responsável",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
 
 router.get(
   "/api/servicos/:servicoId/consolidar-pdfs",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { servicoId } = req.params;
     if (isNaN(parseInt(servicoId))) {

@@ -8,43 +8,7 @@ const {
   projectRootDir,
   uploadsSubestacoesDir,
 } = require("../init");
-const { autenticar, registrarAuditoria } = require("../auth");
-
-const podeGerenciarPaginaServicos = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Encarregado",
-    "Técnico",
-    "ADM",
-    "Gerente",
-    "Inspetor",
-    "Estagiário",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
-    next();
-  } else {
-    res
-      .status(403)
-      .json({ message: "Acesso negado para gerenciar página de serviços." });
-  }
-};
-
-const podeModificarServicos = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Técnico",
-    "ADM",
-    "Gerente",
-    "Inspetor",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
-    next();
-  } else {
-    res.status(403).json({ message: "Acesso negado para modificar serviços." });
-  }
-};
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 async function verificarServicoExiste(req, res, next) {
   const { servicoId } = req.params;
@@ -73,7 +37,7 @@ async function verificarServicoExiste(req, res, next) {
 router.get(
   "/pagina-servicos-subestacoes",
   autenticar,
-  podeGerenciarPaginaServicos,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -87,7 +51,7 @@ router.get(
 router.get(
   "/pagina-servicos-concluidos",
   autenticar,
-  podeGerenciarPaginaServicos,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -101,7 +65,7 @@ router.get(
 router.get(
   "/registrar-servico-subestacao",
   autenticar,
-  podeModificarServicos,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -115,7 +79,7 @@ router.get(
 router.get(
   "/servicos/:servicoId/detalhes-pagina",
   autenticar,
-  podeGerenciarPaginaServicos,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -129,7 +93,7 @@ router.get(
 router.get(
   "/servicos/:servicoId/detalhes-concluido",
   autenticar,
-  podeGerenciarPaginaServicos,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -143,6 +107,7 @@ router.get(
 router.get(
   "/usuarios-responsaveis-para-servicos",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const cargosRelevantes = [
@@ -168,6 +133,7 @@ router.get(
 router.get(
   "/usuarios-encarregados-e-inspetores",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const cargosParaEncarregados = ["Encarregado", "Inspetor", "Técnico"];
@@ -183,24 +149,29 @@ router.get(
   }
 );
 
-router.get("/api/catalogo-defeitos-servicos", autenticar, async (req, res) => {
-  try {
-    const [rows] = await promisePool.query(
-      "SELECT id, codigo, ponto_defeito, descricao, categoria_principal FROM catalogo_defeitos_servicos ORDER BY codigo ASC"
-    );
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({
-      message: "Erro ao buscar catálogo de defeitos.",
-      detalhes: error.message,
-    });
+router.get(
+  "/api/catalogo-defeitos-servicos",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [rows] = await promisePool.query(
+        "SELECT id, codigo, ponto_defeito, descricao, categoria_principal FROM catalogo_defeitos_servicos ORDER BY codigo ASC"
+      );
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({
+        message: "Erro ao buscar catálogo de defeitos.",
+        detalhes: error.message,
+      });
+    }
   }
-});
+);
 
 router.post(
   "/api/servicos-subestacoes",
   autenticar,
-  podeModificarServicos,
+  verificarNivel(3),
   upload.any(),
   async (req, res) => {
     const {
@@ -487,7 +458,7 @@ router.post(
 router.put(
   "/api/servicos-subestacoes/:servicoId",
   autenticar,
-  podeModificarServicos,
+  verificarNivel(3),
   upload.any(),
   async (req, res) => {
     const { servicoId } = req.params;
@@ -548,7 +519,7 @@ router.put(
 router.delete(
   "/api/servicos-subestacoes/:servicoId",
   autenticar,
-  podeModificarServicos,
+  verificarNivel(3),
   async (req, res) => {
     const { servicoId } = req.params;
     if (isNaN(parseInt(servicoId)))
@@ -633,7 +604,7 @@ router.delete(
 router.get(
   "/api/servicos-subestacoes",
   autenticar,
-  podeGerenciarPaginaServicos,
+  verificarNivel(3),
   async (req, res) => {
     try {
       let query = `
@@ -714,7 +685,7 @@ router.get(
 router.get(
   "/api/servicos-subestacoes/:servicoId",
   autenticar,
-  podeGerenciarPaginaServicos,
+  verificarNivel(3),
   async (req, res) => {
     const { servicoId } = req.params;
     if (isNaN(parseInt(servicoId)))
@@ -785,10 +756,10 @@ router.get(
   }
 );
 
-// ROTA MODIFICADA
 router.put(
   "/api/servicos-subestacoes/:servicoId/concluir",
   autenticar,
+  verificarNivel(3),
   verificarServicoExiste,
   upload.array("anexos_conclusao_servico", 5),
   async (req, res) => {
@@ -925,7 +896,7 @@ router.put(
 router.put(
   "/api/servicos-subestacoes/:servicoId/reabrir",
   autenticar,
-  podeModificarServicos,
+  verificarNivel(3),
   verificarServicoExiste,
   async (req, res) => {
     const { servicoId } = req.params;
@@ -985,7 +956,7 @@ router.put(
 router.put(
   "/api/servicos/:servicoId/atualizar-encarregados-itens",
   autenticar,
-  podeModificarServicos,
+  verificarNivel(3),
   async (req, res) => {
     const { servicoId } = req.params;
     const { atualizacoes_encarregados } = req.body;
@@ -1079,7 +1050,7 @@ router.put(
 router.post(
   "/api/servicos/:servicoId/anexar-posterior",
   autenticar,
-  podeGerenciarPaginaServicos,
+  verificarNivel(3),
   upload.array("anexosServico", 5),
   async (req, res) => {
     const { servicoId } = req.params;

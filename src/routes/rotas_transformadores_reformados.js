@@ -2,11 +2,7 @@ const express = require("express");
 const path = require("path");
 const { chromium } = require("playwright");
 const { promisePool, upload } = require("../init");
-const {
-  autenticar,
-  verificarPermissaoPorCargo,
-  registrarAuditoria,
-} = require("../auth");
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 const xlsx = require("xlsx");
 const fs = require("fs");
 
@@ -15,7 +11,7 @@ const router = express.Router();
 router.get(
   "/transformadores_reformados",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -29,7 +25,7 @@ router.get(
 router.get(
   "/trafos_reformados_filtrar.html",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -43,7 +39,7 @@ router.get(
 router.get(
   "/trafos_reformados_importar.html",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -57,7 +53,7 @@ router.get(
 router.get(
   "/consultar_historicos.html",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -71,7 +67,7 @@ router.get(
 router.get(
   "/transformadores/historico/:numero_serie",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -82,101 +78,110 @@ router.get(
   }
 );
 
-router.get("/api/user_info/:matricula", autenticar, async (req, res) => {
-  try {
-    const { matricula } = req.params;
-    const [rows] = await promisePool.query(
-      "SELECT nome, matricula FROM users WHERE matricula = ?",
-      [matricula]
-    );
-    if (rows.length > 0) {
-      res.json(rows[0]);
-    } else {
-      res.status(404).json({ message: "Usuário não encontrado" });
+router.get(
+  "/api/user_info/:matricula",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const { matricula } = req.params;
+      const [rows] = await promisePool.query(
+        "SELECT nome, matricula FROM users WHERE matricula = ?",
+        [matricula]
+      );
+      if (rows.length > 0) {
+        res.json(rows[0]);
+      } else {
+        res.status(404).json({ message: "Usuário não encontrado" });
+      }
+    } catch (error) {
+      console.error("Erro ao buscar informações do usuário:", error);
+      res.status(500).json({ message: "Erro interno ao buscar usuário" });
     }
-  } catch (error) {
-    console.error("Erro ao buscar informações do usuário:", error);
-    res.status(500).json({ message: "Erro interno ao buscar usuário" });
   }
-});
+);
 
-router.get("/api/transformadores_reformados", autenticar, async (req, res) => {
-  try {
-    const {
-      id,
-      status,
-      status_not_in,
-      numero_serie,
-      fabricante,
-      pot,
-      tecnico_responsavel,
-      data_avaliacao_inicial,
-      data_avaliacao_final,
-      getAll,
-    } = req.query;
+router.get(
+  "/api/transformadores_reformados",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const {
+        id,
+        status,
+        status_not_in,
+        numero_serie,
+        fabricante,
+        pot,
+        tecnico_responsavel,
+        data_avaliacao_inicial,
+        data_avaliacao_final,
+        getAll,
+      } = req.query;
 
-    let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 15;
+      let page = parseInt(req.query.page) || 1;
+      let limit = parseInt(req.query.limit) || 15;
 
-    if (page < 1) page = 1;
-    if (limit < 1 && getAll !== "true") limit = 15;
+      if (page < 1) page = 1;
+      if (limit < 1 && getAll !== "true") limit = 15;
 
-    let queryParams = [];
-    let conditions = "WHERE 1=1";
+      let queryParams = [];
+      let conditions = "WHERE 1=1";
 
-    if (id) {
-      conditions += " AND tr.id = ?";
-      queryParams.push(id);
-    }
-    if (status) {
-      conditions += " AND tr.status_avaliacao = ?";
-      queryParams.push(status);
-    }
-    if (status_not_in) {
-      conditions += " AND tr.status_avaliacao != ?";
-      queryParams.push(status_not_in);
-    }
-    if (numero_serie) {
-      conditions += " AND tr.numero_serie LIKE ?";
-      queryParams.push(`%${numero_serie}%`);
-    }
-    if (fabricante) {
-      conditions += " AND tr.fabricante LIKE ?";
-      queryParams.push(`%${fabricante}%`);
-    }
-    if (pot) {
-      conditions += " AND tr.pot LIKE ?";
-      queryParams.push(`%${pot}%`);
-    }
-    if (tecnico_responsavel) {
-      conditions += " AND tr.tecnico_responsavel = ?";
-      queryParams.push(tecnico_responsavel);
-    }
-    if (data_avaliacao_inicial && data_avaliacao_final) {
-      conditions += " AND DATE(tr.data_avaliacao) BETWEEN ? AND ?";
-      queryParams.push(data_avaliacao_inicial, data_avaliacao_final);
-    } else if (data_avaliacao_inicial) {
-      conditions += " AND DATE(tr.data_avaliacao) >= ?";
-      queryParams.push(data_avaliacao_inicial);
-    } else if (data_avaliacao_final) {
-      conditions += " AND DATE(tr.data_avaliacao) <= ?";
-      queryParams.push(data_avaliacao_final);
-    }
+      if (id) {
+        conditions += " AND tr.id = ?";
+        queryParams.push(id);
+      }
+      if (status) {
+        conditions += " AND tr.status_avaliacao = ?";
+        queryParams.push(status);
+      }
+      if (status_not_in) {
+        conditions += " AND tr.status_avaliacao != ?";
+        queryParams.push(status_not_in);
+      }
+      if (numero_serie) {
+        conditions += " AND tr.numero_serie LIKE ?";
+        queryParams.push(`%${numero_serie}%`);
+      }
+      if (fabricante) {
+        conditions += " AND tr.fabricante LIKE ?";
+        queryParams.push(`%${fabricante}%`);
+      }
+      if (pot) {
+        conditions += " AND tr.pot LIKE ?";
+        queryParams.push(`%${pot}%`);
+      }
+      if (tecnico_responsavel) {
+        conditions += " AND tr.tecnico_responsavel = ?";
+        queryParams.push(tecnico_responsavel);
+      }
+      if (data_avaliacao_inicial && data_avaliacao_final) {
+        conditions += " AND DATE(tr.data_avaliacao) BETWEEN ? AND ?";
+        queryParams.push(data_avaliacao_inicial, data_avaliacao_final);
+      } else if (data_avaliacao_inicial) {
+        conditions += " AND DATE(tr.data_avaliacao) >= ?";
+        queryParams.push(data_avaliacao_inicial);
+      } else if (data_avaliacao_final) {
+        conditions += " AND DATE(tr.data_avaliacao) <= ?";
+        queryParams.push(data_avaliacao_final);
+      }
 
-    const countQuery = `SELECT COUNT(*) as totalItems FROM trafos_reformados tr ${conditions}`;
-    const [countResult] = await promisePool.query(countQuery, queryParams);
-    const totalItems = countResult[0].totalItems;
+      const countQuery = `SELECT COUNT(*) as totalItems FROM trafos_reformados tr ${conditions}`;
+      const [countResult] = await promisePool.query(countQuery, queryParams);
+      const totalItems = countResult[0].totalItems;
 
-    let totalPages = 1;
-    if (getAll !== "true" && totalItems > 0) {
-      totalPages = Math.ceil(totalItems / limit);
-      if (page > totalPages) page = totalPages;
-    } else if (getAll !== "true" && totalItems === 0) {
-      page = 1;
-      totalPages = 1;
-    }
+      let totalPages = 1;
+      if (getAll !== "true" && totalItems > 0) {
+        totalPages = Math.ceil(totalItems / limit);
+        if (page > totalPages) page = totalPages;
+      } else if (getAll !== "true" && totalItems === 0) {
+        page = 1;
+        totalPages = 1;
+      }
 
-    let dataQuery = `
+      let dataQuery = `
         SELECT 
             tr.*,
             u.nome as nome_tecnico,
@@ -199,35 +204,37 @@ router.get("/api/transformadores_reformados", autenticar, async (req, res) => {
         ORDER BY tr.id DESC
     `;
 
-    if (getAll !== "true") {
-      dataQuery += " LIMIT ? OFFSET ?";
-      queryParams.push(limit, (page - 1) * limit);
+      if (getAll !== "true") {
+        dataQuery += " LIMIT ? OFFSET ?";
+        queryParams.push(limit, (page - 1) * limit);
+      }
+
+      const [trafos] = await promisePool.query(dataQuery, queryParams);
+
+      res.json({
+        success: true,
+        data: trafos,
+        pagination: {
+          currentPage: page,
+          totalPages: totalPages,
+          totalItems: totalItems,
+          itemsPerPage: getAll === "true" ? totalItems : limit,
+        },
+      });
+    } catch (err) {
+      console.error("Erro ao buscar transformadores reformados:", err);
+      res.status(500).json({
+        success: false,
+        message: "Erro ao buscar transformadores reformados",
+      });
     }
-
-    const [trafos] = await promisePool.query(dataQuery, queryParams);
-
-    res.json({
-      success: true,
-      data: trafos,
-      pagination: {
-        currentPage: page,
-        totalPages: totalPages,
-        totalItems: totalItems,
-        itemsPerPage: getAll === "true" ? totalItems : limit,
-      },
-    });
-  } catch (err) {
-    console.error("Erro ao buscar transformadores reformados:", err);
-    res.status(500).json({
-      success: false,
-      message: "Erro ao buscar transformadores reformados",
-    });
   }
-});
+);
 
 router.get(
   "/api/transformadores_reformados/:id",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -260,6 +267,7 @@ router.get(
 router.get(
   "/api/checklist_por_registro/:registroId",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const { registroId } = req.params;
@@ -272,12 +280,10 @@ router.get(
       );
 
       if (rows.length === 0) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: "Nenhum checklist encontrado para este registro.",
-          });
+        return res.status(404).json({
+          success: false,
+          message: "Nenhum checklist encontrado para este registro.",
+        });
       }
 
       res.json({ success: true, data: rows[0] });
@@ -293,6 +299,7 @@ router.get(
 router.get(
   "/api/historico_por_serie/:numero_serie",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const { numero_serie } = req.params;
@@ -311,12 +318,10 @@ router.get(
       res.json({ success: true, data: checklists });
     } catch (err) {
       console.error("Erro ao buscar checklists por série:", err);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Erro ao buscar checklists por série",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Erro ao buscar checklists por série",
+      });
     }
   }
 );
@@ -324,6 +329,7 @@ router.get(
 router.put(
   "/api/transformadores/:id/reverter",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     try {
@@ -357,6 +363,7 @@ router.put(
 router.put(
   "/api/transformadores_reformados/:id/avaliar_completo",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     const {
@@ -470,6 +477,7 @@ router.put(
 router.post(
   "/api/gerar_pdf_checklist_especifico",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { checklist, transformador } = req.body;
 
@@ -661,20 +669,22 @@ router.post(
   }
 );
 
-router.post("/api/gerar_pdf_tabela_historico", autenticar, async (req, res) => {
-  const { dados, filtros } = req.body;
+router.post(
+  "/api/gerar_pdf_tabela_historico",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { dados, filtros } = req.body;
 
-  if (!dados || dados.length === 0) {
-    return res
-      .status(400)
-      .json({
+    if (!dados || dados.length === 0) {
+      return res.status(400).json({
         success: false,
         message: "Não há dados para gerar o relatório.",
       });
-  }
+    }
 
-  try {
-    const htmlContent = `
+    try {
+      const htmlContent = `
         <!DOCTYPE html>
         <html lang="pt-BR">
         <head>
@@ -745,37 +755,39 @@ router.post("/api/gerar_pdf_tabela_historico", autenticar, async (req, res) => {
         </html>
       `;
 
-    const browser = await chromium.launch({
-      headless: true,
-      args: ["--no-sandbox"],
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      landscape: true,
-      margin: { top: "1cm", right: "1cm", bottom: "1cm", left: "1cm" },
-    });
-    await browser.close();
+      const browser = await chromium.launch({
+        headless: true,
+        args: ["--no-sandbox"],
+      });
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: "networkidle" });
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        landscape: true,
+        margin: { top: "1cm", right: "1cm", bottom: "1cm", left: "1cm" },
+      });
+      await browser.close();
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=Relatorio_Checklists_Avaliados.pdf`
-    );
-    res.send(pdfBuffer);
-  } catch (error) {
-    console.error("Erro ao gerar PDF da tabela de históricos:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Erro interno no servidor." });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=Relatorio_Checklists_Avaliados.pdf`
+      );
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Erro ao gerar PDF da tabela de históricos:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erro interno no servidor." });
+    }
   }
-});
+);
 
 router.post(
   "/api/importar_trafos_reformados",
   autenticar,
+  verificarNivel(3),
   upload.single("planilha"),
   async (req, res) => {
     if (!req.file) {
@@ -937,7 +949,7 @@ router.post(
 router.delete(
   "/api/trafos_pendentes",
   autenticar,
-  verificarPermissaoPorCargo,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const [result] = await promisePool.query(
@@ -963,6 +975,7 @@ router.delete(
 router.delete(
   "/api/transformadores_reformados/:id",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     const connection = await promisePool.getConnection();
@@ -1025,6 +1038,7 @@ router.delete(
 router.get(
   "/api/tecnicos_responsaveis_trafos_reformados",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const [rows] = await promisePool.query(`
@@ -1047,6 +1061,7 @@ router.get(
 router.get(
   "/api/fabricantes_trafos_reformados",
   autenticar,
+  verificarNivel(3),
   async (req, res) => {
     try {
       const [rows] = await promisePool.query(
@@ -1065,16 +1080,21 @@ router.get(
   }
 );
 
-router.get("/api/potencias_trafos_reformados", autenticar, async (req, res) => {
-  try {
-    const [rows] = await promisePool.query(
-      'SELECT DISTINCT pot FROM trafos_reformados WHERE pot IS NOT NULL AND pot != "" ORDER BY CAST(pot AS UNSIGNED)'
-    );
-    res.status(200).json(rows.map((row) => row.pot));
-  } catch (err) {
-    console.error("Erro ao buscar potências:", err);
-    res.status(500).json({ message: "Erro ao buscar potências!" });
+router.get(
+  "/api/potencias_trafos_reformados",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [rows] = await promisePool.query(
+        'SELECT DISTINCT pot FROM trafos_reformados WHERE pot IS NOT NULL AND pot != "" ORDER BY CAST(pot AS UNSIGNED)'
+      );
+      res.status(200).json(rows.map((row) => row.pot));
+    } catch (err) {
+      console.error("Erro ao buscar potências:", err);
+      res.status(500).json({ message: "Erro ao buscar potências!" });
+    }
   }
-});
+);
 
 module.exports = router;

@@ -2,80 +2,12 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { promisePool, projectRootDir } = require("../init");
-const { autenticar, registrarAuditoria } = require("../auth");
-
-const podeAcessarSubestacoesDashboard = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Encarregado",
-    "ADM",
-    "Gerente",
-    "Inspetor",
-    "Técnico",
-    "Estagiário",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
-    next();
-  } else {
-    res
-      .status(403)
-      .send(
-        "<h1>Acesso Negado</h1><p>Você não tem permissão para acessar esta área.</p><p><a href='/dashboard'>Voltar ao Dashboard Principal</a></p>"
-      );
-  }
-};
-
-const podeGerenciarPaginaSubestacoes = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Encarregado",
-    "ADM",
-    "Gerente",
-    "Inspetor",
-    "Técnico",
-    "Estagiário",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
-    next();
-  } else {
-    res.status(403).json({ message: "Acesso negado." });
-  }
-};
-
-const podeModificarSubestacoes = (req, res, next) => {
-  const cargosPermitidos = [
-    "ADMIN",
-    "Engenheiro",
-    "Encarregado",
-    "ADM",
-    "Gerente",
-  ];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
-    next();
-  } else {
-    res.status(403).json({ message: "Acesso negado." });
-  }
-};
-
-const podeGerenciarCatalogo = (req, res, next) => {
-  const cargosPermitidos = ["ADMIN", "Engenheiro", "Técnico", "ADM", "Gerente"];
-  if (req.user && cargosPermitidos.includes(req.user.cargo)) {
-    next();
-  } else {
-    res
-      .status(403)
-      .json({
-        message: "Acesso negado para gerenciar o catálogo de equipamentos.",
-      });
-  }
-};
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 router.get(
   "/subestacoes-dashboard",
   autenticar,
-  podeAcessarSubestacoesDashboard,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -89,7 +21,7 @@ router.get(
 router.get(
   "/pagina-subestacoes-admin",
   autenticar,
-  podeGerenciarPaginaSubestacoes,
+  verificarNivel(3),
   (req, res) => {
     res.sendFile(
       path.join(projectRootDir, "public/pages/subestacoes/subestacoes.html")
@@ -97,7 +29,7 @@ router.get(
   }
 );
 
-router.get("/subestacoes", autenticar, async (req, res) => {
+router.get("/subestacoes", autenticar, verificarNivel(3), async (req, res) => {
   try {
     const [rows] = await promisePool.query(
       "SELECT Id, sigla, nome, Ano_Inicio_Op FROM subestacoes ORDER BY nome ASC"
@@ -109,85 +41,83 @@ router.get("/subestacoes", autenticar, async (req, res) => {
   }
 });
 
-router.get("/subestacoes/:id", autenticar, async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(parseInt(id, 10))) {
-    return res
-      .status(400)
-      .json({ message: `ID da subestação inválido: ${id}` });
-  }
-  try {
-    const [rows] = await promisePool.query(
-      "SELECT Id, sigla, nome, Ano_Inicio_Op FROM subestacoes WHERE Id = ?",
-      [id]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Subestação não encontrada." });
-    }
-    res.json(rows[0]);
-  } catch (error) {
-    console.error("Erro ao buscar subestação por ID:", error);
-    res.status(500).json({ message: "Erro interno ao buscar subestação." });
-  }
-});
-
-router.post(
-  "/subestacoes",
+router.get(
+  "/subestacoes/:id",
   autenticar,
-  podeModificarSubestacoes,
+  verificarNivel(3),
   async (req, res) => {
-    const { sigla, nome, Ano_Inicio_Op } = req.body;
-    if (!sigla || !nome) {
+    const { id } = req.params;
+    if (isNaN(parseInt(id, 10))) {
       return res
         .status(400)
-        .json({ message: "Sigla e Nome são obrigatórios." });
-    }
-    let anoOperacao = null;
-    if (Ano_Inicio_Op) {
-      const anoNum = parseInt(Ano_Inicio_Op, 10);
-      if (isNaN(anoNum) || anoNum < 1900 || anoNum > 2200) {
-        return res
-          .status(400)
-          .json({ message: "Ano de Início de Operação inválido." });
-      }
-      anoOperacao = anoNum;
+        .json({ message: `ID da subestação inválido: ${id}` });
     }
     try {
-      const [result] = await promisePool.query(
-        "INSERT INTO subestacoes (sigla, nome, Ano_Inicio_Op) VALUES (?, ?, ?)",
-        [sigla.toUpperCase(), nome, anoOperacao]
+      const [rows] = await promisePool.query(
+        "SELECT Id, sigla, nome, Ano_Inicio_Op FROM subestacoes WHERE Id = ?",
+        [id]
       );
-      const newSubestacaoId = result.insertId;
-      if (req.user && req.user.matricula) {
-        await registrarAuditoria(
-          req.user.matricula,
-          "CREATE_SUBESTACAO",
-          `Subestação criada: ID ${newSubestacaoId}, Sigla: ${sigla}`
-        );
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "Subestação não encontrada." });
       }
-      res.status(201).json({
-        id: newSubestacaoId,
-        sigla: sigla.toUpperCase(),
-        nome,
-        Ano_Inicio_Op: anoOperacao,
-        message: "Subestação criada com sucesso!",
-      });
+      res.json(rows[0]);
     } catch (error) {
-      console.error("Erro ao criar subestação:", error);
-      if (error.code === "ER_DUP_ENTRY") {
-        return res
-          .status(409)
-          .json({ message: "Erro ao criar subestação: Sigla já cadastrada." });
-      }
-      res.status(500).json({ message: "Erro interno ao criar subestação." });
+      console.error("Erro ao buscar subestação por ID:", error);
+      res.status(500).json({ message: "Erro interno ao buscar subestação." });
     }
   }
 );
 
+router.post("/subestacoes", autenticar, verificarNivel(3), async (req, res) => {
+  const { sigla, nome, Ano_Inicio_Op } = req.body;
+  if (!sigla || !nome) {
+    return res.status(400).json({ message: "Sigla e Nome são obrigatórios." });
+  }
+  let anoOperacao = null;
+  if (Ano_Inicio_Op) {
+    const anoNum = parseInt(Ano_Inicio_Op, 10);
+    if (isNaN(anoNum) || anoNum < 1900 || anoNum > 2200) {
+      return res
+        .status(400)
+        .json({ message: "Ano de Início de Operação inválido." });
+    }
+    anoOperacao = anoNum;
+  }
+  try {
+    const [result] = await promisePool.query(
+      "INSERT INTO subestacoes (sigla, nome, Ano_Inicio_Op) VALUES (?, ?, ?)",
+      [sigla.toUpperCase(), nome, anoOperacao]
+    );
+    const newSubestacaoId = result.insertId;
+    if (req.user && req.user.matricula) {
+      await registrarAuditoria(
+        req.user.matricula,
+        "CREATE_SUBESTACAO",
+        `Subestação criada: ID ${newSubestacaoId}, Sigla: ${sigla}`
+      );
+    }
+    res.status(201).json({
+      id: newSubestacaoId,
+      sigla: sigla.toUpperCase(),
+      nome,
+      Ano_Inicio_Op: anoOperacao,
+      message: "Subestação criada com sucesso!",
+    });
+  } catch (error) {
+    console.error("Erro ao criar subestação:", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res
+        .status(409)
+        .json({ message: "Erro ao criar subestação: Sigla já cadastrada." });
+    }
+    res.status(500).json({ message: "Erro interno ao criar subestação." });
+  }
+});
+
 router.put(
   "/subestacoes/:id",
   autenticar,
-  podeModificarSubestacoes,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id, 10))) {
@@ -267,7 +197,7 @@ router.put(
 router.delete(
   "/subestacoes/:id",
   autenticar,
-  podeModificarSubestacoes,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id, 10))) {
@@ -324,32 +254,35 @@ router.delete(
   }
 );
 
-router.get("/api/catalogo/equipamentos", autenticar, async (req, res) => {
-  try {
-    const [rows] = await promisePool.query(
-      "SELECT id, codigo, nome, descricao, categoria FROM catalogo_equipamentos ORDER BY categoria, nome ASC"
-    );
-    res.json(rows);
-  } catch (error) {
-    console.error("Erro ao buscar catálogo de equipamentos:", error);
-    res
-      .status(500)
-      .json({ message: "Erro ao buscar catálogo de equipamentos." });
+router.get(
+  "/api/catalogo/equipamentos",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [rows] = await promisePool.query(
+        "SELECT id, codigo, nome, descricao, categoria FROM catalogo_equipamentos ORDER BY categoria, nome ASC"
+      );
+      res.json(rows);
+    } catch (error) {
+      console.error("Erro ao buscar catálogo de equipamentos:", error);
+      res
+        .status(500)
+        .json({ message: "Erro ao buscar catálogo de equipamentos." });
+    }
   }
-});
+);
 
 router.post(
   "/api/catalogo/equipamentos",
   autenticar,
-  podeGerenciarCatalogo,
+  verificarNivel(3),
   async (req, res) => {
     const { codigo, nome, descricao, categoria } = req.body;
     if (!codigo || !nome) {
-      return res
-        .status(400)
-        .json({
-          message: "Código e Nome são obrigatórios para o item do catálogo.",
-        });
+      return res.status(400).json({
+        message: "Código e Nome são obrigatórios para o item do catálogo.",
+      });
     }
     try {
       const [result] = await promisePool.query(
@@ -361,12 +294,10 @@ router.post(
         "CREATE_CATALOGO_EQUIP",
         `Item de catálogo criado: ID ${result.insertId}, Código: ${codigo}`
       );
-      res
-        .status(201)
-        .json({
-          id: result.insertId,
-          message: "Item de catálogo criado com sucesso!",
-        });
+      res.status(201).json({
+        id: result.insertId,
+        message: "Item de catálogo criado com sucesso!",
+      });
     } catch (error) {
       console.error("Erro ao criar item no catálogo:", error);
       if (error.code === "ER_DUP_ENTRY") {
@@ -384,7 +315,7 @@ router.post(
 router.put(
   "/api/catalogo/equipamentos/:id",
   autenticar,
-  podeGerenciarCatalogo,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     const { codigo, nome, descricao, categoria } = req.body;
@@ -417,11 +348,9 @@ router.put(
     } catch (error) {
       console.error("Erro ao atualizar item do catálogo:", error);
       if (error.code === "ER_DUP_ENTRY") {
-        return res
-          .status(409)
-          .json({
-            message: "Erro: Código já pertence a outro item do catálogo.",
-          });
+        return res.status(409).json({
+          message: "Erro: Código já pertence a outro item do catálogo.",
+        });
       }
       res
         .status(500)
@@ -433,7 +362,7 @@ router.put(
 router.delete(
   "/api/catalogo/equipamentos/:id",
   autenticar,
-  podeGerenciarCatalogo,
+  verificarNivel(3),
   async (req, res) => {
     const { id } = req.params;
     if (isNaN(parseInt(id, 10))) {
@@ -447,11 +376,9 @@ router.delete(
         [id]
       );
       if (usage[0].count > 0) {
-        return res
-          .status(409)
-          .json({
-            message: `Não é possível excluir: este tipo de equipamento está sendo usado em ${usage[0].count} serviço(s).`,
-          });
+        return res.status(409).json({
+          message: `Não é possível excluir: este tipo de equipamento está sendo usado em ${usage[0].count} serviço(s).`,
+        });
       }
       const [result] = await promisePool.query(
         "DELETE FROM catalogo_equipamentos WHERE id = ?",

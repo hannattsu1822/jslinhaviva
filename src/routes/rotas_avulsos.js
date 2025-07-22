@@ -3,29 +3,31 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 const XLSX = require("xlsx");
-const { autenticar, registrarAuditoria } = require("../auth");
-const { promisePool } = require("../init");
+const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
+const { promisePool, upload } = require("../init");
 
 const router = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
 
-router.get("/avulsos-dashboard", autenticar, (req, res) =>
+router.get("/avulsos-dashboard", autenticar, verificarNivel(2), (req, res) =>
   res.sendFile(
     path.join(__dirname, "../../public/pages/avulsos/dashboard_avulsos.html")
   )
 );
 
-router.get("/autorizacao-horas-extras", autenticar, (req, res) =>
-  res.sendFile(
-    path.join(
-      __dirname,
-      "../../public/pages/avulsos/autorizacao_horas_extras.html"
+router.get(
+  "/autorizacao-horas-extras",
+  autenticar,
+  verificarNivel(2),
+  (req, res) =>
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/avulsos/autorizacao_horas_extras.html"
+      )
     )
-  )
 );
 
-router.get("/bas_cadastro", autenticar, (req, res) => {
+router.get("/bas_cadastro", autenticar, verificarNivel(2), (req, res) => {
   const p = path.join(
     __dirname,
     "../../public/pages/avulsos/bas_cadastro.html"
@@ -34,76 +36,108 @@ router.get("/bas_cadastro", autenticar, (req, res) => {
   else res.status(404).send("Página de cadastro de BAS não encontrada.");
 });
 
-router.get("/hora_extra_cadastro", autenticar, (req, res) => {
-  const p = path.join(
-    __dirname,
-    "../../public/pages/avulsos/hora_extra_cadastro.html"
-  );
-  if (fs.existsSync(p)) res.sendFile(p);
-  else res.status(404).send("Página de cadastro de Hora Extra não encontrada.");
-});
-
-router.get("/bas-importar-dados-pagina", autenticar, (req, res) =>
-  res.sendFile(
-    path.join(__dirname, "../../public/pages/avulsos/bas_importar_dados.html")
-  )
-);
-
-router.get("/gerar-formulario-bas-construcao", autenticar, (req, res) =>
-  res.sendFile(
-    path.join(
+router.get(
+  "/hora_extra_cadastro",
+  autenticar,
+  verificarNivel(2),
+  (req, res) => {
+    const p = path.join(
       __dirname,
-      "../../public/pages/avulsos/gerar_formulario_bas_construcao.html"
-    )
-  )
+      "../../public/pages/avulsos/hora_extra_cadastro.html"
+    );
+    if (fs.existsSync(p)) res.sendFile(p);
+    else
+      res.status(404).send("Página de cadastro de Hora Extra não encontrada.");
+  }
 );
 
-router.get("/gerar-formulario-bas-linhaviva", autenticar, (req, res) =>
-  res.sendFile(
-    path.join(
-      __dirname,
-      "../../public/pages/avulsos/gerar_formulario_bas_linhaviva.html"
+router.get(
+  "/bas-importar-dados-pagina",
+  autenticar,
+  verificarNivel(2),
+  (req, res) =>
+    res.sendFile(
+      path.join(__dirname, "../../public/pages/avulsos/bas_importar_dados.html")
     )
-  )
 );
 
-router.get("/gerar-formulario-txt-bas", autenticar, (req, res) =>
-  res.sendFile(
-    path.join(
-      __dirname,
-      "../../public/pages/avulsos/gerar_formulario_txt_bas.html"
+router.get(
+  "/gerar-formulario-bas-construcao",
+  autenticar,
+  verificarNivel(2),
+  (req, res) =>
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/avulsos/gerar_formulario_bas_construcao.html"
+      )
     )
-  )
 );
 
-router.get("/gerar-formulario-txt-bas-linhaviva", autenticar, (req, res) =>
-  res.sendFile(
-    path.join(
-      __dirname,
-      "../../public/pages/avulsos/gerar_formulario_txt_bas_linhaviva.html"
+router.get(
+  "/gerar-formulario-bas-linhaviva",
+  autenticar,
+  verificarNivel(2),
+  (req, res) =>
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/avulsos/gerar_formulario_bas_linhaviva.html"
+      )
     )
-  )
 );
 
-router.get("/api/avulsos/turmas-encarregados", autenticar, async (req, res) => {
-  try {
-    const query = `
+router.get(
+  "/gerar-formulario-txt-bas",
+  autenticar,
+  verificarNivel(2),
+  (req, res) =>
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/avulsos/gerar_formulario_txt_bas.html"
+      )
+    )
+);
+
+router.get(
+  "/gerar-formulario-txt-bas-linhaviva",
+  autenticar,
+  verificarNivel(2),
+  (req, res) =>
+    res.sendFile(
+      path.join(
+        __dirname,
+        "../../public/pages/avulsos/gerar_formulario_txt_bas_linhaviva.html"
+      )
+    )
+);
+
+router.get(
+  "/api/avulsos/turmas-encarregados",
+  autenticar,
+  verificarNivel(2),
+  async (req, res) => {
+    try {
+      const query = `
             SELECT DISTINCT t.turma_encarregado, u.nome as nome_encarregado
             FROM sua_tabela_de_turmas t 
             JOIN users u ON t.turma_encarregado = u.matricula
             ORDER BY u.nome;
         `;
-    const [rows] = await promisePool.query(query);
-    res.json(rows);
-  } catch (error) {
-    console.error("Erro ao buscar turmas e encarregados:", error);
-    res.status(500).json({ message: "Erro interno ao buscar dados." });
+      const [rows] = await promisePool.query(query);
+      res.json(rows);
+    } catch (error) {
+      console.error("Erro ao buscar turmas e encarregados:", error);
+      res.status(500).json({ message: "Erro interno ao buscar dados." });
+    }
   }
-});
+);
 
 router.post(
   "/api/avulsos/solicitacao-horas-extras",
   autenticar,
+  verificarNivel(2),
   async (req, res) => {
     const connection = await promisePool.getConnection();
     try {
@@ -173,6 +207,7 @@ router.post(
 router.post(
   "/api/bas/importar-dados-processos",
   autenticar,
+  verificarNivel(2),
   upload.single("csvFile"),
   async (req, res) => {
     if (!req.file)
@@ -304,159 +339,184 @@ router.post(
   }
 );
 
-router.get("/api/bas/user-info", autenticar, async (req, res) => {
-  const { matricula } = req.query;
-  if (!matricula)
-    return res.status(400).json({ message: "Matrícula é obrigatória." });
-  try {
-    const [rows] = await promisePool.query(
-      "SELECT nome, cargo FROM users WHERE matricula = ?",
-      [matricula]
-    );
-    if (rows.length > 0) res.json(rows[0]);
-    else res.status(404).json({ message: "Usuário não encontrado." });
-  } catch (error) {
-    console.error("Erro API /user-info:", error);
-    res.status(500).json({ message: "Erro interno servidor." });
+router.get(
+  "/api/bas/user-info",
+  autenticar,
+  verificarNivel(2),
+  async (req, res) => {
+    const { matricula } = req.query;
+    if (!matricula)
+      return res.status(400).json({ message: "Matrícula é obrigatória." });
+    try {
+      const [rows] = await promisePool.query(
+        "SELECT nome, cargo FROM users WHERE matricula = ?",
+        [matricula]
+      );
+      if (rows.length > 0) res.json(rows[0]);
+      else res.status(404).json({ message: "Usuário não encontrado." });
+    } catch (error) {
+      console.error("Erro API /user-info:", error);
+      res.status(500).json({ message: "Erro interno servidor." });
+    }
   }
-});
+);
 
-router.get("/api/bas/processos-construcao", autenticar, async (req, res) => {
-  try {
-    const query = `
+router.get(
+  "/api/bas/processos-construcao",
+  autenticar,
+  verificarNivel(2),
+  async (req, res) => {
+    try {
+      const query = `
       SELECT id, processo, data, TIME_FORMAT(horas, '%H:%i:%s') as horas 
       FROM bas_process ORDER BY data DESC, processo ASC;`;
-    const [rows] = await promisePool.query(query);
-    res.json(
-      rows.map((r) => ({
-        ...r,
-        data: r.data ? new Date(r.data).toISOString().split("T")[0] : null,
-      }))
-    );
-  } catch (error) {
-    console.error("Erro API /processos-construcao:", error);
-    res
-      .status(500)
-      .json({ message: "Erro ao buscar processos de Construção." });
+      const [rows] = await promisePool.query(query);
+      res.json(
+        rows.map((r) => ({
+          ...r,
+          data: r.data ? new Date(r.data).toISOString().split("T")[0] : null,
+        }))
+      );
+    } catch (error) {
+      console.error("Erro API /processos-construcao:", error);
+      res
+        .status(500)
+        .json({ message: "Erro ao buscar processos de Construção." });
+    }
   }
-});
+);
 
-router.get("/api/bas/processos-linhaviva", autenticar, async (req, res) => {
-  try {
-    const query = `
+router.get(
+  "/api/bas/processos-linhaviva",
+  autenticar,
+  verificarNivel(2),
+  async (req, res) => {
+    try {
+      const query = `
       SELECT id, processo, data_prevista_execucao as data, TIME_FORMAT(TIMEDIFF(hora_fim, hora_inicio), '%H:%i:%s') as horas
       FROM processos 
       WHERE (tipo IS NULL OR tipo != 'Emergencial') AND ordem_obra = 'ODI' 
       ORDER BY data_prevista_execucao DESC, processo ASC;`;
-    const [rows] = await promisePool.query(query);
-    res.json(
-      rows.map((r) => ({
-        ...r,
-        data: r.data ? new Date(r.data).toISOString().split("T")[0] : null,
-        horas: r.horas || "00:00:00",
-      }))
-    );
-  } catch (error) {
-    console.error("Erro API /processos-linhaviva:", error);
-    res
-      .status(500)
-      .json({ message: "Erro ao buscar processos de Linha Viva." });
-  }
-});
-
-router.post("/api/bas/salvar-bas-cadastro", autenticar, async (req, res) => {
-  const { idBasProcesso, matriculaResponsavel, setor, colaboradores } =
-    req.body;
-  const connection = await promisePool.getConnection();
-  try {
-    if (
-      !idBasProcesso ||
-      !matriculaResponsavel ||
-      !setor ||
-      !Array.isArray(colaboradores) ||
-      colaboradores.length === 0
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Dados incompletos para o cadastro do BAS." });
-    }
-    await connection.beginTransaction();
-    const [processoResult] = await connection.execute(
-      "SELECT id, processo FROM bas_process WHERE id = ?",
-      [idBasProcesso]
-    );
-    if (processoResult.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({ message: "Processo BAS não encontrado." });
-    }
-    const basProcessoDetalhes = processoResult[0];
-    const [responsavelInfo] = await connection.execute(
-      "SELECT nome, cargo FROM users WHERE matricula = ?",
-      [matriculaResponsavel]
-    );
-    if (responsavelInfo.length === 0) {
-      await connection.rollback();
-      return res
-        .status(404)
-        .json({ message: "Matrícula do responsável não encontrada." });
-    }
-
-    await connection.execute(
-      "INSERT IGNORE INTO bas_users (person_id, matricula, nome, cargo) VALUES (?, ?, ?, ?)",
-      [
-        String(idBasProcesso),
-        matriculaResponsavel,
-        responsavelInfo[0].nome,
-        responsavelInfo[0].cargo || null,
-      ]
-    );
-
-    for (const user of colaboradores) {
-      const [colaboradorDetails] = await connection.execute(
-        "SELECT nome, cargo FROM users WHERE matricula = ?",
-        [user.matricula]
+      const [rows] = await promisePool.query(query);
+      res.json(
+        rows.map((r) => ({
+          ...r,
+          data: r.data ? new Date(r.data).toISOString().split("T")[0] : null,
+          horas: r.horas || "00:00:00",
+        }))
       );
-      if (colaboradorDetails.length > 0) {
-        await connection.execute(
-          "INSERT IGNORE INTO bas_users (person_id, matricula, nome, cargo) VALUES (?, ?, ?, ?)",
-          [
-            String(idBasProcesso),
-            user.matricula,
-            colaboradorDetails[0].nome,
-            colaboradorDetails[0].cargo || null,
-          ]
-        );
-      } else {
-        console.warn(
-          `Matrícula ${user.matricula} (colaborador) não encontrada. Pulando.`
-        );
-      }
-    }
-    await registrarAuditoria(
-      req.user.matricula,
-      "Cadastro BAS",
-      `BAS para processo ${basProcessoDetalhes.processo} (ID ${idBasProcesso}) salvo.`
-    );
-    await connection.commit();
-    res.status(200).json({
-      message: "BAS cadastrado e colaboradores associados com sucesso!",
-    });
-  } catch (error) {
-    if (connection) await connection.rollback();
-    console.error("Erro ao salvar cadastro BAS:", error);
-    if (error.code === "ER_DUP_ENTRY")
+    } catch (error) {
+      console.error("Erro API /processos-linhaviva:", error);
       res
-        .status(409)
-        .json({ message: "Colaborador já associado a este BAS de processo." });
-    else res.status(500).json({ message: `Erro interno: ${error.message}` });
-  } finally {
-    if (connection) connection.release();
+        .status(500)
+        .json({ message: "Erro ao buscar processos de Linha Viva." });
+    }
   }
-});
+);
+
+router.post(
+  "/api/bas/salvar-bas-cadastro",
+  autenticar,
+  verificarNivel(2),
+  async (req, res) => {
+    const { idBasProcesso, matriculaResponsavel, setor, colaboradores } =
+      req.body;
+    const connection = await promisePool.getConnection();
+    try {
+      if (
+        !idBasProcesso ||
+        !matriculaResponsavel ||
+        !setor ||
+        !Array.isArray(colaboradores) ||
+        colaboradores.length === 0
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Dados incompletos para o cadastro do BAS." });
+      }
+      await connection.beginTransaction();
+      const [processoResult] = await connection.execute(
+        "SELECT id, processo FROM bas_process WHERE id = ?",
+        [idBasProcesso]
+      );
+      if (processoResult.length === 0) {
+        await connection.rollback();
+        return res
+          .status(404)
+          .json({ message: "Processo BAS não encontrado." });
+      }
+      const basProcessoDetalhes = processoResult[0];
+      const [responsavelInfo] = await connection.execute(
+        "SELECT nome, cargo FROM users WHERE matricula = ?",
+        [matriculaResponsavel]
+      );
+      if (responsavelInfo.length === 0) {
+        await connection.rollback();
+        return res
+          .status(404)
+          .json({ message: "Matrícula do responsável não encontrada." });
+      }
+
+      await connection.execute(
+        "INSERT IGNORE INTO bas_users (person_id, matricula, nome, cargo) VALUES (?, ?, ?, ?)",
+        [
+          String(idBasProcesso),
+          matriculaResponsavel,
+          responsavelInfo[0].nome,
+          responsavelInfo[0].cargo || null,
+        ]
+      );
+
+      for (const user of colaboradores) {
+        const [colaboradorDetails] = await connection.execute(
+          "SELECT nome, cargo FROM users WHERE matricula = ?",
+          [user.matricula]
+        );
+        if (colaboradorDetails.length > 0) {
+          await connection.execute(
+            "INSERT IGNORE INTO bas_users (person_id, matricula, nome, cargo) VALUES (?, ?, ?, ?)",
+            [
+              String(idBasProcesso),
+              user.matricula,
+              colaboradorDetails[0].nome,
+              colaboradorDetails[0].cargo || null,
+            ]
+          );
+        } else {
+          console.warn(
+            `Matrícula ${user.matricula} (colaborador) não encontrada. Pulando.`
+          );
+        }
+      }
+      await registrarAuditoria(
+        req.user.matricula,
+        "Cadastro BAS",
+        `BAS para processo ${basProcessoDetalhes.processo} (ID ${idBasProcesso}) salvo.`
+      );
+      await connection.commit();
+      res.status(200).json({
+        message: "BAS cadastrado e colaboradores associados com sucesso!",
+      });
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error("Erro ao salvar cadastro BAS:", error);
+      if (error.code === "ER_DUP_ENTRY")
+        res
+          .status(409)
+          .json({
+            message: "Colaborador já associado a este BAS de processo.",
+          });
+      else res.status(500).json({ message: `Erro interno: ${error.message}` });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
 
 router.post(
   "/api/bas/gerar-relatorio-processos-txt",
   autenticar,
+  verificarNivel(2),
   async (req, res) => {
     const { matricula, razao, dataInicio, dataFim } = req.body;
     const usuarioLogadoMatricula = req.user.matricula;
@@ -582,6 +642,7 @@ router.post(
 router.post(
   "/api/bas/gerar-relatorio-processos-txt-linhaviva",
   autenticar,
+  verificarNivel(2),
   async (req, res) => {
     const { matricula, razao, dataInicio, dataFim } = req.body;
     const usuarioLogadoMatricula = req.user.matricula;
@@ -658,7 +719,6 @@ router.post(
           if (String(dataConclusao).length === 10) {
             dataObj.setUTCHours(dataObj.getUTCHours() + 3);
           } else if (dataConclusao instanceof Date) {
-            // Ajuste de fuso para DATETIME se necessário
           }
 
           const dia = String(dataObj.getUTCDate()).padStart(2, "0");
