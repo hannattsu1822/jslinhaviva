@@ -349,9 +349,19 @@ router.post(
         }
 
         if (itemEscopo.inspecao_item_id) {
+          let queryAnexos = `SELECT nome_original, caminho_servidor, tipo_mime, tamanho FROM inspecoes_anexos WHERE item_resposta_id = ?`;
+          const paramsAnexos = [itemEscopo.inspecao_item_id];
+
+          if (itemEscopo.inspecao_especificacao_id) {
+            queryAnexos += ` AND item_especificacao_id = ?`;
+            paramsAnexos.push(itemEscopo.inspecao_especificacao_id);
+          } else {
+            queryAnexos += ` AND item_especificacao_id IS NULL`;
+          }
+
           const [anexosDaInspecao] = await connection.query(
-            `SELECT nome_original, caminho_servidor, tipo_mime, tamanho FROM inspecoes_anexos WHERE item_resposta_id = ?`,
-            [itemEscopo.inspecao_item_id]
+            queryAnexos,
+            paramsAnexos
           );
 
           for (const anexo of anexosDaInspecao) {
@@ -628,10 +638,15 @@ router.get(
       const params = [];
 
       if (req.query.status) {
-        query += " AND ss.status = ?";
-        params.push(req.query.status);
+        if (req.query.status === "CONCLUIDO") {
+          query += " AND ss.status IN ('CONCLUIDO', 'CONCLUIDO_COM_RESSALVAS')";
+        } else {
+          query += " AND ss.status = ?";
+          params.push(req.query.status);
+        }
       } else {
-        query += " AND ss.status NOT IN ('CONCLUIDO', 'CANCELADO')";
+        query +=
+          " AND ss.status NOT IN ('CONCLUIDO', 'CANCELADO', 'CONCLUIDO_COM_RESSALVAS')";
       }
 
       if (req.query.subestacao_id) {
@@ -752,143 +767,6 @@ router.get(
         message: "Erro ao buscar detalhes do serviço.",
         detalhes: err.message,
       });
-    }
-  }
-);
-
-router.put(
-  "/api/servicos-subestacoes/:servicoId/concluir",
-  autenticar,
-  verificarNivel(3),
-  verificarServicoExiste,
-  upload.array("anexos_conclusao_servico", 5),
-  async (req, res) => {
-    const { servicoId } = req.params;
-    const { servico } = req;
-    const { userId } = { userId: req.user.id };
-    const { data_conclusao_manual, observacoes_conclusao_manual } = req.body;
-    const arquivosConclusao = req.files;
-
-    if (servico.status === "CONCLUIDO" || servico.status === "CANCELADO") {
-      if (arquivosConclusao?.length)
-        arquivosConclusao.forEach((f) => {
-          if (f.path) fs.unlink(f.path).catch(() => {});
-        });
-      return res.status(400).json({
-        message: `Serviço (Processo: ${servico.processo}) já está ${servico.status}.`,
-      });
-    }
-    if (!data_conclusao_manual) {
-      if (arquivosConclusao?.length)
-        arquivosConclusao.forEach((f) => {
-          if (f.path) fs.unlink(f.path).catch(() => {});
-        });
-      return res
-        .status(400)
-        .json({ message: "Data de conclusão é obrigatória." });
-    }
-
-    const connection = await promisePool.getConnection();
-    let arquivosMovidosComSucesso = [];
-    try {
-      await connection.beginTransaction();
-
-      const [itensDoUsuario] = await connection.query(
-        "SELECT id FROM servico_itens_escopo WHERE servico_id = ? AND encarregado_item_id = ? AND status_item_escopo NOT LIKE 'CONCLUIDO%'",
-        [servicoId, userId]
-      );
-
-      if (itensDoUsuario.length === 0) {
-        await connection.rollback();
-        if (arquivosConclusao?.length)
-          arquivosConclusao.forEach((f) => {
-            if (f.path) fs.unlink(f.path).catch(() => {});
-          });
-        return res.status(403).json({
-          message: "Você não tem itens pendentes para concluir neste serviço.",
-        });
-      }
-
-      const idsItensDoUsuario = itensDoUsuario.map((item) => item.id);
-
-      await connection.query(
-        "UPDATE servico_itens_escopo SET status_item_escopo = 'CONCLUIDO_MANUAL', data_conclusao_item = ?, observacoes_conclusao_item = ? WHERE id IN (?)",
-        [data_conclusao_manual, observacoes_conclusao_manual, idsItensDoUsuario]
-      );
-
-      if (arquivosConclusao && arquivosConclusao.length > 0) {
-        const itemAnexoDir = path.join(
-          uploadsSubestacoesDir,
-          "servicos",
-          `servico_${String(servicoId)}`,
-          "itens_conclusao"
-        );
-        await fs.mkdir(itemAnexoDir, { recursive: true });
-
-        for (const item of itensDoUsuario) {
-          for (const file of arquivosConclusao) {
-            const nomeUnicoArq = `${Date.now()}_ITEM${
-              item.id
-            }_${file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-            const tempPath = file.path;
-            const finalPath = path.join(itemAnexoDir, nomeUnicoArq);
-            await fs.copyFile(tempPath, finalPath);
-            arquivosMovidosComSucesso.push(finalPath);
-
-            const caminhoRelServ = `servicos/servico_${servicoId}/itens_conclusao/${nomeUnicoArq}`;
-            await connection.query(
-              `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?,?,?,?,?)`,
-              [
-                item.id,
-                file.originalname,
-                `/upload_arquivos_subestacoes/${caminhoRelServ}`,
-                file.mimetype,
-                file.size,
-              ]
-            );
-          }
-        }
-      }
-
-      const [progressoRows] = await connection.query(
-        `SELECT 
-          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ?) as total, 
-          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ? AND status_item_escopo LIKE 'CONCLUIDO%') as concluidos`,
-        [servicoId, servicoId]
-      );
-
-      if (
-        progressoRows.length > 0 &&
-        progressoRows[0].total > 0 &&
-        progressoRows[0].total === progressoRows[0].concluidos
-      ) {
-        await connection.query(
-          "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = ?, observacoes_conclusao = CONCAT(IFNULL(observacoes_conclusao, ''), ' (Concluído automaticamente após finalização de todos os itens.)') WHERE id = ?",
-          [new Date().toISOString().split("T")[0], servicoId]
-        );
-      }
-
-      await connection.commit();
-      res.json({
-        message: `Ação de conclusão registrada para o serviço (Processo: ${servico.processo})!`,
-      });
-    } catch (error) {
-      await connection.rollback();
-      for (const p of arquivosMovidosComSucesso) {
-        try {
-          if (fs.existsSync(p)) fs.unlinkSync(p);
-        } catch (e) {}
-      }
-      res.status(500).json({
-        message: "Erro interno ao concluir serviço.",
-        detalhes: error.message,
-      });
-    } finally {
-      if (arquivosConclusao?.length)
-        arquivosConclusao.forEach((f) => {
-          if (f.path) fs.unlink(f.path).catch(() => {});
-        });
-      if (connection) connection.release();
     }
   }
 );
@@ -1108,6 +986,149 @@ router.post(
       }
       res.status(500).json({
         message: "Erro ao adicionar anexos.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.put(
+  "/api/servicos/item/:itemEscopoId/concluir",
+  autenticar,
+  verificarNivel(3),
+  upload.array("anexos_conclusao_item", 5),
+  async (req, res) => {
+    const { itemEscopoId } = req.params;
+    const { data_conclusao, observacoes_conclusao, status_item } = req.body;
+    const arquivosConclusao = req.files;
+
+    if (!itemEscopoId || isNaN(parseInt(itemEscopoId))) {
+      return res
+        .status(400)
+        .json({ message: "ID do item de escopo inválido." });
+    }
+    if (!data_conclusao) {
+      return res
+        .status(400)
+        .json({ message: "A data de conclusão é obrigatória." });
+    }
+    if (!status_item) {
+      return res
+        .status(400)
+        .json({ message: "O status da conclusão é obrigatório." });
+    }
+
+    const connection = await promisePool.getConnection();
+    let arquivosMovidosComSucesso = [];
+    try {
+      await connection.beginTransaction();
+
+      const [itemRows] = await connection.query(
+        "SELECT servico_id FROM servico_itens_escopo WHERE id = ?",
+        [itemEscopoId]
+      );
+
+      if (itemRows.length === 0) {
+        await connection.rollback();
+        return res
+          .status(404)
+          .json({ message: "Item de escopo não encontrado." });
+      }
+
+      const { servico_id } = itemRows[0];
+
+      await connection.query(
+        "UPDATE servico_itens_escopo SET status_item_escopo = ?, data_conclusao_item = ?, observacoes_conclusao_item = ? WHERE id = ?",
+        [
+          status_item,
+          data_conclusao,
+          observacoes_conclusao || null,
+          itemEscopoId,
+        ]
+      );
+
+      if (arquivosConclusao && arquivosConclusao.length > 0) {
+        const itemAnexoDir = path.join(
+          uploadsSubestacoesDir,
+          "servicos",
+          `servico_${String(servico_id)}`,
+          "itens_conclusao"
+        );
+        await fs.mkdir(itemAnexoDir, { recursive: true });
+
+        for (const file of arquivosConclusao) {
+          const nomeUnicoArq = `${Date.now()}_ITEM${itemEscopoId}_${file.originalname.replace(
+            /[^a-zA-Z0-9.\\-_]/g,
+            "_"
+          )}`;
+          const finalPath = path.join(itemAnexoDir, nomeUnicoArq);
+          await fs.rename(file.path, finalPath);
+          arquivosMovidosComSucesso.push(finalPath);
+
+          const caminhoRelServ = `servicos/servico_${servico_id}/itens_conclusao/${nomeUnicoArq}`;
+          await connection.query(
+            `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?,?,?,?,?)`,
+            [
+              itemEscopoId,
+              file.originalname,
+              `/upload_arquivos_subestacoes/${caminhoRelServ}`,
+              file.mimetype,
+              file.size,
+            ]
+          );
+        }
+      }
+
+      const [progressoRows] = await connection.query(
+        `SELECT 
+          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ?) as total, 
+          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ? AND status_item_escopo != 'PENDENTE') as tratados`,
+        [servico_id, servico_id]
+      );
+
+      if (
+        progressoRows.length > 0 &&
+        progressoRows[0].total > 0 &&
+        progressoRows[0].total === progressoRows[0].tratados
+      ) {
+        const [todosItens] = await connection.query(
+          "SELECT status_item_escopo FROM servico_itens_escopo WHERE servico_id = ?",
+          [servico_id]
+        );
+
+        const temPendenciaOuNaoConcluido = todosItens.some(
+          (item) =>
+            item.status_item_escopo === "CONCLUIDO_COM_PENDENCIA" ||
+            item.status_item_escopo === "NAO_CONCLUIDO"
+        );
+
+        const statusFinalServico = temPendenciaOuNaoConcluido
+          ? "CONCLUIDO_COM_RESSALVAS"
+          : "CONCLUIDO";
+
+        await connection.query(
+          "UPDATE servicos_subestacoes SET status = ?, data_conclusao = ? WHERE id = ?",
+          [
+            statusFinalServico,
+            new Date().toISOString().split("T")[0],
+            servico_id,
+          ]
+        );
+      }
+
+      await connection.commit();
+      res.json({ message: "Status do item atualizado com sucesso!" });
+    } catch (error) {
+      await connection.rollback();
+      for (const p of arquivosMovidosComSucesso) {
+        try {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        } catch (e) {}
+      }
+      res.status(500).json({
+        message: "Erro interno ao atualizar o status do item.",
         detalhes: error.message,
       });
     } finally {
