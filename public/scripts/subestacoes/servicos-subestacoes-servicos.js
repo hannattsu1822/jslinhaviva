@@ -10,40 +10,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const nenhumServicoMsgElem = document.getElementById("nenhumServico");
   const btnNovoServico = document.getElementById("btnNovoServico");
 
-  const modalConfirmacaoServicoEl = document.getElementById(
-    "modalConfirmacaoServico"
+  const modalConcluirItemEl = document.getElementById("modalConcluirItem");
+  const formConcluirItem = document.getElementById("formConcluirItem");
+  const servicoIdParaConclusaoInput = document.getElementById(
+    "servicoIdParaConclusao"
   );
-  const modalConfirmacaoServicoTitulo = document.getElementById(
-    "modalConfirmacaoServicoTitulo"
+  const servicoProcessoParaConclusaoSpan = document.getElementById(
+    "servicoProcessoParaConclusao"
   );
-  const mensagemConfirmacaoServico = document.getElementById(
-    "mensagemConfirmacaoServico"
+  const selectItemParaConcluir = document.getElementById(
+    "selectItemParaConcluir"
   );
-  const formConfirmacaoConcluirServico = document.getElementById(
-    "formConfirmacaoConcluirServico"
+  const statusConclusaoItemSelect = document.getElementById(
+    "statusConclusaoItem"
   );
-  const listaItensParaConcluirContainer = document.getElementById(
-    "listaItensParaConcluirContainer"
+  const dataConclusaoItemInput = document.getElementById("dataConclusaoItem");
+  const horaConclusaoItemInput = document.getElementById("horaConclusaoItem");
+  const observacoesConclusaoItemTextarea = document.getElementById(
+    "observacoesConclusaoItem"
   );
-  const confirmacaoDataConclusaoInput = document.getElementById(
-    "confirmacaoDataConclusaoInput"
+  const btnAnexarEvidencia = document.getElementById("btnAnexarEvidencia");
+  const anexosConclusaoItemInput = document.getElementById(
+    "anexosConclusaoItemInput"
   );
-  const confirmacaoHoraConclusaoInput = document.getElementById(
-    "confirmacaoHoraConclusaoInput"
-  );
-  const confirmacaoObservacoesTextarea = document.getElementById(
-    "confirmacaoObservacoesTextarea"
-  );
-  const btnConfirmarAcaoServico = document.getElementById(
-    "btnConfirmarAcaoServico"
-  );
-
-  const btnAnexarConclusao = document.getElementById("btnAnexarConclusao");
-  const confirmacaoAnexosInput = document.getElementById(
-    "confirmacaoAnexosInput"
-  );
-  const previewAnexosConclusao = document.getElementById(
-    "previewAnexosConclusao"
+  const previewAnexosConclusaoItem = document.getElementById(
+    "previewAnexosConclusaoItem"
   );
   const templateAnexoPreviewConclusao = document.getElementById(
     "templateAnexoPreviewConclusao"
@@ -68,8 +59,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnSalvarGerenciamentoItens"
   );
 
-  let operacaoConfirmacaoServico = null;
-  let idServicoParaAcao = null;
   let encarregadosCache = [];
   let currentUser = null;
   let anexosConclusaoTemporarios = [];
@@ -122,15 +111,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function formatarDataParaInput(dataISO) {
-    if (!dataISO) return "";
+    if (!dataISO) return new Date().toISOString().split("T")[0];
     return dataISO.split("T")[0];
-  }
-
-  function formatarHoraParaInput(horaISO) {
-    if (!horaISO) return "";
-    if (typeof horaISO === "string" && horaISO.includes(":"))
-      return horaISO.substring(0, 5);
-    return "";
   }
 
   function formatarNomes(nomesString) {
@@ -264,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     serv.id
                   }" data-processo="${
         serv.processo
-      }" title="Concluir Serviço / Meus Itens" ${
+      }" title="Concluir Item de Serviço" ${
         statusServ === "CONCLUIDO" || statusServ === "CANCELADO"
           ? "disabled"
           : ""
@@ -291,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tr.querySelector(".btn-concluir-servico")?.addEventListener(
         "click",
         (e) =>
-          abrirModalConfirmacaoConcluirServico(
+          abrirModalConclusao(
             e.currentTarget.dataset.id,
             e.currentTarget.dataset.processo
           )
@@ -336,35 +318,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function confirmarExclusaoServico(servicoId, processo) {
-    idServicoParaAcao = servicoId;
-    operacaoConfirmacaoServico = async () => {
-      try {
-        await fetchData(`/api/servicos-subestacoes/${idServicoParaAcao}`, {
-          method: "DELETE",
-        });
-        alert("Serviço excluído com sucesso!");
-        ocultarModal(modalConfirmacaoServicoEl);
-        carregarServicos(
-          Object.fromEntries(new FormData(formFiltrosServicos).entries())
-        );
-      } catch (error) {
-        alert(`Falha ao excluir serviço: ${error.message}`);
-      }
-    };
+    if (
+      confirm(
+        `Tem certeza que deseja excluir o serviço do processo "${
+          processo || servicoId
+        }"? Esta ação não pode ser desfeita.`
+      )
+    ) {
+      handleExcluirServico(servicoId);
+    }
+  }
 
-    modalConfirmacaoServicoTitulo.innerHTML = `<span class="material-symbols-outlined text-danger">warning</span> Confirmar Exclusão`;
-    mensagemConfirmacaoServico.textContent = `Tem certeza que deseja excluir o serviço do processo "${
-      processo || servicoId
-    }"? Esta ação não pode ser desfeita.`;
-    formConfirmacaoConcluirServico.classList.add("hidden");
-    btnConfirmarAcaoServico.className = "btn btn-danger";
-    btnConfirmarAcaoServico.innerHTML = `<span class="material-symbols-outlined">delete</span> Excluir`;
-    mostrarModal(modalConfirmacaoServicoEl);
+  async function handleExcluirServico(servicoId) {
+    try {
+      await fetchData(`/api/servicos-subestacoes/${servicoId}`, {
+        method: "DELETE",
+      });
+      alert("Serviço excluído com sucesso!");
+      carregarServicos(
+        Object.fromEntries(new FormData(formFiltrosServicos).entries())
+      );
+    } catch (error) {
+      alert(`Falha ao excluir serviço: ${error.message}`);
+    }
   }
 
   function renderizarPreviewAnexosConclusao() {
-    if (!previewAnexosConclusao || !templateAnexoPreviewConclusao) return;
-    previewAnexosConclusao.innerHTML = "";
+    if (!previewAnexosConclusaoItem || !templateAnexoPreviewConclusao) return;
+    previewAnexosConclusaoItem.innerHTML = "";
     anexosConclusaoTemporarios.forEach((file, index) => {
       const clone = templateAnexoPreviewConclusao.content.cloneNode(true);
       const anexoItem = clone.querySelector(".anexo-preview-item");
@@ -390,112 +371,124 @@ document.addEventListener("DOMContentLoaded", () => {
         renderizarPreviewAnexosConclusao();
       });
 
-      previewAnexosConclusao.appendChild(anexoItem);
+      previewAnexosConclusaoItem.appendChild(anexoItem);
     });
   }
 
-  if (btnAnexarConclusao) {
-    btnAnexarConclusao.addEventListener("click", () => {
-      confirmacaoAnexosInput.click();
+  if (btnAnexarEvidencia) {
+    btnAnexarEvidencia.addEventListener("click", () => {
+      anexosConclusaoItemInput.click();
     });
   }
 
-  if (confirmacaoAnexosInput) {
-    confirmacaoAnexosInput.addEventListener("change", (event) => {
+  if (anexosConclusaoItemInput) {
+    anexosConclusaoItemInput.addEventListener("change", (event) => {
       anexosConclusaoTemporarios.push(...Array.from(event.target.files));
       renderizarPreviewAnexosConclusao();
       event.target.value = "";
     });
   }
 
-  // FUNÇÃO MODIFICADA
-  async function abrirModalConfirmacaoConcluirServico(
-    servicoId,
-    processoServico
-  ) {
-    formConfirmacaoConcluirServico.reset();
-    idServicoParaAcao = servicoId;
+  async function abrirModalConclusao(servicoId, processo) {
+    formConcluirItem.reset();
     anexosConclusaoTemporarios = [];
     renderizarPreviewAnexosConclusao();
+    servicoIdParaConclusaoInput.value = servicoId;
+    servicoProcessoParaConclusaoSpan.textContent = processo || servicoId;
 
-    const user = await fetchCurrentUser();
-    if (!user) {
-      alert(
-        "Não foi possível verificar seu usuário. Por favor, recarregue a página."
-      );
-      return;
-    }
+    try {
+      const [servico, user] = await Promise.all([
+        fetchData(`/api/servicos-subestacoes/${servicoId}`),
+        fetchCurrentUser(),
+      ]);
 
-    const servico = await fetchData(`/api/servicos-subestacoes/${servicoId}`);
-    if (!servico) {
-      alert("Não foi possível carregar os detalhes do serviço.");
-      return;
-    }
+      if (!user) {
+        alert(
+          "Não foi possível identificar o usuário. Por favor, recarregue a página."
+        );
+        return;
+      }
 
-    modalConfirmacaoServicoTitulo.innerHTML = `<span class="material-symbols-outlined text-success">check_circle</span> Concluir Meus Itens`;
-    btnConfirmarAcaoServico.className = "btn btn-success";
-    btnConfirmarAcaoServico.innerHTML = `<span class="material-symbols-outlined">check</span> Confirmar Conclusão`;
-
-    // Lógica unificada: sempre verifica os itens pendentes do usuário logado.
-    const meusItens = servico.itens_escopo.filter(
-      (item) =>
-        item.encarregado_item_id === user.id &&
-        !item.status_item_escopo.startsWith("CONCLUIDO")
-    );
-
-    if (meusItens.length === 0) {
-      alert("Você não possui itens pendentes para concluir neste serviço.");
-      return; // Impede a abertura do modal se não há o que fazer.
-    }
-
-    mensagemConfirmacaoServico.textContent =
-      "Você está prestes a concluir os seguintes itens sob sua responsabilidade:";
-    listaItensParaConcluirContainer.innerHTML = `<ul class="item-list">${meusItens
-      .map(
+      const meusItensPendentes = servico.itens_escopo.filter(
         (item) =>
-          `<li>${item.descricao_item_servico || "Item sem descrição"}</li>`
-      )
-      .join("")}</ul>`;
-    listaItensParaConcluirContainer.classList.remove("hidden");
+          item.encarregado_item_id === user.id &&
+          !item.status_item_escopo.startsWith("CONCLUIDO")
+      );
 
-    formConfirmacaoConcluirServico.classList.remove("hidden");
-    confirmacaoDataConclusaoInput.value = formatarDataParaInput(
-      new Date().toISOString()
-    );
-    confirmacaoHoraConclusaoInput.value = new Date().toLocaleTimeString(
-      "pt-BR",
-      { hour: "2-digit", minute: "2-digit" }
-    );
-    operacaoConfirmacaoServico = handleConcluirServico;
-    mostrarModal(modalConfirmacaoServicoEl);
+      if (meusItensPendentes.length === 0) {
+        alert("Você não possui itens pendentes para concluir neste serviço.");
+        return;
+      }
+
+      selectItemParaConcluir.innerHTML =
+        '<option value="">Selecione um item...</option>';
+      meusItensPendentes.forEach((item) => {
+        selectItemParaConcluir.add(
+          new Option(item.descricao_item_servico, item.item_escopo_id)
+        );
+      });
+
+      dataConclusaoItemInput.value = formatarDataParaInput();
+      horaConclusaoItemInput.value = new Date().toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      mostrarModal(modalConcluirItemEl);
+    } catch (error) {
+      alert("Erro ao carregar os itens do serviço.");
+    }
   }
 
-  async function handleConcluirServico() {
-    if (!idServicoParaAcao || !confirmacaoDataConclusaoInput.value) {
+  async function handleConcluirItemSubmit(event) {
+    event.preventDefault();
+    const itemEscopoId = selectItemParaConcluir.value;
+    const statusItem = statusConclusaoItemSelect.value;
+    const data = dataConclusaoItemInput.value;
+    const hora = horaConclusaoItemInput.value;
+
+    if (!itemEscopoId) {
+      alert("Por favor, selecione um item para concluir.");
+      return;
+    }
+    if (!data) {
       alert("A data de conclusão é obrigatória.");
       return;
     }
-    const formData = new FormData(formConfirmacaoConcluirServico);
-    anexosConclusaoTemporarios.forEach((file) => {
-      formData.append("anexos_conclusao_servico", file);
-    });
-    formData.delete("anexos_conclusao_servico_input_placeholder"); // Remover se houver um campo de input com nome diferente
 
-    btnConfirmarAcaoServico.disabled = true;
+    const dataConclusaoFinal = hora ? `${data} ${hora}:00` : `${data} 00:00:00`;
+
+    const formData = new FormData();
+    formData.append("status_item", statusItem);
+    formData.append("data_conclusao", dataConclusaoFinal);
+    formData.append(
+      "observacoes_conclusao",
+      observacoesConclusaoItemTextarea.value
+    );
+    anexosConclusaoTemporarios.forEach((file) => {
+      formData.append("anexos_conclusao_item", file);
+    });
+
+    const btn =
+      event.submitter || document.getElementById("btnConfirmarConclusaoItem");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-symbols-outlined spin">sync</span> Salvando...`;
+
     try {
-      await fetchData(
-        `/api/servicos-subestacoes/${idServicoParaAcao}/concluir`,
-        { method: "PUT", body: formData }
-      );
-      alert("Ação de conclusão registrada com sucesso!");
-      ocultarModal(modalConfirmacaoServicoEl);
+      await fetchData(`/api/servicos/item/${itemEscopoId}/concluir`, {
+        method: "PUT",
+        body: formData,
+      });
+      alert("Status do item atualizado com sucesso!");
+      ocultarModal(modalConcluirItemEl);
       carregarServicos(
         Object.fromEntries(new FormData(formFiltrosServicos).entries())
       );
     } catch (error) {
       alert(`Falha ao registrar conclusão: ${error.message}`);
     } finally {
-      btnConfirmarAcaoServico.disabled = false;
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-symbols-outlined">check</span> Concluir Item Selecionado`;
     }
   }
 
@@ -512,6 +505,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const servicoDetalhes = await fetchData(
         `/api/servicos-subestacoes/${servicoId}`
       );
+
       await popularSelectEncarregados(null);
       listaItensParaGerenciamentoDiv.innerHTML = "";
 
@@ -524,11 +518,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const itemDiv = document.createElement("div");
         itemDiv.className = "item-management-card";
         itemDiv.dataset.itemEscopoId = item.item_escopo_id;
+
+        const itemContent = document.createElement("div");
+        itemContent.className = "item-content";
+
+        const itemDesc = document.createElement("h6");
+        itemDesc.textContent = item.descricao_item_servico;
+        itemContent.appendChild(itemDesc);
+
         const selectEncarregado = document.createElement("select");
         selectEncarregado.className = "form-select";
         popularSelectEncarregados(selectEncarregado, item.encarregado_item_id);
-        itemDiv.innerHTML = `<h6>${item.descricao_item_servico}</h6>`;
-        itemDiv.appendChild(selectEncarregado);
+        itemContent.appendChild(selectEncarregado);
+
+        itemDiv.appendChild(itemContent);
         listaItensParaGerenciamentoDiv.appendChild(itemDiv);
       });
     } catch (error) {
@@ -577,12 +580,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (btnConfirmarAcaoServico) {
-    btnConfirmarAcaoServico.addEventListener("click", () => {
-      if (typeof operacaoConfirmacaoServico === "function") {
-        operacaoConfirmacaoServico();
-      }
-    });
+  if (formConcluirItem) {
+    formConcluirItem.addEventListener("submit", handleConcluirItemSubmit);
   }
 
   async function init() {
