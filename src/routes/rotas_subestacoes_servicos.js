@@ -554,10 +554,10 @@ router.delete(
         "DELETE FROM servico_itens_escopo WHERE servico_id = ?",
         [servicoId]
       );
-      await connection.query(
-        "DELETE FROM servicos_inspecoes_vinculadas WHERE servico_id = ?",
-        [servicoId]
-      );
+
+      // A LINHA PROBLEMÁTICA FOI REMOVIDA DAQUI.
+      // O código tentava acessar a tabela 'servicos_inspecoes_vinculadas', que não existe.
+
       await connection.query(
         "DELETE FROM servicos_subestacoes_anexos WHERE id_servico = ?",
         [servicoId]
@@ -1108,14 +1108,22 @@ router.put(
           ? "CONCLUIDO_COM_RESSALVAS"
           : "CONCLUIDO";
 
+        // ===== INÍCIO DA CORREÇÃO =====
+        // Pega a hora atual formatada para o Brasil (ex: "14:53:00")
+        const horaConclusao = new Date().toLocaleTimeString("pt-BR", {
+          hour12: false,
+        });
+
         await connection.query(
-          "UPDATE servicos_subestacoes SET status = ?, data_conclusao = ? WHERE id = ?",
+          "UPDATE servicos_subestacoes SET status = ?, data_conclusao = ?, horario_fim = ? WHERE id = ?",
           [
             statusFinalServico,
             new Date().toISOString().split("T")[0],
+            horaConclusao, // Adiciona a hora atual na query
             servico_id,
           ]
         );
+        // ===== FIM DA CORREÇÃO =====
       }
 
       await connection.commit();
