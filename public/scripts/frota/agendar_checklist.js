@@ -1,5 +1,3 @@
-// public/scripts/frota/agendar_checklist.js
-
 document.addEventListener("DOMContentLoaded", async () => {
   // Elementos do Modal de Agendamento
   const agendamentoModal = document.getElementById("agendamentoModal");
@@ -399,6 +397,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       closeDetailsModal();
     }
   });
+
+  // --- CÓDIGO ADICIONADO: EVENT LISTENERS PARA O FORMULÁRIO DE FILTRO ---
+  if (filterForm) {
+    filterForm.addEventListener("submit", (event) => {
+      event.preventDefault(); // Impede o recarregamento da página
+
+      const filters = {
+        status: filterStatus.value,
+        dataInicial: filterDataInicial.value,
+        dataFinal: filterDataFinal.value,
+      };
+
+      // Chama a função para carregar os agendamentos com os filtros, sem limite de 10
+      carregarAgendamentos(filters, null);
+    });
+  }
+
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener("click", () => {
+      filterForm.reset(); // Limpa os campos do formulário
+      // Recarrega a tabela com a visão padrão (últimos 10 agendamentos pendentes)
+      carregarAgendamentos({}, 10);
+    });
+  }
+  // --- FIM DO CÓDIGO ADICIONADO ---
 
   // --- Inicialização ---
   carregarAgendamentos({}, 10); // Carrega os 10 últimos agendamentos ao carregar a página
