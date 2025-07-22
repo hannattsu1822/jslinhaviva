@@ -423,8 +423,12 @@ document.addEventListener("DOMContentLoaded", () => {
       selectItemParaConcluir.innerHTML =
         '<option value="">Selecione um item...</option>';
       meusItensPendentes.forEach((item) => {
+        const displayText = item.tag_equipamento_alvo
+          ? `${item.descricao_item_servico} (TAG: ${item.tag_equipamento_alvo})`
+          : item.descricao_item_servico;
+
         selectItemParaConcluir.add(
-          new Option(item.descricao_item_servico, item.item_escopo_id)
+          new Option(displayText, item.item_escopo_id)
         );
       });
 
