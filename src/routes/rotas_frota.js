@@ -6,6 +6,9 @@ const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
+// ... (todas as outras rotas que já estavam aqui, de /frota até /api/agendamentos_checklist/:id) ...
+// ... vou omitir as rotas já existentes para não ficar gigante, mas elas devem permanecer no seu arquivo ...
+
 router.get("/frota", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/pages/frota/frota.html"));
 });
@@ -368,16 +371,17 @@ router.get(
     `;
       const params = [];
 
-      if (status) {
-        if (status === "Concluído") {
-          query += ` AND ac.status = ?`;
-          params.push("Concluído");
-        } else if (status === "NaoConcluido") {
-          query += ` AND ac.status = ?`;
-          params.push("Agendado");
-        } else if (status === "Atrasado") {
-          query += ` AND ac.status = 'Agendado' AND ac.data_agendamento < CURDATE()`;
-        }
+      if (status === "Concluído") {
+        query += ` AND ac.status = ?`;
+        params.push("Concluído");
+      } else if (status === "NaoConcluido") {
+        query += ` AND ac.status = ?`;
+        params.push("Agendado");
+      } else if (status === "Atrasado") {
+        query += ` AND ac.status = 'Agendado' AND ac.data_agendamento < CURDATE()`;
+      } else if (!status) {
+        query += ` AND ac.status = ?`;
+        params.push("Agendado");
       }
 
       if (dataInicial) {
@@ -419,6 +423,66 @@ router.get(
     }
   }
 );
+
+// ROTA NOVA ADICIONADA AQUI
+router.get(
+  "/api/agendamentos_abertos",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { placa, data } = req.query;
+
+    if (!placa || !data) {
+      return res
+        .status(400)
+        .json({ message: "Placa e data são obrigatórias." });
+    }
+
+    try {
+      const query = `
+        SELECT
+            ac.id,
+            ac.data_agendamento,
+            ac.status,
+            v.placa,
+            u_enc.nome AS encarregado_nome
+        FROM
+            agendamentos_checklist ac
+        JOIN
+            veiculos v ON ac.veiculo_id = v.id
+        JOIN
+            users u_enc ON ac.encarregado_matricula = u_enc.matricula
+        WHERE
+            v.placa = ?
+            AND DATE(ac.data_agendamento) = ?
+            AND ac.status = 'Agendado'
+        ORDER BY
+            ac.id DESC
+      `;
+      const params = [placa, data];
+      const [rows] = await promisePool.query(query, params);
+
+      // Adiciona o status_display para consistência
+      const agendamentosFormatados = rows.map((agendamento) => {
+        let statusDisplay = agendamento.status;
+        if (new Date(agendamento.data_agendamento) < new Date()) {
+          statusDisplay = "Atrasado";
+        }
+        return { ...agendamento, status_display: statusDisplay };
+      });
+
+      res.status(200).json(agendamentosFormatados);
+    } catch (err) {
+      console.error("Erro ao buscar agendamentos em aberto:", err);
+      res
+        .status(500)
+        .json({ message: "Erro ao buscar agendamentos em aberto." });
+    }
+  }
+);
+
+// ... (resto do seu arquivo de rotas, de /api/veiculos_controle em diante) ...
+// ... vou omitir o resto para não ficar gigante, mas ele deve permanecer no seu arquivo ...
 
 router.get(
   "/api/veiculos_controle",
