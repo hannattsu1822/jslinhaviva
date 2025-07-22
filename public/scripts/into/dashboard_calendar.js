@@ -58,11 +58,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     agendamentos = await response.json();
 
-    if (agendamentos.length === 0) {
+    // FILTRO ADICIONAL NO FRONTEND: Garante que apenas agendamentos não concluídos sejam processados
+    const agendamentosPendentes = agendamentos.filter(
+      (ag) => ag.status !== "Concluído"
+    );
+
+    if (agendamentosPendentes.length === 0) {
       calendarEl.innerHTML =
-        '<p class="text-center text-muted py-5">Nenhum agendamento de checklist encontrado.</p>';
+        '<p class="text-center text-muted py-5">Nenhum agendamento de checklist pendente.</p>';
       return;
     }
+
+    agendamentos = agendamentosPendentes; // Substitui a lista original pela filtrada
   } catch (error) {
     console.error(
       "Erro ao carregar agendamentos para o calendário do dashboard:",
@@ -100,6 +107,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       // Atribui cor e classe com base na categoria de status
       switch (statusCategory) {
         case "Concluído":
+          // Este caso não deve mais ocorrer devido ao filtro, mas mantemos por segurança
           eventColor = "#28a745"; // Verde
           eventClassName += " status-concluido";
           break;
