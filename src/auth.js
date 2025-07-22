@@ -1,7 +1,7 @@
 const { promisePool } = require("./init");
 const bcrypt = require("bcrypt");
 
-// Função para autenticar
+// Função para autenticar (permanece a mesma)
 function autenticar(req, res, next) {
   if (req.session.user) {
     req.user = req.session.user;
@@ -11,14 +11,14 @@ function autenticar(req, res, next) {
   }
 }
 
-// Função para login seguro com migração automática de senhas
+// MODIFICADO: Função de login para incluir o 'nivel' na sessão
 async function loginSeguro(req, res, next) {
-  // Remova 'next' se não for usá-lo aqui
   const { matricula, senha } = req.body;
 
   try {
+    // MODIFICADO: Adicionado 'nivel' à consulta SELECT
     const [rows] = await promisePool.query(
-      "SELECT * FROM users WHERE matricula = ?", // Supondo que sua tabela de usuários seja 'users'
+      "SELECT *, nivel FROM users WHERE matricula = ?",
       [matricula]
     );
 
@@ -27,6 +27,14 @@ async function loginSeguro(req, res, next) {
     }
 
     const usuario = rows[0];
+
+    // ADICIONADO: Verificação de nível para impedir login de usuários desativados/sem permissão
+    if (usuario.nivel === 0) {
+      return res
+        .status(403)
+        .json({ message: "Usuário desativado ou sem permissão de acesso." });
+    }
+
     let senhaValida = false;
     const senhaJaCriptografada = usuario.senha.startsWith("$2b$");
 
@@ -37,7 +45,7 @@ async function loginSeguro(req, res, next) {
       if (senhaValida) {
         const hash = await bcrypt.hash(senha, 10);
         await promisePool.query(
-          "UPDATE users SET senha = ? WHERE matricula = ?", // Supondo 'users'
+          "UPDATE users SET senha = ? WHERE matricula = ?",
           [hash, matricula]
         );
         console.log(`Senha migrada para bcrypt (usuário ${matricula})`);
@@ -48,12 +56,12 @@ async function loginSeguro(req, res, next) {
       return res.status(401).json({ message: "Matrícula ou senha inválida" });
     }
 
+    // MODIFICADO: O objeto do usuário na sessão agora inclui o 'nivel'
     const { senha: _, ...userWithoutPassword } = usuario;
     req.session.user = userWithoutPassword;
 
     await registrarAuditoria(matricula, "LOGIN", "Login no sistema");
 
-    // ADICIONE ESTA LINHA PARA ENVIAR A RESPOSTA DE SUCESSO
     res.status(200).json({
       message: "Login bem-sucedido!",
       user: req.session.user,
@@ -64,63 +72,38 @@ async function loginSeguro(req, res, next) {
   }
 }
 
-// Função para verificar permissão por cargo
-function verificarPermissaoPorCargo(req, res, next) {
-  const cargo = req.user.cargo;
-  console.log(`Cargo do usuário: ${cargo}`);
-  console.log(`Rota solicitada: ${req.path}`);
+// NOVO: Middleware para verificar o nível de permissão
+// Esta função recebe o nível mínimo requerido e retorna um middleware
+function verificarNivel(nivelRequerido) {
+  return (req, res, next) => {
+    // req.user é populado pela função autenticar()
+    const nivelUsuario = req.user?.nivel;
 
-  const rotasPublicas = ["/login", "/dashboard"];
-  if (rotasPublicas.includes(req.path)) {
-    return next();
-  }
+    if (nivelUsuario === undefined) {
+      console.log("Acesso negado! Nível do usuário não definido na sessão.");
+      return res
+        .status(403)
+        .json({ message: "Acesso negado! Nível de permissão não encontrado." });
+    }
 
-  const rotasPermitidas = {
-    Motorista: ["/frota", "/checklist_veiculos"],
-    Inspetor: ["*"],
-    Técnico: ["*"],
-    Engenheiro: ["*"],
-    Encarregado: ["*"],
-    ADM: ["*"],
-    ADMIN: ["*"],
-    Construção: ["/avulsos-dashboard", "/gerar-formulario-txt-bas", "/gerar-formulario-bas-linhaviva", "/bas-importar-dados-pagina" ],
-    Transporte: ["/frota", "/frota", "/frota_controle", "/frota_veiculos_cadastro", "/frota_motoristas_cadastro", "/frota_estoque_cadastro"]
+    if (nivelUsuario >= nivelRequerido) {
+      // O usuário tem o nível necessário ou superior
+      next();
+    } else {
+      console.log(
+        `Acesso negado! Nível do usuário: ${nivelUsuario}, Nível requerido: ${nivelRequerido}`
+      );
+      res
+        .status(403)
+        .json({
+          message:
+            "Acesso negado! Você não tem permissão para acessar este recurso.",
+        });
+    }
   };
-
-  const rotasPermitidasUsuario = rotasPermitidas[cargo] || [];
-  const rotaPermitida = rotasPermitidasUsuario.some((rota) => {
-    if (rota === "*") return true;
-    return req.path === rota;
-  });
-
-  if (!rotaPermitida) {
-    console.log("Acesso negado!");
-    res.status(403).json({ message: "Acesso negado!" });
-  } else {
-    console.log("Acesso permitido!");
-    next();
-  }
 }
 
-// Função para verificar permissão geral
-function verificarPermissao(req, res, next) {
-  const cargo = req.user.cargo;
-  const cargosPermitidos = [
-    "Técnico",
-    "Engenheiro",
-    "Encarregado",
-    "ADMIN",
-    "Inspetor",
-  ];
-
-  if (cargosPermitidos.includes(cargo)) {
-    next();
-  } else {
-    res.status(403).json({ message: "Acesso negado!" });
-  }
-}
-
-// Função para registrar auditoria
+// Função para registrar auditoria (permanece a mesma)
 async function registrarAuditoria(
   matricula,
   acao,
@@ -146,21 +129,20 @@ async function registrarAuditoria(
   }
 }
 
-// Função para criar hash de senha (usar em cadastros/resets)
+// Funções de hash e verificação de senha (permanecem as mesmas)
 async function criarHashSenha(senha) {
   return await bcrypt.hash(senha, 10);
 }
 
-// Função para verificar senha (uso geral)
 async function verificarSenha(senhaDigitada, hashArmazenado) {
   return await bcrypt.compare(senhaDigitada, hashArmazenado);
 }
 
+// MODIFICADO: Exportando a nova função e removendo as antigas
 module.exports = {
   autenticar,
-  loginSeguro, // Garanta que está exportando loginSeguro
-  verificarPermissaoPorCargo,
-  verificarPermissao,
+  loginSeguro,
+  verificarNivel, // <-- Nova função
   registrarAuditoria,
   criarHashSenha,
   verificarSenha,
