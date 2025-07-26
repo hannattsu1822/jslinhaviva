@@ -45,8 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ".btn-close-lightbox"
   );
 
-  let servicoIdAtual = null;
-
   function getServicoIdFromUrl() {
     const pathParts = window.location.pathname.split("/");
     const id = pathParts[pathParts.length - 2];
@@ -168,9 +166,8 @@ document.addEventListener("DOMContentLoaded", () => {
         `/api/servicos-subestacoes/${servicoIdAtual}`
       );
 
-      // LINHA ALTERADA AQUI
-      if (servicoIdTitulo) servicoIdTitulo.textContent = `#${servico.id}`;
-
+      if (servicoIdTitulo)
+        servicoIdTitulo.textContent = `Nº ${servico.processo || servico.id}`;
       if (detalheProcesso)
         detalheProcesso.textContent = servico.processo || "Não informado";
       if (detalheSubestacao)
@@ -283,15 +280,9 @@ document.addEventListener("DOMContentLoaded", () => {
           }</div>`
         : '<div class="item-origin">Origem: Serviço Avulso</div>';
 
-      let anexosHtml = "";
-      if (item.anexos && item.anexos.length > 0) {
-        anexosHtml =
-          '<p class="item-anexos-title"><strong>Anexos de Conclusão do Item:</strong></p><div class="item-anexos-container">';
-        item.anexos.forEach((anexo) => {
-          anexosHtml += `<img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" class="item-anexo-img" onclick="openImageLightbox('${anexo.caminho_servidor}')" title="${anexo.nome_original}" />`;
-        });
-        anexosHtml += "</div>";
-      }
+      let obsConclusaoHtml = item.observacoes_conclusao_item
+        ? `<div class="item-obs-conclusao"><p><strong>Observações de Conclusão do Item:</strong></p><p>${item.observacoes_conclusao_item}</p></div>`
+        : "";
 
       itemCard.innerHTML = `
             <p class="item-description">${item.descricao_item_servico}</p>
@@ -303,13 +294,52 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div><strong>Status do Item:</strong><span class="status-badge status-${statusClasse}">${statusTexto}</span></div>
                 <div><strong>Data Conclusão do Item:</strong><span>${dataConclusaoItemFmt}</span></div>
             </div>
-            ${
-              item.observacoes_conclusao_item
-                ? `<div class="item-obs-conclusao"><p><strong>Observações de Conclusão do Item:</strong></p><p>${item.observacoes_conclusao_item}</p></div>`
-                : ""
-            }
-            ${anexosHtml}
+            ${obsConclusaoHtml}
         `;
+
+      if (item.anexos && item.anexos.length > 0) {
+        const anexosSection = document.createElement("div");
+        anexosSection.className = "item-anexos-section";
+
+        const title = document.createElement("p");
+        title.className = "item-anexos-title";
+        title.innerHTML = "<strong>Anexos de Conclusão do Item:</strong>";
+        anexosSection.appendChild(title);
+
+        const container = document.createElement("div");
+        container.className = "item-anexos-container";
+
+        item.anexos.forEach((anexo) => {
+          const caminho = anexo.caminho_servidor || "";
+          const isImage =
+            caminho.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i) != null;
+
+          if (isImage) {
+            const img = document.createElement("img");
+            img.src = caminho;
+            img.alt = anexo.nome_original;
+            img.className = "item-anexo-img";
+            img.title = `Clique para ampliar: ${anexo.nome_original}`;
+            img.addEventListener("click", () => openImageLightbox(caminho));
+            container.appendChild(img);
+          } else {
+            const link = document.createElement("a");
+            link.href = caminho;
+            link.target = "_blank";
+            link.className = "item-anexo-file";
+            link.title = `Abrir: ${anexo.nome_original}`;
+            link.innerHTML = `
+                    <span class="material-symbols-outlined">description</span>
+                    <span class="item-anexo-file-name">${anexo.nome_original}</span>
+                `;
+            container.appendChild(link);
+          }
+        });
+
+        anexosSection.appendChild(container);
+        itemCard.appendChild(anexosSection);
+      }
+
       containerItensEscopo.appendChild(itemCard);
     });
   }

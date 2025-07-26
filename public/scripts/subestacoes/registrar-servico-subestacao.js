@@ -538,6 +538,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function inverterDescricaoParaAnormalidade(descricao) {
+    const mapaInversoes = {
+      "Inexistência de": "Presença de",
+      "Ausência de": "Presença de",
+      "Bom estado de": "Mau estado de",
+      "Boas condições de": "Más condições de",
+      "Correto funcionamento de": "Falha no funcionamento de",
+      "Nível adequado de": "Nível inadequado de",
+      "Limpeza de": "Sujeira em",
+    };
+
+    for (const [chave, valor] of Object.entries(mapaInversoes)) {
+      if (descricao.startsWith(chave)) {
+        return descricao.replace(chave, valor);
+      }
+    }
+    return `Verificar/Corrigir: ${descricao}`;
+  }
+
   async function handleConfirmarSelecaoInspecoes() {
     salvarEstadoDosItensNaTela();
     const idsSelecionados = Array.from(
@@ -549,6 +568,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
+      btnConfirmarSelecaoInspecoes.disabled = true;
+      btnConfirmarSelecaoInspecoes.innerHTML = "Buscando detalhes...";
+
       const detalhesInspecoes = await fetchData(
         "/api/inspecoes/detalhes-para-servico",
         {
@@ -560,31 +582,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       detalhesInspecoes.forEach((insp) => {
         insp.itens_anormais.forEach((itemAnormal) => {
-          // Adiciona o item geral
-          const itemGeral = {
-            tipo: "inspecao",
-            temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_geral`,
-            descricao: itemAnormal.descricao_item,
-            origem: {
-              inspecao_id: insp.id,
-              formulario_inspecao_num: insp.formulario_inspecao_num,
-              subestacao_sigla: insp.subestacao_sigla,
-              resposta_id: itemAnormal.resposta_id,
-              anexos: itemAnormal.anexos_gerais || [],
-            },
-            anexos: [],
-          };
-          if (!itensDeServico.some((i) => i.temp_id === itemGeral.temp_id)) {
-            itensDeServico.push(itemGeral);
-          }
+          const temEspecificacoes =
+            itemAnormal.especificacoes && itemAnormal.especificacoes.length > 0;
+          const descricaoAnormalidade = inverterDescricaoParaAnormalidade(
+            itemAnormal.descricao_item
+          );
 
-          // Adiciona um item para cada equipamento específico
-          if (itemAnormal.especificacoes) {
+          if (temEspecificacoes) {
             itemAnormal.especificacoes.forEach((esp) => {
               const itemEspecifico = {
                 tipo: "inspecao",
                 temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_esp_${esp.id}`,
-                descricao: `${itemAnormal.descricao_item} (Equipamento: ${esp.descricao_equipamento})`,
+                descricao: `${descricaoAnormalidade} (Equipamento: ${esp.descricao_equipamento})`,
                 origem: {
                   inspecao_id: insp.id,
                   formulario_inspecao_num: insp.formulario_inspecao_num,
@@ -603,6 +612,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 itensDeServico.push(itemEspecifico);
               }
             });
+          } else {
+            const itemGeral = {
+              tipo: "inspecao",
+              temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_geral`,
+              descricao: descricaoAnormalidade,
+              origem: {
+                inspecao_id: insp.id,
+                formulario_inspecao_num: insp.formulario_inspecao_num,
+                subestacao_sigla: insp.subestacao_sigla,
+                resposta_id: itemAnormal.resposta_id,
+                especificacao_id: null,
+                anexos: itemAnormal.anexos_gerais || [],
+              },
+              anexos: [],
+            };
+            if (!itensDeServico.some((i) => i.temp_id === itemGeral.temp_id)) {
+              itensDeServico.push(itemGeral);
+            }
           }
         });
       });
@@ -610,6 +637,10 @@ document.addEventListener("DOMContentLoaded", () => {
       ocultarModal(modalSelecionarInspecaoEl);
     } catch (error) {
       alert("Erro ao buscar detalhes das inspeções selecionadas.");
+    } finally {
+      btnConfirmarSelecaoInspecoes.disabled = false;
+      btnConfirmarSelecaoInspecoes.innerHTML =
+        '<span class="material-symbols-outlined">task</span> Gerar Itens a Partir da Seleção';
     }
   }
 
@@ -661,7 +692,7 @@ document.addEventListener("DOMContentLoaded", () => {
           descricao_item_servico: item.descricao,
         };
       } else {
-        return {
+        const itemServico = {
           temp_id: item.temp_id,
           inspecao_item_id: item.origem.resposta_id,
           catalogo_defeito_id: item.defeito_id || null,
@@ -669,6 +700,10 @@ document.addEventListener("DOMContentLoaded", () => {
           tag_equipamento_alvo: item.tag,
           descricao_item_servico: item.descricao,
         };
+        if (item.origem.especificacao_id) {
+          itemServico.inspecao_especificacao_id = item.origem.especificacao_id;
+        }
+        return itemServico;
       }
     });
     formData.append("itens_escopo", JSON.stringify(itensParaEnviar));
