@@ -22,11 +22,20 @@
           <span id="servicoIdTitulo" class="header-id"></span>
         </h1>
         <div class="header-actions">
-          <button id="btnEditarServicoPagina" class="btn btn-primary">
+          <button id="btnEditarServicoPagina" class="btn btn-primary view-mode">
             <span class="material-symbols-outlined">edit</span> Editar
           </button>
-          <button id="btnImprimirPagina" class="btn btn-info">
+          <button id="btnImprimirPagina" class="btn btn-info view-mode">
             <span class="material-symbols-outlined">print</span> Imprimir
+          </button>
+          <button id="btnSalvarEdicao" class="btn btn-success edit-mode hidden">
+            <span class="material-symbols-outlined">save</span> Salvar
+          </button>
+          <button
+            id="btnCancelarEdicao"
+            class="btn btn-secondary edit-mode hidden"
+          >
+            <span class="material-symbols-outlined">cancel</span> Cancelar
           </button>
         </div>
       </header>
@@ -49,62 +58,158 @@
               <div class="details-grid">
                 <div class="detail-item">
                   <strong>Nº Processo/OS:</strong>
-                  <p id="detalheProcesso"></p>
+                  <p id="detalheProcesso" class="view-mode"></p>
+                  <input
+                    type="text"
+                    id="editProcesso"
+                    class="form-control edit-mode hidden"
+                  />
                 </div>
+
                 <div class="detail-item">
                   <strong>Subestação:</strong>
-                  <p id="detalheSubestacao"></p>
+                  <p id="detalheSubestacao" class="view-mode"></p>
+                  <select
+                    id="editSubestacao"
+                    class="form-select edit-mode hidden"
+                  ></select>
                 </div>
+
                 <div class="detail-item">
                   <strong>Tipo de Ordem:</strong>
-                  <p id="detalheTipoOrdem"></p>
+                  <p id="detalheTipoOrdem" class="view-mode"></p>
+                  <select
+                    id="editTipoOrdem"
+                    class="form-select edit-mode hidden"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="ODI">ODI</option>
+                    <option value="ODD">ODD</option>
+                    <option value="ODS">ODS</option>
+                  </select>
                 </div>
+
                 <div class="detail-item">
                   <strong>Status:</strong>
-                  <p id="detalheStatus"></p>
+                  <p id="detalheStatus" class="view-mode"></p>
+                  <select id="editStatus" class="form-select edit-mode hidden">
+                    <option value="PROGRAMADO">PROGRAMADO</option>
+                    <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                    <option value="PENDENTE_APROVACAO">
+                      PENDENTE APROVAÇÃO
+                    </option>
+                    <option value="CONCLUIDO">CONCLUÍDO</option>
+                    <option value="CANCELADO">CANCELADO</option>
+                  </select>
                 </div>
+
                 <div class="detail-item">
                   <strong>Prioridade:</strong>
-                  <p id="detalhePrioridade"></p>
+                  <p id="detalhePrioridade" class="view-mode"></p>
+                  <select
+                    id="editPrioridade"
+                    class="form-select edit-mode hidden"
+                  >
+                    <option value="BAIXA">Baixa</option>
+                    <option value="MEDIA">Média</option>
+                    <option value="ALTA">Alta</option>
+                    <option value="GRAVE">Grave</option>
+                  </select>
                 </div>
+
                 <div class="detail-item">
                   <strong>Responsável Técnico:</strong>
-                  <p id="detalheResponsavel"></p>
+                  <p id="detalheResponsavel" class="view-mode"></p>
+                  <select
+                    id="editResponsavel"
+                    class="form-select edit-mode hidden"
+                  ></select>
                 </div>
+
                 <div class="detail-item detail-full">
                   <strong>Motivo do Serviço:</strong>
-                  <p id="detalheMotivo" class="text-break"></p>
+                  <p id="detalheMotivo" class="text-break view-mode"></p>
+                  <textarea
+                    id="editMotivo"
+                    class="form-control edit-mode hidden"
+                    rows="3"
+                  ></textarea>
                 </div>
+
                 <div class="detail-item">
                   <strong>Data Prevista:</strong>
-                  <p id="detalheDataPrevista"></p>
+                  <p id="detalheDataPrevista" class="view-mode"></p>
+                  <input
+                    type="date"
+                    id="editDataPrevista"
+                    class="form-control edit-mode hidden"
+                  />
                 </div>
+
                 <div class="detail-item">
                   <strong>Horário Previsto:</strong>
-                  <p id="detalheHorarioPrevisto"></p>
+                  <p id="detalheHorarioPrevisto" class="view-mode"></p>
+                  <div
+                    class="edit-mode hidden"
+                    style="display: flex; gap: 10px"
+                  >
+                    <input
+                      type="time"
+                      id="editHorarioInicio"
+                      class="form-control"
+                      title="Horário de Início"
+                    />
+                    <input
+                      type="time"
+                      id="editHorarioFim"
+                      class="form-control"
+                      title="Horário de Fim"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <section id="secaoItensEscopo" class="card hidden">
+          <section id="secaoItensEscopo" class="card">
             <div class="card-header">
               <h2 class="card-title">
                 <span class="material-symbols-outlined">fact_check</span>
                 Itens de Escopo do Serviço
               </h2>
+              <button
+                id="btnAdicionarItem"
+                class="btn btn-success edit-mode hidden"
+              >
+                <span class="material-symbols-outlined">add_circle</span>
+                Adicionar Item
+              </button>
             </div>
             <div class="card-body">
               <div id="containerItensEscopo" class="items-container"></div>
             </div>
           </section>
 
-          <section id="secaoAnexosServico" class="card hidden">
+          <section id="secaoAnexosServico" class="card">
             <div class="card-header">
               <h2 class="card-title">
                 <span class="material-symbols-outlined">attach_file</span>
                 Anexos Gerais do Serviço
               </h2>
+              <div class="edit-mode hidden">
+                <button id="btnAdicionarAnexoGeral" class="btn btn-success">
+                  <span class="material-symbols-outlined"
+                    >add_photo_alternate</span
+                  >
+                  Anexar
+                </button>
+                <input
+                  type="file"
+                  id="inputAnexoGeral"
+                  class="hidden"
+                  multiple
+                />
+              </div>
             </div>
             <div class="card-body">
               <div
@@ -131,6 +236,128 @@
         <img src="" alt="Imagem Ampliada" id="lightboxImageDetalhesContent" />
       </div>
     </div>
+
+    <div id="modalAdicionarItem" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Adicionar Novo Item de Serviço</h3>
+          <button type="button" class="btn-close-modal" aria-label="Fechar">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="formModalItem">
+            <div class="form-group">
+              <label for="modalItemDefeito">Defeito (Catálogo):</label>
+              <input type="text" id="modalItemDefeito" class="form-control" />
+              <input type="hidden" id="modalItemDefeitoId" />
+              <div
+                id="sugestoesDefeitos"
+                class="autocomplete-suggestions"
+              ></div>
+            </div>
+            <div class="form-group">
+              <label for="modalItemEquipamento"
+                >Tipo de Equipamento (Catálogo):</label
+              >
+              <input
+                type="text"
+                id="modalItemEquipamento"
+                class="form-control"
+              />
+              <input type="hidden" id="modalItemEquipamentoId" />
+              <div
+                id="sugestoesEquipamentos"
+                class="autocomplete-suggestions"
+              ></div>
+            </div>
+            <div class="form-group">
+              <label for="modalItemTag">TAG do Equipamento Alvo:</label>
+              <input type="text" id="modalItemTag" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label for="modalItemDescricao">Descrição da Tarefa:*</label>
+              <textarea
+                id="modalItemDescricao"
+                class="form-control"
+                rows="3"
+                required
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label>Anexos do Novo Item:</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAnexarNovoItemModal"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Procurar
+                </button>
+              </div>
+              <input
+                type="file"
+                id="modalNovoItemAnexosInput"
+                class="hidden"
+                multiple
+              />
+              <div
+                id="modalPreviewAnexosNovoItem"
+                class="anexos-preview-container"
+              ></div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">
+            Cancelar
+          </button>
+          <button type="button" id="btnSalvarNovoItem" class="btn btn-primary">
+            Adicionar Item
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <template id="templateItemCardEdicao">
+      <div class="service-item-card" data-item-id="" data-temp-id="">
+        <div class="item-header">
+          <p class="item-description"></p>
+          <button class="btn-delete-item edit-mode hidden" title="Excluir Item">
+            ×
+          </button>
+        </div>
+        <div class="item-details-grid"></div>
+        <div class="item-anexos-section">
+          <div class="item-anexos-header">
+            <p class="item-anexos-title"><strong>Anexos do Item:</strong></p>
+            <button
+              class="btn-add-anexo-item btn btn-sm btn-success edit-mode hidden"
+            >
+              <span class="material-symbols-outlined">add</span> Anexar
+            </button>
+            <input type="file" class="input-anexo-item hidden" multiple />
+          </div>
+          <div class="item-anexos-container"></div>
+        </div>
+      </div>
+    </template>
+
+    <template id="templateAnexoCard">
+      <div class="anexo-preview-card" data-anexo-id="">
+        <div class="anexo-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+        </div>
+        <button class="btn-delete-anexo edit-mode hidden" title="Excluir Anexo">
+          ×
+        </button>
+      </div>
+    </template>
 
     <script src="/scripts/subestacoes/servico-detalhes-pagina.js"></script>
   </body>
