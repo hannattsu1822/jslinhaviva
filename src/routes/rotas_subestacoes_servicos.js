@@ -513,24 +513,42 @@ router.put(
 
       const parsedAnexosParaDeletar = JSON.parse(anexosParaDeletar || "[]");
       if (parsedAnexosParaDeletar.length > 0) {
-        const [anexosDb] = await connection.query(
-          "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id IN (?)",
+        const [anexosGeraisDb] = await connection.query(
+          "SELECT id, caminho_servidor FROM servicos_subestacoes_anexos WHERE id IN (?)",
           [parsedAnexosParaDeletar]
         );
-        for (const anexo of anexosDb) {
-          const fullPath = path.join(
-            projectRootDir,
-            "public",
-            anexo.caminho_servidor
-          );
-          fs.unlink(fullPath).catch((err) =>
-            console.warn(`Falha ao deletar arquivo: ${fullPath}`)
+        const [anexosItensDb] = await connection.query(
+          "SELECT id, caminho_servidor FROM servico_item_escopo_anexos WHERE id IN (?)",
+          [parsedAnexosParaDeletar]
+        );
+
+        const todosAnexosParaDeletar = [...anexosGeraisDb, ...anexosItensDb];
+
+        for (const anexo of todosAnexosParaDeletar) {
+          if (anexo.caminho_servidor) {
+            const fullPath = path.join(
+              projectRootDir,
+              "public",
+              anexo.caminho_servidor
+            );
+            fs.unlink(fullPath).catch((err) =>
+              console.warn(`Falha ao deletar arquivo físico: ${fullPath}`)
+            );
+          }
+        }
+
+        if (anexosGeraisDb.length > 0) {
+          await connection.query(
+            "DELETE FROM servicos_subestacoes_anexos WHERE id IN (?)",
+            [parsedAnexosParaDeletar]
           );
         }
-        await connection.query(
-          "DELETE FROM servicos_subestacoes_anexos WHERE id IN (?)",
-          [parsedAnexosParaDeletar]
-        );
+        if (anexosItensDb.length > 0) {
+          await connection.query(
+            "DELETE FROM servico_item_escopo_anexos WHERE id IN (?)",
+            [parsedAnexosParaDeletar]
+          );
+        }
       }
 
       await connection.query(
