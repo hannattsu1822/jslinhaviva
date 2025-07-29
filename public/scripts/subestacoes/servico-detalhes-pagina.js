@@ -182,6 +182,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function openImageLightbox(imageUrl) {
+    if (lightboxImageDetalhesContent && imageLightboxDetalhesEl) {
+      lightboxImageDetalhesContent.src = imageUrl;
+      imageLightboxDetalhesEl.classList.remove("hidden");
+    }
+  }
+
+  function hideLightbox() {
+    if (imageLightboxDetalhesEl) {
+      imageLightboxDetalhesEl.classList.add("hidden");
+    }
+  }
+
   function entrarModoEdicao() {
     document
       .querySelectorAll(".view-mode")
@@ -272,8 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderizarInformacoesGerais(servico) {
-    if (servicoIdTitulo)
-      servicoIdTitulo.textContent = `#${servico.processo || servico.id}`;
+    if (servicoIdTitulo) servicoIdTitulo.textContent = `#${servico.id}`;
     if (detalheProcesso)
       detalheProcesso.textContent = servico.processo || "Não informado";
     if (detalheSubestacao)
@@ -373,34 +385,53 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function renderAnexo(anexoData, isNewFile = false) {
+    const clone = templateAnexoCard.content.cloneNode(true);
+    const anexoCard = clone.querySelector(".anexo-preview-card");
+    const link = anexoCard.querySelector(".anexo-link");
+    const imgPreview = anexoCard.querySelector(".anexo-preview-img");
+    const fileIcon = anexoCard.querySelector(".file-icon");
+    const fileName = anexoCard.querySelector(".file-name");
+    const btnDeleteAnexo = anexoCard.querySelector(".btn-delete-anexo");
+
+    if (isNewFile) {
+      fileName.textContent = anexoData.name;
+      if (anexoData.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          imgPreview.src = e.target.result;
+          imgPreview.classList.remove("hidden");
+          fileIcon.classList.add("hidden");
+        };
+        reader.readAsDataURL(anexoData);
+      }
+    } else {
+      anexoCard.dataset.anexoId = anexoData.id;
+      fileName.textContent = anexoData.nome_original;
+      link.href = anexoData.caminho_servidor;
+      const isImage =
+        anexoData.caminho_servidor &&
+        anexoData.caminho_servidor.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i);
+      if (isImage) {
+        imgPreview.src = anexoData.caminho_servidor;
+        imgPreview.classList.remove("hidden");
+        fileIcon.classList.add("hidden");
+        link.addEventListener("click", (e) => {
+          if (!e.target.classList.contains("btn-delete-anexo")) {
+            e.preventDefault();
+            openImageLightbox(anexoData.caminho_servidor);
+          }
+        });
+      }
+    }
+    return { anexoCard, btnDeleteAnexo };
+  }
+
   function renderizarAnexos(anexos, container, parentId, isEditMode) {
     container.innerHTML = "";
     if (anexos) {
       anexos.forEach((anexo) => {
-        const clone = templateAnexoCard.content.cloneNode(true);
-        const anexoCard = clone.querySelector(".anexo-preview-card");
-        anexoCard.dataset.anexoId = anexo.id;
-
-        const imgPreview = anexoCard.querySelector(".anexo-preview-img");
-        const fileIcon = anexoCard.querySelector(".file-icon");
-        anexoCard.querySelector(".file-name").textContent = anexo.nome_original;
-
-        const isImage =
-          anexo.caminho_servidor &&
-          anexo.caminho_servidor.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i);
-        if (isImage) {
-          imgPreview.src = anexo.caminho_servidor;
-          imgPreview.classList.remove("hidden");
-          fileIcon.classList.add("hidden");
-          anexoCard.addEventListener("click", (e) => {
-            if (!e.target.classList.contains("btn-delete-anexo")) {
-              e.preventDefault();
-              openImageLightbox(anexo.caminho_servidor);
-            }
-          });
-        }
-
-        const btnDeleteAnexo = anexoCard.querySelector(".btn-delete-anexo");
+        const { anexoCard, btnDeleteAnexo } = renderAnexo(anexo, false);
         if (isEditMode) {
           btnDeleteAnexo.classList.remove("hidden");
         }
@@ -414,25 +445,19 @@ document.addEventListener("DOMContentLoaded", () => {
               const item = serviceDataWorkingCopy.itens_escopo.find(
                 (i) => (i.item_escopo_id || i.temp_id) === parentId
               );
-              if (item) {
+              if (item)
                 item.anexos = item.anexos.filter((a) => a.id !== anexo.id);
-              }
             }
             renderizarPaginaCompleta(serviceDataWorkingCopy, true);
           }
         });
-
-        container.appendChild(clone);
+        container.appendChild(anexoCard);
       });
     }
 
     const novosAnexos = novosAnexosMap.get(parentId) || [];
     novosAnexos.forEach((file) => {
-      const clone = templateAnexoCard.content.cloneNode(true);
-      const anexoCard = clone.querySelector(".anexo-preview-card");
-      anexoCard.querySelector(".file-name").textContent = file.name;
-
-      const btnDeleteAnexo = anexoCard.querySelector(".btn-delete-anexo");
+      const { anexoCard, btnDeleteAnexo } = renderAnexo(file, true);
       btnDeleteAnexo.classList.remove("hidden");
       btnDeleteAnexo.addEventListener("click", () => {
         const currentFiles = novosAnexosMap.get(parentId) || [];
@@ -442,8 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         renderizarPaginaCompleta(serviceDataWorkingCopy, true);
       });
-
-      container.appendChild(clone);
+      container.appendChild(anexoCard);
     });
   }
 
@@ -495,18 +519,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderizarPreviewAnexosNovoItem() {
     modalPreviewAnexosNovoItem.innerHTML = "";
     novosAnexosParaItemModal.forEach((file, index) => {
-      const clone = templateAnexoCard.content.cloneNode(true);
-      const anexoCard = clone.querySelector(".anexo-preview-card");
-      anexoCard.querySelector(".file-name").textContent = file.name;
-
-      const btnDelete = anexoCard.querySelector(".btn-delete-anexo");
-      btnDelete.classList.remove("hidden");
-      btnDelete.addEventListener("click", () => {
+      const { anexoCard, btnDeleteAnexo } = renderAnexo(file, true);
+      btnDeleteAnexo.classList.remove("hidden");
+      btnDeleteAnexo.addEventListener("click", () => {
         novosAnexosParaItemModal.splice(index, 1);
         renderizarPreviewAnexosNovoItem();
       });
-
-      modalPreviewAnexosNovoItem.appendChild(clone);
+      modalPreviewAnexosNovoItem.appendChild(anexoCard);
     });
   }
 
@@ -622,6 +641,17 @@ document.addEventListener("DOMContentLoaded", () => {
         '<span class="material-symbols-outlined">save</span> Salvar';
     }
   });
+
+  if (imageLightboxDetalhesEl) {
+    imageLightboxDetalhesEl.addEventListener("click", (e) => {
+      if (e.target === imageLightboxDetalhesEl) {
+        hideLightbox();
+      }
+    });
+  }
+  if (lightboxCloseBtn) {
+    lightboxCloseBtn.addEventListener("click", hideLightbox);
+  }
 
   async function init() {
     await popularSelectsEdicao();

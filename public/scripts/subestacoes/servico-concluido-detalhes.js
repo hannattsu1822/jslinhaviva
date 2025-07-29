@@ -166,8 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `/api/servicos-subestacoes/${servicoIdAtual}`
       );
 
-      if (servicoIdTitulo)
-        servicoIdTitulo.textContent = `Nº ${servico.processo || servico.id}`;
+      if (servicoIdTitulo) servicoIdTitulo.textContent = `#${servico.id}`;
       if (detalheProcesso)
         detalheProcesso.textContent = servico.processo || "Não informado";
       if (detalheSubestacao)
