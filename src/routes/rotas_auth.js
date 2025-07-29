@@ -60,6 +60,7 @@ router.get("/api/me", autenticar, (req, res) => {
       nome: req.user.nome,
       cargo: req.user.cargo,
       matricula: req.user.matricula,
+      nivel: req.user.nivel, // <-- LINHA ADICIONADA AQUI
     });
   } else {
     res.status(401).json({ message: "Usuário não autenticado." });
