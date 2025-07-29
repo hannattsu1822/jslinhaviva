@@ -231,12 +231,8 @@ document.addEventListener("DOMContentLoaded", () => {
           <td class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
           <td class="actions-column">
               <div class="actions-wrapper">
-                  <button class="btn text-info btn-ver-detalhes" data-id="${
-                    serv.id
-                  }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-                  <button class="btn text-primary btn-editar-servico" data-id="${
-                    serv.id
-                  }" title="Editar Serviço"><span class="material-symbols-outlined">edit</span></button>
+                  <button class="btn text-info btn-ver-detalhes" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
+                  <button class="btn text-primary btn-editar-servico" title="Editar Serviço"><span class="material-symbols-outlined">edit</span></button>
                   <button class="btn text-secondary btn-gerenciar-itens" data-id="${
                     serv.id
                   }" data-processo="${
@@ -259,17 +255,17 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
           </td>`;
 
-      tr.querySelector(".btn-ver-detalhes")?.addEventListener("click", (e) =>
-        window.open(
-          `/servicos/${e.currentTarget.dataset.id}/detalhes-pagina`,
-          "_blank"
-        )
+      const servicoIdLimpo = parseInt(serv.id, 10);
+
+      tr.querySelector(".btn-ver-detalhes")?.addEventListener("click", () =>
+        window.open(`/servicos/${servicoIdLimpo}/detalhes-pagina`, "_blank")
       );
       tr.querySelector(".btn-editar-servico")?.addEventListener(
         "click",
-        (e) =>
-          (window.location.href = `/registrar-servico-subestacao?editarId=${e.currentTarget.dataset.id}`)
+        () =>
+          (window.location.href = `/servicos/${servicoIdLimpo}/detalhes-pagina?modo=editar`)
       );
+
       tr.querySelector(".btn-concluir-servico")?.addEventListener(
         "click",
         (e) =>
@@ -371,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderizarPreviewAnexosConclusao();
       });
 
-      previewAnexosConclusaoItem.appendChild(anexoItem);
+      previewAnexosConclusaoItem.appendChild(clone);
     });
   }
 

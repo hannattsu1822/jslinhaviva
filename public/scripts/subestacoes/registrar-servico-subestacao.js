@@ -789,14 +789,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "id"
     );
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const servicoIdParaEditarUrl = urlParams.get("editarId");
-
-    if (servicoIdParaEditarUrl) {
-      console.log("Modo de edição ainda não implementado.");
-    } else {
-      mostrarModal(modalPreSelecaoServicoEl);
-    }
+    mostrarModal(modalPreSelecaoServicoEl);
   }
 
   init();
