@@ -14,6 +14,12 @@ app.use(cors());
 
 const projectRootDir = path.resolve(__dirname, "..");
 
+app.set("view engine", "ejs");
+app.set("views", path.join(projectRootDir, "views"));
+
+app.use("/static", express.static(path.join(projectRootDir, "views/static")));
+app.use("/scripts", express.static(path.join(projectRootDir, "views/scripts")));
+
 const publicDir = path.join(projectRootDir, "public");
 app.use(express.static(publicDir));
 console.log(`Servindo arquivos estáticos da pasta 'public' em: ${publicDir}`);
@@ -143,16 +149,6 @@ app.use(
     secret: sessionSecret,
     resave: false,
     saveUninitialized: true,
-    // ====================== ALTERAÇÃO IMPORTANTE AQUI ======================
-    // A opção 'secure' foi definida como 'false'.
-    // Isso é necessário para que a sessão funcione em um ambiente de desenvolvimento
-    // ou em uma VPS que está sendo acessada via HTTP (e não HTTPS).
-    // Se 'secure' estivesse 'true', o navegador só enviaria o cookie de sessão
-    // em conexões seguras (HTTPS), o que causaria a falha no redirecionamento
-    // após o login no seu cenário atual.
-    // Se no futuro você implementar HTTPS, pode voltar para:
-    // cookie: { secure: process.env.NODE_ENV === "production" },
-    // =======================================================================
     cookie: { secure: false },
   })
 );

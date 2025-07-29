@@ -1,7 +1,6 @@
-// src/routes.js
 const express = require("express");
 const path = require("path");
-const { autenticar } = require("./auth"); // Ajuste o caminho se necessário
+const { autenticar } = require("./auth");
 
 const rotasAuth = require("./routes/rotas_auth");
 const rotasAuditoria = require("./routes/rotas_auditoria");
@@ -14,12 +13,11 @@ const rotasFibraOptica = require("./routes/rotas_fibra_optica");
 const rotasInspecoesRedes = require("./routes/rotas_inspecoes_redes");
 const rotasAvulsos = require("./routes/rotas_avulsos");
 const rotasRelatorios = require("./routes/rotas_relatorios");
-// REMOVIDO: const rotasSubestacoes = require("./routes/rotas_subestacoes");
-
-// ADICIONADO: Novas importações para subestações
 const rotasSubestacoesInfra = require("./routes/rotas_subestacoes_infra");
 const rotasSubestacoesServicos = require("./routes/rotas_subestacoes_servicos");
 const rotasSubestacoesChecklist = require("./routes/rotas_subestacoes_checklist");
+const rotasPaginasDirect = require("./routes/rotas_paginas_direct");
+const rotasGerenciamentoUsuarios = require("./routes/gerenciamentoUsuarios");
 
 const router = express.Router();
 
@@ -34,12 +32,11 @@ router.use("/", rotasFibraOptica);
 router.use("/", rotasInspecoesRedes);
 router.use("/", rotasAvulsos);
 router.use("/", rotasRelatorios);
-// REMOVIDO: router.use("/", rotasSubestacoes);
-
-// ADICIONADO: Adicionando os novos módulos de rota para subestações
 router.use("/", rotasSubestacoesInfra);
 router.use("/", rotasSubestacoesServicos);
 router.use("/", rotasSubestacoesChecklist);
+router.use("/", rotasPaginasDirect);
+router.use("/", rotasGerenciamentoUsuarios);
 
 router.get("/", (req, res) => {
   if (req.session && req.session.user) {
