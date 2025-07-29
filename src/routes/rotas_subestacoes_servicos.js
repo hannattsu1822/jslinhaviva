@@ -472,8 +472,6 @@ router.put(
   upload.any(),
   async (req, res) => {
     const { servicoId } = req.params;
-    if (isNaN(parseInt(servicoId)))
-      return res.status(400).json({ message: `ID inválido: ${servicoId}` });
     const {
       subestacao_id,
       processo,
@@ -484,42 +482,165 @@ router.put(
       responsavel_id,
       status,
       prioridade,
-      data_conclusao,
-      observacoes_conclusao,
-      inspecao_ids_vinculadas,
-      itens_escopo,
       tipo_ordem,
+      itensParaDeletar,
+      anexosParaDeletar,
+      novosItens,
     } = req.body;
-    const arquivosNovos = req.files;
+    const novosArquivos = req.files;
+
+    if (isNaN(parseInt(servicoId))) {
+      return res.status(400).json({ message: `ID inválido: ${servicoId}` });
+    }
 
     const connection = await promisePool.getConnection();
+    let arquivosMovidosComSucesso = [];
+
     try {
       await connection.beginTransaction();
 
-      const [itensEscopoAntigos] = await connection.query(
-        "SELECT id FROM servico_itens_escopo WHERE servico_id = ?",
-        [servicoId]
-      );
-      if (itensEscopoAntigos.length > 0) {
-        const idsItensAntigos = itensEscopoAntigos.map((item) => item.id);
+      const parsedItensParaDeletar = JSON.parse(itensParaDeletar || "[]");
+      if (parsedItensParaDeletar.length > 0) {
         await connection.query(
           "DELETE FROM servico_item_escopo_anexos WHERE item_escopo_id IN (?)",
-          [idsItensAntigos]
+          [parsedItensParaDeletar]
+        );
+        await connection.query(
+          "DELETE FROM servico_itens_escopo WHERE id IN (?)",
+          [parsedItensParaDeletar]
         );
       }
+
+      const parsedAnexosParaDeletar = JSON.parse(anexosParaDeletar || "[]");
+      if (parsedAnexosParaDeletar.length > 0) {
+        const [anexosDb] = await connection.query(
+          "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id IN (?)",
+          [parsedAnexosParaDeletar]
+        );
+        for (const anexo of anexosDb) {
+          const fullPath = path.join(
+            projectRootDir,
+            "public",
+            anexo.caminho_servidor
+          );
+          fs.unlink(fullPath).catch((err) =>
+            console.warn(`Falha ao deletar arquivo: ${fullPath}`)
+          );
+        }
+        await connection.query(
+          "DELETE FROM servicos_subestacoes_anexos WHERE id IN (?)",
+          [parsedAnexosParaDeletar]
+        );
+      }
+
       await connection.query(
-        "DELETE FROM servico_itens_escopo WHERE servico_id = ?",
-        [servicoId]
+        `UPDATE servicos_subestacoes SET
+          subestacao_id = ?, processo = ?, motivo = ?, data_prevista = ?,
+          horario_inicio = ?, horario_fim = ?, responsavel_id = ?,
+          status = ?, prioridade = ?, tipo_ordem = ?
+        WHERE id = ?`,
+        [
+          subestacao_id,
+          processo,
+          motivo,
+          data_prevista,
+          horario_inicio,
+          horario_fim,
+          responsavel_id,
+          status,
+          prioridade,
+          tipo_ordem,
+          servicoId,
+        ]
       );
 
+      const parsedNovosItens = JSON.parse(novosItens || "[]");
+      const itemTempIdMap = new Map();
+      for (const item of parsedNovosItens) {
+        const [result] = await connection.query(
+          `INSERT INTO servico_itens_escopo (servico_id, descricao_item_servico, tag_equipamento_alvo, catalogo_defeito_id, catalogo_equipamento_id, status_item_escopo) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            servicoId,
+            item.descricao_item_servico,
+            item.tag_equipamento_alvo,
+            item.catalogo_defeito_id,
+            item.catalogo_equipamento_id,
+            "PENDENTE",
+          ]
+        );
+        itemTempIdMap.set(item.temp_id, result.insertId);
+      }
+
+      const servicoUploadDir = path.join(
+        uploadsSubestacoesDir,
+        "servicos",
+        `servico_${String(servicoId)}`
+      );
+      await fs.mkdir(servicoUploadDir, { recursive: true });
+
+      for (const file of novosArquivos) {
+        const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
+          /[^a-zA-Z0-9.\-_]/g,
+          "_"
+        )}`;
+        const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
+        await fs.rename(file.path, caminhoDestino);
+        arquivosMovidosComSucesso.push(caminhoDestino);
+        const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
+
+        const fieldParts = file.fieldname.split("_");
+        const parentId = fieldParts.slice(1).join("_");
+
+        if (parentId === "geral") {
+          await connection.query(
+            `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              servicoId,
+              file.originalname,
+              `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
+              file.mimetype,
+              file.size,
+              "DOCUMENTO_GERAL",
+            ]
+          );
+        } else {
+          const itemEscopoId = itemTempIdMap.get(parentId) || parentId;
+          await connection.query(
+            `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?, ?, ?, ?, ?)`,
+            [
+              itemEscopoId,
+              file.originalname,
+              `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
+              file.mimetype,
+              file.size,
+            ]
+          );
+        }
+      }
+
       await connection.commit();
+      if (req.user && req.user.matricula) {
+        await registrarAuditoria(
+          req.user.matricula,
+          "UPDATE_SERVICO_SUBESTACAO_FULL",
+          `Serviço ID ${servicoId} (Proc: ${processo}) atualizado com itens e anexos.`
+        );
+      }
       res.json({ message: "Serviço atualizado com sucesso!" });
     } catch (error) {
       await connection.rollback();
-      res.status(500).json({
-        message: "Erro ao atualizar serviço.",
-        detalhes: error.message,
-      });
+      for (const caminho of arquivosMovidosComSucesso) {
+        try {
+          await fs.unlink(caminho);
+        } catch (e) {}
+      }
+      console.error("Erro ao atualizar serviço:", error);
+      res
+        .status(500)
+        .json({
+          message: "Erro interno ao atualizar serviço.",
+          detalhes: error.message,
+        });
     } finally {
       if (connection) connection.release();
     }
@@ -554,9 +675,6 @@ router.delete(
         "DELETE FROM servico_itens_escopo WHERE servico_id = ?",
         [servicoId]
       );
-
-      // A LINHA PROBLEMÁTICA FOI REMOVIDA DAQUI.
-      // O código tentava acessar a tabela 'servicos_inspecoes_vinculadas', que não existe.
 
       await connection.query(
         "DELETE FROM servicos_subestacoes_anexos WHERE id_servico = ?",
@@ -1108,8 +1226,6 @@ router.put(
           ? "CONCLUIDO_COM_RESSALVAS"
           : "CONCLUIDO";
 
-        // ===== INÍCIO DA CORREÇÃO =====
-        // Pega a hora atual formatada para o Brasil (ex: "14:53:00")
         const horaConclusao = new Date().toLocaleTimeString("pt-BR", {
           hour12: false,
         });
@@ -1119,11 +1235,10 @@ router.put(
           [
             statusFinalServico,
             new Date().toISOString().split("T")[0],
-            horaConclusao, // Adiciona a hora atual na query
+            horaConclusao,
             servico_id,
           ]
         );
-        // ===== FIM DA CORREÇÃO =====
       }
 
       await connection.commit();
