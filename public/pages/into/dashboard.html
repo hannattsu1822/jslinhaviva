@@ -23,7 +23,6 @@
       href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/main.min.css"
       rel="stylesheet"
     />
-    <!-- NOVO LINK PARA O CSS DO CALENDÁRIO NA PASTA 'into' -->
     <link rel="stylesheet" href="/static/css/into/dashboard_calendar.css" />
   </head>
 
@@ -98,19 +97,6 @@
               <i class="fas fa-truck fa-fw me-2"></i>Frota
             </a>
           </li>
-          <li
-            class="nav-item"
-            id="sidebar-auditoria-link"
-            style="display: none"
-          >
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('auditoria');"
-              class="nav-link"
-            >
-              <i class="fas fa-search fa-fw me-2"></i>Auditoria
-            </a>
-          </li>
           <li class="nav-item">
             <a
               href="#"
@@ -155,6 +141,28 @@
               class="nav-link"
             >
               <i class="fas fa-hand-sparkles fa-fw me-2"></i>Avulsos
+            </a>
+          </li>
+          <li class="nav-item" id="sidebar-gestao-link" style="display: none">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('dashboard-gestor');"
+              class="nav-link"
+            >
+              <i class="fas fa-cogs fa-fw me-2"></i>Painel de Gestão
+            </a>
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-auditoria-link"
+            style="display: none"
+          >
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('auditoria');"
+              class="nav-link"
+            >
+              <i class="fas fa-search fa-fw me-2"></i>Auditoria
             </a>
           </li>
         </ul>
@@ -217,27 +225,6 @@
                     <i class="fas fa-truck"></i>
                   </div>
                   <h3 class="card-title mb-0">Frota</h3>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div
-            id="auditoria-card"
-            class="col-md-6 col-lg-3"
-            style="display: none"
-          >
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('auditoria')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-danger mx-auto mb-2">
-                    <i class="fas fa-search"></i>
-                  </div>
-                  <h3 class="card-title mb-0">Auditoria</h3>
                 </div>
               </div>
             </div>
@@ -336,6 +323,44 @@
               </div>
             </div>
           </div>
+          <div id="gestao-card" class="col-md-6 col-lg-3" style="display: none">
+            <div
+              class="card glass-card h-100"
+              onclick="navigateTo('dashboard-gestor')"
+            >
+              <div
+                class="card-body d-flex align-items-center justify-content-center"
+              >
+                <div class="text-center">
+                  <div class="icon-circle bg-dark mx-auto mb-2">
+                    <i class="fas fa-cogs"></i>
+                  </div>
+                  <h3 class="card-title mb-0">Painel de Gestão</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            id="auditoria-card"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <div
+              class="card glass-card h-100"
+              onclick="navigateTo('auditoria')"
+            >
+              <div
+                class="card-body d-flex align-items-center justify-content-center"
+              >
+                <div class="text-center">
+                  <div class="icon-circle bg-danger mx-auto mb-2">
+                    <i class="fas fa-search"></i>
+                  </div>
+                  <h3 class="card-title mb-0">Auditoria</h3>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="row mt-4">
@@ -414,7 +439,7 @@
               class="btn btn-primary"
               data-bs-dismiss="modal"
             >
-              Entendido
+              Entendi
             </button>
           </div>
         </div>
@@ -441,6 +466,38 @@
           if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
         }
 
+        fetch("/api/me")
+          .then((response) => {
+            if (!response.ok) {
+              window.location.href = "/login";
+              return;
+            }
+            return response.json();
+          })
+          .then((user) => {
+            if (!user) return;
+            const userLevel = user.nivel || 0;
+            const auditoriaCard = document.getElementById("auditoria-card");
+            const auditoriaLink = document.getElementById(
+              "sidebar-auditoria-link"
+            );
+            const gestaoCard = document.getElementById("gestao-card");
+            const gestaoLink = document.getElementById("sidebar-gestao-link");
+
+            if (userLevel >= 10) {
+              if (auditoriaCard) auditoriaCard.style.display = "block";
+              if (auditoriaLink) auditoriaLink.style.display = "block";
+            }
+            if (userLevel >= 4) {
+              if (gestaoCard) gestaoCard.style.display = "block";
+              if (gestaoLink) gestaoLink.style.display = "block";
+            }
+          })
+          .catch((error) => {
+            console.error("Erro ao buscar dados do usuário:", error);
+            window.location.href = "/login";
+          });
+
         window.navigateTo = async function (page) {
           const existingPages = [
             "dashboard",
@@ -453,6 +510,7 @@
             "fibra-optica",
             "inspecoes-redes",
             "avulsos-dashboard",
+            "dashboard-gestor",
           ];
 
           if (!existingPages.includes(page)) {
@@ -464,14 +522,7 @@
             return;
           }
 
-          let targetUrl = "";
-          if (page === "dashboard") {
-            targetUrl = "/dashboard";
-          } else if (page === "subestacoes-dashboard") {
-            targetUrl = "/subestacoes-dashboard";
-          } else {
-            targetUrl = `/${page}`;
-          }
+          let targetUrl = `/${page}`;
 
           if (window.location.pathname === targetUrl && page === "dashboard") {
             return;
