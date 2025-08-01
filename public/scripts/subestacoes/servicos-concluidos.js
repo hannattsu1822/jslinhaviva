@@ -42,6 +42,10 @@ document.addEventListener("DOMContentLoaded", () => {
     "templateAnexoPreviewPosterior"
   );
 
+  const paginationContainer = document.getElementById("paginationContainer");
+  let currentPage = 1;
+  const a_cada = 10;
+
   let acaoConfirmadaCallback = null;
   let anexosPosteriorTemporarios = [];
 
@@ -98,28 +102,58 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function carregarServicos(params = {}) {
+  async function carregarServicos(page = 1) {
     if (!corpoTabelaServicosElem || !nenhumServicoMsgElem) return;
 
+    currentPage = page;
     corpoTabelaServicosElem.innerHTML =
       '<tr><td colspan="9"><div class="feedback-message">Carregando histórico...</div></td></tr>';
     nenhumServicoMsgElem.classList.add("d-none");
 
+    const params = Object.fromEntries(
+      new FormData(formFiltrosServicos).entries()
+    );
     if (!params.status) {
       params.status = "CONCLUIDO";
     }
+
+    params.page = currentPage;
+    params.limit = a_cada;
 
     const queryParams = new URLSearchParams(params);
     const url = `/api/servicos-subestacoes?${queryParams.toString()}`;
 
     try {
-      const servicos = await fetchData(url);
-      popularTabelaServicos(servicos);
+      const response = await fetchData(url);
+      popularTabelaServicos(response.data);
+      renderizarPaginacao(response.total, response.page, response.totalPages);
     } catch (error) {
       if (corpoTabelaServicosElem) {
         corpoTabelaServicosElem.innerHTML =
           '<tr><td colspan="9"><div class="feedback-message error">Erro ao carregar o histórico.</div></td></tr>';
       }
+      if (paginationContainer) paginationContainer.innerHTML = "";
+    }
+  }
+
+  function renderizarPaginacao(totalItems, page, totalPages) {
+    if (!paginationContainer) return;
+    paginationContainer.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    for (let i = 1; i <= totalPages; i++) {
+      const pageButton = document.createElement("button");
+      pageButton.textContent = i;
+      pageButton.className = "pagination-button";
+      if (i === page) {
+        pageButton.classList.add("active");
+        pageButton.disabled = true;
+      }
+      pageButton.addEventListener("click", () => {
+        carregarServicos(i);
+      });
+      paginationContainer.appendChild(pageButton);
     }
   }
 
@@ -138,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const statusCls = (serv.status || "desconhecido")
         .toLowerCase()
         .replace(/_/g, "");
-      const statusTxt = (serv.status || "DESCONHECIDO").replace("_", " ");
+      const statusTxt = (serv.status || "DESCONHECIDO").replace(/_/g, " ");
       const dataConclusaoFormatada = serv.data_conclusao
         ? new Date(serv.data_conclusao + "T00:00:00Z").toLocaleDateString(
             "pt-BR",
@@ -219,9 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         alert("Serviço reaberto com sucesso!");
         ocultarModal(modalConfirmacaoEl);
-        carregarServicos(
-          Object.fromEntries(new FormData(formFiltrosServicos).entries())
-        );
+        carregarServicos(currentPage);
       } catch (error) {
         alert(`Falha ao reabrir serviço: ${error.message}`);
       }
@@ -289,10 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (formFiltrosServicos) {
     formFiltrosServicos.addEventListener("submit", (event) => {
       event.preventDefault();
-      const params = Object.fromEntries(
-        new FormData(formFiltrosServicos).entries()
-      );
-      carregarServicos(params);
+      carregarServicos(1);
     });
   }
 
@@ -300,7 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnLimparFiltrosServicos.addEventListener("click", () => {
       formFiltrosServicos.reset();
       filtroStatusSelect.value = "CONCLUIDO";
-      carregarServicos({ status: "CONCLUIDO" });
+      carregarServicos(1);
     });
   }
 

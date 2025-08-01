@@ -59,6 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnSalvarGerenciamentoItens"
   );
 
+  const paginationContainer = document.getElementById("paginationContainer");
+  let currentPage = 1;
+  const a_cada = 10;
+
   let encarregadosCache = [];
   let currentUser = null;
   let anexosConclusaoTemporarios = [];
@@ -169,23 +173,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function carregarServicos(params = {}) {
+  async function carregarServicos(page = 1) {
     if (!corpoTabelaServicosElem || !nenhumServicoMsgElem) return;
 
+    currentPage = page;
     corpoTabelaServicosElem.innerHTML =
       '<tr><td colspan="10"><div class="feedback-message">Carregando serviços...</div></td></tr>';
     nenhumServicoMsgElem.classList.add("d-none");
+    const params = Object.fromEntries(
+      new FormData(formFiltrosServicos).entries()
+    );
+    params.page = currentPage;
+    params.limit = a_cada;
+
     const queryParams = new URLSearchParams(params);
 
     const url = `/api/servicos-subestacoes?${queryParams.toString()}`;
     try {
-      const servicos = await fetchData(url);
-      popularTabelaServicos(servicos);
+      const response = await fetchData(url);
+      popularTabelaServicos(response.data);
+      renderizarPaginacao(response.total, response.page, response.totalPages);
     } catch (error) {
       if (corpoTabelaServicosElem) {
         corpoTabelaServicosElem.innerHTML =
           '<tr><td colspan="10"><div class="feedback-message text-danger">Erro ao carregar os serviços.</div></td></tr>';
       }
+      if (paginationContainer) paginationContainer.innerHTML = "";
+    }
+  }
+
+  function renderizarPaginacao(totalItems, page, totalPages) {
+    if (!paginationContainer) return;
+    paginationContainer.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    for (let i = 1; i <= totalPages; i++) {
+      const pageButton = document.createElement("button");
+      pageButton.textContent = i;
+      pageButton.className = "pagination-button";
+      if (i === page) {
+        pageButton.classList.add("active");
+        pageButton.disabled = true;
+      }
+      pageButton.addEventListener("click", () => {
+        carregarServicos(i);
+      });
+      paginationContainer.appendChild(pageButton);
     }
   }
 
@@ -294,16 +328,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (formFiltrosServicos) {
     formFiltrosServicos.addEventListener("submit", (event) => {
       event.preventDefault();
-      const formData = new FormData(formFiltrosServicos);
-      const params = Object.fromEntries(formData.entries());
-      carregarServicos(params);
+      carregarServicos(1);
     });
   }
 
   if (btnLimparFiltrosServicos && formFiltrosServicos) {
     btnLimparFiltrosServicos.addEventListener("click", () => {
       formFiltrosServicos.reset();
-      carregarServicos();
+      carregarServicos(1);
     });
   }
 
@@ -331,9 +363,7 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "DELETE",
       });
       alert("Serviço excluído com sucesso!");
-      carregarServicos(
-        Object.fromEntries(new FormData(formFiltrosServicos).entries())
-      );
+      carregarServicos(currentPage);
     } catch (error) {
       alert(`Falha ao excluir serviço: ${error.message}`);
     }
@@ -481,9 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       alert("Status do item atualizado com sucesso!");
       ocultarModal(modalConcluirItemEl);
-      carregarServicos(
-        Object.fromEntries(new FormData(formFiltrosServicos).entries())
-      );
+      carregarServicos(currentPage);
     } catch (error) {
       alert(`Falha ao registrar conclusão: ${error.message}`);
     } finally {
@@ -569,9 +597,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         alert("Encarregados dos itens atualizados com sucesso!");
         ocultarModal(modalGerenciarItensServicoEl);
-        carregarServicos(
-          Object.fromEntries(new FormData(formFiltrosServicos).entries())
-        );
+        carregarServicos(currentPage);
       } catch (error) {
         alert(`Falha ao atualizar encarregados: ${error.message}`);
       } finally {
@@ -587,7 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function init() {
     await fetchCurrentUser();
     await popularFiltroSubestacoes();
-    await carregarServicos();
+    await carregarServicos(1);
   }
 
   init();

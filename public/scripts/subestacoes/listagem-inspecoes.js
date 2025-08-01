@@ -56,6 +56,10 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnConfirmarAcaoGeral"
   );
 
+  const paginationContainer = document.getElementById("paginationContainer");
+  let currentPage = 1;
+  const a_cada = 10;
+
   let idParaAcao = null;
   let callbackAcaoConfirmada = null;
   let filesToUpload = [];
@@ -171,25 +175,51 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function carregarInspecoes(params = {}) {
+  async function carregarInspecoes(page = 1) {
     if (!corpoTabelaInspecoes || !nenhumaInspecaoMsg) return;
+    currentPage = page;
     corpoTabelaInspecoes.innerHTML =
       '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Carregando inspeções...</td></tr>';
     nenhumaInspecaoMsg.style.display = "none";
 
-    const queryParams = new URLSearchParams();
-    for (const key in params) {
-      if (params[key]) queryParams.append(key, params[key]);
-    }
-    const queryString = queryParams.toString();
-    const url = `/inspecoes-subestacoes${queryString ? "?" + queryString : ""}`;
+    const params = Object.fromEntries(
+      new FormData(formFiltrosInspecoes).entries()
+    );
+    params.page = currentPage;
+    params.limit = a_cada;
+
+    const queryParams = new URLSearchParams(params);
+    const url = `/inspecoes-subestacoes?${queryParams.toString()}`;
 
     try {
-      const inspecoes = await fetchData(url);
-      popularTabelaInspecoes(inspecoes);
+      const response = await fetchData(url);
+      popularTabelaInspecoes(response.data);
+      renderizarPaginacao(response.total, response.page, response.totalPages);
     } catch (error) {
       corpoTabelaInspecoes.innerHTML =
         '<tr><td colspan="9" style="text-align: center; color: red; padding: 2rem;">Erro ao carregar inspeções.</td></tr>';
+      if (paginationContainer) paginationContainer.innerHTML = "";
+    }
+  }
+
+  function renderizarPaginacao(totalItems, page, totalPages) {
+    if (!paginationContainer) return;
+    paginationContainer.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    for (let i = 1; i <= totalPages; i++) {
+      const pageButton = document.createElement("button");
+      pageButton.textContent = i;
+      pageButton.className = "pagination-button";
+      if (i === page) {
+        pageButton.classList.add("active");
+        pageButton.disabled = true;
+      }
+      pageButton.addEventListener("click", () => {
+        carregarInspecoes(i);
+      });
+      paginationContainer.appendChild(pageButton);
     }
   }
 
@@ -389,10 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
       alert(result.message || `Inspeção ${acao} com sucesso!`);
       hideModal(modalConfirmacaoGeralEl);
-      const formData = formFiltrosInspecoes
-        ? new FormData(formFiltrosInspecoes)
-        : new FormData();
-      carregarInspecoes(Object.fromEntries(formData.entries()));
+      carregarInspecoes(currentPage);
     } catch (error) {
       alert(`Falha ao ${acao} inspeção: ${error.message}`);
     } finally {
@@ -563,10 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const result = await response.json();
         alert(result.message || "Anexos salvos com sucesso!");
         hideModal(modalAnexosEscritorioEl);
-        const currentFormData = formFiltrosInspecoes
-          ? new FormData(formFiltrosInspecoes)
-          : new FormData();
-        carregarInspecoes(Object.fromEntries(currentFormData.entries()));
+        carregarInspecoes(currentPage);
       } catch (error) {
         alert(`Falha ao salvar anexos: ${error.message}`);
       } finally {
@@ -579,23 +603,21 @@ document.addEventListener("DOMContentLoaded", () => {
   if (formFiltrosInspecoes) {
     formFiltrosInspecoes.addEventListener("submit", (event) => {
       event.preventDefault();
-      const formData = new FormData(formFiltrosInspecoes);
-      const params = Object.fromEntries(formData.entries());
-      carregarInspecoes(params);
+      carregarInspecoes(1);
     });
   }
 
   if (btnLimparFiltrosInspecoes) {
     btnLimparFiltrosInspecoes.addEventListener("click", () => {
       if (formFiltrosInspecoes) formFiltrosInspecoes.reset();
-      carregarInspecoes();
+      carregarInspecoes(1);
     });
   }
 
   function init() {
     popularFiltroSubestacoes();
     popularFiltroResponsaveis();
-    carregarInspecoes();
+    carregarInspecoes(1);
   }
 
   init();

@@ -287,6 +287,16 @@ document.addEventListener("DOMContentLoaded", () => {
             <p class="item-description">${item.descricao_item_servico}</p>
             ${origemHtml}
             <div class="item-details-grid">
+                ${
+                  item.catalogo_equipamento_nome
+                    ? `<div><strong>Equipamento:</strong><span>${item.catalogo_equipamento_nome}</span></div>`
+                    : ""
+                }
+                ${
+                  item.tag_equipamento_alvo
+                    ? `<div><strong>TAG:</strong><span>${item.tag_equipamento_alvo}</span></div>`
+                    : ""
+                }
                 <div><strong>Encarregado:</strong><span>${
                   item.encarregado_item_nome || "N/A"
                 }</span></div>

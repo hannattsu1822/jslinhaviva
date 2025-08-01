@@ -866,6 +866,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }_na" value="NA" autocomplete="off" ${
           itemState.avaliacao === "NA" ? "checked" : ""
         }><label class="btn btn-na" for="item_${item.id}_na">NA</label>
+              <input type="radio" class="btn-check" name="item_${
+                item.id
+              }_avaliacao" id="item_${
+          item.id
+        }_ea" value="EA" autocomplete="off" ${
+          itemState.avaliacao === "EA" ? "checked" : ""
+        }><label class="btn btn-ea" for="item_${item.id}_ea">E.A</label>
             </div>
             <button type="button" class="btn btn-detalhes-item" title="Adicionar Observação e Anexos">
               <span class="material-symbols-outlined feedback-icon">attachment</span>
@@ -1054,10 +1061,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = itemDiv.querySelector(".btn-detalhes-item");
     const icon = btn.querySelector(".feedback-icon");
     const state = checklistState.itens[itemId];
-    btn.classList.remove("normal", "anormal", "na");
+    btn.classList.remove("normal", "anormal", "na", "em-acompanhamento");
     if (state.avaliacao === "N") btn.classList.add("normal");
     else if (state.avaliacao === "A") btn.classList.add("anormal");
     else if (state.avaliacao === "NA") btn.classList.add("na");
+    else if (state.avaliacao === "EA") btn.classList.add("em-acompanhamento");
     const temAnexos =
       state.anexos.length > 0 || state.anexos_existentes.length > 0;
     icon.classList.toggle("visible", temAnexos);
