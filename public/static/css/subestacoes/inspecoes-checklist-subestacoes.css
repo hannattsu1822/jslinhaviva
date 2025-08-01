@@ -716,16 +716,62 @@ textarea.form-control {
   flex-shrink: 1;
 }
 
-/* Adicione este estilo ao seu arquivo .css */
-
 .btn-anexar-dinamico.has-attachments {
-  background-color: var(
-    --c-info
-  ); /* Usa a variável de cor azul do seu sistema */
+  background-color: var(--c-info);
   color: white;
-  border-color: var(--c-info-dark);
+  border-color: var(--c-info);
 }
 
 .btn-anexar-dinamico.has-attachments:hover {
-  background-color: var(--c-info-dark);
+  background-color: #0277bd;
+}
+
+.checklist-legenda {
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.9em;
+}
+
+.legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legenda-item b {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-on-dark);
+  font-size: 0.9em;
+}
+
+.legenda-badge-n {
+  background-color: var(--c-success);
+}
+.legenda-badge-a {
+  background-color: var(--c-danger);
+}
+.legenda-badge-na {
+  background-color: var(--c-secondary);
+}
+.legenda-badge-ea {
+  background-color: var(--c-info);
+}
+
+.item-avaliacao .btn-check:checked + .btn-ea {
+  background-color: var(--c-info);
+  color: var(--text-on-dark);
+}
+
+.btn-detalhes-item.em-acompanhamento {
+  background-color: var(--c-info);
+  color: var(--text-on-dark);
+  border-color: var(--c-info);
 }
