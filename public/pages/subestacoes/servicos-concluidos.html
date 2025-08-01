@@ -49,7 +49,10 @@
                   name="status"
                   class="form-select"
                 >
-                  <option value="CONCLUIDO" selected>CONCLUÍDO</option>
+                  <option value="CONCLUIDO" selected>CONCLUÍDO (TODOS)</option>
+                  <option value="CONCLUIDO_COM_PENDENCIA">
+                    CONCLUÍDO COM PENDÊNCIA
+                  </option>
                   <option value="CANCELADO">CANCELADO</option>
                   <option value="">Todos</option>
                 </select>
@@ -129,6 +132,7 @@
             <p id="nenhumServico" class="feedback-message hidden">
               Nenhum serviço encontrado com os filtros aplicados.
             </p>
+            <div class="pagination-container" id="paginationContainer"></div>
           </div>
         </div>
       </main>
