@@ -502,6 +502,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams({
       subestacao_id: subestacaoId,
       status_inspecao: status,
+      paginated: "false",
     });
 
     corpoTabelaInspecoes.innerHTML =
