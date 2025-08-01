@@ -1009,13 +1009,16 @@ router.get(
   verificarNivel(3),
   async (req, res) => {
     try {
-      const page = parseInt(req.query.page, 10) || 1;
-      const limit = parseInt(req.query.limit, 10) || 10;
-      const offset = (page - 1) * limit;
+      const { paginated = "true" } = req.query;
+
+      let baseQuery = `
+        FROM inspecoes_subestacoes i
+        JOIN subestacoes s ON i.subestacao_id = s.Id
+        JOIN users u ON i.responsavel_levantamento_id = u.id
+      `;
 
       let whereClauses = "WHERE 1=1";
       const params = [];
-      const countParams = [];
 
       if (req.query.subestacao_id) {
         whereClauses += " AND i.subestacao_id = ?";
@@ -1050,13 +1053,7 @@ router.get(
         params.push(req.query.data_avaliacao_ate);
       }
 
-      countParams.push(...params);
-
-      const orderByClause = "ORDER BY i.data_avaliacao DESC, i.id DESC";
-      const limitOffsetClause = "LIMIT ? OFFSET ?";
-      params.push(limit, offset);
-
-      const dataQuery = `
+      const selectFields = `
         SELECT
           i.id,
           i.processo,
@@ -1067,33 +1064,36 @@ router.get(
           i.status_inspecao,
           s.sigla as subestacao_sigla,
           u.nome as responsavel_nome
-        FROM inspecoes_subestacoes i
-        JOIN subestacoes s ON i.subestacao_id = s.Id
-        JOIN users u ON i.responsavel_levantamento_id = u.id
-        ${whereClauses}
-        ${orderByClause}
-        ${limitOffsetClause}
       `;
 
-      const countQuery = `
-        SELECT COUNT(i.id) as total
-        FROM inspecoes_subestacoes i
-        JOIN subestacoes s ON i.subestacao_id = s.Id
-        JOIN users u ON i.responsavel_levantamento_id = u.id
-        ${whereClauses}
-      `;
+      if (paginated === "false") {
+        const query = `${selectFields} ${baseQuery} ${whereClauses} ORDER BY i.data_avaliacao DESC, i.id DESC`;
+        const [rows] = await promisePool.query(query, params);
+        res.json(rows);
+      } else {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const offset = (page - 1) * limit;
 
-      const [rows] = await promisePool.query(dataQuery, params);
-      const [countRows] = await promisePool.query(countQuery, countParams);
-      const totalItems = countRows[0].total;
+        const countQuery = `SELECT COUNT(i.id) as total ${baseQuery} ${whereClauses}`;
+        const [countRows] = await promisePool.query(countQuery, params);
+        const totalItems = countRows[0].total;
 
-      res.json({
-        data: rows,
-        total: totalItems,
-        page: page,
-        limit: limit,
-        totalPages: Math.ceil(totalItems / limit),
-      });
+        const dataQuery = `${selectFields} ${baseQuery} ${whereClauses} ORDER BY i.data_avaliacao DESC, i.id DESC LIMIT ? OFFSET ?`;
+        const [rows] = await promisePool.query(dataQuery, [
+          ...params,
+          limit,
+          offset,
+        ]);
+
+        res.json({
+          data: rows,
+          total: totalItems,
+          page: page,
+          limit: limit,
+          totalPages: Math.ceil(totalItems / limit),
+        });
+      }
     } catch (error) {
       res.status(500).json({
         message: "Erro interno ao listar inspeções.",
