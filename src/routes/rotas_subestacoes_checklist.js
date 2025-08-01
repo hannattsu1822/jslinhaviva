@@ -161,7 +161,6 @@ router.post(
         originalName: req.file.originalname,
       });
     } catch (error) {
-      console.error("Erro ao salvar arquivo temporário:", error);
       await limparArquivosTemporariosUpload([req.file]);
       res.status(500).json({ message: "Erro ao processar upload temporário." });
     }
@@ -186,7 +185,6 @@ router.get(
       }
       res.json(grupos);
     } catch (error) {
-      console.error("Erro ao buscar modelo de checklist:", error);
       res.status(500).json({
         message: "Erro interno ao buscar modelo de checklist.",
         detalhes: error.message,
@@ -412,7 +410,6 @@ router.post(
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      console.error("Erro ao registrar inspeção:", error);
       res.status(500).json({
         message: "Erro interno ao registrar a inspeção.",
         detalhes: error.message,
@@ -505,9 +502,9 @@ router.put(
       );
 
       await connection.query(
-        `UPDATE inspecoes_subestacoes SET 
-            processo = ?, subestacao_id = ?, responsavel_levantamento_id = ?, 
-            tipo_inspecao = ?, modo_inspecao = ?, data_avaliacao = ?, 
+        `UPDATE inspecoes_subestacoes SET
+            processo = ?, subestacao_id = ?, responsavel_levantamento_id = ?,
+            tipo_inspecao = ?, modo_inspecao = ?, data_avaliacao = ?,
             hora_inicial = ?, hora_final = ?, observacoes_gerais = ?
          WHERE id = ?`,
         [
@@ -691,7 +688,6 @@ router.put(
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      console.error(`Erro ao atualizar inspeção ${inspecaoId}:`, error);
       res.status(500).json({
         message: "Erro interno ao atualizar a inspeção.",
         detalhes: error.message,
@@ -715,15 +711,15 @@ router.get(
 
     try {
       const [inspecaoRows] = await promisePool.query(
-        `SELECT i.id, i.processo, i.subestacao_id, i.formulario_inspecao_num, i.responsavel_levantamento_id, 
+        `SELECT i.id, i.processo, i.subestacao_id, i.formulario_inspecao_num, i.responsavel_levantamento_id,
                     i.tipo_inspecao, i.modo_inspecao,
-                    DATE_FORMAT(i.data_avaliacao, '%d/%m/%Y') as data_avaliacao_fmt, i.data_avaliacao, 
-                    i.hora_inicial, i.hora_final, i.status_inspecao, i.observacoes_gerais, 
-                    s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
-                    u.nome as responsavel_nome 
-             FROM inspecoes_subestacoes i 
-             JOIN subestacoes s ON i.subestacao_id = s.Id 
-             JOIN users u ON i.responsavel_levantamento_id = u.id 
+                    DATE_FORMAT(i.data_avaliacao, '%d/%m/%Y') as data_avaliacao_fmt, i.data_avaliacao,
+                    i.hora_inicial, i.hora_final, i.status_inspecao, i.observacoes_gerais,
+                    s.sigla as subestacao_sigla, s.nome as subestacao_nome,
+                    u.nome as responsavel_nome
+             FROM inspecoes_subestacoes i
+             JOIN subestacoes s ON i.subestacao_id = s.Id
+             JOIN users u ON i.responsavel_levantamento_id = u.id
              WHERE i.id = ?`,
         [id]
       );
@@ -742,8 +738,8 @@ router.get(
       };
 
       const [anexosRows] = await promisePool.query(
-        `SELECT id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo, 
-                    item_resposta_id, item_especificacao_id, registro_id, item_avulso_id 
+        `SELECT id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo,
+                    item_resposta_id, item_especificacao_id, registro_id, item_avulso_id
              FROM inspecoes_anexos WHERE inspecao_id = ?`,
         [id]
       );
@@ -757,7 +753,7 @@ router.get(
                 FROM inspecoes_itens_respostas r
                 JOIN checklist_itens ci ON r.item_checklist_id = ci.id
                 JOIN checklist_grupos cg ON ci.grupo_id = cg.id
-                WHERE r.inspecao_id = ? 
+                WHERE r.inspecao_id = ?
                 ORDER BY cg.ordem, ci.ordem ASC`,
           [id]
         );
@@ -766,7 +762,7 @@ router.get(
         let especificacoesRows = [];
         if (idRespostas.length > 0) {
           [especificacoesRows] = await promisePool.query(
-            `SELECT id, item_resposta_id, descricao_equipamento, observacao 
+            `SELECT id, item_resposta_id, descricao_equipamento, observacao
                FROM inspecoes_item_especificacoes WHERE item_resposta_id IN (?)`,
             [idRespostas]
           );
@@ -780,7 +776,7 @@ router.get(
         }));
 
         const [registrosRows] = await promisePool.query(
-          `SELECT id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, estado_item, referencia_externa 
+          `SELECT id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, estado_item, referencia_externa
                  FROM inspecoes_registros WHERE inspecao_id = ? ORDER BY id ASC`,
           [id]
         );
@@ -803,7 +799,6 @@ router.get(
 
       res.json(respostaFinal);
     } catch (error) {
-      console.error("Erro ao buscar detalhes da inspeção:", error);
       res.status(500).json({
         message: "Erro interno ao buscar detalhes da inspeção.",
         detalhes: error.message,
@@ -1014,63 +1009,92 @@ router.get(
   verificarNivel(3),
   async (req, res) => {
     try {
-      let query = `
-        SELECT 
-          i.id, 
-          i.processo, 
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
+      const offset = (page - 1) * limit;
+
+      let whereClauses = "WHERE 1=1";
+      const params = [];
+      const countParams = [];
+
+      if (req.query.subestacao_id) {
+        whereClauses += " AND i.subestacao_id = ?";
+        params.push(req.query.subestacao_id);
+      }
+      if (req.query.status_inspecao) {
+        whereClauses += " AND i.status_inspecao = ?";
+        params.push(req.query.status_inspecao);
+      }
+      if (req.query.tipo_inspecao) {
+        whereClauses += " AND i.tipo_inspecao = ?";
+        params.push(req.query.tipo_inspecao);
+      }
+      if (req.query.modo_inspecao) {
+        whereClauses += " AND i.modo_inspecao = ?";
+        params.push(req.query.modo_inspecao);
+      }
+      if (req.query.processo) {
+        whereClauses += " AND i.processo LIKE ?";
+        params.push(`%${req.query.processo}%`);
+      }
+      if (req.query.responsavel_id) {
+        whereClauses += " AND i.responsavel_levantamento_id = ?";
+        params.push(req.query.responsavel_id);
+      }
+      if (req.query.data_avaliacao_de) {
+        whereClauses += " AND i.data_avaliacao >= ?";
+        params.push(req.query.data_avaliacao_de);
+      }
+      if (req.query.data_avaliacao_ate) {
+        whereClauses += " AND i.data_avaliacao <= ?";
+        params.push(req.query.data_avaliacao_ate);
+      }
+
+      countParams.push(...params);
+
+      const orderByClause = "ORDER BY i.data_avaliacao DESC, i.id DESC";
+      const limitOffsetClause = "LIMIT ? OFFSET ?";
+      params.push(limit, offset);
+
+      const dataQuery = `
+        SELECT
+          i.id,
+          i.processo,
           i.formulario_inspecao_num,
           i.tipo_inspecao,
           i.modo_inspecao,
-          DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao, 
-          i.status_inspecao, 
-          s.sigla as subestacao_sigla, 
+          DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao,
+          i.status_inspecao,
+          s.sigla as subestacao_sigla,
           u.nome as responsavel_nome
         FROM inspecoes_subestacoes i
         JOIN subestacoes s ON i.subestacao_id = s.Id
         JOIN users u ON i.responsavel_levantamento_id = u.id
-        WHERE 1=1
+        ${whereClauses}
+        ${orderByClause}
+        ${limitOffsetClause}
       `;
-      const params = [];
 
-      if (req.query.subestacao_id) {
-        query += " AND i.subestacao_id = ?";
-        params.push(req.query.subestacao_id);
-      }
-      if (req.query.status_inspecao) {
-        query += " AND i.status_inspecao = ?";
-        params.push(req.query.status_inspecao);
-      }
-      if (req.query.tipo_inspecao) {
-        query += " AND i.tipo_inspecao = ?";
-        params.push(req.query.tipo_inspecao);
-      }
-      if (req.query.modo_inspecao) {
-        query += " AND i.modo_inspecao = ?";
-        params.push(req.query.modo_inspecao);
-      }
-      if (req.query.processo) {
-        query += " AND i.processo LIKE ?";
-        params.push(`%${req.query.processo}%`);
-      }
-      if (req.query.responsavel_id) {
-        query += " AND i.responsavel_levantamento_id = ?";
-        params.push(req.query.responsavel_id);
-      }
-      if (req.query.data_avaliacao_de) {
-        query += " AND i.data_avaliacao >= ?";
-        params.push(req.query.data_avaliacao_de);
-      }
-      if (req.query.data_avaliacao_ate) {
-        query += " AND i.data_avaliacao <= ?";
-        params.push(req.query.data_avaliacao_ate);
-      }
+      const countQuery = `
+        SELECT COUNT(i.id) as total
+        FROM inspecoes_subestacoes i
+        JOIN subestacoes s ON i.subestacao_id = s.Id
+        JOIN users u ON i.responsavel_levantamento_id = u.id
+        ${whereClauses}
+      `;
 
-      query += " ORDER BY i.data_avaliacao DESC, i.id DESC";
+      const [rows] = await promisePool.query(dataQuery, params);
+      const [countRows] = await promisePool.query(countQuery, countParams);
+      const totalItems = countRows[0].total;
 
-      const [rows] = await promisePool.query(query, params);
-      res.json(rows);
+      res.json({
+        data: rows,
+        total: totalItems,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(totalItems / limit),
+      });
     } catch (error) {
-      console.error("Erro ao listar inspeções de subestações:", error);
       res.status(500).json({
         message: "Erro interno ao listar inspeções.",
         detalhes: error.message,
@@ -1119,7 +1143,6 @@ router.delete(
       res.json({ message: `Inspeção ID ${inspecaoId} excluída com sucesso.` });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao excluir inspeção:", error);
       res
         .status(500)
         .json({ message: "Erro interno ao excluir.", detalhes: error.message });
@@ -1146,7 +1169,7 @@ router.post(
 
     try {
       const [inspecoes] = await promisePool.query(
-        `SELECT i.id, i.formulario_inspecao_num, s.sigla as subestacao_sigla 
+        `SELECT i.id, i.formulario_inspecao_num, s.sigla as subestacao_sigla
              FROM inspecoes_subestacoes i
              JOIN subestacoes s ON i.subestacao_id = s.Id
              WHERE i.id IN (${placeholders})`,
@@ -1155,17 +1178,17 @@ router.post(
 
       for (const inspecao of inspecoes) {
         const [itensAnormais] = await promisePool.query(
-          `SELECT 
-              r.id as resposta_id, 
-              ci.descricao_item, 
+          `SELECT
+              r.id as resposta_id,
+              ci.descricao_item,
               r.observacao_item,
-              (SELECT JSON_ARRAYAGG(JSON_OBJECT('caminho_servidor', a.caminho_servidor, 'nome_original', a.nome_original)) 
-               FROM inspecoes_anexos a 
+              (SELECT JSON_ARRAYAGG(JSON_OBJECT('caminho_servidor', a.caminho_servidor, 'nome_original', a.nome_original))
+               FROM inspecoes_anexos a
                WHERE a.item_resposta_id = r.id AND a.item_especificacao_id IS NULL) as anexos_gerais,
-              (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', esp.id, 'descricao_equipamento', esp.descricao_equipamento, 'observacao', esp.observacao, 'anexos', 
-                  (SELECT JSON_ARRAYAGG(JSON_OBJECT('caminho_servidor', an.caminho_servidor, 'nome_original', an.nome_original)) 
+              (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', esp.id, 'descricao_equipamento', esp.descricao_equipamento, 'observacao', esp.observacao, 'anexos',
+                  (SELECT JSON_ARRAYAGG(JSON_OBJECT('caminho_servidor', an.caminho_servidor, 'nome_original', an.nome_original))
                    FROM inspecoes_anexos an WHERE an.item_especificacao_id = esp.id)
-              )) 
+              ))
                FROM inspecoes_item_especificacoes esp WHERE esp.item_resposta_id = r.id) as especificacoes
            FROM inspecoes_itens_respostas r
            JOIN checklist_itens ci ON r.item_checklist_id = ci.id
@@ -1197,7 +1220,6 @@ router.post(
 
       res.json(inspecoes);
     } catch (error) {
-      console.error("Erro ao buscar detalhes de múltiplas inspeções:", error);
       res.status(500).json({
         message: "Erro interno ao buscar detalhes das inspeções.",
         detalhes: error.message,

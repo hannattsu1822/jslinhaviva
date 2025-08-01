@@ -454,7 +454,6 @@ router.post(
             } catch (e) {}
           }
         });
-      console.error("Erro ao criar serviço de subestação:", error);
       res.status(500).json({
         message: "Erro interno ao criar serviço.",
         detalhes: error.message,
@@ -652,13 +651,10 @@ router.put(
           await fs.unlink(caminho);
         } catch (e) {}
       }
-      console.error("Erro ao atualizar serviço:", error);
-      res
-        .status(500)
-        .json({
-          message: "Erro interno ao atualizar serviço.",
-          detalhes: error.message,
-        });
+      res.status(500).json({
+        message: "Erro interno ao atualizar serviço.",
+        detalhes: error.message,
+      });
     } finally {
       if (connection) connection.release();
     }
@@ -753,60 +749,49 @@ router.get(
   verificarNivel(3),
   async (req, res) => {
     try {
-      let query = `
-          SELECT 
-            ss.id, ss.processo, ss.motivo, ss.tipo_ordem, ss.prioridade,
-            DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista, 
-            ss.horario_inicio, ss.horario_fim, ss.status, 
-            DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao, 
-            s.sigla as subestacao_sigla, s.nome as subestacao_nome, 
-            u.nome as responsavel_nome,
-            (SELECT GROUP_CONCAT(DISTINCT u2.nome ORDER BY u2.nome SEPARATOR ', ') 
-              FROM servico_itens_escopo sie_enc 
-              LEFT JOIN users u2 ON sie_enc.encarregado_item_id = u2.id 
-              WHERE sie_enc.servico_id = ss.id AND sie_enc.encarregado_item_id IS NOT NULL) as encarregados_itens_nomes,
-            (SELECT COUNT(*) FROM servico_itens_escopo sie_total WHERE sie_total.servico_id = ss.id) as total_itens,
-            (SELECT COUNT(*) FROM servico_itens_escopo sie_conc WHERE sie_conc.servico_id = ss.id AND sie_conc.status_item_escopo LIKE 'CONCLUIDO%') as itens_concluidos
-          FROM servicos_subestacoes ss 
-          JOIN subestacoes s ON ss.subestacao_id = s.Id 
-          JOIN users u ON ss.responsavel_id = u.id 
-          WHERE 1=1`;
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
+      const offset = (page - 1) * limit;
+
+      let whereClauses = "WHERE 1=1";
       const params = [];
+      const countParams = [];
 
       if (req.query.status) {
         if (req.query.status === "CONCLUIDO") {
-          query += " AND ss.status IN ('CONCLUIDO', 'CONCLUIDO_COM_RESSALVAS')";
+          whereClauses +=
+            " AND ss.status IN ('CONCLUIDO', 'CONCLUIDO_COM_RESSALVAS', 'CONCLUIDO_COM_PENDENCIA')";
         } else {
-          query += " AND ss.status = ?";
+          whereClauses += " AND ss.status = ?";
           params.push(req.query.status);
         }
       } else {
-        query +=
-          " AND ss.status NOT IN ('CONCLUIDO', 'CANCELADO', 'CONCLUIDO_COM_RESSALVAS')";
+        whereClauses +=
+          " AND ss.status NOT IN ('CONCLUIDO', 'CANCELADO', 'CONCLUIDO_COM_RESSALVAS', 'CONCLUIDO_COM_PENDENCIA')";
       }
 
       if (req.query.subestacao_id) {
-        query += " AND ss.subestacao_id = ?";
+        whereClauses += " AND ss.subestacao_id = ?";
         params.push(req.query.subestacao_id);
       }
       if (req.query.processo) {
-        query += " AND ss.processo LIKE ?";
+        whereClauses += " AND ss.processo LIKE ?";
         params.push(`%${req.query.processo}%`);
       }
       if (req.query.data_prevista_de) {
-        query += " AND ss.data_prevista >= ?";
+        whereClauses += " AND ss.data_prevista >= ?";
         params.push(req.query.data_prevista_de);
       }
       if (req.query.data_prevista_ate) {
-        query += " AND ss.data_prevista <= ?";
+        whereClauses += " AND ss.data_prevista <= ?";
         params.push(req.query.data_prevista_ate);
       }
       if (req.query.data_conclusao_de) {
-        query += " AND ss.data_conclusao >= ?";
+        whereClauses += " AND ss.data_conclusao >= ?";
         params.push(req.query.data_conclusao_de);
       }
       if (req.query.data_conclusao_ate) {
-        query += " AND ss.data_conclusao <= ?";
+        whereClauses += " AND ss.data_conclusao <= ?";
         params.push(req.query.data_conclusao_ate);
       }
 
@@ -816,15 +801,57 @@ router.get(
         (req.user.cargo === "Encarregado" || req.user.cargo === "Inspetor") &&
         !cargosComVisaoTotal.includes(req.user.cargo)
       ) {
-        query +=
+        whereClauses +=
           " AND EXISTS (SELECT 1 FROM servico_itens_escopo sie_filter WHERE sie_filter.servico_id = ss.id AND sie_filter.encarregado_item_id = ?)";
         params.push(req.user.id);
       }
 
-      query +=
-        " ORDER BY FIELD(ss.prioridade, 'GRAVE', 'ALTA', 'MEDIA', 'BAIXA'), ss.data_prevista ASC, ss.id DESC";
-      const [rows] = await promisePool.query(query, params);
-      res.json(rows);
+      countParams.push(...params);
+
+      const orderByClause =
+        "ORDER BY FIELD(ss.prioridade, 'GRAVE', 'ALTA', 'MEDIA', 'BAIXA'), ss.data_prevista ASC, ss.id DESC";
+      const limitOffsetClause = "LIMIT ? OFFSET ?";
+      params.push(limit, offset);
+
+      const dataQuery = `
+          SELECT
+            ss.id, ss.processo, ss.motivo, ss.tipo_ordem, ss.prioridade,
+            DATE_FORMAT(ss.data_prevista, '%Y-%m-%d') as data_prevista,
+            ss.horario_inicio, ss.horario_fim, ss.status,
+            DATE_FORMAT(ss.data_conclusao, '%Y-%m-%d') as data_conclusao,
+            s.sigla as subestacao_sigla, s.nome as subestacao_nome,
+            u.nome as responsavel_nome,
+            (SELECT GROUP_CONCAT(DISTINCT u2.nome ORDER BY u2.nome SEPARATOR ', ')
+              FROM servico_itens_escopo sie_enc
+              LEFT JOIN users u2 ON sie_enc.encarregado_item_id = u2.id
+              WHERE sie_enc.servico_id = ss.id AND sie_enc.encarregado_item_id IS NOT NULL) as encarregados_itens_nomes,
+            (SELECT COUNT(*) FROM servico_itens_escopo sie_total WHERE sie_total.servico_id = ss.id) as total_itens,
+            (SELECT COUNT(*) FROM servico_itens_escopo sie_conc WHERE sie_conc.servico_id = ss.id AND sie_conc.status_item_escopo LIKE 'CONCLUIDO%') as itens_concluidos
+          FROM servicos_subestacoes ss
+          JOIN subestacoes s ON ss.subestacao_id = s.Id
+          JOIN users u ON ss.responsavel_id = u.id
+          ${whereClauses}
+          ${orderByClause}
+          ${limitOffsetClause}`;
+
+      const countQuery = `
+          SELECT COUNT(ss.id) as total
+          FROM servicos_subestacoes ss
+          JOIN subestacoes s ON ss.subestacao_id = s.Id
+          JOIN users u ON ss.responsavel_id = u.id
+          ${whereClauses}`;
+
+      const [rows] = await promisePool.query(dataQuery, params);
+      const [countRows] = await promisePool.query(countQuery, countParams);
+      const totalItems = countRows[0].total;
+
+      res.json({
+        data: rows,
+        total: totalItems,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(totalItems / limit),
+      });
     } catch (err) {
       res
         .status(500)
@@ -859,9 +886,9 @@ router.get(
       servico.anexos = anexosRows;
 
       const [itensEscopoRows] = await promisePool.query(
-        `SELECT 
-              sie.id as item_escopo_id, 
-              sie.catalogo_defeito_id, 
+        `SELECT
+              sie.id as item_escopo_id,
+              sie.catalogo_defeito_id,
               sie.inspecao_item_id,
               sie.descricao_item_servico,
               sie.observacao_especifica_servico,
@@ -898,7 +925,6 @@ router.get(
 
       res.json(servico);
     } catch (err) {
-      console.error("Erro ao buscar detalhes do serviço:", err);
       res.status(500).json({
         message: "Erro ao buscar detalhes do serviço.",
         detalhes: err.message,
@@ -1218,9 +1244,9 @@ router.put(
       }
 
       const [progressoRows] = await connection.query(
-        `SELECT 
-          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ?) as total, 
-          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ? AND status_item_escopo != 'PENDENTE') as tratados`,
+        `SELECT
+          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ?) as total,
+          (SELECT COUNT(*) FROM servico_itens_escopo WHERE servico_id = ? AND status_item_escopo != 'PENDENTE' AND status_item_escopo != 'EM_ANDAMENTO') as tratados`,
         [servico_id, servico_id]
       );
 
@@ -1241,7 +1267,7 @@ router.put(
         );
 
         const statusFinalServico = temPendenciaOuNaoConcluido
-          ? "CONCLUIDO_COM_RESSALVAS"
+          ? "CONCLUIDO_COM_PENDENCIA"
           : "CONCLUIDO";
 
         const horaConclusao = new Date().toLocaleTimeString("pt-BR", {
@@ -1257,6 +1283,20 @@ router.put(
             servico_id,
           ]
         );
+      } else {
+        const [servicoStatusRows] = await connection.query(
+          "SELECT status FROM servicos_subestacoes WHERE id = ?",
+          [servico_id]
+        );
+        if (
+          servicoStatusRows.length > 0 &&
+          servicoStatusRows[0].status === "PROGRAMADO"
+        ) {
+          await connection.query(
+            "UPDATE servicos_subestacoes SET status = 'EM_ANDAMENTO' WHERE id = ?",
+            [servico_id]
+          );
+        }
       }
 
       await connection.commit();
