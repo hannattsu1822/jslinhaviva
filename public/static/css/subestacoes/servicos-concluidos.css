@@ -182,6 +182,10 @@ body {
   background-color: var(--cor-aviso);
   color: var(--cor-texto-claro);
 }
+.btn-success {
+  background-color: var(--cor-sucesso);
+  color: var(--cor-texto-claro);
+}
 
 .table-responsive {
   overflow-x: auto;
@@ -214,6 +218,17 @@ body {
 
 .text-center {
   text-align: center;
+}
+
+.actions-column {
+  white-space: nowrap;
+}
+
+.actions-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--espacamento-unidade) / 2);
 }
 
 .actions-column .btn {
@@ -484,4 +499,63 @@ body {
 .pagination-button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.lista-anexos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.apr-anexo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espacamento-unidade);
+  padding: var(--espacamento-unidade);
+  border-radius: var(--raio-borda);
+  background-color: var(--cor-fundo-sutil);
+  border: 1px solid var(--cor-borda);
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.apr-anexo-item:hover {
+  background-color: var(--cor-fundo-pagina);
+  border-color: #ccc;
+}
+
+.apr-anexo-item + .apr-anexo-item {
+  margin-top: var(--espacamento-unidade);
+}
+
+.apr-anexo-item a {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-unidade);
+  text-decoration: none;
+  color: var(--cor-primaria);
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apr-anexo-item a:hover {
+  text-decoration: underline;
+}
+
+.btn-delete-apr {
+  background: none;
+  border: none;
+  color: var(--cor-texto-secundario);
+  cursor: pointer;
+  padding: calc(var(--espacamento-unidade) / 2);
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.btn-delete-apr:hover {
+  color: var(--cor-perigo);
+  background-color: #ffebee;
 }
