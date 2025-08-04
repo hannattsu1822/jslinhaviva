@@ -826,7 +826,9 @@ router.get(
               LEFT JOIN users u2 ON sie_enc.encarregado_item_id = u2.id
               WHERE sie_enc.servico_id = ss.id AND sie_enc.encarregado_item_id IS NOT NULL) as encarregados_itens_nomes,
             (SELECT COUNT(*) FROM servico_itens_escopo sie_total WHERE sie_total.servico_id = ss.id) as total_itens,
-            (SELECT COUNT(*) FROM servico_itens_escopo sie_conc WHERE sie_conc.servico_id = ss.id AND sie_conc.status_item_escopo LIKE 'CONCLUIDO%') as itens_concluidos
+            (SELECT COUNT(*) FROM servico_itens_escopo sie_conc WHERE sie_conc.servico_id = ss.id AND sie_conc.status_item_escopo LIKE 'CONCLUIDO%') as itens_concluidos,
+            (SELECT COUNT(*) FROM servicos_subestacoes_anexos WHERE id_servico = ss.id AND categoria_anexo = 'APR') as apr_count,
+            (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'caminho_servidor', caminho_servidor, 'nome_original', nome_original)) FROM servicos_subestacoes_anexos WHERE id_servico = ss.id AND categoria_anexo = 'APR') as apr_anexos
           FROM servicos_subestacoes ss
           JOIN subestacoes s ON ss.subestacao_id = s.Id
           JOIN users u ON ss.responsavel_id = u.id
@@ -1148,6 +1150,153 @@ router.post(
       }
       res.status(500).json({
         message: "Erro ao adicionar anexos.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.post(
+  "/api/servicos/:servicoId/anexar-apr",
+  autenticar,
+  verificarNivel(3),
+  verificarServicoExiste,
+  upload.array("anexosAPR", 5),
+  async (req, res) => {
+    const { servicoId } = req.params;
+    const arquivos = req.files;
+
+    if (!arquivos || arquivos.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Nenhum arquivo de APR enviado." });
+    }
+
+    const connection = await promisePool.getConnection();
+    let arquivosMovidosComSucesso = [];
+    try {
+      await connection.beginTransaction();
+
+      const servicoUploadDir = path.join(
+        uploadsSubestacoesDir,
+        "servicos",
+        `servico_${String(servicoId)}`
+      );
+      await fs.mkdir(servicoUploadDir, { recursive: true });
+
+      for (const file of arquivos) {
+        const nomeUnicoArquivo = `${Date.now()}_APR_${file.originalname.replace(
+          /[^a-zA-Z0-9.\-_]/g,
+          "_"
+        )}`;
+        const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
+        await fs.rename(file.path, caminhoDestino);
+        arquivosMovidosComSucesso.push(caminhoDestino);
+
+        const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
+        await connection.query(
+          `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            servicoId,
+            file.originalname,
+            `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
+            file.mimetype,
+            file.size,
+            "APR",
+          ]
+        );
+      }
+
+      await connection.commit();
+      if (req.user && req.user.matricula) {
+        await registrarAuditoria(
+          req.user.matricula,
+          "UPLOAD_APR_SERVICO",
+          `APR(s) anexada(s) ao Serviço ID ${servicoId}.`
+        );
+      }
+      res.status(201).json({ message: "APR(s) anexada(s) com sucesso!" });
+    } catch (error) {
+      await connection.rollback();
+      for (const caminho of arquivosMovidosComSucesso) {
+        try {
+          await fs.unlink(caminho);
+        } catch (e) {}
+      }
+      res.status(500).json({
+        message: "Erro ao anexar APR.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.delete(
+  "/api/servicos/anexos/:anexoId",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { anexoId } = req.params;
+    if (isNaN(parseInt(anexoId, 10))) {
+      return res.status(400).json({ message: "ID do anexo inválido." });
+    }
+
+    const connection = await promisePool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [anexoRows] = await connection.query(
+        "SELECT caminho_servidor, nome_original FROM servicos_subestacoes_anexos WHERE id = ?",
+        [anexoId]
+      );
+
+      if (anexoRows.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({ message: "Anexo não encontrado." });
+      }
+
+      const anexo = anexoRows[0];
+      if (anexo.caminho_servidor) {
+        const fullPath = path.join(
+          projectRootDir,
+          "public",
+          anexo.caminho_servidor
+        );
+        try {
+          await fs.unlink(fullPath);
+        } catch (err) {
+          if (err.code !== "ENOENT") {
+            console.warn(
+              `Falha ao deletar arquivo físico do anexo ${anexoId}: ${fullPath}`
+            );
+          }
+        }
+      }
+
+      await connection.query(
+        "DELETE FROM servicos_subestacoes_anexos WHERE id = ?",
+        [anexoId]
+      );
+
+      await connection.commit();
+
+      if (req.user && req.user.matricula) {
+        await registrarAuditoria(
+          req.user.matricula,
+          "DELETE_ANEXO_SERVICO",
+          `Anexo ID ${anexoId} (Nome: ${anexo.nome_original}) foi excluído.`
+        );
+      }
+
+      res.json({ message: "Anexo excluído com sucesso." });
+    } catch (error) {
+      await connection.rollback();
+      res.status(500).json({
+        message: "Erro interno ao excluir o anexo.",
         detalhes: error.message,
       });
     } finally {
