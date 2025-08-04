@@ -123,6 +123,7 @@
                     <th class="text-center">Data Conclusão</th>
                     <th>Responsável</th>
                     <th class="text-center">Status</th>
+                    <th class="text-center">APR</th>
                     <th class="text-center">Ações</th>
                   </tr>
                 </thead>
@@ -234,7 +235,101 @@
       </div>
     </div>
 
+    <div id="modalAnexarAPR" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">upload_file</span>
+            Anexar APR(s)
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <form id="formAnexarAPR">
+          <div class="modal-body">
+            <input type="hidden" id="servicoIdAnexoAPR" />
+            <p>
+              Anexando APR(s) ao serviço de Processo Nº:
+              <strong
+                id="processoServicoAnexoAPR"
+                class="text-primary"
+              ></strong>
+            </p>
+            <div class="form-group">
+              <label>Selecionar arquivos de APR:</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAdicionarAnexoAPR"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Procurar Arquivos
+                </button>
+              </div>
+              <input
+                type="file"
+                id="arquivosAnexoAPR"
+                name="anexosAPR"
+                class="visually-hidden"
+                multiple
+              />
+              <div id="previewAnexosAPR" class="anexos-preview-container"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-close-modal">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <span class="material-symbols-outlined">upload_file</span> Enviar
+              APR(s)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="modalVerAPRs" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">visibility</span>
+            APRs Anexadas
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Lista de APRs para o serviço de Processo Nº:
+            <strong id="processoServicoVerAPR" class="text-primary"></strong>
+          </p>
+          <ul id="listaAPRsAnexadas" class="lista-anexos"></ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+
     <template id="templateAnexoPreviewPosterior">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+          <span class="file-size"></span>
+        </div>
+        <button type="button" class="btn-remove" title="Remover anexo">
+          ×
+        </button>
+      </div>
+    </template>
+
+    <template id="templateAnexoPreviewAPR">
       <div class="anexo-preview-item">
         <div class="anexo-preview-thumbnail">
           <img src="" alt="Preview" class="anexo-preview-img hidden" />
