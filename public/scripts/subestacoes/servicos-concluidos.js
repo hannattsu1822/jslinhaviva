@@ -42,12 +42,32 @@ document.addEventListener("DOMContentLoaded", () => {
     "templateAnexoPreviewPosterior"
   );
 
+  const modalAnexarAPREl = document.getElementById("modalAnexarAPR");
+  const formAnexarAPR = document.getElementById("formAnexarAPR");
+  const servicoIdAnexoAPRInput = document.getElementById("servicoIdAnexoAPR");
+  const processoServicoAnexoAPRSpan = document.getElementById(
+    "processoServicoAnexoAPR"
+  );
+  const btnAdicionarAnexoAPR = document.getElementById("btnAdicionarAnexoAPR");
+  const arquivosAnexoAPR = document.getElementById("arquivosAnexoAPR");
+  const previewAnexosAPR = document.getElementById("previewAnexosAPR");
+  const templateAnexoPreviewAPR = document.getElementById(
+    "templateAnexoPreviewAPR"
+  );
+
+  const modalVerAPRsEl = document.getElementById("modalVerAPRs");
+  const processoServicoVerAPRSpan = document.getElementById(
+    "processoServicoVerAPR"
+  );
+  const listaAPRsAnexadas = document.getElementById("listaAPRsAnexadas");
+
   const paginationContainer = document.getElementById("paginationContainer");
   let currentPage = 1;
   const a_cada = 10;
 
   let acaoConfirmadaCallback = null;
   let anexosPosteriorTemporarios = [];
+  let anexosAPRTemporarios = [];
 
   function mostrarModal(modalEl) {
     if (modalEl) modalEl.classList.remove("hidden");
@@ -107,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     currentPage = page;
     corpoTabelaServicosElem.innerHTML =
-      '<tr><td colspan="9"><div class="feedback-message">Carregando histórico...</div></td></tr>';
+      '<tr><td colspan="10"><div class="feedback-message">Carregando histórico...</div></td></tr>';
     nenhumServicoMsgElem.classList.add("d-none");
 
     const params = Object.fromEntries(
@@ -130,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       if (corpoTabelaServicosElem) {
         corpoTabelaServicosElem.innerHTML =
-          '<tr><td colspan="9"><div class="feedback-message error">Erro ao carregar o histórico.</div></td></tr>';
+          '<tr><td colspan="10"><div class="feedback-message error">Erro ao carregar o histórico.</div></td></tr>';
       }
       if (paginationContainer) paginationContainer.innerHTML = "";
     }
@@ -190,6 +210,20 @@ document.addEventListener("DOMContentLoaded", () => {
           (motivoDisplay.length > 40 ? "..." : "");
       }
 
+      const aprAnexos = serv.apr_anexos ? JSON.parse(serv.apr_anexos) : [];
+      const aprCount = serv.apr_count || 0;
+
+      let aprButtonHtml = "";
+      if (aprCount > 0) {
+        aprButtonHtml = `<button class="btn btn-success btn-ver-apr" data-processo="${
+          serv.processo
+        }" data-anexos='${JSON.stringify(
+          aprAnexos
+        )}' title="Ver APRs Anexadas"><span class="material-symbols-outlined">visibility</span> APR (${aprCount})</button>`;
+      } else {
+        aprButtonHtml = `<button class="btn btn-primary btn-anexar-apr" data-id="${serv.id}" data-processo="${serv.processo}" title="Anexar APR"><span class="material-symbols-outlined">upload_file</span> APR</button>`;
+      }
+
       tr.innerHTML = `
           <td>${serv.id || "-"}</td>
           <td>${serv.processo || "-"}</td>
@@ -199,7 +233,9 @@ document.addEventListener("DOMContentLoaded", () => {
           <td class="text-center">${dataConclusaoFormatada}</td>
           <td>${serv.responsavel_nome || "-"}</td>
           <td class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
+          <td class="actions-column text-center">${aprButtonHtml}</td>
           <td class="actions-column text-center">
+            <div class="actions-wrapper">
               <button class="btn text-info btn-ver-detalhes" data-id="${
                 serv.id
               }" title="Ver Relatório Final"><span class="material-symbols-outlined">visibility</span></button>
@@ -208,11 +244,12 @@ document.addEventListener("DOMContentLoaded", () => {
               }" data-processo="${
         serv.processo
       }" title="Reabrir Serviço"><span class="material-symbols-outlined">history</span></button>
-              <button class="btn text-primary btn-anexar" data-id="${
+              <button class="btn text-secondary btn-anexar" data-id="${
                 serv.id
               }" data-processo="${
         serv.processo
       }" title="Anexar Documento Posterior"><span class="material-symbols-outlined">attach_file_add</span></button>
+            </div>
           </td>`;
 
       tr.querySelector(".btn-ver-detalhes")?.addEventListener("click", (e) =>
@@ -233,6 +270,17 @@ document.addEventListener("DOMContentLoaded", () => {
           e.currentTarget.dataset.processo
         )
       );
+      tr.querySelector(".btn-anexar-apr")?.addEventListener("click", (e) =>
+        abrirModalAnexarAPR(
+          e.currentTarget.dataset.id,
+          e.currentTarget.dataset.processo
+        )
+      );
+      tr.querySelector(".btn-ver-apr")?.addEventListener("click", (e) => {
+        const anexosData = e.currentTarget.dataset.anexos;
+        const anexosArray = anexosData ? JSON.parse(anexosData) : [];
+        abrirModalVerAPRs(e.currentTarget.dataset.processo, anexosArray);
+      });
 
       corpoTabelaServicosElem.appendChild(tr);
     });
@@ -262,11 +310,10 @@ document.addEventListener("DOMContentLoaded", () => {
     mostrarModal(modalConfirmacaoEl);
   }
 
-  function renderAnexosPosterior() {
-    if (!previewAnexosPosterior || !templateAnexoPreviewPosterior) return;
-    previewAnexosPosterior.innerHTML = "";
-    anexosPosteriorTemporarios.forEach((file, index) => {
-      const clone = templateAnexoPreviewPosterior.content.cloneNode(true);
+  function renderAnexos(anexosTemporarios, previewContainer, templateClone) {
+    previewContainer.innerHTML = "";
+    anexosTemporarios.forEach((file, index) => {
+      const clone = templateClone.content.cloneNode(true);
       const anexoItem = clone.querySelector(".anexo-preview-item");
       const imgPreview = anexoItem.querySelector(".anexo-preview-img");
       const iconDefault = anexoItem.querySelector(".file-icon");
@@ -286,11 +333,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       anexoItem.querySelector(".btn-remove").addEventListener("click", () => {
-        anexosPosteriorTemporarios.splice(index, 1);
-        renderAnexosPosterior();
+        anexosTemporarios.splice(index, 1);
+        renderAnexos(anexosTemporarios, previewContainer, templateClone);
       });
 
-      previewAnexosPosterior.appendChild(clone);
+      previewContainer.appendChild(clone);
     });
   }
 
@@ -298,7 +345,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!modalAnexarPosteriorEl) return;
     formAnexarPosterior.reset();
     anexosPosteriorTemporarios = [];
-    renderAnexosPosterior();
+    renderAnexos(
+      anexosPosteriorTemporarios,
+      previewAnexosPosterior,
+      templateAnexoPreviewPosterior
+    );
     servicoIdAnexoPosteriorInput.value = servicoId;
     processoServicoAnexoPosteriorSpan.textContent = processo;
     mostrarModal(modalAnexarPosteriorEl);
@@ -313,7 +364,91 @@ document.addEventListener("DOMContentLoaded", () => {
   if (arquivosAnexoPosterior) {
     arquivosAnexoPosterior.addEventListener("change", (event) => {
       anexosPosteriorTemporarios.push(...Array.from(event.target.files));
-      renderAnexosPosterior();
+      renderAnexos(
+        anexosPosteriorTemporarios,
+        previewAnexosPosterior,
+        templateAnexoPreviewPosterior
+      );
+      event.target.value = "";
+    });
+  }
+
+  function abrirModalAnexarAPR(servicoId, processo) {
+    if (!modalAnexarAPREl) return;
+    formAnexarAPR.reset();
+    anexosAPRTemporarios = [];
+    renderAnexos(
+      anexosAPRTemporarios,
+      previewAnexosAPR,
+      templateAnexoPreviewAPR
+    );
+    servicoIdAnexoAPRInput.value = servicoId;
+    processoServicoAnexoAPRSpan.textContent = processo;
+    mostrarModal(modalAnexarAPREl);
+  }
+
+  function abrirModalVerAPRs(processo, anexos) {
+    if (!modalVerAPRsEl) return;
+    processoServicoVerAPRSpan.textContent = processo;
+    listaAPRsAnexadas.innerHTML = "";
+    if (anexos && anexos.length > 0) {
+      anexos.forEach((anexo) => {
+        const li = document.createElement("li");
+        li.className = "apr-anexo-item";
+        li.innerHTML = `
+          <a href="${anexo.caminho_servidor}" target="_blank">
+            <span class="material-symbols-outlined">description</span>
+            ${anexo.nome_original}
+          </a>
+          <button class="btn-delete-apr" data-anexo-id="${anexo.id}" title="Excluir APR">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        `;
+        li.querySelector(".btn-delete-apr").addEventListener("click", (e) => {
+          const anexoId = e.currentTarget.dataset.anexoId;
+          if (
+            confirm(
+              `Tem certeza que deseja excluir a APR "${anexo.nome_original}"?`
+            )
+          ) {
+            handleExcluirAPR(anexoId);
+          }
+        });
+        listaAPRsAnexadas.appendChild(li);
+      });
+    } else {
+      listaAPRsAnexadas.innerHTML = "<li>Nenhuma APR encontrada.</li>";
+    }
+    mostrarModal(modalVerAPRsEl);
+  }
+
+  async function handleExcluirAPR(anexoId) {
+    try {
+      await fetchData(`/api/servicos/anexos/${anexoId}`, {
+        method: "DELETE",
+      });
+      alert("APR excluída com sucesso!");
+      ocultarModal(modalVerAPRsEl);
+      carregarServicos(currentPage);
+    } catch (error) {
+      alert(`Falha ao excluir APR: ${error.message}`);
+    }
+  }
+
+  if (btnAdicionarAnexoAPR) {
+    btnAdicionarAnexoAPR.addEventListener("click", () => {
+      arquivosAnexoAPR.click();
+    });
+  }
+
+  if (arquivosAnexoAPR) {
+    arquivosAnexoAPR.addEventListener("change", (event) => {
+      anexosAPRTemporarios.push(...Array.from(event.target.files));
+      renderAnexos(
+        anexosAPRTemporarios,
+        previewAnexosAPR,
+        templateAnexoPreviewAPR
+      );
       event.target.value = "";
     });
   }
@@ -384,12 +519,45 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  if (formAnexarAPR) {
+    formAnexarAPR.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const servicoId = servicoIdAnexoAPRInput.value;
+
+      if (anexosAPRTemporarios.length === 0) {
+        alert("Por favor, selecione pelo menos um arquivo de APR.");
+        return;
+      }
+
+      const formData = new FormData();
+      anexosAPRTemporarios.forEach((file) => {
+        formData.append("anexosAPR", file, file.name);
+      });
+
+      const submitButton = formAnexarAPR.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Enviando...`;
+
+      try {
+        await fetchData(`/api/servicos/${servicoId}/anexar-apr`, {
+          method: "POST",
+          body: formData,
+        });
+        alert("APR(s) enviada(s) com sucesso!");
+        ocultarModal(modalAnexarAPREl);
+        carregarServicos(currentPage);
+      } catch (error) {
+        alert(`Falha ao enviar APR(s): ${error.message}`);
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = `<span class="material-symbols-outlined">upload_file</span> Enviar APR(s)`;
+      }
+    });
+  }
+
   async function init() {
     await popularFiltroSubestacoes();
-    const initialParams = Object.fromEntries(
-      new FormData(formFiltrosServicos).entries()
-    );
-    await carregarServicos(initialParams);
+    await carregarServicos(1);
   }
 
   init();
