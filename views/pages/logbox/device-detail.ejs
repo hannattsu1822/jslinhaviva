@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= pageTitle %></title>
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/static/css/logbox/style.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <h1>
+        <span class="material-icons">sensors</span>
+        <%= localTag %>
+        <small style="color: #777; font-weight: 400; margin-left: 10px"
+          >SN: <%= serialNumber %></small
+        >
+      </h1>
+
+      <div class="latest-and-stats">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3>
+              <span class="material-icons">device_thermostat</span> Última Temp.
+            </h3>
+            <p id="latest-temp">-- °C</p>
+            <small id="latest-timestamp">Carregando...</small>
+          </div>
+          <div class="stat-card">
+            <h3>
+              <span class="material-icons">water_drop</span> Última Umidade
+            </h3>
+            <p id="latest-umid">-- %</p>
+            <small>&nbsp;</small>
+          </div>
+          <div class="stat-card">
+            <h3><span class="material-icons">battery_std</span> Bateria</h3>
+            <p id="latest-bat">-- V</p>
+            <small id="power-source">--</small>
+          </div>
+        </div>
+
+        <div class="stats-detail-grid">
+          <div class="stat-card-small">
+            <h4>Hoje</h4>
+            <p><strong>Mín:</strong> <span id="stat-today-min">--</span> °C</p>
+            <p>
+              <strong>Média:</strong> <span id="stat-today-avg">--</span> °C
+            </p>
+            <p><strong>Máx:</strong> <span id="stat-today-max">--</span> °C</p>
+          </div>
+          <div class="stat-card-small">
+            <h4>Este Mês</h4>
+            <p><strong>Mín:</strong> <span id="stat-month-min">--</span> °C</p>
+            <p>
+              <strong>Média:</strong> <span id="stat-month-avg">--</span> °C
+            </p>
+            <p><strong>Máx:</strong> <span id="stat-month-max">--</span> °C</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fan-stats-grid">
+        <div class="stat-card-small fan-card">
+          <h4>Ventoinha (Hoje)</h4>
+          <p>
+            <strong>Acionamentos:</strong>
+            <span id="fan-today-count">--</span>
+          </p>
+          <p>
+            <strong>Tempo Ativa:</strong>
+            <span id="fan-today-duration">--</span>
+          </p>
+        </div>
+        <div class="stat-card-small fan-card">
+          <h4>Ventoinha (Este Mês)</h4>
+          <p>
+            <strong>Acionamentos:</strong>
+            <span id="fan-month-count">--</span>
+          </p>
+          <p>
+            <strong>Tempo Ativa:</strong>
+            <span id="fan-month-duration">--</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card log-card">
+          <h2>Histórico de Leituras</h2>
+          <div id="loader-historico" class="loader"></div>
+          <canvas id="graficoHistorico" style="display: none"></canvas>
+        </div>
+
+        <div class="chart-card log-card">
+          <h2><span class="material-icons">update</span> Log em Tempo Real</h2>
+          <div class="log-container">
+            <ul id="realtime-log-list-detail"></ul>
+          </div>
+        </div>
+
+        <div class="chart-card log-card">
+          <h2>
+            <span class="material-icons">history</span> Histórico da Ventoinha
+          </h2>
+          <div class="table-container">
+            <table id="fan-history-table">
+              <thead>
+                <tr>
+                  <th>Início</th>
+                  <th>Fim</th>
+                  <th>Duração</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const serialNumber = "<%= serialNumber %>";
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/scripts/logbox/device-detail.js"></script>
+  </body>
+</html>

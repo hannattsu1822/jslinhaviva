@@ -1,0 +1,52 @@
+/* views/static/css/logbox/hub.css */
+
+.hub-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.hub-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+}
+
+.hub-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.hub-card a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  text-decoration: none;
+  color: #333;
+  text-align: center;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.hub-card .material-icons {
+  font-size: 60px;
+  color: #3f51b5;
+  margin-bottom: 15px;
+}
+
+.hub-card h3 {
+  margin: 10px 0;
+  font-size: 1.5rem;
+  color: #1a237e;
+}
+
+.hub-card p {
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.5;
+}

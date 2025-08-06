@@ -1,0 +1,102 @@
+<button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+  <span class="material-symbols-outlined">menu</span>
+</button>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="user-profile">
+      <span class="material-symbols-outlined user-icon">badge</span>
+      <div class="user-details">
+        <h5 class="user-name" id="sidebar-user-name">Carregando...</h5>
+        <p class="user-role" id="sidebar-user-cargo">...</p>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <ul class="nav-list">
+      <li class="nav-item">
+        <a href="/dashboard" class="nav-link">
+          <span class="material-symbols-outlined">space_dashboard</span>
+          Dashboard Principal
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/subestacoes-dashboard" class="nav-link">
+          <span class="material-symbols-outlined">electrical_services</span>
+          Subestações
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/transformadores" class="nav-link">
+          <span class="material-symbols-outlined">bolt</span>
+          Transformadores
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/frota" class="nav-link">
+          <span class="material-symbols-outlined">local_shipping</span>
+          Frota
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/gestao-servicos" class="nav-link">
+          <span class="material-symbols-outlined">build_circle</span>
+          Gestão de Serviços
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/gestao-turmas" class="nav-link">
+          <span class="material-symbols-outlined">groups</span>
+          Gestão de Turmas
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/fibra-optica" class="nav-link">
+          <span class="material-symbols-outlined">cable</span>
+          Fibra Óptica
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/inspecoes-redes" class="nav-link">
+          <span class="material-symbols-outlined">cell_tower</span>
+          Inspeções de Redes
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="/avulsos-dashboard" class="nav-link">
+          <span class="material-symbols-outlined">extension</span>
+          Serviços Avulsos
+        </a>
+      </li>
+
+      <!-- LINK CORRIGIDO E ADICIONADO AQUI -->
+      <li class="nav-item" id="sidebar-gestao-link" style="display: none">
+        <a href="/dashboard-gestor" class="nav-link">
+          <span class="material-symbols-outlined">admin_panel_settings</span>
+          Painel de Gestão
+        </a>
+      </li>
+
+      <li class="nav-item" id="sidebar-auditoria-link" style="display: none">
+        <a href="/auditoria" class="nav-link">
+          <span class="material-symbols-outlined">policy</span>
+          Auditoria
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="time-display">
+      <span id="sidebar-date">--/--/----</span>
+      <span id="sidebar-time">--:--:--</span>
+    </div>
+    <button id="sidebar-logout-btn" class="btn-logout">
+      <span class="material-symbols-outlined">logout</span>
+      Sair
+    </button>
+  </div>
+</aside>
+
+<div class="sidebar-overlay"></div>
