@@ -1,0 +1,100 @@
+/* Estilos Gerais */
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: #f8f9fa; /* Um branco levemente acinzentado, suave para os olhos */
+  color: #212529; /* Preto suave para texto principal */
+  margin: 0;
+  line-height: 1.6;
+}
+
+.main-content-wrapper {
+  padding: 1.5rem;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Cabeçalho */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid #dee2e6; /* Borda cinza clara */
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  font-weight: 500;
+  color: #343a40; /* Cinza escuro para títulos */
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.page-header .material-symbols-outlined {
+  font-size: 2.8rem;
+  color: #495057; /* Cinza médio para o ícone do título */
+}
+
+/* Grid do Dashboard */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+/* Card do Dashboard */
+.dashboard-card {
+  background-color: #ffffff;
+  border: 1px solid #e9ecef; /* Borda muito sutil */
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
+    border-color 0.2s ease-in-out;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 7px 14px rgba(0, 0, 0, 0.07);
+  border-color: #ced4da; /* Borda fica um pouco mais escura no hover */
+}
+
+.card-icon-wrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px; /* Um quadrado com cantos arredondados (squircle) */
+  background-color: #e9ecef; /* Fundo cinza claro para o ícone */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  color: #495057; /* Ícone em cinza médio */
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #212529;
+  margin: 0 0 0.5rem 0;
+}
+
+.card-description {
+  font-size: 0.95rem;
+  color: #6c757d; /* Cinza para texto secundário */
+  flex-grow: 1;
+}

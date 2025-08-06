@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= pageTitle %></title>
+
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/static/css/logbox/style.css" />
+
+    <link rel="stylesheet" href="/static/css/logbox/hub.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <h1>
+        <span class="material-icons">hub</span>
+        Hub de Monitoramento
+      </h1>
+
+      <div class="hub-container">
+        <div class="hub-card">
+          <a href="/logbox-devices">
+            <span class="material-icons">visibility</span>
+            <h3>Visualizar Equipamentos</h3>
+            <p>
+              Acesse a lista de todos os dispositivos monitorados e veja seus
+              dados em tempo real e históricos detalhados.
+            </p>
+          </a>
+        </div>
+
+        <div class="hub-card">
+          <a href="/gerenciar-dispositivos">
+            <span class="material-icons">settings</span>
+            <h3>Gerenciar Dispositivos</h3>
+            <p>
+              Adicione, edite ou remova equipamentos LogBox do sistema.
+              Configure nomes, descrições e outros parâmetros.
+            </p>
+          </a>
+        </div>
+
+        <div class="hub-card">
+          <a href="/relatorios-logbox">
+            <span class="material-icons">assessment</span>
+            <h3>Gerar Relatórios</h3>
+            <p>
+              Crie relatórios detalhados com gráficos e estatísticas para
+              períodos específicos e exporte para PDF.
+            </p>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script src="/scripts/logbox/hub.js"></script>
+  </body>
+</html>
