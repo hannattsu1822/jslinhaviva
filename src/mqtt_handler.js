@@ -1,48 +1,50 @@
 const mqtt = require("mqtt");
 const { promisePool } = require("./init");
 
-const LIMITE_TEMPERATURA_VENTOINHA = 60.0;
+const LIMITE_TEMPERATURA_VENTILACAO = 60.0;
 const HISTERESE_TEMPERATURA = 5.0;
-const LIMITE_VOLTAGEM_CA = 8.0;
 
-let estadoVentoinhas = {};
+let estadoVentilacao = {};
 
-async function verificarEAtualizarVentoinha(
+async function verificarEAtualizarVentilacao(
   serialNumber,
   temperaturaAtual,
   timestampLeitura
 ) {
-  const estadoAtual = estadoVentoinhas[serialNumber] || {
+  const estadoAtual = estadoVentilacao[serialNumber] || {
     ligada: false,
     ultimoId: null,
   };
 
-  if (!estadoAtual.ligada && temperaturaAtual >= LIMITE_TEMPERATURA_VENTOINHA) {
+  if (
+    !estadoAtual.ligada &&
+    temperaturaAtual >= LIMITE_TEMPERATURA_VENTILACAO
+  ) {
     const [result] = await promisePool.query(
-      `INSERT INTO historico_ventoinha (serial_number, timestamp_inicio) VALUES (?, ?)`,
+      `INSERT INTO historico_ventilacao (serial_number, timestamp_inicio) VALUES (?, ?)`,
       [serialNumber, timestampLeitura]
     );
-    estadoVentoinhas[serialNumber] = {
+    estadoVentilacao[serialNumber] = {
       ligada: true,
       ultimoId: result.insertId,
     };
     console.log(
-      `[Ventoinha Handler] LIGADA para SN: ${serialNumber} no ID: ${result.insertId}`
+      `[Ventilação Handler] LIGADA para SN: ${serialNumber} no ID: ${result.insertId}`
     );
   } else if (
     estadoAtual.ligada &&
-    temperaturaAtual < LIMITE_TEMPERATURA_VENTOINHA - HISTERESE_TEMPERATURA
+    temperaturaAtual < LIMITE_TEMPERATURA_VENTILACAO - HISTERESE_TEMPERATURA
   ) {
     if (estadoAtual.ultimoId) {
       await promisePool.query(
-        `UPDATE historico_ventoinha SET timestamp_fim = ?, duracao_segundos = TIMESTAMPDIFF(SECOND, timestamp_inicio, ?) WHERE id = ?`,
+        `UPDATE historico_ventilacao SET timestamp_fim = ?, duracao_segundos = TIMESTAMPDIFF(SECOND, timestamp_inicio, ?) WHERE id = ?`,
         [timestampLeitura, timestampLeitura, estadoAtual.ultimoId]
       );
       console.log(
-        `[Ventoinha Handler] DESLIGADA para SN: ${serialNumber} no ID: ${estadoAtual.ultimoId}`
+        `[Ventilação Handler] DESLIGADA para SN: ${serialNumber} no ID: ${estadoAtual.ultimoId}`
       );
     }
-    estadoVentoinhas[serialNumber] = { ligada: false, ultimoId: null };
+    estadoVentilacao[serialNumber] = { ligada: false, ultimoId: null };
   }
 }
 
@@ -66,8 +68,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
     const jsTimestamp = (tDateTime - epochOffset) * 86400 * 1000;
     const timestampLeitura = new Date(jsTimestamp);
 
-    const fonteAlimentacao =
-      bateria > LIMITE_VOLTAGEM_CA ? "Alimentação Direta" : "Bateria";
+    const fonteAlimentacao = "Alimentação Direta";
 
     const sql = `
       INSERT INTO leituras_logbox 
@@ -85,7 +86,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
       `[MQTT Handler] Payload salvo para SN: ${serialNumber} | Fonte: ${fonteAlimentacao}`
     );
 
-    await verificarEAtualizarVentoinha(
+    await verificarEAtualizarVentilacao(
       serialNumber,
       temperatura,
       timestampLeitura
