@@ -18,6 +18,7 @@ const rotasSubestacoesServicos = require("./routes/rotas_subestacoes_servicos");
 const rotasSubestacoesChecklist = require("./routes/rotas_subestacoes_checklist");
 const rotasPaginasDirect = require("./routes/rotas_paginas_direct");
 const rotasGerenciamentoUsuarios = require("./routes/gerenciamentoUsuarios");
+const rotasLogbox = require("./routes/rotas_logbox");
 
 const router = express.Router();
 
@@ -37,6 +38,7 @@ router.use("/", rotasSubestacoesServicos);
 router.use("/", rotasSubestacoesChecklist);
 router.use("/", rotasPaginasDirect);
 router.use("/", rotasGerenciamentoUsuarios);
+router.use("/", rotasLogbox);
 
 router.get("/", (req, res) => {
   if (req.session && req.session.user) {
