@@ -220,7 +220,6 @@ router.post(
         !subestacao_id ||
         !responsavel_levantamento_id ||
         !tipo_inspecao ||
-        !data_avaliacao ||
         !hora_inicial ||
         !inspection_mode
       ) {
@@ -229,6 +228,8 @@ router.post(
             "Campos obrigatórios do cabeçalho ou modo de inspeção não foram preenchidos.",
         });
       }
+
+      const dataAvaliacaoParaSalvar = data_avaliacao || null;
 
       await connection.beginTransaction();
 
@@ -240,7 +241,7 @@ router.post(
           responsavel_levantamento_id,
           tipo_inspecao,
           inspection_mode.toUpperCase(),
-          data_avaliacao,
+          dataAvaliacaoParaSalvar,
           hora_inicial,
           req.body.hora_final || null,
           "EM_ANDAMENTO",
@@ -501,6 +502,8 @@ router.put(
         [inspecaoId]
       );
 
+      const dataAvaliacaoParaSalvar = data_avaliacao || null;
+
       await connection.query(
         `UPDATE inspecoes_subestacoes SET
             processo = ?, subestacao_id = ?, responsavel_levantamento_id = ?,
@@ -513,7 +516,7 @@ router.put(
           responsavel_levantamento_id,
           tipo_inspecao,
           inspection_mode.toUpperCase(),
-          data_avaliacao,
+          dataAvaliacaoParaSalvar,
           hora_inicial,
           req.body.hora_final || null,
           req.body.observacoes_gerais || null,
