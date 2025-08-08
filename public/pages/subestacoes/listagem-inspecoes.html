@@ -176,6 +176,7 @@
                     <th class="text-center">Data Avaliação</th>
                     <th>Responsável</th>
                     <th class="text-center">Status</th>
+                    <th class="text-center">APR</th>
                     <th class="actions-column">Utilidades</th>
                   </tr>
                 </thead>
@@ -317,6 +318,105 @@
       </div>
     </div>
 
+    <div class="modal" id="modalAnexarAPRInspecao" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <span class="material-symbols-outlined">upload_file</span> Anexar
+              APR(s)
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <form id="formAnexarAPRInspecao">
+            <div class="modal-body">
+              <input type="hidden" id="inspecaoIdAnexoAPR" />
+              <p>
+                Anexando APR(s) à Inspeção Nº:
+                <strong
+                  id="formNumInspecaoAnexoAPR"
+                  class="text-primary"
+                ></strong>
+              </p>
+              <div class="form-group">
+                <label>Selecionar arquivos de APR:</label>
+                <div class="upload-actions">
+                  <button
+                    type="button"
+                    id="btnAdicionarAnexoAPRInspecao"
+                    class="btn btn-secondary"
+                  >
+                    <span class="material-symbols-outlined">attach_file</span>
+                    Procurar Arquivos
+                  </button>
+                </div>
+                <input
+                  type="file"
+                  id="arquivosAnexoAPRInspecao"
+                  name="anexosAPR"
+                  class="visually-hidden"
+                  multiple
+                />
+                <div
+                  id="previewAnexosAPRInspecao"
+                  class="anexos-preview-container"
+                ></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary btn-close-modal"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-sm btn-primary">
+                <span class="material-symbols-outlined">upload_file</span>
+                Enviar APR(s)
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalVerAPRsInspecao" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <span class="material-symbols-outlined">visibility</span> APRs
+              Anexadas
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Lista de APRs para a Inspeção Nº:
+              <strong id="formNumInspecaoVerAPR" class="text-primary"></strong>
+            </p>
+            <ul id="listaAPRsAnexadasInspecao" class="lista-anexos"></ul>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary btn-close-modal"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <template id="templateAnexoPreview">
       <div class="anexo-preview-item">
         <div class="anexo-preview-icon-container">
@@ -324,6 +424,24 @@
           <span class="material-symbols-outlined anexo-preview-icon-default">
             description
           </span>
+        </div>
+        <div class="anexo-info">
+          <div class="anexo-name">Nome do Arquivo.jpg</div>
+          <div class="anexo-size">123 KB</div>
+        </div>
+        <button type="button" class="btn-remover-anexo" title="Remover anexo">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
+    </template>
+
+    <template id="templateAnexoPreviewAPR">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-icon-container">
+          <img src="" class="anexo-preview-img visually-hidden" alt="preview" />
+          <span class="material-symbols-outlined anexo-preview-icon-default"
+            >description</span
+          >
         </div>
         <div class="anexo-info">
           <div class="anexo-name">Nome do Arquivo.jpg</div>
