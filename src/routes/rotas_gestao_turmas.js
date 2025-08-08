@@ -623,6 +623,15 @@ router.post(
   async (req, res) => {
     try {
       const { diarias, filtros, usuario } = req.body;
+
+      if (!diarias || !filtros || !usuario) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Dados insuficientes para gerar o PDF. Faltam informações essenciais na requisição.",
+        });
+      }
+
       const htmlContent = `
             <!DOCTYPE html>
             <html lang="pt-BR">
@@ -650,18 +659,20 @@ router.post(
                 </div>
                 <div class="filters">
                     <h3>Filtros Aplicados</h3>
-                    <p><strong>Turma:</strong> ${filtros.turma || "N/A"}</p>
+                    <p><strong>Turma:</strong> ${filtros?.turma || "N/A"}</p>
                     <p><strong>Período:</strong> ${
-                      filtros.dataInicial || "N/A"
-                    } ${filtros.dataFinal ? "até " + filtros.dataFinal : ""}</p>
+                      filtros?.dataInicial || "N/A"
+                    } ${
+        filtros?.dataFinal ? "até " + filtros.dataFinal : ""
+      }</p>
                     <p><strong>Processo:</strong> ${
-                      filtros.processo || "N/A"
+                      filtros?.processo || "N/A"
                     }</p>
                     <p><strong>Matrícula:</strong> ${
-                      filtros.matricula || "N/A"
+                      filtros?.matricula || "N/A"
                     }</p>
-                    <p><strong>QS:</strong> ${filtros.qs ? "Sim" : "Não"}</p>
-                    <p><strong>QD:</strong> ${filtros.qd ? "Sim" : "Não"}</p>
+                    <p><strong>QS:</strong> ${filtros?.qs ? "Sim" : "Não"}</p>
+                    <p><strong>QD:</strong> ${filtros?.qd ? "Sim" : "Não"}</p>
                 </div>
                 <table>
                     <thead>
@@ -681,35 +692,39 @@ router.post(
                             ([matricula, dados]) => `
                                 <tr class="group-header">
                                     <td colspan="7">${matricula} - ${
-                              dados.nome
-                            } (${dados.cargo || "N/A"})</td>
+                              dados?.nome || "Nome Indisponível"
+                            } (${dados?.cargo || "N/A"})</td>
                                 </tr>
-                                ${dados.diarias
-                                  .map(
-                                    (diaria) => `
+                                ${
+                                  dados?.diarias
+                                    ?.map(
+                                      (diaria) => `
                                     <tr>
                                         <td>${matricula}</td>
-                                        <td>${dados.nome}</td>
-                                        <td>${dados.cargo || "N/A"}</td>
+                                        <td>${dados?.nome || "N/A"}</td>
+                                        <td>${dados?.cargo || "N/A"}</td>
                                         <td>${
-                                          diaria.data_formatada ||
-                                          new Date(
-                                            diaria.data
-                                          ).toLocaleDateString("pt-BR", {
-                                            timeZone: "UTC",
-                                          })
+                                          diaria?.data_formatada ||
+                                          (diaria?.data
+                                            ? new Date(
+                                                diaria.data
+                                              ).toLocaleDateString("pt-BR", {
+                                                timeZone: "UTC",
+                                              })
+                                            : "N/A")
                                         }</td>
                                         <td class="text-center">${
-                                          diaria.qs ? "X" : ""
+                                          diaria?.qs ? "X" : ""
                                         }</td>
                                         <td class="text-center">${
-                                          diaria.qd ? "X" : ""
+                                          diaria?.qd ? "X" : ""
                                         }</td>
-                                        <td>${diaria.processo}</td>
+                                        <td>${diaria?.processo || ""}</td>
                                     </tr>
                                 `
-                                  )
-                                  .join("")}
+                                    )
+                                    .join("") || ""
+                                }
                             `
                           )
                           .join("")}
@@ -717,13 +732,13 @@ router.post(
                 </table>
                 <div class="footer">
                     <p>Total de diárias: ${Object.values(diarias).reduce(
-                      (acc, curr) => acc + curr.diarias.length,
+                      (acc, curr) => acc + (curr?.diarias?.length || 0),
                       0
                     )}</p>
                     <div class="assinatura">
-                        <p>Gerado por: ${usuario.nome} (${
-        usuario.matricula
-      })</p>
+                        <p>Gerado por: ${
+                          usuario?.nome || "Usuário Desconhecido"
+                        } (${usuario?.matricula || "N/A"})</p>
                     </div>
                 </div>
             </body>
