@@ -56,6 +56,33 @@ document.addEventListener("DOMContentLoaded", () => {
     "btnConfirmarAcaoGeral"
   );
 
+  const modalAnexarAPREl = document.getElementById("modalAnexarAPRInspecao");
+  const formAnexarAPR = document.getElementById("formAnexarAPRInspecao");
+  const inspecaoIdAnexoAPRInput = document.getElementById("inspecaoIdAnexoAPR");
+  const formNumInspecaoAnexoAPRSpan = document.getElementById(
+    "formNumInspecaoAnexoAPR"
+  );
+  const btnAdicionarAnexoAPR = document.getElementById(
+    "btnAdicionarAnexoAPRInspecao"
+  );
+  const arquivosAnexoAPRInput = document.getElementById(
+    "arquivosAnexoAPRInspecao"
+  );
+  const previewAnexosAPRDiv = document.getElementById(
+    "previewAnexosAPRInspecao"
+  );
+  const templateAnexoPreviewAPR = document.getElementById(
+    "templateAnexoPreviewAPR"
+  );
+
+  const modalVerAPRsEl = document.getElementById("modalVerAPRsInspecao");
+  const formNumInspecaoVerAPRSpan = document.getElementById(
+    "formNumInspecaoVerAPR"
+  );
+  const listaAPRsAnexadasUl = document.getElementById(
+    "listaAPRsAnexadasInspecao"
+  );
+
   const paginationContainer = document.getElementById("paginationContainer");
   let currentPage = 1;
   const a_cada = 10;
@@ -63,6 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let idParaAcao = null;
   let callbackAcaoConfirmada = null;
   let filesToUpload = [];
+  let anexosAPRTemporarios = [];
 
   async function uploadFile(file) {
     const formData = new FormData();
@@ -179,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!corpoTabelaInspecoes || !nenhumaInspecaoMsg) return;
     currentPage = page;
     corpoTabelaInspecoes.innerHTML =
-      '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Carregando inspeções...</td></tr>';
+      '<tr><td colspan="10" style="text-align: center; padding: 2rem;">Carregando inspeções...</td></tr>';
     nenhumaInspecaoMsg.style.display = "none";
 
     const params = Object.fromEntries(
@@ -197,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderizarPaginacao(response.total, response.page, response.totalPages);
     } catch (error) {
       corpoTabelaInspecoes.innerHTML =
-        '<tr><td colspan="9" style="text-align: center; color: red; padding: 2rem;">Erro ao carregar inspeções.</td></tr>';
+        '<tr><td colspan="10" style="text-align: center; color: red; padding: 2rem;">Erro ao carregar inspeções.</td></tr>';
       if (paginationContainer) paginationContainer.innerHTML = "";
     }
   }
@@ -267,6 +295,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let btnExcluirHtml = `<button class="btn text-danger btn-excluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Excluir Inspeção"><span class="material-symbols-outlined">delete</span></button>`;
 
+      const aprAnexos = insp.apr_anexos ? JSON.parse(insp.apr_anexos) : [];
+      const aprCount = insp.apr_count || 0;
+
+      let aprButtonHtml = "";
+      if (aprCount > 0) {
+        aprButtonHtml = `<button class="btn btn-sm btn-success btn-ver-apr" data-form-num="${formNumId}" data-anexos='${JSON.stringify(
+          aprAnexos
+        )}' title="Ver APRs Anexadas"><span class="material-symbols-outlined">visibility</span> APR (${aprCount})</button>`;
+      } else {
+        aprButtonHtml = `<button class="btn btn-sm btn-primary btn-anexar-apr" data-id="${insp.id}" data-form-num="${formNumId}" title="Anexar APR"><span class="material-symbols-outlined">upload_file</span> APR</button>`;
+      }
+
       tr.innerHTML = `
         <td class="text-center">${formNumId}</td>
         <td>${insp.processo || "-"}</td>
@@ -276,6 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <td class="text-center">${dataAvaliacaoFormatada}</td>
         <td>${insp.responsavel_nome}</td>
         <td class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
+        <td class="text-center">${aprButtonHtml}</td>
         <td class="actions-column">
             <button class="btn text-info btn-ver-detalhes-inspecao" data-id="${
               insp.id
@@ -340,6 +381,17 @@ document.addEventListener("DOMContentLoaded", () => {
             "danger"
           )
       );
+      tr.querySelector(".btn-anexar-apr")?.addEventListener("click", (e) =>
+        abrirModalAnexarAPR(
+          e.currentTarget.dataset.id,
+          e.currentTarget.dataset.formNum
+        )
+      );
+      tr.querySelector(".btn-ver-apr")?.addEventListener("click", (e) => {
+        const anexosData = e.currentTarget.dataset.anexos;
+        const anexosArray = anexosData ? JSON.parse(anexosData) : [];
+        abrirModalVerAPRs(e.currentTarget.dataset.formNum, anexosArray);
+      });
       corpoTabelaInspecoes.appendChild(tr);
     });
   }
@@ -596,6 +648,146 @@ document.addEventListener("DOMContentLoaded", () => {
       } finally {
         btnSalvarAnexosEscritorio.disabled = false;
         btnSalvarAnexosEscritorio.innerHTML = originalButtonHtml;
+      }
+    });
+  }
+
+  function renderAnexoPreviewsAPR() {
+    if (!previewAnexosAPRDiv || !templateAnexoPreviewAPR) return;
+    previewAnexosAPRDiv.innerHTML = "";
+    anexosAPRTemporarios.forEach((file, index) => {
+      const clone = templateAnexoPreviewAPR.content.cloneNode(true);
+      const anexoItem = clone.querySelector(".anexo-preview-item");
+      const imgPreview = anexoItem.querySelector(".anexo-preview-img");
+      const iconDefault = anexoItem.querySelector(
+        ".anexo-preview-icon-default"
+      );
+
+      anexoItem.querySelector(".anexo-name").textContent = file.name;
+      anexoItem.querySelector(".anexo-size").textContent = `${(
+        file.size / 1024
+      ).toFixed(1)} KB`;
+
+      if (file.type.startsWith("image/")) {
+        imgPreview.src = URL.createObjectURL(file);
+        imgPreview.classList.remove("visually-hidden");
+        iconDefault.classList.add("visually-hidden");
+      }
+
+      anexoItem
+        .querySelector(".btn-remover-anexo")
+        .addEventListener("click", () => {
+          anexosAPRTemporarios.splice(index, 1);
+          URL.revokeObjectURL(imgPreview.src);
+          renderAnexoPreviewsAPR();
+        });
+      previewAnexosAPRDiv.appendChild(clone);
+    });
+  }
+
+  function abrirModalAnexarAPR(inspecaoId, formNum) {
+    if (!modalAnexarAPREl) return;
+    formAnexarAPR.reset();
+    anexosAPRTemporarios = [];
+    renderAnexoPreviewsAPR();
+    inspecaoIdAnexoAPRInput.value = inspecaoId;
+    formNumInspecaoAnexoAPRSpan.textContent = formNum;
+    showModal(modalAnexarAPREl);
+  }
+
+  function abrirModalVerAPRs(formNum, anexos) {
+    if (!modalVerAPRsEl) return;
+    formNumInspecaoVerAPRSpan.textContent = formNum;
+    listaAPRsAnexadasUl.innerHTML = "";
+    if (anexos && anexos.length > 0) {
+      anexos.forEach((anexo) => {
+        const li = document.createElement("li");
+        li.className = "apr-anexo-item";
+        li.innerHTML = `
+            <a href="${anexo.caminho_servidor}" target="_blank">
+              <span class="material-symbols-outlined">description</span>
+              ${anexo.nome_original}
+            </a>
+            <button class="btn-delete-apr" data-anexo-id="${anexo.id}" title="Excluir APR">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          `;
+        li.querySelector(".btn-delete-apr").addEventListener("click", (e) => {
+          const anexoId = e.currentTarget.dataset.anexoId;
+          if (
+            confirm(
+              `Tem certeza que deseja excluir a APR "${anexo.nome_original}"?`
+            )
+          ) {
+            handleExcluirAPR(anexoId);
+          }
+        });
+        listaAPRsAnexadasUl.appendChild(li);
+      });
+    } else {
+      listaAPRsAnexadasUl.innerHTML = "<li>Nenhuma APR encontrada.</li>";
+    }
+    showModal(modalVerAPRsEl);
+  }
+
+  async function handleExcluirAPR(anexoId) {
+    try {
+      await fetchData(`/inspecoes-subestacoes/anexos/${anexoId}`, {
+        method: "DELETE",
+      });
+      alert("APR excluída com sucesso!");
+      hideModal(modalVerAPRsEl);
+      carregarInspecoes(currentPage);
+    } catch (error) {
+      alert(`Falha ao excluir APR: ${error.message}`);
+    }
+  }
+
+  if (btnAdicionarAnexoAPR) {
+    btnAdicionarAnexoAPR.addEventListener("click", () =>
+      arquivosAnexoAPRInput.click()
+    );
+  }
+
+  if (arquivosAnexoAPRInput) {
+    arquivosAnexoAPRInput.addEventListener("change", (event) => {
+      anexosAPRTemporarios.push(...Array.from(event.target.files));
+      renderAnexoPreviewsAPR();
+      event.target.value = "";
+    });
+  }
+
+  if (formAnexarAPR) {
+    formAnexarAPR.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const inspecaoId = inspecaoIdAnexoAPRInput.value;
+      if (anexosAPRTemporarios.length === 0) {
+        alert("Por favor, selecione pelo menos um arquivo de APR.");
+        return;
+      }
+
+      const formData = new FormData();
+      anexosAPRTemporarios.forEach((file) => {
+        formData.append("anexosAPR", file, file.name);
+      });
+
+      const submitButton = formAnexarAPR.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.innerHTML = `Enviando...`;
+
+      try {
+        await fetchData(`/inspecoes-subestacoes/${inspecaoId}/anexar-apr`, {
+          method: "POST",
+          body: formData,
+        });
+        alert("APR(s) enviada(s) com sucesso!");
+        hideModal(modalAnexarAPREl);
+        carregarInspecoes(currentPage);
+      } catch (error) {
+        alert(`Falha ao enviar APR(s): ${error.message}`);
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = `<span class="material-symbols-outlined">upload_file</span> Enviar APR(s)`;
       }
     });
   }
