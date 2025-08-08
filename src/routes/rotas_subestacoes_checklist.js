@@ -1066,7 +1066,9 @@ router.get(
           DATE_FORMAT(i.data_avaliacao, '%Y-%m-%d') as data_avaliacao,
           i.status_inspecao,
           s.sigla as subestacao_sigla,
-          u.nome as responsavel_nome
+          u.nome as responsavel_nome,
+          (SELECT COUNT(*) FROM inspecoes_anexos WHERE inspecao_id = i.id AND categoria_anexo = 'INSPECAO_APR') as apr_count,
+          (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'caminho_servidor', caminho_servidor, 'nome_original', nome_original)) FROM inspecoes_anexos WHERE inspecao_id = i.id AND categoria_anexo = 'INSPECAO_APR') as apr_anexos
       `;
 
       if (paginated === "false") {
@@ -1311,6 +1313,148 @@ router.post(
       }
       res.status(500).json({
         message: "Erro interno ao salvar imagens termográficas do item.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.post(
+  "/inspecoes-subestacoes/:inspecaoId/anexar-apr",
+  autenticar,
+  verificarNivel(3),
+  verificarInspecaoExiste,
+  upload.array("anexosAPR", 5),
+  async (req, res) => {
+    const { inspecaoId } = req;
+    const arquivos = req.files;
+
+    if (!arquivos || arquivos.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Nenhum arquivo de APR enviado." });
+    }
+
+    const connection = await promisePool.getConnection();
+    let arquivosMovidosComSucesso = [];
+    try {
+      await connection.beginTransaction();
+
+      const inspecaoUploadDir = path.join(
+        uploadsSubestacoesDir,
+        "checklist",
+        `checklist_${String(inspecaoId)}`,
+        "apr_anexos"
+      );
+      await fs.mkdir(inspecaoUploadDir, { recursive: true });
+
+      for (const file of arquivos) {
+        const nomeUnicoArquivo = `${Date.now()}_APR_${file.originalname.replace(
+          /[^a-zA-Z0-9.\-_]/g,
+          "_"
+        )}`;
+        const caminhoDestino = path.join(inspecaoUploadDir, nomeUnicoArquivo);
+        await fs.rename(file.path, caminhoDestino);
+        arquivosMovidosComSucesso.push(caminhoDestino);
+
+        const caminhoRelativoServidor = `checklist/checklist_${inspecaoId}/apr_anexos/${nomeUnicoArquivo}`;
+        await connection.query(
+          `INSERT INTO inspecoes_anexos (inspecao_id, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            inspecaoId,
+            file.originalname,
+            `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
+            file.mimetype,
+            file.size,
+            "INSPECAO_APR",
+          ]
+        );
+      }
+
+      await connection.commit();
+      await registrarAuditoria(
+        req.user.matricula,
+        "UPLOAD_APR_INSPECAO",
+        `APR(s) anexada(s) à Inspeção ID ${inspecaoId}.`
+      );
+      res.status(201).json({ message: "APR(s) anexada(s) com sucesso!" });
+    } catch (error) {
+      await connection.rollback();
+      for (const caminho of arquivosMovidosComSucesso) {
+        try {
+          await fs.unlink(caminho);
+        } catch (e) {}
+      }
+      res.status(500).json({
+        message: "Erro ao anexar APR.",
+        detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.delete(
+  "/inspecoes-subestacoes/anexos/:anexoId",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { anexoId } = req.params;
+    if (isNaN(parseInt(anexoId, 10))) {
+      return res.status(400).json({ message: "ID do anexo inválido." });
+    }
+
+    const connection = await promisePool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [anexoRows] = await connection.query(
+        "SELECT id, caminho_servidor, nome_original, inspecao_id FROM inspecoes_anexos WHERE id = ?",
+        [anexoId]
+      );
+
+      if (anexoRows.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({ message: "Anexo não encontrado." });
+      }
+
+      const anexo = anexoRows[0];
+      if (anexo.caminho_servidor) {
+        const fullPath = path.join(
+          projectRootDir,
+          "public",
+          anexo.caminho_servidor
+        );
+        try {
+          await fs.unlink(fullPath);
+        } catch (err) {
+          if (err.code !== "ENOENT") {
+            console.warn(
+              `Falha ao deletar arquivo físico do anexo ${anexoId}: ${fullPath}`
+            );
+          }
+        }
+      }
+
+      await connection.query("DELETE FROM inspecoes_anexos WHERE id = ?", [
+        anexoId,
+      ]);
+      await connection.commit();
+
+      await registrarAuditoria(
+        req.user.matricula,
+        "DELETE_ANEXO_INSPECAO",
+        `Anexo ID ${anexoId} (Nome: ${anexo.nome_original}) da Inspeção ID ${anexo.inspecao_id} foi excluído.`
+      );
+
+      res.json({ message: "Anexo excluído com sucesso." });
+    } catch (error) {
+      await connection.rollback();
+      res.status(500).json({
+        message: "Erro interno ao excluir o anexo.",
         detalhes: error.message,
       });
     } finally {
