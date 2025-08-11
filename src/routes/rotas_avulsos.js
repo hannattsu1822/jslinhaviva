@@ -501,11 +501,9 @@ router.post(
       if (connection) await connection.rollback();
       console.error("Erro ao salvar cadastro BAS:", error);
       if (error.code === "ER_DUP_ENTRY")
-        res
-          .status(409)
-          .json({
-            message: "Colaborador já associado a este BAS de processo.",
-          });
+        res.status(409).json({
+          message: "Colaborador já associado a este BAS de processo.",
+        });
       else res.status(500).json({ message: `Erro interno: ${error.message}` });
     } finally {
       if (connection) connection.release();
@@ -575,7 +573,7 @@ router.post(
         "04:00:00",
       ];
       let txtContent = "";
-      const espacamento = "   ";
+      const espacamento = "\t";
 
       for (const proc of processRows) {
         const processoSemBarra = String(proc.processo || "").replace(/\//g, "");
@@ -680,18 +678,37 @@ router.post(
         });
       }
 
-      const [processRows] = await connection.execute(
-        `SELECT 
-           processo, 
-           data_conclusao
-         FROM processos 
-         WHERE 
-           data_conclusao BETWEEN ? AND ? AND
-           (tipo IS NULL OR tipo != 'Emergencial') AND
-           ordem_obra = 'ODI'
-         ORDER BY data_conclusao, id`,
-        [dataInicio, dataFim]
-      );
+      const [resultadosLinhaViva, resultadosSubestacao] = await Promise.all([
+        connection.execute(
+          `SELECT 
+             processo, 
+             data_conclusao
+           FROM processos 
+           WHERE 
+             data_conclusao BETWEEN ? AND ? AND
+             (tipo IS NULL OR tipo != 'Emergencial') AND
+             ordem_obra = 'ODI'
+           ORDER BY data_conclusao, id`,
+          [dataInicio, dataFim]
+        ),
+        connection.execute(
+          `SELECT 
+             processo, 
+             data_conclusao
+           FROM servicos_subestacoes 
+           WHERE 
+             data_conclusao BETWEEN ? AND ? AND
+             tipo_ordem = 'ODI' AND
+             status = 'CONCLUIDO'
+           ORDER BY data_conclusao, id`,
+          [dataInicio, dataFim]
+        ),
+      ]);
+
+      const processRows = [
+        ...resultadosLinhaViva[0],
+        ...resultadosSubestacao[0],
+      ];
 
       if (processRows.length === 0) {
         return res.status(200).send("");
@@ -699,7 +716,7 @@ router.post(
 
       const horasPossiveis = ["01:00:00", "02:00:00", "03:00:00", "04:00:00"];
       let txtContent = "";
-      const espacamento = "   ";
+      const espacamento = "\t";
 
       for (const proc of processRows) {
         let processoOriginal = String(proc.processo || "");
@@ -746,7 +763,7 @@ router.post(
       const periodoNomeArquivo = `${formatarDataParaNomeArquivo(
         dataInicioObj
       )}_a_${formatarDataParaNomeArquivo(dataFimObj)}`;
-      const nomeArquivo = `${nomeUsuarioParaArquivo}_${matricula}_${periodoNomeArquivo}_LINHAVIVA.txt`;
+      const nomeArquivo = `${nomeUsuarioParaArquivo}_${matricula}_${periodoNomeArquivo}_LINHAVIVA_CONSOLIDADO.txt`;
 
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.setHeader(
@@ -757,11 +774,14 @@ router.post(
 
       await registrarAuditoria(
         usuarioLogadoMatricula,
-        "Geração Relatório TXT BAS Linha Viva",
-        `Relatório TXT "${nomeArquivo}" gerado para matrícula ${matricula}, person_id: ${personIdParaRelatorio}, razão ${razao}, período ${dataInicio} a ${dataFim}. Total de ${processRows.length} processos.`
+        "Geração Relatório TXT BAS Linha Viva Consolidado",
+        `Relatório TXT "${nomeArquivo}" gerado para matrícula ${matricula}, person_id: ${personIdParaRelatorio}, razão ${razao}, período ${dataInicio} a ${dataFim}. Total de ${processRows.length} processos (Linha Viva + Subestação).`
       );
     } catch (error) {
-      console.error("Erro ao gerar relatório TXT BAS Linha Viva:", error);
+      console.error(
+        "Erro ao gerar relatório TXT BAS Linha Viva Consolidado:",
+        error
+      );
       if (!res.headersSent) {
         res.status(500).json({
           message: `Erro interno no servidor: ${error.message}`,
