@@ -572,11 +572,15 @@ router.post(
         "03:00:00",
         "04:00:00",
       ];
-      let txtContent = "";
       const espacamento = "\t";
+      const header = `ID${espacamento}PROCESSO${espacamento}RAZAO${espacamento}DATA${espacamento}HORAS\n`;
+      let txtContent = header;
+
+      const idLimpo = String(personIdParaRelatorio).trim();
+      const razaoLimpa = String(razao).trim();
 
       for (const proc of processRows) {
-        const processoSemBarra = String(proc.processo || "").replace(/\//g, "");
+        const processoLimpo = String(proc.processo || "").replace(/\D/g, "");
 
         const dataObj = new Date(proc.data);
         if (String(proc.data).length === 10) {
@@ -592,7 +596,7 @@ router.post(
             Math.floor(Math.random() * horasPossiveisConstrucao.length)
           ];
 
-        txtContent += `${personIdParaRelatorio}${espacamento}${processoSemBarra}${espacamento}${razao}${espacamento}${dataFormatadaParaTxt}${espacamento}${horasParaTxt}\n`;
+        txtContent += `${idLimpo}${espacamento}${processoLimpo}${espacamento}${razaoLimpa}${espacamento}${dataFormatadaParaTxt}${espacamento}${horasParaTxt}\n`;
       }
 
       const dataInicioObj = new Date(dataInicio + "T00:00:00Z");
@@ -715,19 +719,18 @@ router.post(
       }
 
       const horasPossiveis = ["01:00:00", "02:00:00", "03:00:00", "04:00:00"];
-      let txtContent = "";
       const espacamento = "\t";
+      const header = `ID${espacamento}PROCESSO${espacamento}RAZAO${espacamento}DATA${espacamento}HORAS\n`;
+      let txtContent = header;
+
+      const idLimpo = String(personIdParaRelatorio).trim();
+      const razaoLimpa = String(razao).trim();
 
       for (const proc of processRows) {
-        let processoOriginal = String(proc.processo || "");
-        let processoFormatadoParaTxt = "";
-
-        const match = processoOriginal.match(/^(\d+)\/(\d{1,2})/);
-        if (match) {
-          processoFormatadoParaTxt = match[1] + match[2];
-        } else {
-          processoFormatadoParaTxt = processoOriginal.replace(/\//g, "");
-        }
+        const processoFormatadoParaTxt = String(proc.processo || "").replace(
+          /\D/g,
+          ""
+        );
 
         const dataConclusao = proc.data_conclusao;
         let dataFormatadaParaTxt = "N/A";
@@ -747,7 +750,7 @@ router.post(
         const horasRandomizadasParaTxt =
           horasPossiveis[Math.floor(Math.random() * horasPossiveis.length)];
 
-        txtContent += `${personIdParaRelatorio}${espacamento}${processoFormatadoParaTxt}${espacamento}${razao}${espacamento}${dataFormatadaParaTxt}${espacamento}${horasRandomizadasParaTxt}\n`;
+        txtContent += `${idLimpo}${espacamento}${processoFormatadoParaTxt}${espacamento}${razaoLimpa}${espacamento}${dataFormatadaParaTxt}${espacamento}${horasRandomizadasParaTxt}\n`;
       }
 
       const dataInicioObj = new Date(dataInicio + "T00:00:00Z");
