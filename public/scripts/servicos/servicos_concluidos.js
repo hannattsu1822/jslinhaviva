@@ -339,9 +339,9 @@ function atualizarTabela() {
               <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
                 servico.id
               }')" title="Visualizar"><span class="material-symbols-outlined">visibility</span></button>
-              <button class="btn btn-sm glass-btn btn-info me-1" onclick="solicitarConsolidacaoPDFs(${
+              <button class="btn btn-sm glass-btn btn-success me-1" onclick="solicitarRelatorioCompleto(${
                 servico.id
-              })" title="Consolidar PDFs Anexos"><span class="material-symbols-outlined">merge_type</span></button>
+              })" title="Gerar Relatório Completo (PDF)"><span class="material-symbols-outlined">picture_as_pdf</span></button>
               <button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${
                 servico.id
               })" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>
@@ -553,17 +553,17 @@ window.reativarServico = async function (id) {
   }
 };
 
-window.solicitarConsolidacaoPDFs = function (servicoId) {
+window.solicitarRelatorioCompleto = function (servicoId) {
   mostrarNotificacao(
-    "Processando consolidação de PDFs... Isso pode levar um momento.",
+    "Gerando relatório completo... Isso pode levar alguns segundos.",
     "info",
-    5000
+    8000
   );
   const downloadUrl = `/api/servicos/${servicoId}/consolidar-pdfs`;
 
   const link = document.createElement("a");
   link.href = downloadUrl;
-  link.setAttribute("download", "");
+  link.setAttribute("download", `relatorio_servico_${servicoId}.pdf`);
   link.style.display = "none";
   document.body.appendChild(link);
   link.click();
