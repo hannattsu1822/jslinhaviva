@@ -5,6 +5,7 @@ const { autenticar, verificarNivel } = require("../auth");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
 
+// --- FUNÇÕES AUXILIARES ---
 function formatarDuracao(segundos) {
   if (segundos === null || segundos === undefined) return "Em andamento";
   if (segundos < 60) return `${segundos} seg`;
@@ -30,38 +31,19 @@ async function getReportData(filters) {
       "SELECT * FROM dispositivos_logbox WHERE id = ?",
       [deviceId]
     );
-    if (deviceRows.length > 0) {
-      deviceInfo = deviceRows[0];
-    }
+    if (deviceRows.length > 0) deviceInfo = deviceRows[0];
   }
 
   const [leituras] = await promisePool.query(
-    `SELECT 
-        l.timestamp_leitura,
-        JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS temperatura
-     FROM leituras_logbox l
-     JOIN dispositivos_logbox d ON l.serial_number = d.serial_number
-     ${whereClauseLeituras}
-     ORDER BY l.timestamp_leitura ASC`,
+    `SELECT l.timestamp_leitura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS temperatura FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras} ORDER BY l.timestamp_leitura ASC`,
     params
   );
-
   const [stats] = await promisePool.query(
-    `SELECT
-        MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min,
-        AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg,
-        MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max
-     FROM leituras_logbox l
-     JOIN dispositivos_logbox d ON l.serial_number = d.serial_number
-     ${whereClauseLeituras}`,
+    `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras}`,
     params
   );
-
   const [fanHistory] = await promisePool.query(
-    `SELECT v.* FROM historico_ventilacao v
-     JOIN dispositivos_logbox d ON v.serial_number = d.serial_number
-     ${whereClauseVentilacao}
-     ORDER BY v.timestamp_inicio ASC`,
+    `SELECT v.* FROM historico_ventilacao v JOIN dispositivos_logbox d ON v.serial_number = d.serial_number ${whereClauseVentilacao} ORDER BY v.timestamp_inicio ASC`,
     params
   );
 
@@ -82,6 +64,54 @@ async function getReportData(filters) {
   };
 }
 
+// --- ROTAS QUE ESTAVAM NO LUGAR ERRADO ---
+router.get("/dashboard-logbox", autenticar, (req, res) => {
+  res.render("pages/logbox/logbox.html", {
+    pageTitle: "Dashboard LogBox",
+    user: req.session.user,
+  });
+});
+
+router.get("/api/logbox/leituras", autenticar, async (req, res) => {
+  try {
+    const limite = parseInt(req.query.limite) || 200;
+    const [rows] = await promisePool.query(
+      `SELECT l.timestamp_leitura, l.payload_json ->> '$.value_channels[2]' AS temperatura, l.payload_json ->> '$.value_channels[3]' AS umidade, l.payload_json ->> '$.battery' AS bateria FROM (SELECT * FROM leituras_logbox ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
+      [limite]
+    );
+    const labels = rows.map((r) =>
+      new Date(r.timestamp_leitura).toLocaleString("pt-BR")
+    );
+    const temperaturas = rows.map((r) => parseFloat(r.temperatura));
+    const umidades = rows.map((r) => parseFloat(r.umidade));
+    const baterias = rows.map((r) => parseFloat(r.bateria));
+    res.json({ labels, temperaturas, umidades, baterias });
+  } catch (err) {
+    console.error("Erro ao buscar leituras do LogBox:", err);
+    res.status(500).json({ message: "Erro interno no servidor" });
+  }
+});
+
+router.get("/api/logbox/stats", autenticar, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(
+      `SELECT MIN(CAST(payload_json ->> '$.value_channels[2]' AS DECIMAL(10,2))) as temp_min, AVG(CAST(payload_json ->> '$.value_channels[2]' AS DECIMAL(10,2))) as temp_avg, MAX(CAST(payload_json ->> '$.value_channels[2]' AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE timestamp_leitura >= NOW() - INTERVAL 1 DAY`
+    );
+    const stats = rows[0];
+    const formattedStats = {
+      temp_min: stats.temp_min ? parseFloat(stats.temp_min).toFixed(2) : "N/A",
+      temp_avg: stats.temp_avg ? parseFloat(stats.temp_avg).toFixed(2) : "N/A",
+      temp_max: stats.temp_max ? parseFloat(stats.temp_max).toFixed(2) : "N/A",
+    };
+    res.json(formattedStats);
+  } catch (err) {
+    console.error("Erro ao buscar estatísticas do LogBox:", err);
+    res.status(500).json({ message: "Erro interno no servidor" });
+  }
+});
+// --- FIM DAS ROTAS MOVIDAS ---
+
+// --- ROTAS QUE JÁ ESTAVAM CORRETAS ---
 router.get("/logbox-device/:serialNumber", autenticar, async (req, res) => {
   const serialNumber = req.params.serialNumber;
   try {
@@ -89,10 +119,9 @@ router.get("/logbox-device/:serialNumber", autenticar, async (req, res) => {
       "SELECT local_tag FROM dispositivos_logbox WHERE serial_number = ?",
       [serialNumber]
     );
-    if (rows.length === 0) {
+    if (rows.length === 0)
       return res.status(404).send("Equipamento não encontrado");
-    }
-    res.render("pages/logbox/device-detail", {
+    res.render("pages/logbox/device-detail.html", {
       pageTitle: `Detalhes - ${rows[0].local_tag}`,
       user: req.session.user,
       serialNumber: serialNumber,
@@ -113,7 +142,7 @@ router.get(
       const [devices] = await promisePool.query(
         "SELECT * FROM dispositivos_logbox ORDER BY local_tag ASC"
       );
-      res.render("pages/logbox/gerenciar-dispositivos", {
+      res.render("pages/logbox/gerenciar-dispositivos.html", {
         pageTitle: "Gerenciar Dispositivos",
         user: req.session.user,
         devices: devices,
@@ -134,7 +163,7 @@ router.get(
       const [devices] = await promisePool.query(
         "SELECT id, serial_number, local_tag FROM dispositivos_logbox WHERE ativo = 1 ORDER BY local_tag ASC"
       );
-      res.render("pages/logbox/relatorios", {
+      res.render("pages/logbox/relatorios.html", {
         pageTitle: "Gerador de Relatórios",
         user: req.session.user,
         devices: devices,
@@ -156,9 +185,8 @@ router.get(
         "SELECT payload_json, timestamp_leitura, fonte_alimentacao FROM leituras_logbox WHERE serial_number = ? ORDER BY id DESC LIMIT 1",
         [serialNumber]
       );
-      if (rows.length === 0) {
+      if (rows.length === 0)
         return res.status(404).json({ message: "Nenhuma leitura encontrada." });
-      }
       res.json({
         payload: rows[0].payload_json,
         timestamp_leitura: rows[0].timestamp_leitura,
@@ -179,17 +207,7 @@ router.get(
     const limite = parseInt(req.query.limite) || 200;
     try {
       const [rows] = await promisePool.query(
-        `
-        SELECT 
-          l.timestamp_leitura,
-          JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS temperatura,
-          JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[3]')) AS umidade,
-          JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.battery')) AS bateria
-        FROM (
-          SELECT * FROM leituras_logbox WHERE serial_number = ? ORDER BY id DESC LIMIT ?
-        ) l
-        ORDER BY l.id ASC
-        `,
+        `SELECT l.timestamp_leitura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS temperatura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[3]')) AS umidade, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.battery')) AS bateria FROM (SELECT * FROM leituras_logbox WHERE serial_number = ? ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
         [serialNumber, limite]
       );
       const labels = rows.map((r) =>
@@ -213,25 +231,11 @@ router.get(
     const { serialNumber } = req.params;
     try {
       const [todayStatsRows] = await promisePool.query(
-        `
-        SELECT
-          MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min,
-          AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg,
-          MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max
-        FROM leituras_logbox
-        WHERE serial_number = ? AND DATE(timestamp_leitura) = CURDATE()
-        `,
+        `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND DATE(timestamp_leitura) = CURDATE()`,
         [serialNumber]
       );
       const [monthStatsRows] = await promisePool.query(
-        `
-        SELECT
-          MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min,
-          AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg,
-          MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max
-        FROM leituras_logbox
-        WHERE serial_number = ? AND YEAR(timestamp_leitura) = YEAR(CURDATE()) AND MONTH(timestamp_leitura) = MONTH(CURDATE())
-        `,
+        `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND YEAR(timestamp_leitura) = YEAR(CURDATE()) AND MONTH(timestamp_leitura) = MONTH(CURDATE())`,
         [serialNumber]
       );
       const formatStats = (stats) => ({
@@ -305,26 +309,26 @@ router.post(
   verificarNivel(4),
   async (req, res) => {
     const { serial_number, local_tag, descricao } = req.body;
-    if (!serial_number || !local_tag) {
+    if (!serial_number || !local_tag)
       return res
         .status(400)
         .json({ message: "Número de série e Local/Tag são obrigatórios." });
-    }
     try {
       const [result] = await promisePool.query(
         "INSERT INTO dispositivos_logbox (serial_number, local_tag, descricao) VALUES (?, ?, ?)",
         [serial_number, local_tag, descricao || null]
       );
-      res.status(201).json({
-        id: result.insertId,
-        message: "Dispositivo criado com sucesso!",
-      });
+      res
+        .status(201)
+        .json({
+          id: result.insertId,
+          message: "Dispositivo criado com sucesso!",
+        });
     } catch (err) {
-      if (err.code === "ER_DUP_ENTRY") {
+      if (err.code === "ER_DUP_ENTRY")
         return res
           .status(409)
           .json({ message: "Este número de série já está cadastrado." });
-      }
       console.error("Erro ao criar dispositivo:", err);
       res.status(500).json({ message: "Erro interno no servidor" });
     }
@@ -342,9 +346,8 @@ router.get(
         "SELECT id, serial_number, local_tag, descricao FROM dispositivos_logbox WHERE id = ?",
         [id]
       );
-      if (rows.length === 0) {
+      if (rows.length === 0)
         return res.status(404).json({ message: "Dispositivo não encontrado." });
-      }
       res.json(rows[0]);
     } catch (err) {
       console.error("Erro ao buscar dispositivo:", err);
@@ -360,26 +363,23 @@ router.put(
   async (req, res) => {
     const { id } = req.params;
     const { serial_number, local_tag, descricao } = req.body;
-    if (!serial_number || !local_tag) {
+    if (!serial_number || !local_tag)
       return res
         .status(400)
         .json({ message: "Número de série e Local/Tag são obrigatórios." });
-    }
     try {
       const [result] = await promisePool.query(
         "UPDATE dispositivos_logbox SET serial_number = ?, local_tag = ?, descricao = ? WHERE id = ?",
         [serial_number, local_tag, descricao || null, id]
       );
-      if (result.affectedRows === 0) {
+      if (result.affectedRows === 0)
         return res.status(404).json({ message: "Dispositivo não encontrado." });
-      }
       res.json({ message: "Dispositivo atualizado com sucesso!" });
     } catch (err) {
-      if (err.code === "ER_DUP_ENTRY") {
+      if (err.code === "ER_DUP_ENTRY")
         return res
           .status(409)
           .json({ message: "Este número de série já está cadastrado." });
-      }
       console.error("Erro ao atualizar dispositivo:", err);
       res.status(500).json({ message: "Erro interno no servidor" });
     }
@@ -397,9 +397,8 @@ router.delete(
         "DELETE FROM dispositivos_logbox WHERE id = ?",
         [id]
       );
-      if (result.affectedRows === 0) {
+      if (result.affectedRows === 0)
         return res.status(404).json({ message: "Dispositivo não encontrado." });
-      }
       res.json({ message: "Dispositivo excluído com sucesso!" });
     } catch (err) {
       console.error("Erro ao excluir dispositivo:", err);
@@ -449,7 +448,6 @@ router.post(
   async (req, res) => {
     try {
       const data = await getReportData(req.body);
-
       const width = 800;
       const height = 400;
       const chartJSNodeCanvas = new ChartJSNodeCanvas({
@@ -463,15 +461,12 @@ router.post(
         options: { responsive: false },
       };
       const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
-
       const pdfDoc = await PDFDocument.create();
       const page = pdfDoc.addPage();
       const { width: pageWidth, height: pageHeight } = page.getSize();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
       let y = pageHeight - 50;
-
       page.drawText(`Relatório de Monitoramento - ${data.device.local_tag}`, {
         x: 50,
         y,
@@ -490,7 +485,6 @@ router.post(
         color: rgb(0.3, 0.3, 0.3),
       });
       y -= 40;
-
       page.drawText("Estatísticas de Temperatura", {
         x: 50,
         y,
@@ -511,7 +505,6 @@ router.post(
         { x: 450, y, font, size: 12 }
       );
       y -= 40;
-
       const chartImage = await pdfDoc.embedPng(imageBuffer);
       const chartDims = chartImage.scale(0.6);
       page.drawImage(chartImage, {
@@ -521,7 +514,6 @@ router.post(
         height: chartDims.height,
       });
       y -= chartDims.height + 20;
-
       page.drawText("Histórico de Acionamentos da Ventilação", {
         x: 50,
         y,
@@ -529,12 +521,10 @@ router.post(
         size: 14,
       });
       y -= 20;
-
       page.drawText("Início", { x: 60, y, font: fontBold, size: 10 });
       page.drawText("Fim", { x: 220, y, font: fontBold, size: 10 });
       page.drawText("Duração", { x: 380, y, font: fontBold, size: 10 });
       y -= 15;
-
       data.fanHistory.forEach((item) => {
         if (y < 50) {
           page = pdfDoc.addPage();
@@ -550,7 +540,6 @@ router.post(
         page.drawText(duracao, { x: 380, y, font, size: 10 });
         y -= 15;
       });
-
       const pdfBytes = await pdfDoc.save();
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
