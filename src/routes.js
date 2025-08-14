@@ -17,7 +17,7 @@ const rotasSubestacoesInfra = require("./routes/rotas_subestacoes_infra");
 const rotasSubestacoesServicos = require("./routes/rotas_subestacoes_servicos");
 const rotasSubestacoesChecklist = require("./routes/rotas_subestacoes_checklist");
 const rotasPaginasDirect = require("./routes/rotas_paginas_direct");
-const rotasGerenciamentoUsuarios = require("./routes/gerenciamentoUsuarios");
+const rotasGerenciamentoUsuarios = require("./routes/rotas_gerenciamento_usuarios");
 const rotasLogbox = require("./routes/rotas_logbox");
 
 const router = express.Router();
