@@ -1,100 +1,284 @@
 let historicoChartInstance = null;
 
-function formatarDuracao(segundos) {
-  if (segundos === null || segundos === undefined) return "Em andamento";
-  if (segundos < 60) return `${segundos} seg`;
-  if (segundos < 3600)
-    return `${Math.floor(segundos / 60)} min ${segundos % 60} seg`;
-  const horas = Math.floor(segundos / 3600);
-  const minutos = Math.floor((segundos % 3600) / 60);
-  return `${horas}h ${minutos}min`;
+document.addEventListener("DOMContentLoaded", () => {
+  inicializarPainel();
+});
+
+function inicializarPainel() {
+  const tooltipTriggerList = [].slice.call(
+    document.querySelectorAll('[data-bs-toggle="tooltip"]')
+  );
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
+  Promise.all([
+    carregarLeiturasIniciais(),
+    carregarStatusInicial(),
+    carregarEstatisticasDetalhes(),
+    carregarDadosVentilacao(),
+  ])
+    .then(() => {
+      console.log("Painel inicializado com sucesso.");
+      iniciarWebSocket();
+    })
+    .catch((error) => {
+      console.error("Falha ao inicializar o painel:", error);
+      document.getElementById("loader-historico").innerHTML =
+        "Erro ao carregar dados. Tente recarregar a página.";
+    });
 }
 
-function atualizarCards(dados) {
-  document.getElementById(
-    "latest-temp"
-  ).textContent = `${dados.temperatura.toFixed(1)} °C`;
-  document.getElementById("latest-bat").textContent = `${dados.bateria.toFixed(
-    2
-  )} V`;
-  document.getElementById(
-    "latest-timestamp"
-  ).textContent = `Em: ${dados.timestamp_leitura}`;
+async function carregarLeiturasIniciais() {
+  const loader = document.getElementById("loader-historico");
+  const canvas = document.getElementById("graficoHistorico");
+  try {
+    loader.style.display = "flex";
+    const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
+    if (!response.ok) throw new Error("Falha ao buscar histórico de leituras");
 
-  const powerIcon = document
-    .getElementById("power-source-icon")
-    .querySelector(".material-icons");
-  const powerText = document.getElementById("power-source-text");
-  if (dados.fonte_alimentacao === "Alimentação Direta") {
-    powerIcon.textContent = "power";
-    powerText.textContent = "Rede Elétrica";
-  } else {
-    powerIcon.textContent = "battery_alert";
-    powerText.textContent = "Bateria";
-  }
-
-  const batteryStatus = document.getElementById("battery-status");
-  if (dados.bateria < 4.5) {
-    batteryStatus.textContent = "Crítica";
-    batteryStatus.style.color = "#e74c3c";
-  } else if (dados.bateria < 4.8) {
-    batteryStatus.textContent = "Baixa";
-    batteryStatus.style.color = "#f39c12";
-  } else {
-    batteryStatus.textContent = "Normal";
-    batteryStatus.style.color = "#27ae60";
+    const data = await response.json();
+    gerarGraficoHistorico(data);
+    loader.style.display = "none";
+    canvas.style.display = "block";
+  } catch (error) {
+    console.error(error);
+    loader.innerHTML = "Erro ao carregar o gráfico.";
+    throw error;
   }
 }
 
-function gerarGraficoHistorico(dados) {
-  const ctx = document.getElementById("graficoHistorico").getContext("2d");
+async function carregarStatusInicial() {
+  try {
+    const response = await fetch(`/api/logbox-device/${serialNumber}/status`);
+    if (!response.ok) throw new Error("Falha ao buscar status do dispositivo");
 
-  const initialData = dados.labels.map((label, index) => ({
-    x: new Date(
-      label.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$2/$1/$3")
-    ).getTime(), // Corrige formato de data para JS
-    y: dados.temperaturas[index],
-  }));
+    const data = await response.json();
+    atualizarPainelCompleto(data.status);
 
-  historicoChartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      datasets: [
-        {
-          label: "Temperatura (°C)",
-          data: initialData,
-          borderColor: "rgba(255, 99, 132, 1)",
-          backgroundColor: "rgba(255, 99, 132, 0.2)",
-          fill: true,
-          tension: 0.2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      scales: {
-        x: {
-          type: "realtime",
-          realtime: {
-            duration: 600000, // Janela de 10 minutos
-            refresh: 5000, // Atualiza o gráfico a cada 5 segundos
-            delay: 2000, // Atraso para agrupar pontos
-            onRefresh: (chart) => {
-              // Esta função será chamada pelo WebSocket
-            },
-          },
-        },
-        y: {
-          title: {
-            display: true,
-            text: "Temperatura (°C)",
-          },
-        },
-      },
-    },
+    const latestReadingResponse = await fetch(
+      `/api/logbox-device/${serialNumber}/latest`
+    );
+    if (latestReadingResponse.ok) {
+      const latestData = await latestReadingResponse.json();
+      const payloadObjeto = JSON.parse(latestData.payload);
+      document.getElementById("latest-temp").textContent =
+        payloadObjeto.value_channels[2].toFixed(1);
+      document.getElementById("latest-timestamp").textContent = `Em: ${new Date(
+        latestData.timestamp_leitura
+      ).toLocaleString("pt-BR")}`;
+    }
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+function atualizarPainelCompleto(status) {
+  if (!status || Object.keys(status).length === 0) {
+    console.warn("Nenhum dado de status recebido para atualizar o painel.");
+    return;
+  }
+
+  const { text: wifiText, className: wifiClass } = getWifiStatus(status.rssi);
+  atualizarBadge("diag-wifi-rssi", `${status.rssi || "--"} dBm`, wifiClass);
+
+  const { text: pt100Text, className: pt100Class } = getSensorStatus(
+    status.A1?.status
+  );
+  atualizarBadge("diag-pt100-status", pt100Text, pt100Class);
+
+  const { text: mqttText, className: mqttClass } = getMqttStatus(
+    status.connected
+  );
+  atualizarBadge("diag-mqtt-status", mqttText, mqttClass);
+
+  const { text: powerText, className: powerClass } = getPowerSourceStatus(
+    status.pwr_voltage
+  );
+  atualizarBadge("diag-power-source", powerText, powerClass);
+
+  atualizarBadge(
+    "diag-internal-temp",
+    `${status.temperature?.toFixed(1) || "--"} °C`,
+    "bg-status-info"
+  );
+  atualizarBadge(
+    "diag-battery-voltage",
+    `${status.battery?.toFixed(2) || "--"} V`,
+    status.battery < 4.8 ? "bg-status-warning" : "bg-status-ok"
+  );
+
+  atualizarListaAlarmes(status.alarms);
+
+  atualizarStatusGeral();
+}
+
+function atualizarBadge(elementId, text, className) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.textContent = text;
+    element.className = `badge ${className}`;
+  }
+}
+
+function atualizarListaAlarmes(alarms) {
+  const alarmList = document.getElementById("active-alarms-list");
+  alarmList.innerHTML = "";
+
+  const activeAlarms = alarms
+    ? Object.entries(alarms).filter(([key, value]) => value === true)
+    : [];
+
+  if (activeAlarms.length === 0) {
+    alarmList.innerHTML =
+      '<div class="list-group-item text-muted text-center placeholder">Nenhum alarme ativo.</div>';
+    return;
+  }
+
+  activeAlarms.forEach(([key, value]) => {
+    const alarmItem = document.createElement("div");
+    alarmItem.className = "list-group-item alarm-item text-status-critical";
+
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined";
+    icon.textContent = "warning";
+
+    const text = document.createElement("span");
+    text.textContent = formatarNomeAlarme(key);
+
+    alarmItem.appendChild(icon);
+    alarmItem.appendChild(text);
+    alarmList.appendChild(alarmItem);
   });
 }
 
+function formatarNomeAlarme(key) {
+  const nomes = {
+    "A1.H": "Temperatura Alta (CH 1)",
+    "A1.L": "Temperatura Baixa (CH 1)",
+    "A2.H": "Alarme Alto (CH 2)",
+    "A2.L": "Alarme Baixo (CH 2)",
+    "A3.H": "Alarme Alto (CH 3)",
+    "A3.L": "Alarme Baixo (CH 3)",
+    "D1.H": "Alarme Digital Ativo",
+  };
+  return nomes[key] || key.replace(".", " ").toUpperCase();
+}
+
+function iniciarWebSocket() {
+  const socket = new WebSocket(`ws://${window.location.host}`);
+
+  socket.onopen = () => console.log("Conexão WebSocket estabelecida.");
+  socket.onclose = () => {
+    console.log("Conexão WebSocket fechada. Tentando reconectar em 5s...");
+    setTimeout(iniciarWebSocket, 5000);
+  };
+
+  socket.onmessage = function (event) {
+    const message = JSON.parse(event.data);
+
+    if (
+      message.type === "nova_leitura" &&
+      message.dados.serial_number === serialNumber
+    ) {
+      document.getElementById("latest-temp").textContent =
+        message.dados.temperatura.toFixed(1);
+      document.getElementById(
+        "latest-timestamp"
+      ).textContent = `Em: ${message.dados.timestamp_leitura}`;
+
+      if (historicoChartInstance) {
+        historicoChartInstance.data.datasets[0].data.push({
+          x: Date.now(),
+          y: message.dados.temperatura,
+        });
+        historicoChartInstance.update("quiet");
+      }
+
+      carregarEstatisticasDetalhes();
+      carregarDadosVentilacao();
+    }
+
+    if (
+      message.type === "atualizacao_status" &&
+      message.dados.serial_number === serialNumber
+    ) {
+      console.log("Atualização de status recebida:", message.dados.status);
+      atualizarPainelCompleto(message.dados.status);
+    }
+  };
+}
+
+function getWifiStatus(rssi) {
+  if (!rssi) return { text: "Sem Sinal", className: "bg-status-critical" };
+  if (rssi >= -67) return { text: "Excelente", className: "bg-status-ok" };
+  if (rssi >= -75) return { text: "Bom", className: "bg-status-info" };
+  if (rssi >= -85) return { text: "Fraco", className: "bg-status-warning" };
+  return { text: "Muito Fraco", className: "bg-status-critical" };
+}
+
+function getSensorStatus(status) {
+  if (status === "OK") return { text: "OK", className: "bg-status-ok" };
+  if (status === "OpenCircuit")
+    return { text: "Circuito Aberto", className: "bg-status-critical" };
+  if (status === "ShortCircuit")
+    return { text: "Curto-Circuito", className: "bg-status-critical" };
+  return { text: "Desconhecido", className: "bg-secondary" };
+}
+
+function getMqttStatus(connected) {
+  if (connected === true)
+    return { text: "Conectado", className: "bg-status-ok" };
+  if (connected === false)
+    return { text: "Desconectado", className: "bg-status-critical" };
+  return { text: "Verificando...", className: "bg-secondary" };
+}
+
+function getPowerSourceStatus(voltage) {
+  if (!voltage) return { text: "Verificando...", className: "bg-secondary" };
+  if (voltage > 9)
+    return {
+      text: `Rede Elétrica (${voltage.toFixed(1)}V)`,
+      className: "bg-status-ok",
+    };
+  return { text: "Apenas Bateria", className: "bg-status-warning" };
+}
+
+function atualizarStatusGeral() {
+  const indicator = document.getElementById("geral-status-indicator");
+  const pt100Badge = document.getElementById("diag-pt100-status");
+  const alarmsList = document.getElementById("active-alarms-list");
+
+  if (
+    pt100Badge.classList.contains("bg-status-critical") ||
+    alarmsList.querySelector(".alarm-item")
+  ) {
+    indicator.className = "status-indicator critical";
+    indicator.setAttribute(
+      "title",
+      "Status Crítico: Falha no sensor ou alarme ativo!"
+    );
+  } else if (
+    document
+      .getElementById("diag-wifi-rssi")
+      .classList.contains("bg-status-warning") ||
+    document
+      .getElementById("diag-battery-voltage")
+      .classList.contains("bg-status-warning")
+  ) {
+    indicator.className = "status-indicator warning";
+    indicator.setAttribute("title", "Aviso: Conexão fraca ou bateria baixa.");
+  } else {
+    indicator.className = "status-indicator ok";
+    indicator.setAttribute("title", "Sistema operando normalmente.");
+  }
+  const tooltip = bootstrap.Tooltip.getInstance(indicator);
+  if (tooltip)
+    tooltip.setContent({ ".tooltip-inner": indicator.getAttribute("title") });
+}
+
+// Funções que já existiam e foram mantidas/adaptadas
 async function carregarEstatisticasDetalhes() {
   try {
     const response = await fetch(
@@ -114,19 +298,6 @@ async function carregarEstatisticasDetalhes() {
 
 async function carregarDadosVentilacao() {
   try {
-    const statsResponse = await fetch(
-      `/api/logbox-device/${serialNumber}/ventilation-stats`
-    );
-    const stats = await statsResponse.json();
-    document.getElementById("fan-today-count").textContent = stats.today.count;
-    document.getElementById("fan-today-duration").textContent = formatarDuracao(
-      stats.today.duration
-    );
-    document.getElementById("fan-month-count").textContent = stats.month.count;
-    document.getElementById("fan-month-duration").textContent = formatarDuracao(
-      stats.month.duration
-    );
-
     const historyResponse = await fetch(
       `/api/logbox-device/${serialNumber}/ventilation-history`
     );
@@ -135,7 +306,7 @@ async function carregarDadosVentilacao() {
     tableBody.innerHTML = "";
     if (history.length === 0) {
       tableBody.innerHTML =
-        '<tr><td colspan="3" style="text-align:center;">Nenhum acionamento registrado.</td></tr>';
+        '<tr><td colspan="3" class="text-center text-muted">Nenhum acionamento registrado.</td></tr>';
     } else {
       history.forEach((item) => {
         const row = tableBody.insertRow();
@@ -153,90 +324,62 @@ async function carregarDadosVentilacao() {
   }
 }
 
-async function carregarDadosIniciais() {
-  const loader = document.getElementById("loader-historico");
-  const canvas = document.getElementById("graficoHistorico");
-  try {
-    loader.style.display = "block";
-    const latestResponse = await fetch(
-      `/api/logbox-device/${serialNumber}/latest`
-    );
-    const latestData = await latestResponse.json();
-    if (latestData.payload) {
-      const payloadObjeto = JSON.parse(latestData.payload);
-      const dadosCard = {
-        temperatura: payloadObjeto.value_channels[2],
-        bateria: payloadObjeto.battery,
-        timestamp_leitura: new Date(
-          latestData.timestamp_leitura
-        ).toLocaleString("pt-BR"),
-        fonte_alimentacao: latestData.fonte_alimentacao,
-      };
-      atualizarCards(dadosCard);
-    }
+function formatarDuracao(segundos) {
+  if (segundos === null || segundos === undefined) return "Em andamento";
+  if (segundos < 60) return `${segundos} seg`;
+  if (segundos < 3600)
+    return `${Math.floor(segundos / 60)} min ${segundos % 60} seg`;
+  const horas = Math.floor(segundos / 3600);
+  const minutos = Math.floor((segundos % 3600) / 60);
+  return `${horas}h ${minutos}min`;
+}
 
-    const historyResponse = await fetch(
-      `/api/logbox-device/${serialNumber}/leituras`
-    );
-    if (!historyResponse.ok) throw new Error("Falha ao buscar histórico");
-    const historyData = await historyResponse.json();
-    loader.style.display = "none";
-    canvas.style.display = "block";
-    gerarGraficoHistorico(historyData);
-  } catch (error) {
-    console.error("Erro ao carregar dados iniciais:", error);
-    loader.innerHTML = "Erro ao carregar dados.";
+function gerarGraficoHistorico(dados) {
+  const ctx = document.getElementById("graficoHistorico").getContext("2d");
+  const initialData = dados.labels.map((label, index) => ({
+    x: new Date(
+      label.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$2/$1/$3")
+    ).getTime(),
+    y: dados.temperaturas[index],
+  }));
+
+  if (historicoChartInstance) {
+    historicoChartInstance.destroy();
   }
+
+  historicoChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      datasets: [
+        {
+          label: "Temperatura (°C)",
+          data: initialData,
+          borderColor: "#0d6efd",
+          backgroundColor: "rgba(13, 110, 253, 0.1)",
+          fill: true,
+          tension: 0.2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: "realtime",
+          realtime: {
+            duration: 900000,
+            refresh: 10000,
+            delay: 5000,
+          },
+        },
+        y: {
+          title: {
+            display: true,
+            text: "Temperatura (°C)",
+          },
+        },
+      },
+    },
+  });
 }
-
-function iniciarWebSocket() {
-  const socket = new WebSocket(`ws://${window.location.host}`);
-  socket.onmessage = function (event) {
-    const message = JSON.parse(event.data);
-    if (
-      message.type === "nova_leitura" &&
-      message.dados.serial_number === serialNumber
-    ) {
-      console.log(
-        "Nova leitura recebida para este dispositivo:",
-        message.dados
-      );
-
-      const dadosParaCards = { ...message.dados, umidade: 0 }; // Adiciona umidade=0 para a função não quebrar
-      atualizarCards(dadosParaCards);
-      carregarDadosVentilacao();
-
-      const logList = document.getElementById("realtime-log-list-detail");
-      const novaEntrada = document.createElement("li");
-      const dados = message.dados;
-      novaEntrada.textContent = `[${dados.timestamp_leitura}] Temp: ${dados.temperatura}°C, Bat: ${dados.bateria}V, Fonte: ${dados.fonte_alimentacao}`;
-      logList.prepend(novaEntrada);
-      while (logList.children.length > 15) {
-        logList.removeChild(logList.lastChild);
-      }
-
-      // Adiciona o novo ponto ao gráfico em tempo real
-      if (historicoChartInstance) {
-        historicoChartInstance.data.datasets[0].data.push({
-          x: Date.now(),
-          y: dados.temperatura,
-        });
-        historicoChartInstance.update("quiet");
-      }
-    }
-  };
-  socket.onopen = function () {
-    console.log("Conexão WebSocket estabelecida.");
-  };
-  socket.onclose = function () {
-    console.log("Conexão WebSocket fechada. Tentando reconectar em 5s...");
-    setTimeout(iniciarWebSocket, 5000);
-  };
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  carregarDadosIniciais();
-  carregarEstatisticasDetalhes();
-  carregarDadosVentilacao();
-  iniciarWebSocket();
-});
