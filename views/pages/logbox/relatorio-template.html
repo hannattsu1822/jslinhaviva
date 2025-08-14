@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Relatório de Monitoramento</title>
+    <link rel="stylesheet" href="/static/css/logbox/relatorio-template.css" />
+  </head>
+  <body>
+    <div class="report-page">
+      <div class="report-header">
+        <h1>Relatório de Monitoramento - <%= data.device.local_tag %></h1>
+        <p>
+          Período: <%= new Date(data.filters.startDate).toLocaleString('pt-BR')
+          %> até <%= new Date(data.filters.endDate).toLocaleString('pt-BR') %>
+        </p>
+      </div>
+
+      <div class="stats-grid-report">
+        <div class="stat-card-report">
+          <h3>Temp. Mínima</h3>
+          <p><%= parseFloat(data.stats.temp_min || 0).toFixed(2) %> °C</p>
+        </div>
+        <div class="stat-card-report">
+          <h3>Temp. Média</h3>
+          <p><%= parseFloat(data.stats.temp_avg || 0).toFixed(2) %> °C</p>
+        </div>
+        <div class="stat-card-report">
+          <h3>Temp. Máxima</h3>
+          <p><%= parseFloat(data.stats.temp_max || 0).toFixed(2) %> °C</p>
+        </div>
+      </div>
+
+      <div class="chart-container-report">
+        <h2>Histórico de Temperatura</h2>
+        <canvas id="report-chart"></canvas>
+      </div>
+
+      <div class="table-container-report">
+        <h2>Histórico de Acionamentos da Ventilação</h2>
+        <table id="report-fan-table">
+          <thead>
+            <tr>
+              <th>Início</th>
+              <th>Fim</th>
+              <th>Duração</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (data.fanHistory.length === 0) { %>
+            <tr>
+              <td colspan="3" style="text-align: center">
+                Nenhum acionamento no período.
+              </td>
+            </tr>
+            <% } else { %> <% data.fanHistory.forEach(item => { %>
+            <tr>
+              <td>
+                <%= new Date(item.timestamp_inicio).toLocaleString('pt-BR') %>
+              </td>
+              <td>
+                <%= item.timestamp_fim ? new
+                Date(item.timestamp_fim).toLocaleString('pt-BR') : 'Ativa' %>
+              </td>
+              <td>
+                <% if (item.duracao_segundos !== null && item.duracao_segundos
+                !== undefined) { %> <% if (item.duracao_segundos < 60) { %> <%=
+                item.duracao_segundos %> seg <% } else if (item.duracao_segundos
+                < 3600) { %> <%= Math.floor(item.duracao_segundos / 60) %> min
+                <%= item.duracao_segundos % 60 %> seg <% } else { %> <%=
+                Math.floor(item.duracao_segundos / 3600) %>h <%=
+                Math.floor((item.duracao_segundos % 3600) / 60) %>min <% } %> <%
+                } else { %> Em andamento <% } %>
+              </td>
+            </tr>
+            <% }); %> <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const chartData = <%- JSON.stringify(data.chartData) %>;
+    </script>
+    <script src="/scripts/logbox/relatorio-template.js"></script>
+  </body>
+</html>
