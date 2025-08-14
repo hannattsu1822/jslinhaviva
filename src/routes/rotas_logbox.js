@@ -200,6 +200,32 @@ router.get(
 );
 
 router.get(
+  "/api/logbox-device/:serialNumber/status",
+  autenticar,
+  async (req, res) => {
+    const serialNumber = req.params.serialNumber;
+    try {
+      const [rows] = await promisePool.query(
+        "SELECT local_tag, ultima_leitura, status_json FROM dispositivos_logbox WHERE serial_number = ?",
+        [serialNumber]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "Dispositivo não encontrado." });
+      }
+      const statusData = {
+        local_tag: rows[0].local_tag,
+        ultima_leitura_status: rows[0].ultima_leitura,
+        status: rows[0].status_json || {},
+      };
+      res.json(statusData);
+    } catch (err) {
+      console.error("Erro ao buscar status do dispositivo:", err);
+      res.status(500).json({ message: "Erro interno no servidor" });
+    }
+  }
+);
+
+router.get(
   "/api/logbox-device/:serialNumber/leituras",
   autenticar,
   async (req, res) => {
@@ -318,12 +344,10 @@ router.post(
         "INSERT INTO dispositivos_logbox (serial_number, local_tag, descricao) VALUES (?, ?, ?)",
         [serial_number, local_tag, descricao || null]
       );
-      res
-        .status(201)
-        .json({
-          id: result.insertId,
-          message: "Dispositivo criado com sucesso!",
-        });
+      res.status(201).json({
+        id: result.insertId,
+        message: "Dispositivo criado com sucesso!",
+      });
     } catch (err) {
       if (err.code === "ER_DUP_ENTRY")
         return res
