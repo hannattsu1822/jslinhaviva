@@ -1,78 +1,127 @@
+/* Estilos Globais e Ajustes Finos */
 body {
   font-family: "Roboto", sans-serif;
-  background-color: #f4f6f9;
-  color: #333;
-  margin: 0;
-  padding: 20px;
 }
 
-.device-details-container {
-  max-width: 800px;
-  margin: auto;
-  background: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.icon-header {
+  font-size: 2.5rem;
+  color: #343a40;
 }
 
-h1 {
-  color: #1a237e;
+/* Indicador de Status Geral (Círculo) */
+.status-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.status-indicator.pending {
+  background-color: #6c757d; /* Cinza (Pendente) */
+}
+.status-indicator.ok {
+  background-color: #198754; /* Verde (OK) */
+}
+.status-indicator.warning {
+  background-color: #ffc107; /* Amarelo (Aviso) */
+}
+.status-indicator.critical {
+  background-color: #dc3545; /* Vermelho (Crítico) */
+}
+
+/* Card de Temperatura Principal */
+.card-primary {
+  background: linear-gradient(135deg, #0d6efd, #0a58ca);
+  border: none;
+}
+.card-primary .display-4 {
+  font-size: 3.5rem;
+}
+
+/* Ícones */
+.material-symbols-outlined {
+  vertical-align: middle;
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+.material-symbols-outlined.md-36 {
+  font-size: 36px;
+}
+.icon-header.material-symbols-outlined {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 48;
+}
+
+/* Badges de Status (para torná-los uniformes) */
+.badge {
+  min-width: 60px;
+  padding: 0.5em 0.75em;
+  transition: background-color 0.3s ease;
+}
+
+/* Lista de Alarmes Ativos */
+.alarms-list .placeholder {
+  padding: 1rem 1.25rem;
+}
+
+.alarms-list .alarm-item {
   display: flex;
   align-items: center;
-  gap: 15px;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 15px;
-  margin-top: 0;
+  font-weight: 500;
+}
+.alarms-list .alarm-item .material-symbols-outlined {
+  margin-right: 0.75rem;
 }
 
-.device-subtitle {
-  font-size: 1rem;
-  color: #7f8c8d;
-  margin-top: -10px;
-  margin-bottom: 20px;
+/* Cores de Status para Badges e Textos */
+.text-status-ok {
+  color: #198754;
+}
+.bg-status-ok {
+  background-color: #198754 !important;
 }
 
-.details-grid {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 15px 20px;
+.text-status-warning {
+  color: #ffc107;
+}
+.bg-status-warning {
+  background-color: #ffc107 !important;
+}
+
+.text-status-critical {
+  color: #dc3545;
+}
+.bg-status-critical {
+  background-color: #dc3545 !important;
+}
+
+.text-status-info {
+  color: #0dcaf0;
+}
+.bg-status-info {
+  background-color: #0dcaf0 !important;
+}
+
+/* Loader */
+.loader {
+  display: flex;
+  justify-content: center;
   align-items: center;
+  height: 150px;
 }
-
-.details-grid dt {
-  font-weight: 700;
-  color: #555;
-  text-align: right;
+.loader::after {
+  content: "";
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #0d6efd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
 }
-
-.details-grid dd {
-  margin: 0;
-  font-size: 1.1rem;
-  background-color: #ecf0f1;
-  padding: 8px 12px;
-  border-radius: 5px;
-  font-family: "Courier New", Courier, monospace;
-}
-
-.alarm-active {
-  color: #e74c3c;
-  font-weight: bold;
-}
-
-.buzzer-on {
-  color: #f39c12;
-  font-weight: bold;
-}
-
-.flash-update {
-  animation: flash 0.7s ease-out;
-}
-
-@keyframes flash {
+@keyframes spin {
   0% {
-    background-color: #f1c40f;
+    transform: rotate(0deg);
   }
   100% {
-    background-color: #ecf0f1;
+    transform: rotate(360deg);
   }
 }
