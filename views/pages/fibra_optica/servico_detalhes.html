@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalhes do Serviço #<%= servico.id %> - Fibra Óptica</title>
+
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link
+      rel="stylesheet"
+      href="/static/css/fibra_optica/servico_detalhes.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <%- include('../../partials/sidebar') %>
+
+      <main class="main-content">
+        <header class="main-header">
+          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          <div class="header-content">
+            <h1 class="page-title">
+              <span class="material-symbols-outlined">info</span>
+              Detalhes do Serviço #<%= servico.id %>
+            </h1>
+            <div class="header-actions">
+              <a href="/projetos_fibra_andamento" class="btn btn-secondary">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Voltar para Lista
+              </a>
+              <button class="btn btn-primary">
+                <span class="material-symbols-outlined">edit</span>
+                Editar Serviço
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div class="details-layout">
+          <div class="details-main-column">
+            <div class="details-card">
+              <div class="card-header">
+                <h2 class="card-title">Descrição e Observações</h2>
+              </div>
+              <div class="card-body">
+                <div class="info-group">
+                  <label>Descrição do Serviço</label>
+                  <p><%= servico.descricao %></p>
+                </div>
+                <div class="info-group">
+                  <label>Observações</label>
+                  <p>
+                    <%= servico.observacoes || 'Nenhuma observação fornecida.'
+                    %>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="details-card">
+              <div class="card-header">
+                <h2 class="card-title">Anexos</h2>
+              </div>
+              <div class="card-body">
+                <% if (anexos && anexos.length > 0) { %>
+                <div class="attachment-grid">
+                  <% anexos.forEach(anexo => { %>
+                  <a
+                    href="<%= anexo.caminho_servidor %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="attachment-card"
+                    data-filename="<%= anexo.nome_original %>"
+                  >
+                    <div class="attachment-preview">
+                      <!-- O conteúdo aqui será gerado pelo JavaScript -->
+                    </div>
+                    <div class="attachment-info">
+                      <span class="attachment-name"
+                        ><%= anexo.nome_original %></span
+                      >
+                      <span class="attachment-size"
+                        ><%= (anexo.tamanho / 1024 / 1024).toFixed(2) %>
+                        MB</span
+                      >
+                    </div>
+                  </a>
+                  <% }); %>
+                </div>
+                <% } else { %>
+                <p class="no-attachments">
+                  Nenhum anexo encontrado para este serviço.
+                </p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <div class="details-sidebar-column">
+            <div class="details-card">
+              <div class="card-header">
+                <h2 class="card-title">Informações Gerais</h2>
+              </div>
+              <div class="card-body">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <label>Processo</label>
+                    <span><%= servico.processo || 'N/A' %></span>
+                  </div>
+                  <div class="info-item">
+                    <label>Tipo de Ordem</label>
+                    <span
+                      ><span
+                        class="badge badge-<%= servico.tipo_ordem.toLowerCase() %>"
+                        ><%= servico.tipo_ordem %></span
+                      ></span
+                    >
+                  </div>
+                  <div class="info-item">
+                    <label>Status</label>
+                    <span
+                      ><span
+                        class="badge status-<%= servico.status.toLowerCase().replace(' ', '-') %>"
+                        ><%= servico.status %></span
+                      ></span
+                    >
+                  </div>
+                  <div class="info-item">
+                    <label>Tipo de Geração</label>
+                    <span class="capitalize"><%= servico.tipo_geracao %></span>
+                  </div>
+                  <div class="info-item">
+                    <label>Responsável</label>
+                    <span
+                      ><%= servico.nome_responsavel ||
+                      servico.responsavel_matricula %></span
+                    >
+                  </div>
+                  <div class="info-item">
+                    <label>Encarregado</label>
+                    <span
+                      ><%= servico.nome_encarregado || 'Não atribuído' %></span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="details-card">
+              <div class="card-header">
+                <h2 class="card-title">Localização e Agendamento</h2>
+              </div>
+              <div class="card-body">
+                <div class="info-group">
+                  <label>Referência do Local</label>
+                  <p><%= servico.local_referencia %></p>
+                </div>
+                <div class="info-group">
+                  <label>Link do Mapa</label>
+                  <% if (servico.link_maps) { %>
+                  <a
+                    href="<%= servico.link_maps %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="map-link"
+                  >
+                    Abrir no Google Maps
+                    <span class="material-symbols-outlined">open_in_new</span>
+                  </a>
+                  <% } else { %>
+                  <p>Não fornecido.</p>
+                  <% } %>
+                </div>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <label>Data Prevista</label>
+                    <span
+                      ><%= servico.data_servico ? new
+                      Date(servico.data_servico).toLocaleDateString('pt-BR',
+                      {timeZone: 'UTC'}) : 'A definir' %></span
+                    >
+                  </div>
+                  <div class="info-item">
+                    <label>Horário</label>
+                    <span
+                      ><%= servico.horario_inicio.substring(0, 5) %> - <%=
+                      servico.horario_fim.substring(0, 5) %></span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/scripts/utils/toast.js"></script>
+    <script src="/scripts/fibra_optica/servico_detalhes.js"></script>
+  </body>
+</html>

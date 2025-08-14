@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registrar Serviço de Fibra</title>
+
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link
+      rel="stylesheet"
+      href="/static/css/fibra_optica/registro_projeto.css"
+    />
+  </head>
+  <body>
+    <div id="choice-modal" class="modal-container">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Tipo de Geração</h2>
+        </div>
+        <div class="modal-body">
+          <p>Selecione o tipo de ordem de serviço que deseja gerar.</p>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-gerar-emergencial" class="btn btn-danger">
+            <span class="material-symbols-outlined">emergency</span> Emergencial
+          </button>
+          <button id="btn-gerar-normal" class="btn btn-primary">
+            <span class="material-symbols-outlined">list_alt</span> Normal
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-container">
+      <%- include('../../partials/sidebar.html') %>
+
+      <main class="main-content">
+        <header class="main-header">
+          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          <div class="header-content">
+            <h1 class="page-title">
+              <span class="material-symbols-outlined">add_circle</span>
+              Registrar Novo Serviço de Fibra Óptica
+            </h1>
+            <div id="service-type-box" class="info-box">
+              <span class="material-symbols-outlined">info</span>
+              <p>
+                Tipo de Geração: <strong id="service-type-display"></strong>
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <!-- Este contêiner começa escondido -->
+        <div id="form-container" class="form-container hidden">
+          <form id="form-registro-servico" class="form-layout-grid" novalidate>
+            <div class="form-section">
+              <div class="form-section-header">
+                <h3 class="form-section-title">Detalhes do Serviço</h3>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="processo">Nº do Processo</label>
+                  <input
+                    type="text"
+                    id="processo"
+                    name="processo"
+                    placeholder="Ex: 2024-12345"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="tipoOrdem"
+                    >Tipo de Ordem<span class="required">*</span></label
+                  >
+                  <select id="tipoOrdem" name="tipoOrdem" required>
+                    <option value="" disabled selected>Selecione...</option>
+                    <option value="ODI">ODI - Ordem de Instalação</option>
+                    <option value="ODD">ODD - Ordem de Desconexão</option>
+                    <option value="ODS">ODS - Ordem de Serviço</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="responsavelMatricula"
+                    >Responsável Técnico<span class="required">*</span></label
+                  >
+                  <select
+                    id="responsavelMatricula"
+                    name="responsavelMatricula"
+                    required
+                  >
+                    <option value="" disabled selected>
+                      Selecione um responsável...
+                    </option>
+                    <% responsaveis.forEach(resp => { %>
+                    <option value="<%= resp.matricula %>">
+                      <%= resp.nome %>
+                    </option>
+                    <% }) %>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="descricao"
+                  >Descrição do Serviço<span class="required">*</span></label
+                >
+                <textarea
+                  id="descricao"
+                  name="descricao"
+                  rows="3"
+                  required
+                  placeholder="Descreva detalhadamente o serviço a ser executado..."
+                ></textarea>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-header">
+                <h3 class="form-section-title">Localização e Prazos</h3>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="localReferencia"
+                    >Local/Referência<span class="required">*</span></label
+                  >
+                  <input
+                    type="text"
+                    id="localReferencia"
+                    name="localReferencia"
+                    required
+                    placeholder="Ex: Rua Principal, 123, Bairro Centro"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="linkMaps">Link do Google Maps</label>
+                  <input
+                    type="url"
+                    id="linkMaps"
+                    name="linkMaps"
+                    placeholder="https://maps.app.goo.gl/..."
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group compact-width">
+                  <label for="dataServico">Data Prevista</label>
+                  <input type="date" id="dataServico" name="dataServico" />
+                </div>
+                <div class="form-group compact-width">
+                  <label for="horarioInicio"
+                    >Horário Início<span class="required">*</span></label
+                  >
+                  <input
+                    type="time"
+                    id="horarioInicio"
+                    name="horarioInicio"
+                    required
+                  />
+                </div>
+                <div class="form-group compact-width">
+                  <label for="horarioFim"
+                    >Horário Fim<span class="required">*</span></label
+                  >
+                  <input
+                    type="time"
+                    id="horarioFim"
+                    name="horarioFim"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-header">
+                <h3 class="form-section-title">Anexos e Observações</h3>
+              </div>
+              <div class="form-group">
+                <label for="file-input"
+                  >Anexos (PDF, Imagens, Documentos)</label
+                >
+                <div class="file-drop-zone" role="button" tabindex="0">
+                  <span class="material-symbols-outlined">upload_file</span>
+                  <p>
+                    Arraste e solte os arquivos aqui ou
+                    <strong>clique para selecionar</strong>
+                  </p>
+                  <input
+                    type="file"
+                    id="file-input"
+                    name="anexos"
+                    multiple
+                    hidden
+                  />
+                </div>
+                <div id="file-list-wrapper">
+                  <div id="file-list"></div>
+                  <div id="file-size-info"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="observacoes">Observações</label>
+                <textarea
+                  id="observacoes"
+                  name="observacoes"
+                  rows="3"
+                  placeholder="Informações adicionais, se houver..."
+                ></textarea>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                id="btn-cancelar-registro"
+                class="btn btn-secondary"
+              >
+                <span class="material-symbols-outlined">arrow_back</span> Voltar
+              </button>
+              <button
+                type="submit"
+                id="btn-submit-form"
+                class="btn btn-primary"
+              >
+                <span class="material-symbols-outlined">save</span> Salvar
+                Serviço
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/scripts/utils/toast.js"></script>
+    <script src="/scripts/fibra_optica/registro_projeto.js"></script>
+  </body>
+</html>
