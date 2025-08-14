@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { promisePool } = require("../init");
 const { autenticar, verificarNivel, criarHashSenha } = require("../auth");
+const ExcelJS = require("exceljs");
 
 router.get(
   "/api/gerenciamento/usuarios",
@@ -121,11 +122,9 @@ router.put(
       res.json({ message: "Usuário atualizado com sucesso!" });
     } catch (error) {
       if (error.code === "ER_DUP_ENTRY")
-        return res
-          .status(409)
-          .json({
-            message: "A matrícula informada já está em uso por outro usuário.",
-          });
+        return res.status(409).json({
+          message: "A matrícula informada já está em uso por outro usuário.",
+        });
       res.status(500).json({ message: "Erro interno ao atualizar usuário." });
     }
   }
@@ -175,4 +174,367 @@ router.delete(
   }
 );
 
+router.get(
+  "/pagina-gerenciamento-frota",
+  autenticar,
+  verificarNivel(4),
+  (req, res) => {
+    res.render("pages/gestor/gerenciamento-frota.html", {
+      user: req.session.user,
+    });
+  }
+);
+
+router.get(
+  "/api/gestao-frota/veiculos",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    try {
+      const page = parseInt(req.query.pagina) || 1;
+      const limit = 15;
+      const offset = (page - 1) * limit;
+      const { termo, status } = req.query;
+      let whereClauses = [];
+      let params = [];
+      if (termo) {
+        whereClauses.push("(placa LIKE ? OR modelo LIKE ?)");
+        params.push(`%${termo}%`, `%${termo}%`);
+      }
+      if (status) {
+        whereClauses.push("status = ?");
+        params.push(status);
+      }
+      const whereString =
+        whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+      const countSql = `SELECT COUNT(*) as total FROM veiculos_frota ${whereString}`;
+      const [countRows] = await promisePool.query(countSql, params);
+      const totalVeiculos = countRows[0].total;
+      const totalPages = Math.ceil(totalVeiculos / limit);
+      const veiculosSql = `SELECT * FROM veiculos_frota ${whereString} ORDER BY modelo ASC LIMIT ? OFFSET ?`;
+      const [veiculos] = await promisePool.query(veiculosSql, [
+        ...params,
+        limit,
+        offset,
+      ]);
+      res.json({ veiculos, currentPage: page, totalPages });
+    } catch (error) {
+      console.error("Erro ao buscar veículos:", error);
+      res.status(500).json({ message: "Erro interno ao buscar veículos." });
+    }
+  }
+);
+
+router.get(
+  "/api/gestao-frota/veiculos/:id",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [rows] = await promisePool.query(
+        "SELECT * FROM veiculos_frota WHERE id = ?",
+        [id]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "Veículo não encontrado." });
+      }
+      res.json(rows[0]);
+    } catch (error) {
+      res.status(500).json({ message: "Erro interno ao buscar veículo." });
+    }
+  }
+);
+
+router.post(
+  "/api/gestao-frota/veiculos",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { placa, modelo, tipo, ano, status } = req.body;
+    if (!placa || !modelo) {
+      return res
+        .status(400)
+        .json({ message: "Placa e Modelo são obrigatórios." });
+    }
+    try {
+      const [result] = await promisePool.query(
+        "INSERT INTO veiculos_frota (placa, modelo, tipo, ano, status) VALUES (?, ?, ?, ?, ?)",
+        [placa, modelo, tipo || null, ano || null, status || "ATIVO"]
+      );
+      res
+        .status(201)
+        .json({ id: result.insertId, message: "Veículo criado com sucesso!" });
+    } catch (error) {
+      if (error.code === "ER_DUP_ENTRY") {
+        return res
+          .status(409)
+          .json({ message: "A placa informada já está em uso." });
+      }
+      res.status(500).json({ message: "Erro interno ao criar veículo." });
+    }
+  }
+);
+
+router.put(
+  "/api/gestao-frota/veiculos/:id",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { id } = req.params;
+    const { placa, modelo, tipo, ano, status } = req.body;
+    if (!placa || !modelo) {
+      return res
+        .status(400)
+        .json({ message: "Placa e Modelo são obrigatórios." });
+    }
+    try {
+      const [result] = await promisePool.query(
+        "UPDATE veiculos_frota SET placa = ?, modelo = ?, tipo = ?, ano = ?, status = ? WHERE id = ?",
+        [placa, modelo, tipo, ano, status, id]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Veículo não encontrado." });
+      }
+      res.json({ message: "Veículo atualizado com sucesso!" });
+    } catch (error) {
+      if (error.code === "ER_DUP_ENTRY") {
+        return res.status(409).json({
+          message: "A placa informada já está em uso por outro veículo.",
+        });
+      }
+      res.status(500).json({ message: "Erro interno ao atualizar veículo." });
+    }
+  }
+);
+
+router.delete(
+  "/api/gestao-frota/veiculos/:id",
+  autenticar,
+  verificarNivel(5),
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [result] = await promisePool.query(
+        "DELETE FROM veiculos_frota WHERE id = ?",
+        [id]
+      );
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Veículo não encontrado." });
+      }
+      res.json({ message: "Veículo excluído permanentemente com sucesso!" });
+    } catch (error) {
+      res.status(500).json({ message: "Erro interno ao excluir veículo." });
+    }
+  }
+);
+
+router.get(
+  "/pagina-relatorios-prv",
+  autenticar,
+  verificarNivel(4),
+  (req, res) => {
+    res.render("pages/gestor/relatorios-prv.html", { user: req.session.user });
+  }
+);
+
+router.get(
+  "/api/relatorios/prv",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { veiculoId, mesAno } = req.query;
+    if (!veiculoId || !mesAno) {
+      return res
+        .status(400)
+        .json({ message: "Veículo e Mês/Ano são obrigatórios." });
+    }
+    try {
+      const sql = `
+        SELECT r.*, v.placa, v.modelo
+        FROM prv_registros r
+        JOIN veiculos_frota v ON r.veiculo_id = v.id
+        WHERE r.veiculo_id = ? AND r.mes_ano_referencia = ?
+        ORDER BY r.dia, r.saida_horario
+      `;
+      const [registros] = await promisePool.query(sql, [veiculoId, mesAno]);
+      if (registros.length === 0) {
+        const [veiculoRows] = await promisePool.query(
+          "SELECT placa, modelo FROM veiculos_frota WHERE id = ?",
+          [veiculoId]
+        );
+        return res.json({
+          veiculo: veiculoRows[0] || {},
+          registros: [],
+        });
+      }
+      res.json({
+        veiculo: {
+          placa: registros[0].placa,
+          modelo: registros[0].modelo,
+        },
+        registros: registros,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar dados do relatório PRV:", error);
+      res.status(500).json({ message: "Erro ao buscar dados do relatório." });
+    }
+  }
+);
+
+router.get(
+  "/api/relatorios/prv/export",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { veiculoId, mesAno } = req.query;
+    if (!veiculoId || !mesAno) {
+      return res.status(400).send("Veículo e Mês/Ano são obrigatórios.");
+    }
+    try {
+      const sql = `
+        SELECT 
+          r.*, 
+          v.placa, 
+          v.modelo,
+          u.nome as nome_motorista
+        FROM prv_registros r
+        JOIN veiculos_frota v ON r.veiculo_id = v.id
+        LEFT JOIN users u ON r.motorista_matricula = u.matricula
+        WHERE r.veiculo_id = ? AND r.mes_ano_referencia = ?
+        ORDER BY r.dia, r.saida_horario
+      `;
+      const [registros] = await promisePool.query(sql, [veiculoId, mesAno]);
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Roteiro de Viagem");
+
+      worksheet.mergeCells("A1:K1");
+      const titleCell = worksheet.getCell("A1");
+      titleCell.value = "PLANILHA ROTEIRO DE VIAGEM DO VEÍCULO - PRV";
+      titleCell.font = { name: "Arial", size: 16, bold: true };
+      titleCell.alignment = { vertical: "middle", horizontal: "center" };
+
+      const veiculoInfo =
+        registros.length > 0
+          ? `${registros[0].placa} / ${registros[0].modelo}`
+          : "N/A";
+      worksheet.getCell("A3").value = "Placa/Tipo:";
+      worksheet.getCell("B3").value = veiculoInfo;
+      worksheet.getCell("A4").value = "Mês/ano:";
+      worksheet.getCell("B4").value = mesAno;
+
+      const headerRow = worksheet.getRow(6);
+      headerRow.values = [
+        "DIA",
+        "SAÍDA",
+        "",
+        "",
+        "CHEGADA",
+        "",
+        "",
+        "MOTORISTA/MATRÍCULA",
+        "PROCESSO",
+        "TIPO DE SERVIÇO",
+      ];
+      worksheet.mergeCells("B6:D6");
+      worksheet.mergeCells("E6:G6");
+
+      const subHeaderRow = worksheet.getRow(7);
+      subHeaderRow.values = [
+        "",
+        "HORÁRIO",
+        "LOCAL",
+        "KM",
+        "HORÁRIO",
+        "LOCAL",
+        "KM",
+      ];
+
+      ["A6", "H6", "I6", "J6"].forEach((cell) => {
+        worksheet.mergeCells(`${cell}:${cell.charAt(0)}7`);
+        worksheet.getCell(cell).alignment = {
+          vertical: "middle",
+          horizontal: "center",
+        };
+      });
+
+      const headerCells = [
+        "A6",
+        "B6",
+        "E6",
+        "H6",
+        "I6",
+        "J6",
+        "B7",
+        "C7",
+        "D7",
+        "E7",
+        "F7",
+        "G7",
+      ];
+      headerCells.forEach((cell) => {
+        worksheet.getCell(cell).font = { bold: true };
+        worksheet.getCell(cell).alignment = {
+          horizontal: "center",
+          vertical: "middle",
+        };
+        worksheet.getCell(cell).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      registros.forEach((r) => {
+        const motoristaFormatado = r.nome_motorista
+          ? `${r.nome_motorista} - ${r.motorista_matricula}`
+          : r.motorista_matricula;
+
+        worksheet.addRow([
+          r.dia,
+          r.saida_horario,
+          r.saida_local,
+          r.saida_km,
+          r.chegada_horario,
+          r.chegada_local,
+          r.chegada_km,
+          motoristaFormatado,
+          r.processo,
+          r.tipo_servico,
+        ]);
+      });
+
+      worksheet.columns = [
+        { key: "dia", width: 5 },
+        { key: "saida_h", width: 10 },
+        { key: "saida_l", width: 25 },
+        { key: "saida_k", width: 10 },
+        { key: "chegada_h", width: 10 },
+        { key: "chegada_l", width: 25 },
+        { key: "chegada_k", width: 10 },
+        { key: "motorista", width: 35 },
+        { key: "processo", width: 15 },
+        { key: "servico", width: 30 },
+      ];
+
+      const fileName = `PRV_${veiculoInfo.split(" / ")[0]}_${mesAno.replace(
+        "/",
+        "-"
+      )}.xlsx`;
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      console.error("Erro ao exportar relatório PRV:", error);
+      res.status(500).send("Erro ao gerar o arquivo Excel.");
+    }
+  }
+);
 module.exports = router;
