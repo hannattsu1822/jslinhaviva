@@ -128,6 +128,55 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
   }
 }
 
+async function salvarInfoDispositivo(serialNumber, data, wss) {
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT status_json FROM dispositivos_logbox WHERE serial_number = ?",
+      [serialNumber]
+    );
+
+    if (rows.length === 0) {
+      console.log(
+        `[Device Info Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`
+      );
+      return;
+    }
+
+    const statusAtual = rows[0].status_json || {};
+    const novoStatus = Object.assign(statusAtual, data);
+
+    await promisePool.query(
+      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
+      [JSON.stringify(novoStatus), serialNumber]
+    );
+
+    console.log(
+      `[Device Info Handler] Status atualizado para SN: ${serialNumber}`
+    );
+
+    if (wss) {
+      const payloadWebSocket = {
+        type: "atualizacao_status",
+        dados: {
+          serial_number: serialNumber,
+          status: novoStatus,
+        },
+      };
+      wss.clients.forEach((client) => {
+        if (client.readyState === client.OPEN) {
+          client.send(JSON.stringify(payloadWebSocket));
+        }
+      });
+    }
+  } catch (err) {
+    console.error(
+      "[Device Info Handler] Erro ao salvar status do dispositivo:",
+      err
+    );
+    console.error("Payload que causou o erro:", data);
+  }
+}
+
 function iniciarClienteMQTT(app) {
   const options = {
     host: "localhost",
@@ -141,7 +190,7 @@ function iniciarClienteMQTT(app) {
     console.log(
       "[MQTT Handler] Conectado ao broker Mosquitto local com sucesso!"
     );
-    const topico = "novus/+/status/channels";
+    const topico = "novus/+/status/#";
     client.subscribe(topico, (err) => {
       if (!err) {
         console.log(
@@ -155,14 +204,37 @@ function iniciarClienteMQTT(app) {
 
   client.on("message", (topic, message) => {
     try {
-      const serialNumber = topic.split("/")[1];
+      const topicParts = topic.split("/");
+      const serialNumber = topicParts[1];
+      const messageType = topicParts[3];
+
       const dados = JSON.parse(message.toString());
       const wss = app.get("wss");
-      salvarLeituraLogBox(serialNumber, dados, wss);
+
+      console.log(
+        `[MQTT Router] Mensagem recebida para SN: ${serialNumber} | Tipo: ${messageType}`
+      );
+
+      switch (messageType) {
+        case "channels":
+          salvarLeituraLogBox(serialNumber, dados, wss);
+          break;
+        case "device":
+          salvarInfoDispositivo(serialNumber, dados, wss);
+          break;
+        case "wifi":
+          salvarInfoDispositivo(serialNumber, dados, wss);
+          break;
+        default:
+          console.log(
+            `[MQTT Router] Tipo de mensagem '${messageType}' não possui um handler definido. Ignorando.`
+          );
+      }
     } catch (e) {
       console.error(
-        "[MQTT Handler] Erro ao processar mensagem (não é um JSON válido):",
-        message.toString()
+        "[MQTT Handler] Erro ao processar mensagem:",
+        message.toString(),
+        e
       );
     }
   });
