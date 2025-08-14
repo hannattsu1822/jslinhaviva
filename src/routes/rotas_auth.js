@@ -19,9 +19,8 @@ router.post("/api/logout", async (req, res) => {
 
     req.session.destroy(async (err) => {
       if (err) {
-        return res.status(500).json({
-          message: "Erro interno no servidor ao tentar fazer logout.",
-        });
+        console.error("Erro ao destruir a sessão:", err);
+        return res.status(500).send("Ocorreu um erro ao tentar fazer logout.");
       }
 
       res.clearCookie("connect.sid");
@@ -41,15 +40,12 @@ router.post("/api/logout", async (req, res) => {
         );
       }
 
-      return res
-        .status(200)
-        .json({ message: "Logout do servidor bem-sucedido!" });
+      // CORREÇÃO: Redireciona para a página de login em vez de enviar JSON
+      return res.redirect("/login");
     });
   } else {
-    return res.status(200).json({
-      message:
-        "Nenhuma sessão ativa para logout no servidor, mas requisição processada.",
-    });
+    // CORREÇÃO: Se não há sessão, apenas redireciona para o login
+    return res.redirect("/login");
   }
 });
 
@@ -60,7 +56,7 @@ router.get("/api/me", autenticar, (req, res) => {
       nome: req.user.nome,
       cargo: req.user.cargo,
       matricula: req.user.matricula,
-      nivel: req.user.nivel, // <-- LINHA ADICIONADA AQUI
+      nivel: req.user.nivel,
     });
   } else {
     res.status(401).json({ message: "Usuário não autenticado." });
