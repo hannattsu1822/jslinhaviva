@@ -14,7 +14,9 @@ app.use(cors());
 
 const projectRootDir = path.resolve(__dirname, "..");
 
-app.set("view engine", "ejs");
+app.engine("html", require("ejs").renderFile);
+app.set("view engine", "html");
+
 app.set("views", path.join(projectRootDir, "views"));
 
 app.use("/static", express.static(path.join(projectRootDir, "views/static")));
@@ -49,6 +51,26 @@ if (!fs.existsSync(uploadsSubestacoesDir)) {
 app.use("/upload_arquivos_subestacoes", express.static(uploadsSubestacoesDir));
 console.log(
   `Servindo arquivos de '/upload_arquivos_subestacoes' a partir de: ${uploadsSubestacoesDir}`
+);
+
+const uploadsFibraDir = path.join(projectRootDir, "upload_arquivos_fibra");
+
+if (!fs.existsSync(uploadsFibraDir)) {
+  try {
+    fs.mkdirSync(uploadsFibraDir, { recursive: true });
+    console.log(`Diretório de uploads de fibra criado em: ${uploadsFibraDir}`);
+  } catch (err) {
+    console.error(
+      `Falha ao criar diretório de uploads de fibra em ${uploadsFibraDir}:`,
+      err
+    );
+  }
+} else {
+  console.log(`Diretório de uploads de fibra já existe em: ${uploadsFibraDir}`);
+}
+app.use("/upload_arquivos_fibra", express.static(uploadsFibraDir));
+console.log(
+  `Servindo arquivos de '/upload_arquivos_fibra' a partir de: ${uploadsFibraDir}`
 );
 
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
