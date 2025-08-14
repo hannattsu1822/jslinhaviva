@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= pageTitle %></title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
+
+    <link rel="stylesheet" href="/static/css/logbox/device-detail.css" />
+  </head>
+  <body class="bg-light">
+    <div class="container-fluid p-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+          <span class="material-symbols-outlined icon-header">sensors</span>
+          <h1 class="h3 mb-0 ms-2"><%= localTag %></h1>
+        </div>
+        <div class="d-flex align-items-center">
+          <span class="text-muted me-3">SN: <%= serialNumber %></span>
+          <div
+            id="geral-status-indicator"
+            class="status-indicator pending"
+            data-bs-toggle="tooltip"
+            data-bs-placement="bottom"
+            title="Status Geral do Dispositivo"
+          ></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="row">
+            <div class="col-md-5">
+              <div
+                class="card card-primary text-white text-center shadow-sm mb-4"
+              >
+                <div class="card-body">
+                  <div
+                    class="d-flex justify-content-center align-items-center mb-2"
+                  >
+                    <span class="material-symbols-outlined md-36"
+                      >device_thermostat</span
+                    >
+                    <h5 class="card-title ms-2 mb-0">Temperatura Atual</h5>
+                  </div>
+                  <p id="latest-temp" class="display-4 fw-bold">--</p>
+                  <small id="latest-timestamp" class="text-white-50"
+                    >Carregando...</small
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="col-md-7">
+              <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                  <h5 class="card-title mb-3 d-flex align-items-center">
+                    <span class="material-symbols-outlined me-2">analytics</span
+                    >Estatísticas
+                  </h5>
+                  <div class="row text-center">
+                    <div class="col-6">
+                      <h6>Hoje</h6>
+                      <p class="mb-1">
+                        <strong>Mín:</strong>
+                        <span id="stat-today-min">--</span> °C
+                      </p>
+                      <p class="mb-1">
+                        <strong>Méd:</strong>
+                        <span id="stat-today-avg">--</span> °C
+                      </p>
+                      <p class="mb-0">
+                        <strong>Máx:</strong>
+                        <span id="stat-today-max">--</span> °C
+                      </p>
+                    </div>
+                    <div class="col-6 border-start">
+                      <h6>Este Mês</h6>
+                      <p class="mb-1">
+                        <strong>Mín:</strong>
+                        <span id="stat-month-min">--</span> °C
+                      </p>
+                      <p class="mb-1">
+                        <strong>Méd:</strong>
+                        <span id="stat-month-avg">--</span> °C
+                      </p>
+                      <p class="mb-0">
+                        <strong>Máx:</strong>
+                        <span id="stat-month-max">--</span> °C
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex align-items-center">
+              <span class="material-symbols-outlined me-2">timeline</span>
+              Histórico de Leituras
+            </div>
+            <div class="card-body">
+              <div id="loader-historico" class="loader"></div>
+              <canvas id="graficoHistorico" style="display: none"></canvas>
+            </div>
+          </div>
+
+          <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center">
+              <span class="material-symbols-outlined me-2"
+                >history_toggle_off</span
+              >
+              Histórico de Acionamentos da Ventilação
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table
+                  id="fan-history-table"
+                  class="table table-striped table-hover mb-0"
+                >
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">Início</th>
+                      <th scope="col">Fim</th>
+                      <th scope="col">Duração</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex align-items-center">
+              <span class="material-symbols-outlined me-2">monitor_heart</span>
+              Diagnóstico do Dispositivo
+            </div>
+            <div class="list-group list-group-flush">
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <span
+                    class="material-symbols-outlined text-muted me-2 align-middle"
+                    >power</span
+                  >
+                  Fonte de Alimentação
+                </div>
+                <span id="diag-power-source" class="badge bg-secondary"
+                  >--</span
+                >
+              </div>
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <span
+                    class="material-symbols-outlined text-muted me-2 align-middle"
+                    >battery_charging_full</span
+                  >
+                  Tensão das Pilhas
+                </div>
+                <span id="diag-battery-voltage" class="badge bg-secondary"
+                  >-- V</span
+                >
+              </div>
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <span
+                    class="material-symbols-outlined text-muted me-2 align-middle"
+                    >thermostat_auto</span
+                  >
+                  Temperatura Interna
+                </div>
+                <span id="diag-internal-temp" class="badge bg-secondary"
+                  >-- °C</span
+                >
+              </div>
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <span
+                    class="material-symbols-outlined text-muted me-2 align-middle"
+                    >cable</span
+                  >
+                  Status Sensor Pt100
+                </div>
+                <span id="diag-pt100-status" class="badge bg-secondary"
+                  >--</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex align-items-center">
+              <span class="material-symbols-outlined me-2">network_check</span>
+              Status da Conexão
+            </div>
+            <div class="list-group list-group-flush">
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <span
+                    class="material-symbols-outlined text-muted me-2 align-middle"
+                    >wifi</span
+                  >
+                  Sinal WiFi (RSSI)
+                </div>
+                <span id="diag-wifi-rssi" class="badge bg-secondary">--</span>
+              </div>
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <span
+                    class="material-symbols-outlined text-muted me-2 align-middle"
+                    >cloud_sync</span
+                  >
+                  Status MQTT
+                </div>
+                <span id="diag-mqtt-status" class="badge bg-secondary">--</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center text-warning">
+              <span class="material-symbols-outlined me-2">warning</span>
+              Alarmes Ativos
+            </div>
+            <div id="active-alarms-list" class="list-group list-group-flush">
+              <div class="list-group-item text-muted text-center placeholder">
+                Nenhum alarme ativo.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@^2"></script>
+
+    <script src="/scripts/logbox/device-detail.js"></script>
+  </body>
+</html>
