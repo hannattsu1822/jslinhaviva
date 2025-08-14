@@ -12,15 +12,12 @@
     <link rel="stylesheet" href="/static/css/gestor/dashboard-gestor.css" />
   </head>
   <body>
-    <!-- CORREÇÃO 1: Adicionada a estrutura padrão 'page-container' -->
     <div class="page-container">
       <%- include('../../partials/sidebar.html') %>
 
-      <!-- CORREÇÃO 2: Usando 'main-content' em vez de 'main-content-wrapper' -->
       <main class="main-content">
         <div class="container">
           <header class="page-header">
-            <!-- CORREÇÃO 3: Adicionado o botão de toggle da sidebar -->
             <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
               <span class="material-symbols-outlined">menu</span>
             </button>
@@ -47,6 +44,41 @@
                 <p class="card-description">
                   Adicione, edite e gerencie os usuários e suas permissões de
                   acesso ao sistema.
+                </p>
+              </div>
+            </a>
+
+            <a href="/pagina-gerenciamento-frota" class="dashboard-card">
+              <div class="card-icon-wrapper">
+                <span
+                  class="material-symbols-outlined card-icon"
+                  style="color: #198754"
+                >
+                  local_shipping
+                </span>
+              </div>
+              <div class="card-content">
+                <h2 class="card-title">Gerenciar Frota</h2>
+                <p class="card-description">
+                  Adicione, edite e gerencie os veículos da frota e seus status.
+                </p>
+              </div>
+            </a>
+
+            <a href="/pagina-relatorios-prv" class="dashboard-card">
+              <div class="card-icon-wrapper">
+                <span
+                  class="material-symbols-outlined card-icon"
+                  style="color: #ffc107"
+                >
+                  summarize
+                </span>
+              </div>
+              <div class="card-content">
+                <h2 class="card-title">Relatórios de Viagem (PRV)</h2>
+                <p class="card-description">
+                  Gere e visualize as planilhas mensais de viagem para cada
+                  veículo da frota.
                 </p>
               </div>
             </a>
