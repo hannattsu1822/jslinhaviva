@@ -38,145 +38,95 @@
         </div>
         <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
       </div>
-
       <div class="user-info p-3 mt-2 rounded">
         <div class="info-item mb-2">
-          <i class="fas fa-id-card me-2"></i>
-          <span id="user-matricula">Matrícula: Carregando...</span>
+          <i class="fas fa-id-card me-2"></i
+          ><span id="user-matricula">Matrícula: Carregando...</span>
         </div>
         <div class="info-item mb-2">
-          <i class="fas fa-briefcase me-2"></i>
-          <span id="user-cargo">Cargo: Carregando...</span>
+          <i class="fas fa-briefcase me-2"></i
+          ><span id="user-cargo">Cargo: Carregando...</span>
         </div>
         <div class="info-item mb-2">
-          <i class="fas fa-calendar-alt me-2"></i>
-          <span id="current-date">--/--/----</span>
+          <i class="fas fa-calendar-alt me-2"></i
+          ><span id="current-date">--/--/----</span>
         </div>
         <div class="info-item">
-          <i class="fas fa-clock me-2"></i>
-          <span id="current-time">--:--:--</span>
+          <i class="fas fa-clock me-2"></i
+          ><span id="current-time">--:--:--</span>
         </div>
       </div>
-
       <nav class="sidebar-nav flex-grow-1">
         <ul class="nav-list">
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('dashboard');"
-              class="nav-link"
+            <a href="/dashboard" class="nav-link"
+              ><i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard
+              Principal</a
             >
-              <i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard
-              Principal
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('subestacoes-dashboard');"
-              class="nav-link"
+            <a href="/subestacoes-dashboard" class="nav-link"
+              ><i class="fas fa-charging-station fa-fw me-2"></i>Subestações</a
             >
-              <i class="fas fa-charging-station fa-fw me-2"></i>Subestações
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('transformadores');"
-              class="nav-link"
+            <a href="/transformadores" class="nav-link"
+              ><i class="fas fa-bolt fa-fw me-2"></i>Transformadores</a
             >
-              <i class="fas fa-bolt fa-fw me-2"></i>Transformadores
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('frota');"
-              class="nav-link"
+            <a href="/frota" class="nav-link"
+              ><i class="fas fa-truck fa-fw me-2"></i>Frota</a
             >
-              <i class="fas fa-truck fa-fw me-2"></i>Frota
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('gestao-servicos');"
-              class="nav-link"
+            <a href="/gestao-servicos" class="nav-link"
+              ><i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços</a
             >
-              <i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('gestao-turmas');"
-              class="nav-link"
+            <a href="/gestao-turmas" class="nav-link"
+              ><i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de
+              Turmas</a
             >
-              <i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de Turmas
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('fibra-optica');"
-              class="nav-link"
+            <a href="/fibra-optica" class="nav-link"
+              ><i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica</a
             >
-              <i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('inspecoes-redes');"
-              class="nav-link"
+            <a href="/inspecoes-redes" class="nav-link"
+              ><i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de
+              Redes</a
             >
-              <i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de
-              Redes
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('avulsos-dashboard');"
-              class="nav-link"
+            <a href="/avulsos-dashboard" class="nav-link"
+              ><i class="fas fa-hand-sparkles fa-fw me-2"></i>Avulsos</a
             >
-              <i class="fas fa-hand-sparkles fa-fw me-2"></i>Avulsos
-            </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('monitoramento-hub');"
-              class="nav-link"
+            <a href="/monitoramento-hub" class="nav-link"
+              ><i class="fas fa-satellite-dish fa-fw me-2"></i>Monitoramento</a
             >
-              <i class="fas fa-satellite-dish fa-fw me-2"></i>Monitoramento
-            </a>
           </li>
           <li class="nav-item" id="sidebar-gestao-link" style="display: none">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('dashboard-gestor');"
-              class="nav-link"
+            <a href="/dashboard-gestor" class="nav-link"
+              ><i class="fas fa-cogs fa-fw me-2"></i>Painel de Gestão</a
             >
-              <i class="fas fa-cogs fa-fw me-2"></i>Painel de Gestão
-            </a>
           </li>
           <li
             class="nav-item"
             id="sidebar-auditoria-link"
             style="display: none"
           >
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('auditoria');"
-              class="nav-link"
+            <a href="/auditoria" class="nav-link"
+              ><i class="fas fa-search fa-fw me-2"></i>Auditoria</a
             >
-              <i class="fas fa-search fa-fw me-2"></i>Auditoria
-            </a>
           </li>
         </ul>
       </nav>
-
       <div class="sidebar-footer">
         <button onclick="logout()" class="btn-logout">
           <i class="fas fa-sign-out-alt me-2"></i>Sair
@@ -191,207 +141,217 @@
         </h1>
         <div class="row g-4">
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('subestacoes-dashboard')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-info mx-auto mb-2">
-                    <i class="fas fa-charging-station"></i>
+            <a href="/subestacoes-dashboard" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-info mx-auto mb-2">
+                      <i class="fas fa-charging-station"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Subestações</h3>
                   </div>
-                  <h3 class="card-title mb-0">Subestações</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('transformadores')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-primary mx-auto mb-2">
-                    <i class="fas fa-bolt"></i>
+            <a href="/transformadores" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-primary mx-auto mb-2">
+                      <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Transformadores</h3>
                   </div>
-                  <h3 class="card-title mb-0">Transformadores</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div class="card glass-card h-100" onclick="navigateTo('frota')">
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-warning mx-auto mb-2">
-                    <i class="fas fa-truck"></i>
+            <a href="/frota" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-warning mx-auto mb-2">
+                      <i class="fas fa-truck"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Frota</h3>
                   </div>
-                  <h3 class="card-title mb-0">Frota</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('gestao-servicos')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-info mx-auto mb-2">
-                    <i class="fas fa-tools"></i>
+            <a href="/gestao-servicos" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-info mx-auto mb-2">
+                      <i class="fas fa-tools"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Gestão de Serviços</h3>
                   </div>
-                  <h3 class="card-title mb-0">Gestão de Serviços</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('gestao-turmas')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-secondary mx-auto mb-2">
-                    <i class="fa-solid fa-users-gear"></i>
+            <a href="/gestao-turmas" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-secondary mx-auto mb-2">
+                      <i class="fa-solid fa-users-gear"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Gestão de Turmas</h3>
                   </div>
-                  <h3 class="card-title mb-0">Gestão de Turmas</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('fibra-optica')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div
-                    class="icon-circle mx-auto mb-2"
-                    style="background-color: #9c27b0 !important"
-                  >
-                    <i class="fas fa-network-wired"></i>
+            <a href="/fibra-optica" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #9c27b0 !important"
+                    >
+                      <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Fibra Óptica</h3>
                   </div>
-                  <h3 class="card-title mb-0">Fibra Óptica</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('inspecoes-redes')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div
-                    class="icon-circle mx-auto mb-2"
-                    style="background-color: #ff5722 !important"
-                  >
-                    <i class="fas fa-broadcast-tower"></i>
+            <a href="/inspecoes-redes" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #ff5722 !important"
+                    >
+                      <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Inspeções de Redes</h3>
                   </div>
-                  <h3 class="card-title mb-0">Inspeções de Redes</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('avulsos-dashboard')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div
-                    class="icon-circle mx-auto mb-2"
-                    style="background-color: #607d8b !important"
-                  >
-                    <i class="fas fa-hand-sparkles"></i>
+            <a href="/avulsos-dashboard" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #607d8b !important"
+                    >
+                      <i class="fas fa-hand-sparkles"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Avulsos</h3>
                   </div>
-                  <h3 class="card-title mb-0">Avulsos</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div class="col-md-6 col-lg-3">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('monitoramento-hub')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div
-                    class="icon-circle mx-auto mb-2"
-                    style="background-color: #009688 !important"
-                  >
-                    <i class="fas fa-satellite-dish"></i>
+            <a href="/monitoramento-hub" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #009688 !important"
+                    >
+                      <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Monitoramento</h3>
                   </div>
-                  <h3 class="card-title mb-0">Monitoramento</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
+          </div>
+          <div id="prv-card" class="col-md-6 col-lg-3" style="display: none">
+            <a href="/prv" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #17a2b8 !important"
+                    >
+                      <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Roteiro de Viagem</h3>
+                  </div>
+                </div>
+              </div></a
+            >
           </div>
           <div id="gestao-card" class="col-md-6 col-lg-3" style="display: none">
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('dashboard-gestor')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-dark mx-auto mb-2">
-                    <i class="fas fa-cogs"></i>
+            <a href="/dashboard-gestor" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-dark mx-auto mb-2">
+                      <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Painel de Gestão</h3>
                   </div>
-                  <h3 class="card-title mb-0">Painel de Gestão</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
           <div
             id="auditoria-card"
             class="col-md-6 col-lg-3"
             style="display: none"
           >
-            <div
-              class="card glass-card h-100"
-              onclick="navigateTo('auditoria')"
-            >
-              <div
-                class="card-body d-flex align-items-center justify-content-center"
-              >
-                <div class="text-center">
-                  <div class="icon-circle bg-danger mx-auto mb-2">
-                    <i class="fas fa-search"></i>
+            <a href="/auditoria" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-danger mx-auto mb-2">
+                      <i class="fas fa-search"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Auditoria</h3>
                   </div>
-                  <h3 class="card-title mb-0">Auditoria</h3>
                 </div>
-              </div>
-            </div>
+              </div></a
+            >
           </div>
         </div>
-
         <div class="row mt-4">
           <div class="col-12">
             <div class="card dashboard-calendar-card">
@@ -481,20 +441,6 @@
     <script src="/scripts/into/dashboard_calendar.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        let accessDeniedModalInstance;
-        let developmentModalInstance;
-
-        if (
-          typeof bootstrap !== "undefined" &&
-          typeof bootstrap.Modal !== "undefined"
-        ) {
-          const admEl = document.getElementById("access-denied-modal");
-          if (admEl) accessDeniedModalInstance = new bootstrap.Modal(admEl);
-
-          const devmEl = document.getElementById("development-modal");
-          if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
-        }
-
         fetch("/api/me")
           .then((response) => {
             if (!response.ok) {
@@ -512,6 +458,7 @@
             );
             const gestaoCard = document.getElementById("gestao-card");
             const gestaoLink = document.getElementById("sidebar-gestao-link");
+            const prvCard = document.getElementById("prv-card");
 
             if (userLevel >= 10) {
               if (auditoriaCard) auditoriaCard.style.display = "block";
@@ -521,80 +468,14 @@
               if (gestaoCard) gestaoCard.style.display = "block";
               if (gestaoLink) gestaoLink.style.display = "block";
             }
+            if (userLevel >= 4) {
+              if (prvCard) prvCard.style.display = "block";
+            }
           })
           .catch((error) => {
             console.error("Erro ao buscar dados do usuário:", error);
             window.location.href = "/login";
           });
-
-        window.navigateTo = async function (page) {
-          const existingPages = [
-            "dashboard",
-            "transformadores",
-            "subestacoes-dashboard",
-            "frota",
-            "auditoria",
-            "gestao-servicos",
-            "gestao-turmas",
-            "fibra-optica",
-            "inspecoes-redes",
-            "avulsos-dashboard",
-            "dashboard-gestor",
-            "monitoramento-hub",
-          ];
-
-          if (!existingPages.includes(page)) {
-            if (developmentModalInstance) {
-              developmentModalInstance.show();
-            } else {
-              alert("Recurso em desenvolvimento (modal não carregado).");
-            }
-            return;
-          }
-
-          let targetUrl = `/${page}`;
-
-          if (window.location.pathname === targetUrl && page === "dashboard") {
-            return;
-          }
-
-          try {
-            const response = await fetch(targetUrl, { method: "HEAD" });
-            if (response.ok) {
-              window.location.href = targetUrl;
-            } else if (response.status === 403) {
-              if (accessDeniedModalInstance) {
-                accessDeniedModalInstance.show();
-              } else {
-                alert("Acesso negado (modal não carregado).");
-              }
-            } else if (response.status === 404) {
-              if (developmentModalInstance) {
-                developmentModalInstance.show();
-              } else {
-                alert(
-                  "Página não encontrada ou em desenvolvimento (modal não carregado)."
-                );
-              }
-            } else {
-              if (developmentModalInstance) {
-                developmentModalInstance.show();
-              } else {
-                alert(
-                  "Recurso não encontrado ou em desenvolvimento (modal não carregado)."
-                );
-              }
-            }
-          } catch (error) {
-            if (developmentModalInstance) {
-              developmentModalInstance.show();
-            } else {
-              alert(
-                "Erro de rede ou falha na navegação (modal não carregado)."
-              );
-            }
-          }
-        };
       });
     </script>
   </body>
