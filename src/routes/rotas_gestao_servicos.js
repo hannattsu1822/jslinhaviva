@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const { PDFDocument } = require("pdf-lib");
+const puppeteer = require("puppeteer");
 const { promisePool, upload } = require("../init");
 const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
@@ -1184,111 +1185,358 @@ router.patch(
   }
 );
 
+async function processarImagensParaBase64(imagens, basePath) {
+  const imagensProcessadas = await Promise.all(
+    imagens.map(async (img) => {
+      if (!img.caminho) return null;
+      const caminhoRelativo = img.caminho.replace("/api/upload_arquivos/", "");
+      const caminhoFisico = path.join(
+        basePath,
+        "../../upload_arquivos",
+        caminhoRelativo
+      );
+
+      if (fs.existsSync(caminhoFisico)) {
+        try {
+          const buffer = await fsPromises.readFile(caminhoFisico);
+          const ext = path.extname(img.nomeOriginal).substring(1);
+          return {
+            src: `data:image/${ext};base64,${buffer.toString("base64")}`,
+            nome: img.nomeOriginal,
+          };
+        } catch (e) {
+          console.error(`Erro ao ler o arquivo de imagem: ${caminhoFisico}`, e);
+          return null;
+        }
+      }
+      return null;
+    })
+  );
+  return imagensProcessadas.filter(Boolean);
+}
+
+async function gerarHtmlRelatorio(servicoData) {
+  const {
+    id,
+    processo,
+    tipo,
+    data_prevista_execucao,
+    desligamento,
+    hora_inicio,
+    hora_fim,
+    subestacao,
+    alimentador,
+    chave_montante,
+    responsavel_nome,
+    responsavel_matricula,
+    maps,
+    ordem_obra,
+    descricao_servico,
+    observacoes,
+    status,
+    data_conclusao,
+    observacoes_conclusao,
+    motivo_nao_conclusao,
+    anexos,
+  } = servicoData;
+
+  const imagensRegistro = anexos.filter((anexo) => anexo.tipo === "imagem");
+  const imagensFinalizacao = anexos.filter((anexo) =>
+    ["foto_conclusao", "foto_nao_conclusao"].includes(anexo.tipo)
+  );
+
+  const imagensRegistroBase64 = await processarImagensParaBase64(
+    imagensRegistro,
+    __dirname
+  );
+  const imagensFinalizacaoBase64 = await processarImagensParaBase64(
+    imagensFinalizacao,
+    __dirname
+  );
+
+  const formatarData = (dataStr, comHora = false) => {
+    if (!dataStr) return "N/A";
+    const options = {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "UTC",
+    };
+    if (comHora) {
+      options.hour = "2-digit";
+      options.minute = "2-digit";
+    }
+    const dataObj = new Date(dataStr);
+    if (isNaN(dataObj.getTime())) return "Data inválida";
+    return dataObj.toLocaleDateString("pt-BR", options);
+  };
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Serviço - ${processo || id}</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+            body { font-family: 'Roboto', sans-serif; font-size: 10pt; color: #333; }
+            .container { width: 90%; margin: auto; }
+            .header { text-align: center; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { color: #0056b3; margin: 0; }
+            .header p { margin: 5px 0 0; }
+            .section { border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; page-break-inside: avoid; }
+            .section-header { background-color: #f2f2f2; padding: 8px 12px; font-weight: bold; border-bottom: 1px solid #ccc; border-radius: 8px 8px 0 0; }
+            .section-body { padding: 12px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+            .grid-item { padding-bottom: 8px; }
+            .grid-item strong { display: block; font-size: 0.8rem; color: #555; margin-bottom: 2px; }
+            .grid-item span { font-size: 0.95rem; }
+            .full-width { grid-column: 1 / -1; }
+            .text-area { white-space: pre-wrap; background-color: #f9f9f9; padding: 8px; border-radius: 4px; border: 1px solid #eee; min-height: 40px; }
+            .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 10px; }
+            .gallery-item { page-break-inside: avoid; text-align: center; border: 1px solid #ddd; padding: 5px; border-radius: 4px; }
+            .gallery-item img { max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 5px; }
+            .gallery-item p { font-size: 0.8rem; color: #555; margin: 0; word-wrap: break-word; }
+            .status { padding: 5px 10px; border-radius: 15px; color: white; font-weight: bold; }
+            .status-concluido { background-color: #28a745; }
+            .status-nao-concluido { background-color: #dc3545; }
+            .footer { text-align: center; font-size: 0.8rem; color: #777; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; }
+            .no-content { text-align: center; color: #888; padding: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Relatório de Serviço Concluído</h1>
+                <p>Processo: ${processo || "N/A"} | ID: ${id}</p>
+            </div>
+            <div class="section">
+                <div class="section-header">Informações Gerais</div>
+                <div class="section-body grid">
+                    <div class="grid-item"><strong>Status</strong><span><span class="status ${
+                      status === "concluido"
+                        ? "status-concluido"
+                        : "status-nao-concluido"
+                    }">${
+    status === "concluido" ? "Concluído" : "Não Concluído"
+  }</span></span></div>
+                    <div class="grid-item"><strong>Tipo de Serviço</strong><span>${
+                      tipo || "N/A"
+                    }</span></div>
+                    <div class="grid-item"><strong>Data Prevista</strong><span>${formatarData(
+                      data_prevista_execucao
+                    )}</span></div>
+                    <div class="grid-item"><strong>Data de Finalização</strong><span>${formatarData(
+                      data_conclusao,
+                      true
+                    )}</span></div>
+                    <div class="grid-item"><strong>Responsável</strong><span>${
+                      responsavel_nome || "N/A"
+                    } (${responsavel_matricula || "N/A"})</span></div>
+                    <div class="grid-item"><strong>Ordem de Obra</strong><span>${
+                      ordem_obra || "N/A"
+                    }</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-header">Detalhes Técnicos</div>
+                <div class="section-body grid">
+                    <div class="grid-item"><strong>Subestação</strong><span>${
+                      subestacao || "N/A"
+                    }</span></div>
+                    <div class="grid-item"><strong>Alimentador</strong><span>${
+                      alimentador || "N/A"
+                    }</span></div>
+                    <div class="grid-item"><strong>Chave Montante</strong><span>${
+                      chave_montante || "N/A"
+                    }</span></div>
+                    <div class="grid-item"><strong>Desligamento</strong><span>${
+                      desligamento || "N/A"
+                    } ${
+    desligamento === "SIM" ? `(${hora_inicio || ""} - ${hora_fim || ""})` : ""
+  }</span></div>
+                    <div class="grid-item full-width"><strong>Localização (Maps)</strong><span>${
+                      maps || "Não fornecido"
+                    }</span></div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-header">Descrição e Observações do Registro</div>
+                <div class="section-body">
+                    <div class="grid-item full-width"><strong>Descrição do Serviço</strong><div class="text-area">${
+                      descricao_servico || "Nenhuma."
+                    }</div></div>
+                    <div class="grid-item full-width"><strong>Observações Iniciais</strong><div class="text-area">${
+                      observacoes || "Nenhuma."
+                    }</div></div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-header">Informações de Finalização</div>
+                <div class="section-body">
+                    ${
+                      status === "nao_concluido"
+                        ? `
+                    <div class="grid-item full-width"><strong>Motivo da Não Conclusão</strong><div class="text-area">${
+                      motivo_nao_conclusao || "Nenhum."
+                    }</div></div>
+                    `
+                        : ""
+                    }
+                    <div class="grid-item full-width"><strong>Observações de Conclusão</strong><div class="text-area">${
+                      observacoes_conclusao || "Nenhuma."
+                    }</div></div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-header">Anexos do Registro (Fotos)</div>
+                <div class="section-body">
+                    ${
+                      imagensRegistroBase64.length > 0
+                        ? `
+                        <div class="gallery">
+                            ${imagensRegistroBase64
+                              .map(
+                                (img) => `
+                                <div class="gallery-item">
+                                    <img src="${img.src}">
+                                    <p>${img.nome}</p>
+                                </div>`
+                              )
+                              .join("")}
+                        </div>
+                    `
+                        : '<p class="no-content">Nenhuma imagem de registro anexada.</p>'
+                    }
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-header">Anexos da Finalização (Fotos)</div>
+                <div class="section-body">
+                    ${
+                      imagensFinalizacaoBase64.length > 0
+                        ? `
+                        <div class="gallery">
+                            ${imagensFinalizacaoBase64
+                              .map(
+                                (img) => `
+                                <div class="gallery-item">
+                                    <img src="${img.src}">
+                                    <p>${img.nome}</p>
+                                </div>`
+                              )
+                              .join("")}
+                        </div>
+                    `
+                        : '<p class="no-content">Nenhuma imagem de finalização anexada.</p>'
+                    }
+                </div>
+            </div>
+            <div class="footer">
+                Relatório gerado em ${new Date().toLocaleString("pt-BR")}
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+}
+
 router.get(
-  "/api/servicos/:servicoId/consolidar-pdfs",
+  "/api/servicos/:id/consolidar-pdfs",
   autenticar,
   verificarNivel(3),
   async (req, res) => {
-    const { servicoId } = req.params;
-    if (isNaN(parseInt(servicoId))) {
-      return res
-        .status(400)
-        .json({ success: false, message: "ID do Serviço inválido." });
-    }
-
+    const { id: servicoId } = req.params;
     const connection = await promisePool.getConnection();
+    let browser;
+
     try {
-      const [servico] = await connection.query(
-        "SELECT processo FROM processos WHERE id = ?",
+      const [servicoRows] = await connection.query(
+        `SELECT p.*, u.nome as responsavel_nome FROM processos p LEFT JOIN users u ON p.responsavel_matricula = u.matricula WHERE p.id = ?`,
         [servicoId]
       );
-      if (servico.length === 0) {
-        connection.release();
+      if (servicoRows.length === 0) {
         return res
           .status(404)
-          .json({ success: false, message: "Serviço não encontrado." });
+          .json({ success: false, message: "Serviço não encontrado" });
       }
-      const nomeProcesso = servico[0].processo || `servico_${servicoId}`;
-
       const [anexos] = await connection.query(
-        "SELECT caminho_servidor, nome_original FROM processos_anexos WHERE processo_id = ? AND (LOWER(nome_original) LIKE '%.pdf' OR LOWER(caminho_servidor) LIKE '%.pdf')",
+        `SELECT id, nome_original as nomeOriginal, caminho_servidor as caminho, tipo_anexo as tipo FROM processos_anexos WHERE processo_id = ?`,
         [servicoId]
       );
+      const servicoData = { ...servicoRows[0], anexos };
 
-      if (anexos.length === 0) {
-        connection.release();
-        return res.status(404).json({
-          success: false,
-          message: "Nenhum anexo PDF encontrado para este serviço.",
-        });
-      }
+      const htmlContent = await gerarHtmlRelatorio(servicoData);
 
-      const mergedPdfDoc = await PDFDocument.create();
-      let pdfsMergedCount = 0;
+      browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "20mm", right: "10mm", bottom: "20mm", left: "10mm" },
+      });
+      await browser.close();
+      browser = null;
 
-      for (const anexo of anexos) {
-        const partesCaminho = anexo.caminho_servidor.split("/");
-        const nomePasta = partesCaminho[partesCaminho.length - 2];
-        const nomeArquivo = partesCaminho[partesCaminho.length - 1];
-        const caminhoFisico = path.join(
-          __dirname,
-          "../../upload_arquivos",
-          nomePasta,
-          nomeArquivo
-        );
+      const pdfsAnexos = anexos.filter(
+        (anexo) =>
+          anexo.caminho &&
+          (anexo.caminho.toLowerCase().endsWith(".pdf") ||
+            anexo.tipo === "APR_DOCUMENTO")
+      );
 
-        try {
+      if (pdfsAnexos.length > 0) {
+        const mergedPdfDoc = await PDFDocument.load(pdfBuffer);
+
+        for (const anexo of pdfsAnexos) {
+          const caminhoRelativo = anexo.caminho.replace(
+            "/api/upload_arquivos/",
+            ""
+          );
+          const caminhoFisico = path.join(
+            __dirname,
+            "../../upload_arquivos",
+            caminhoRelativo
+          );
+
           if (fs.existsSync(caminhoFisico)) {
-            const pdfBytes = await fsPromises.readFile(caminhoFisico);
-            const pdfDoc = await PDFDocument.load(pdfBytes, {
+            const anexoPdfBytes = await fsPromises.readFile(caminhoFisico);
+            const anexoPdfDoc = await PDFDocument.load(anexoPdfBytes, {
               ignoreEncryption: true,
             });
             const copiedPages = await mergedPdfDoc.copyPages(
-              pdfDoc,
-              pdfDoc.getPageIndices()
+              anexoPdfDoc,
+              anexoPdfDoc.getPageIndices()
             );
             copiedPages.forEach((page) => mergedPdfDoc.addPage(page));
-            pdfsMergedCount++;
-          } else {
-            console.warn(
-              `Arquivo PDF não encontrado no caminho físico: ${caminhoFisico} para o anexo ${anexo.nome_original}`
-            );
           }
-        } catch (pdfError) {
-          console.error(
-            `Erro ao processar o PDF ${anexo.nome_original} (caminho: ${caminhoFisico}): ${pdfError.message}. Este arquivo será ignorado.`
-          );
         }
-      }
+        const finalPdfBytes = await mergedPdfDoc.save();
 
-      if (pdfsMergedCount === 0) {
-        connection.release();
-        return res.status(404).json({
-          success: false,
-          message: "Nenhum PDF válido pôde ser processado ou encontrado.",
-        });
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="relatorio_servico_${servicoId}.pdf"`
+        );
+        return res.send(Buffer.from(finalPdfBytes));
       }
-
-      const mergedPdfBytes = await mergedPdfDoc.save();
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="consolidado_${nomeProcesso.replace(
-          /\//g,
-          "-"
-        )}_${servicoId}.pdf"`
+        `attachment; filename="relatorio_servico_${servicoId}.pdf"`
       );
-      res.send(Buffer.from(mergedPdfBytes));
+      res.send(pdfBuffer);
     } catch (error) {
-      console.error("Erro ao consolidar PDFs:", error);
-      if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          message: "Erro interno ao consolidar PDFs.",
-          error: error.message,
-        });
-      }
+      console.error("Erro ao gerar relatório PDF:", error);
+      if (browser) await browser.close();
+      res.status(500).json({
+        success: false,
+        message: "Erro interno ao gerar o relatório PDF.",
+      });
     } finally {
       if (connection) connection.release();
     }
