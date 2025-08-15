@@ -5,7 +5,6 @@ const { autenticar, verificarNivel } = require("../auth");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
 
-// --- FUNÇÕES AUXILIARES ---
 function formatarDuracao(segundos) {
   if (segundos === null || segundos === undefined) return "Em andamento";
   if (segundos < 60) return `${segundos} seg`;
@@ -64,7 +63,6 @@ async function getReportData(filters) {
   };
 }
 
-// --- ROTAS QUE ESTAVAM NO LUGAR ERRADO ---
 router.get("/dashboard-logbox", autenticar, (req, res) => {
   res.render("pages/logbox/logbox.html", {
     pageTitle: "Dashboard LogBox",
@@ -109,9 +107,7 @@ router.get("/api/logbox/stats", autenticar, async (req, res) => {
     res.status(500).json({ message: "Erro interno no servidor" });
   }
 });
-// --- FIM DAS ROTAS MOVIDAS ---
 
-// --- ROTAS QUE JÁ ESTAVAM CORRETAS ---
 router.get("/logbox-device/:serialNumber", autenticar, async (req, res) => {
   const serialNumber = req.params.serialNumber;
   try {
