@@ -50,15 +50,13 @@ async function verificarEAtualizarVentilacao(
 
 async function salvarLeituraLogBox(serialNumber, data, wss) {
   try {
-    const temperatura = data.value_channels[2];
-    const umidade =
-      data.value_channels[3] !== undefined ? data.value_channels[3] : null;
+    const temperatura = data.ch_analog_1;
     const bateria = data.battery;
     const tDateTime = data.timestamp;
 
     if (temperatura === undefined) {
       console.error(
-        "[MQTT Handler] Valor de temperatura não encontrado no payload:",
+        "[MQTT Handler] Valor de temperatura (ch_analog_1) não encontrado no payload:",
         data
       );
       return;
@@ -68,7 +66,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
     const jsTimestamp = (tDateTime - epochOffset) * 86400 * 1000;
     const timestampLeitura = new Date(jsTimestamp);
 
-    const fonteAlimentacao = "Alimentação Direta";
+    const fonteAlimentacao = "Verificar Status";
 
     const sql = `
       INSERT INTO leituras_logbox 
@@ -83,8 +81,11 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
       fonteAlimentacao,
     ]);
     console.log(
-      `[MQTT Handler] Payload salvo para SN: ${serialNumber} | Fonte: ${fonteAlimentacao}`
+      `[MQTT Handler] Payload de canais salvo para SN: ${serialNumber}`
     );
+
+    // Atualiza o status do dispositivo com os dados desta mensagem
+    await salvarInfoDispositivo(serialNumber, data, wss);
 
     await verificarEAtualizarVentilacao(
       serialNumber,
@@ -106,9 +107,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
           serial_number: serialNumber,
           local_tag: localTag,
           temperatura: temperatura,
-          umidade: umidade,
           bateria: bateria,
-          fonte_alimentacao: fonteAlimentacao,
           timestamp_leitura: timestampLeitura.toLocaleString("pt-BR"),
         },
       };
@@ -121,7 +120,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
     }
   } catch (err) {
     console.error(
-      "[MQTT Handler] Erro ao salvar payload no banco de dados:",
+      "[MQTT Handler] Erro ao salvar payload de canais no banco de dados:",
       err
     );
     console.error("Payload que causou o erro:", data);
@@ -151,7 +150,7 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
     );
 
     console.log(
-      `[Device Info Handler] Status atualizado para SN: ${serialNumber}`
+      `[Device Info Handler] Status atualizado para SN: ${serialNumber} com dados de canais.`
     );
 
     if (wss) {
@@ -177,6 +176,63 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
   }
 }
 
+async function salvarStatusConexao(data, wss) {
+  const serialNumber = data.serial;
+  if (!serialNumber) {
+    console.error(
+      "[Connection Status Handler] Serial number não encontrado no payload de 'neighbor'."
+    );
+    return;
+  }
+
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT status_json FROM dispositivos_logbox WHERE serial_number = ?",
+      [serialNumber]
+    );
+
+    if (rows.length === 0) {
+      console.log(
+        `[Connection Status Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`
+      );
+      return;
+    }
+
+    const statusAtual = rows[0].status_json || {};
+    const novoStatus = Object.assign(statusAtual, data);
+
+    await promisePool.query(
+      "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
+      [JSON.stringify(novoStatus), serialNumber]
+    );
+
+    console.log(
+      `[Connection Status Handler] Status de conexão atualizado para SN: ${serialNumber}.`
+    );
+
+    if (wss) {
+      const payloadWebSocket = {
+        type: "atualizacao_status",
+        dados: {
+          serial_number: serialNumber,
+          status: novoStatus,
+        },
+      };
+      wss.clients.forEach((client) => {
+        if (client.readyState === client.OPEN) {
+          client.send(JSON.stringify(payloadWebSocket));
+        }
+      });
+    }
+  } catch (err) {
+    console.error(
+      "[Connection Status Handler] Erro ao salvar status de conexão:",
+      err
+    );
+    console.error("Payload que causou o erro:", data);
+  }
+}
+
 function iniciarClienteMQTT(app) {
   const options = {
     host: "localhost",
@@ -190,45 +246,34 @@ function iniciarClienteMQTT(app) {
     console.log(
       "[MQTT Handler] Conectado ao broker Mosquitto local com sucesso!"
     );
-    const topico = "novus/+/status/#";
-    client.subscribe(topico, (err) => {
+    const topicos = ["novus/+/status/channels", "novus/neighbor"];
+    client.subscribe(topicos, (err) => {
       if (!err) {
         console.log(
-          `[MQTT Handler] Inscrito com sucesso no tópico: "${topico}"`
+          `[MQTT Handler] Inscrito com sucesso nos tópicos: "${topicos.join(
+            ", "
+          )}"`
         );
       } else {
-        console.error(`[MQTT Handler] Falha ao se inscrever no tópico:`, err);
+        console.error(`[MQTT Handler] Falha ao se inscrever nos tópicos:`, err);
       }
     });
   });
 
   client.on("message", (topic, message) => {
     try {
-      const topicParts = topic.split("/");
-      const serialNumber = topicParts[1];
-      const messageType = topicParts[3];
-
       const dados = JSON.parse(message.toString());
       const wss = app.get("wss");
 
-      console.log(
-        `[MQTT Router] Mensagem recebida para SN: ${serialNumber} | Tipo: ${messageType}`
-      );
-
-      switch (messageType) {
-        case "channels":
-          salvarLeituraLogBox(serialNumber, dados, wss);
-          break;
-        case "device":
-          salvarInfoDispositivo(serialNumber, dados, wss);
-          break;
-        case "wifi":
-          salvarInfoDispositivo(serialNumber, dados, wss);
-          break;
-        default:
-          console.log(
-            `[MQTT Router] Tipo de mensagem '${messageType}' não possui um handler definido. Ignorando.`
-          );
+      if (topic.includes("status/channels")) {
+        const serialNumber = topic.split("/")[1];
+        console.log(
+          `[MQTT Router] Mensagem de CANAIS recebida para SN: ${serialNumber}`
+        );
+        salvarLeituraLogBox(serialNumber, dados, wss);
+      } else if (topic === "novus/neighbor") {
+        console.log(`[MQTT Router] Mensagem de CONEXÃO recebida.`);
+        salvarStatusConexao(dados, wss);
       }
     } catch (e) {
       console.error(
