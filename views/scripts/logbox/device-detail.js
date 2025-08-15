@@ -62,8 +62,12 @@ async function carregarStatusInicial() {
     if (latestReadingResponse.ok) {
       const latestData = await latestReadingResponse.json();
       const payloadObjeto = JSON.parse(latestData.payload);
-      document.getElementById("latest-temp").textContent =
-        payloadObjeto.value_channels[2].toFixed(1);
+      const tempExterna =
+        payloadObjeto.ch_analog_1 || payloadObjeto.value_channels[2];
+      if (tempExterna !== undefined) {
+        document.getElementById("latest-temp").textContent =
+          tempExterna.toFixed(1);
+      }
       document.getElementById("latest-timestamp").textContent = `Em: ${new Date(
         latestData.timestamp_leitura
       ).toLocaleString("pt-BR")}`;
@@ -76,41 +80,40 @@ async function carregarStatusInicial() {
 
 function atualizarPainelCompleto(status) {
   if (!status || Object.keys(status).length === 0) {
-    console.warn("Nenhum dado de status recebido para atualizar o painel.");
     return;
   }
 
-  const { text: wifiText, className: wifiClass } = getWifiStatus(status.rssi);
-  atualizarBadge("diag-wifi-rssi", `${status.rssi || "--"} dBm`, wifiClass);
+  const temperaturaExterna = status.ch_analog_1;
+  const tensaoFonteExterna = status.ch_analog_2;
+  const tensaoBateria = status.ch_analog_3;
+  const sinalWifi = status.lqi;
+  const alarmes = status.alarms;
+  const temperaturaInterna = status.temperature;
 
-  const { text: pt100Text, className: pt100Class } = getSensorStatus(
-    status.A1?.status
-  );
-  atualizarBadge("diag-pt100-status", pt100Text, pt100Class);
+  const { text: wifiText, className: wifiClass } = getWifiStatus(sinalWifi);
+  atualizarBadge("diag-wifi-rssi", `${sinalWifi || "--"} dBm`, wifiClass);
 
-  const { text: mqttText, className: mqttClass } = getMqttStatus(
-    status.connected
-  );
-  atualizarBadge("diag-mqtt-status", mqttText, mqttClass);
-
-  const { text: powerText, className: powerClass } = getPowerSourceStatus(
-    status.pwr_voltage
-  );
+  const { text: powerText, className: powerClass } =
+    getPowerSourceStatus(tensaoFonteExterna);
   atualizarBadge("diag-power-source", powerText, powerClass);
 
   atualizarBadge(
     "diag-internal-temp",
-    `${status.temperature?.toFixed(1) || "--"} °C`,
+    `${temperaturaInterna?.toFixed(1) || "--"} °C`,
     "bg-status-info"
   );
   atualizarBadge(
     "diag-battery-voltage",
-    `${status.battery?.toFixed(2) || "--"} V`,
-    status.battery < 4.8 ? "bg-status-warning" : "bg-status-ok"
+    `${tensaoBateria?.toFixed(2) || "--"} V`,
+    tensaoBateria < 4.8 ? "bg-status-warning" : "bg-status-ok"
   );
 
-  atualizarListaAlarmes(status.alarms);
+  atualizarBadge("diag-pt100-status", "N/A via MQTT", "bg-secondary");
 
+  const { text: mqttText, className: mqttClass } = getMqttStatus(true);
+  atualizarBadge("diag-mqtt-status", mqttText, mqttClass);
+
+  atualizarListaAlarmes(alarmes);
   atualizarStatusGeral();
 }
 
@@ -236,7 +239,8 @@ function getMqttStatus(connected) {
 }
 
 function getPowerSourceStatus(voltage) {
-  if (!voltage) return { text: "Verificando...", className: "bg-secondary" };
+  if (voltage === undefined || voltage === null)
+    return { text: "Verificando...", className: "bg-secondary" };
   if (voltage > 9)
     return {
       text: `Rede Elétrica (${voltage.toFixed(1)}V)`,
@@ -264,6 +268,9 @@ function atualizarStatusGeral() {
       .getElementById("diag-wifi-rssi")
       .classList.contains("bg-status-warning") ||
     document
+      .getElementById("diag-wifi-rssi")
+      .classList.contains("bg-status-critical") ||
+    document
       .getElementById("diag-battery-voltage")
       .classList.contains("bg-status-warning")
   ) {
@@ -278,7 +285,6 @@ function atualizarStatusGeral() {
     tooltip.setContent({ ".tooltip-inner": indicator.getAttribute("title") });
 }
 
-// Funções que já existiam e foram mantidas/adaptadas
 async function carregarEstatisticasDetalhes() {
   try {
     const response = await fetch(
