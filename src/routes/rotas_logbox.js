@@ -34,11 +34,11 @@ async function getReportData(filters) {
   }
 
   const [leituras] = await promisePool.query(
-    `SELECT l.timestamp_leitura, l.payload_json ->> '$.ch_analog_1' AS temperatura FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras} ORDER BY l.timestamp_leitura ASC`,
+    `SELECT l.timestamp_leitura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS temperatura FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras} ORDER BY l.timestamp_leitura ASC`,
     params
   );
   const [stats] = await promisePool.query(
-    `SELECT MIN(CAST(l.payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_min, AVG(CAST(l.payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_avg, MAX(CAST(l.payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_max FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras}`,
+    `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras}`,
     params
   );
   const [fanHistory] = await promisePool.query(
@@ -74,7 +74,7 @@ router.get("/api/logbox/leituras", autenticar, async (req, res) => {
   try {
     const limite = parseInt(req.query.limite) || 200;
     const [rows] = await promisePool.query(
-      `SELECT l.timestamp_leitura, l.payload_json ->> '$.ch_analog_1' AS temperatura, l.payload_json ->> '$.battery' AS bateria FROM (SELECT * FROM leituras_logbox ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
+      `SELECT l.timestamp_leitura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS temperatura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.battery')) AS bateria FROM (SELECT * FROM leituras_logbox ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
       [limite]
     );
     const labels = rows.map((r) =>
@@ -92,7 +92,7 @@ router.get("/api/logbox/leituras", autenticar, async (req, res) => {
 router.get("/api/logbox/stats", autenticar, async (req, res) => {
   try {
     const [rows] = await promisePool.query(
-      `SELECT MIN(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_min, AVG(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_avg, MAX(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE timestamp_leitura >= NOW() - INTERVAL 1 DAY`
+      `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE timestamp_leitura >= NOW() - INTERVAL 1 DAY`
     );
     const stats = rows[0];
     const formattedStats = {
@@ -228,7 +228,7 @@ router.get(
     const limite = parseInt(req.query.limite) || 200;
     try {
       const [rows] = await promisePool.query(
-        `SELECT l.timestamp_leitura, l.payload_json ->> '$.ch_analog_1' AS temperatura, l.payload_json ->> '$.battery' AS bateria FROM (SELECT * FROM leituras_logbox WHERE serial_number = ? ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
+        `SELECT l.timestamp_leitura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS temperatura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.battery')) AS bateria FROM (SELECT * FROM leituras_logbox WHERE serial_number = ? ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
         [serialNumber, limite]
       );
       const labels = rows.map((r) =>
@@ -251,11 +251,11 @@ router.get(
     const { serialNumber } = req.params;
     try {
       const [todayStatsRows] = await promisePool.query(
-        `SELECT MIN(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_min, AVG(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_avg, MAX(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND DATE(timestamp_leitura) = CURDATE()`,
+        `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND DATE(timestamp_leitura) = CURDATE()`,
         [serialNumber]
       );
       const [monthStatsRows] = await promisePool.query(
-        `SELECT MIN(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_min, AVG(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_avg, MAX(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND YEAR(timestamp_leitura) = YEAR(CURDATE()) AND MONTH(timestamp_leitura) = MONTH(CURDATE())`,
+        `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND YEAR(timestamp_leitura) = YEAR(CURDATE()) AND MONTH(timestamp_leitura) = MONTH(CURDATE())`,
         [serialNumber]
       );
       const formatStats = (stats) => ({
@@ -338,10 +338,12 @@ router.post(
         "INSERT INTO dispositivos_logbox (serial_number, local_tag, descricao) VALUES (?, ?, ?)",
         [serial_number, local_tag, descricao || null]
       );
-      res.status(201).json({
-        id: result.insertId,
-        message: "Dispositivo criado com sucesso!",
-      });
+      res
+        .status(201)
+        .json({
+          id: result.insertId,
+          message: "Dispositivo criado com sucesso!",
+        });
     } catch (err) {
       if (err.code === "ER_DUP_ENTRY")
         return res
