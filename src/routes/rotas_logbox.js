@@ -211,7 +211,7 @@ router.get(
       const statusData = {
         local_tag: rows[0].local_tag,
         ultima_leitura_status: rows[0].ultima_leitura,
-        status: rows[0].status_json || {},
+        status: rows[0].status_json ? JSON.parse(rows[0].status_json) : {},
       };
       res.json(statusData);
     } catch (err) {
@@ -229,16 +229,15 @@ router.get(
     const limite = parseInt(req.query.limite) || 200;
     try {
       const [rows] = await promisePool.query(
-        `SELECT l.timestamp_leitura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]')) AS temperatura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[3]')) AS umidade, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.battery')) AS bateria FROM (SELECT * FROM leituras_logbox WHERE serial_number = ? ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
+        `SELECT l.timestamp_leitura, l.payload_json ->> '$.ch_analog_1' AS temperatura, l.payload_json ->> '$.battery' AS bateria FROM (SELECT * FROM leituras_logbox WHERE serial_number = ? ORDER BY id DESC LIMIT ?) l ORDER BY l.id ASC`,
         [serialNumber, limite]
       );
       const labels = rows.map((r) =>
         new Date(r.timestamp_leitura).toLocaleString("pt-BR")
       );
       const temperaturas = rows.map((r) => parseFloat(r.temperatura));
-      const umidades = rows.map((r) => parseFloat(r.umidade));
       const baterias = rows.map((r) => parseFloat(r.bateria));
-      res.json({ labels, temperaturas, umidades, baterias });
+      res.json({ labels, temperaturas, baterias });
     } catch (err) {
       console.error("Erro ao buscar histórico do dispositivo:", err);
       res.status(500).json({ message: "Erro interno no servidor" });
@@ -253,11 +252,11 @@ router.get(
     const { serialNumber } = req.params;
     try {
       const [todayStatsRows] = await promisePool.query(
-        `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND DATE(timestamp_leitura) = CURDATE()`,
+        `SELECT MIN(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_min, AVG(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_avg, MAX(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND DATE(timestamp_leitura) = CURDATE()`,
         [serialNumber]
       );
       const [monthStatsRows] = await promisePool.query(
-        `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.value_channels[2]')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND YEAR(timestamp_leitura) = YEAR(CURDATE()) AND MONTH(timestamp_leitura) = MONTH(CURDATE())`,
+        `SELECT MIN(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_min, AVG(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_avg, MAX(CAST(payload_json ->> '$.ch_analog_1' AS DECIMAL(10,2))) as temp_max FROM leituras_logbox WHERE serial_number = ? AND YEAR(timestamp_leitura) = YEAR(CURDATE()) AND MONTH(timestamp_leitura) = MONTH(CURDATE())`,
         [serialNumber]
       );
       const formatStats = (stats) => ({
