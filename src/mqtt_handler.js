@@ -1,5 +1,5 @@
 const mqtt = require("mqtt");
-const { promisePool } = require("./init");
+const { promisePool } = require("../init");
 
 const LIMITE_TEMPERATURA_VENTILACAO = 60.0;
 const HISTERESE_TEMPERATURA = 5.0;
@@ -84,7 +84,6 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
       `[MQTT Handler] Payload de canais salvo para SN: ${serialNumber}`
     );
 
-    // Atualiza o status do dispositivo com os dados desta mensagem
     await salvarInfoDispositivo(serialNumber, data, wss);
 
     await verificarEAtualizarVentilacao(
@@ -141,7 +140,9 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
       return;
     }
 
-    const statusAtual = rows[0].status_json || {};
+    const statusAtual = rows[0].status_json
+      ? JSON.parse(rows[0].status_json)
+      : {};
     const novoStatus = Object.assign(statusAtual, data);
 
     await promisePool.query(
@@ -198,7 +199,9 @@ async function salvarStatusConexao(data, wss) {
       return;
     }
 
-    const statusAtual = rows[0].status_json || {};
+    const statusAtual = rows[0].status_json
+      ? JSON.parse(rows[0].status_json)
+      : {};
     const novoStatus = Object.assign(statusAtual, data);
 
     await promisePool.query(
