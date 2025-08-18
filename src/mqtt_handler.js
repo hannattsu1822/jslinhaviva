@@ -1,5 +1,5 @@
 const mqtt = require("mqtt");
-const { promisePool } = require("../init");
+const { promisePool } = require("./init");
 
 const LIMITE_TEMPERATURA_VENTILACAO = 60.0;
 const HISTERESE_TEMPERATURA = 5.0;
