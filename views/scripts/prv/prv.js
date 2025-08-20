@@ -35,12 +35,14 @@ document.addEventListener("DOMContentLoaded", () => {
     veiculoTexto: "",
     registros: [],
     viagemAberta: null,
+    ultimoKmRegistrado: null,
   };
 
   const limparFormulario = () => {
     prvForm.reset();
     hiddenRegistroIdInput.value = "";
     document.getElementById("data_viagem").value = new Date().toISOString().slice(0, 10);
+    atualizarUiComEstado();
   };
 
   const preencherDadosAtuaisSaida = () => {
@@ -49,7 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("saida_horario").value = agora
       .toTimeString()
       .slice(0, 5);
-    document.getElementById("saida_km").focus();
+    
+    document.getElementById("saida_local").focus();
   };
 
   const preencherDadosAtuaisChegada = () => {
@@ -73,7 +76,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const atualizarUiComEstado = () => {
-    limparFormulario();
+    const saidaKmInput = document.getElementById("saida_km");
+
     if (currentState.viagemAberta) {
       tipoLancamentoSaida.disabled = true;
       tipoLancamentoChegada.disabled = false;
@@ -97,6 +101,15 @@ document.addEventListener("DOMContentLoaded", () => {
       tipoLancamentoChegada.disabled = true;
       tipoLancamentoSaida.checked = true;
       toggleFormFields("saida");
+      
+      if (currentState.ultimoKmRegistrado !== null) {
+        saidaKmInput.value = currentState.ultimoKmRegistrado;
+        saidaKmInput.readOnly = true;
+      } else {
+        saidaKmInput.value = "";
+        saidaKmInput.readOnly = false;
+        saidaKmInput.placeholder = "Primeiro KM do veículo";
+      }
       preencherDadosAtuaisSaida();
     }
   };
@@ -153,19 +166,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const carregarDadosPrv = async () => {
     const { veiculoId, mesAno } = currentState;
     try {
-      const statusResponse = await fetch(
-        `/api/prv/status?veiculoId=${veiculoId}`
-      );
-      if (!statusResponse.ok)
-        throw new Error("Falha ao verificar status da viagem.");
-      currentState.viagemAberta = await statusResponse.json();
+      const [statusRes, ultimoKmRes, registrosRes] = await Promise.all([
+        fetch(`/api/prv/status?veiculoId=${veiculoId}`),
+        fetch(`/api/prv/ultimo-km?veiculoId=${veiculoId}`),
+        fetch(`/api/prv/registros?veiculoId=${veiculoId}&mesAno=${mesAno}`)
+      ]);
 
-      const registrosResponse = await fetch(
-        `/api/prv/registros?veiculoId=${veiculoId}&mesAno=${mesAno}`
-      );
-      if (!registrosResponse.ok)
-        throw new Error("Falha ao carregar registros.");
-      currentState.registros = await registrosResponse.json();
+      if (!statusRes.ok) throw new Error("Falha ao verificar status da viagem.");
+      if (!ultimoKmRes.ok) throw new Error("Falha ao buscar último KM.");
+      if (!registrosRes.ok) throw new Error("Falha ao carregar registros.");
+
+      const viagemAberta = await statusRes.json();
+      const { ultimoKm } = await ultimoKmRes.json();
+      const registros = await registrosRes.json();
+
+      currentState.viagemAberta = viagemAberta;
+      currentState.ultimoKmRegistrado = ultimoKm;
+      currentState.registros = registros;
 
       renderTable();
       atualizarUiComEstado();
@@ -258,6 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) throw new Error(result.message);
       showToast(result.message, "success");
 
+      prvForm.reset();
       carregarDadosPrv();
     } catch (error) {
       showToast(error.message, "error");
