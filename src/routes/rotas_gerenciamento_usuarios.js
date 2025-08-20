@@ -343,21 +343,31 @@ router.get(
   autenticar,
   verificarNivel(4),
   async (req, res) => {
-    const { veiculoId, mesAno } = req.query;
-    if (!veiculoId || !mesAno) {
+    const { veiculoId, dataInicio, dataFim } = req.query;
+    if (!veiculoId || !dataInicio || !dataFim) {
       return res
         .status(400)
-        .json({ message: "Veículo e Mês/Ano são obrigatórios." });
+        .json({ message: "Veículo e período de datas são obrigatórios." });
     }
     try {
       const sql = `
-        SELECT r.*, v.placa, v.modelo
+        SELECT 
+          r.*, 
+          v.placa, 
+          v.modelo,
+          STR_TO_DATE(CONCAT(r.dia, '/', r.mes_ano_referencia), '%d/%m/%Y') as dia
         FROM prv_registros r
         JOIN veiculos_frota v ON r.veiculo_id = v.id
-        WHERE r.veiculo_id = ? AND r.mes_ano_referencia = ?
-        ORDER BY r.dia, r.saida_horario
+        WHERE r.veiculo_id = ? 
+          AND STR_TO_DATE(CONCAT(r.dia, '/', r.mes_ano_referencia), '%d/%m/%Y') BETWEEN ? AND ?
+        ORDER BY dia, r.saida_horario
       `;
-      const [registros] = await promisePool.query(sql, [veiculoId, mesAno]);
+      const [registros] = await promisePool.query(sql, [
+        veiculoId,
+        dataInicio,
+        dataFim,
+      ]);
+
       if (registros.length === 0) {
         const [veiculoRows] = await promisePool.query(
           "SELECT placa, modelo FROM veiculos_frota WHERE id = ?",
@@ -387,9 +397,11 @@ router.get(
   autenticar,
   verificarNivel(4),
   async (req, res) => {
-    const { veiculoId, mesAno } = req.query;
-    if (!veiculoId || !mesAno) {
-      return res.status(400).send("Veículo e Mês/Ano são obrigatórios.");
+    const { veiculoId, dataInicio, dataFim } = req.query;
+    if (!veiculoId || !dataInicio || !dataFim) {
+      return res
+        .status(400)
+        .send("Veículo e período de datas são obrigatórios.");
     }
     try {
       const sql = `
@@ -397,14 +409,20 @@ router.get(
           r.*, 
           v.placa, 
           v.modelo,
-          u.nome as nome_motorista
+          u.nome as nome_motorista,
+          STR_TO_DATE(CONCAT(r.dia, '/', r.mes_ano_referencia), '%d/%m/%Y') as dia_completo
         FROM prv_registros r
         JOIN veiculos_frota v ON r.veiculo_id = v.id
         LEFT JOIN users u ON r.motorista_matricula = u.matricula
-        WHERE r.veiculo_id = ? AND r.mes_ano_referencia = ?
-        ORDER BY r.dia, r.saida_horario
+        WHERE r.veiculo_id = ? 
+          AND STR_TO_DATE(CONCAT(r.dia, '/', r.mes_ano_referencia), '%d/%m/%Y') BETWEEN ? AND ?
+        ORDER BY dia_completo, r.saida_horario
       `;
-      const [registros] = await promisePool.query(sql, [veiculoId, mesAno]);
+      const [registros] = await promisePool.query(sql, [
+        veiculoId,
+        dataInicio,
+        dataFim,
+      ]);
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Roteiro de Viagem");
@@ -419,14 +437,22 @@ router.get(
         registros.length > 0
           ? `${registros[0].placa} / ${registros[0].modelo}`
           : "N/A";
+
+      const formatDate = (dateStr) => {
+        const [y, m, d] = dateStr.split("-");
+        return `${d}/${m}/${y}`;
+      };
+
       worksheet.getCell("A3").value = "Placa/Tipo:";
       worksheet.getCell("B3").value = veiculoInfo;
-      worksheet.getCell("A4").value = "Mês/ano:";
-      worksheet.getCell("B4").value = mesAno;
+      worksheet.getCell("A4").value = "Período:";
+      worksheet.getCell("B4").value = `${formatDate(dataInicio)} a ${formatDate(
+        dataFim
+      )}`;
 
       const headerRow = worksheet.getRow(6);
       headerRow.values = [
-        "DIA",
+        "DATA",
         "SAÍDA",
         "",
         "",
@@ -493,7 +519,7 @@ router.get(
           : r.motorista_matricula;
 
         worksheet.addRow([
-          r.dia,
+          r.dia_completo,
           r.saida_horario,
           r.saida_local,
           r.saida_km,
@@ -507,7 +533,7 @@ router.get(
       });
 
       worksheet.columns = [
-        { key: "dia", width: 5 },
+        { key: "dia", width: 12, style: { numFmt: "dd/mm/yyyy" } },
         { key: "saida_h", width: 10 },
         { key: "saida_l", width: 25 },
         { key: "saida_k", width: 10 },
@@ -519,10 +545,9 @@ router.get(
         { key: "servico", width: 30 },
       ];
 
-      const fileName = `PRV_${veiculoInfo.split(" / ")[0]}_${mesAno.replace(
-        "/",
-        "-"
-      )}.xlsx`;
+      const fileName = `PRV_${
+        veiculoInfo.split(" / ")[0]
+      }_${dataInicio}_a_${dataFim}.xlsx`;
       res.setHeader(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

@@ -23,8 +23,32 @@ router.get("/api/prv/veiculos", autenticar, async (req, res) => {
   }
 });
 
+router.get("/api/prv/status", autenticar, async (req, res) => {
+  const { veiculoId } = req.query;
+  if (!veiculoId) {
+    return res.status(400).json({ message: "ID do veículo é obrigatório." });
+  }
+
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT * FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NULL LIMIT 1",
+      [veiculoId]
+    );
+
+    if (rows.length > 0) {
+      res.json(rows[0]);
+    } else {
+      res.json(null);
+    }
+  } catch (error) {
+    console.error("Erro ao verificar status da PRV:", error);
+    res.status(500).json({ message: "Erro interno ao verificar status." });
+  }
+});
+
+// ROTA CORRIGIDA
 router.get("/api/prv/registros", autenticar, async (req, res) => {
-  const { veiculoId, mesAno } = req.query;
+  const { veiculoId, mesAno } = req.query; // mesAno vem como "YYYY-MM"
 
   if (!veiculoId || !mesAno) {
     return res
@@ -33,9 +57,13 @@ router.get("/api/prv/registros", autenticar, async (req, res) => {
   }
 
   try {
+    // NOVO: Converte o formato da data YYYY-MM para MM/YYYY
+    const [ano, mes] = mesAno.split("-");
+    const mesAnoFormatado = `${mes}/${ano}`; // ex: "05/2024"
+
     const [registros] = await promisePool.query(
-      "SELECT * FROM prv_registros WHERE veiculo_id = ? AND mes_ano_referencia = ? ORDER BY dia, saida_horario",
-      [veiculoId, mesAno]
+      "SELECT * FROM prv_registros WHERE veiculo_id = ? AND mes_ano_referencia = ? AND chegada_km IS NOT NULL ORDER BY dia, saida_horario",
+      [veiculoId, mesAnoFormatado] // USA A VARIÁVEL FORMATADA
     );
     res.json(registros);
   } catch (error) {
@@ -44,65 +72,71 @@ router.get("/api/prv/registros", autenticar, async (req, res) => {
   }
 });
 
+// ROTA CORRIGIDA
 router.post("/api/prv/registros", autenticar, async (req, res) => {
   try {
     const { matricula } = req.session.user;
     const {
       veiculo_id,
-      mes_ano_referencia,
+      mes_ano_referencia, // vem como "YYYY-MM"
       dia,
       saida_horario,
       saida_local,
       saida_km,
-      chegada_horario,
-      chegada_local,
-      chegada_km,
-      processo,
-      tipo_servico,
-      ocorrencias,
     } = req.body;
 
-    if (!veiculo_id || !mes_ano_referencia || !dia) {
+    if (!veiculo_id || !mes_ano_referencia || !dia || !saida_km) {
       return res
         .status(400)
-        .json({ message: "Veículo, Mês/Ano e Dia são obrigatórios." });
+        .json({
+          message: "Veículo, Mês/Ano, Dia e KM de Saída são obrigatórios.",
+        });
     }
+
+    const [viagemAberta] = await promisePool.query(
+      "SELECT id FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NULL",
+      [veiculo_id]
+    );
+
+    if (viagemAberta.length > 0) {
+      return res.status(409).json({
+        message:
+          "Não é possível iniciar uma nova viagem. Já existe uma em andamento para este veículo.",
+      });
+    }
+
+    // NOVO: Converte o formato da data YYYY-MM para MM/YYYY
+    const [ano, mes] = mes_ano_referencia.split("-");
+    const mesAnoFormatado = `${mes}/${ano}`; // ex: "05/2024"
 
     const sql = `
       INSERT INTO prv_registros 
-      (veiculo_id, mes_ano_referencia, dia, saida_horario, saida_local, saida_km, 
-       chegada_horario, chegada_local, chegada_km, motorista_matricula, processo, tipo_servico, ocorrencias)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (veiculo_id, mes_ano_referencia, dia, saida_horario, saida_local, saida_km, motorista_matricula)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await promisePool.query(sql, [
       veiculo_id,
-      mes_ano_referencia,
+      mesAnoFormatado, // USA A VARIÁVEL FORMATADA
       dia,
       saida_horario,
       saida_local,
       saida_km,
-      chegada_horario,
-      chegada_local,
-      chegada_km,
       matricula,
-      processo,
-      tipo_servico,
-      ocorrencias,
     ]);
 
     await registrarAuditoria(
       matricula,
-      "INSERIR_REGISTRO_PRV",
+      "INICIAR_VIAGEM_PRV",
       `ID do Registro: ${result.insertId}`
     );
 
     res.status(201).json({
-      message: "Registro adicionado com sucesso!",
+      message: "Saída registrada com sucesso!",
       id: result.insertId,
     });
   } catch (error) {
-    console.error("Erro ao adicionar registro na PRV:", error);
+    console.error("Erro ao registrar saída na PRV:", error);
     res.status(500).json({ message: "Erro interno ao salvar registro." });
   }
 });
@@ -111,26 +145,48 @@ router.put("/api/prv/registros/:id", autenticar, async (req, res) => {
   try {
     const { id } = req.params;
     const { matricula } = req.session.user;
-    const campos = req.body;
+    const {
+      chegada_horario,
+      chegada_local,
+      chegada_km,
+      processo,
+      tipo_servico,
+      ocorrencias,
+    } = req.body;
+
+    if (!chegada_km) {
+      return res.status(400).json({ message: "KM de Chegada é obrigatório." });
+    }
+
+    const camposParaAtualizar = {
+      chegada_horario,
+      chegada_local,
+      chegada_km,
+      processo,
+      tipo_servico,
+      ocorrencias,
+    };
 
     const [result] = await promisePool.query(
       "UPDATE prv_registros SET ? WHERE id = ?",
-      [campos, id]
+      [camposParaAtualizar, id]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Registro não encontrado." });
+      return res
+        .status(404)
+        .json({ message: "Registro de saída não encontrado." });
     }
 
     await registrarAuditoria(
       matricula,
-      "ATUALIZAR_REGISTRO_PRV",
+      "FINALIZAR_VIAGEM_PRV",
       `ID do Registro: ${id}`
     );
 
-    res.json({ message: "Registro atualizado com sucesso!" });
+    res.json({ message: "Chegada registrada com sucesso!" });
   } catch (error) {
-    console.error("Erro ao atualizar registro na PRV:", error);
+    console.error("Erro ao registrar chegada na PRV:", error);
     res.status(500).json({ message: "Erro interno ao atualizar registro." });
   }
 });
