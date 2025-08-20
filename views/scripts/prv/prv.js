@@ -14,6 +14,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const prvForm = document.getElementById("prv-form");
   const prvTableBody = document.getElementById("prv-table-body");
   const limparFormBtn = document.getElementById("limpar-form-btn");
+  const salvarBtn = document.getElementById("salvar-btn");
+
+  const tipoLancamentoSaida = document.getElementById("tipoLancamentoSaida");
+  const tipoLancamentoChegada = document.getElementById(
+    "tipoLancamentoChegada"
+  );
+  const saidaFields = document.getElementById("saida-fields");
+  const chegadaFields = document.getElementById("chegada-fields");
+  const infoViagemAbertaEl = document.getElementById("info-viagem-aberta");
 
   const hiddenRegistroIdInput = document.createElement("input");
   hiddenRegistroIdInput.type = "hidden";
@@ -25,48 +34,78 @@ document.addEventListener("DOMContentLoaded", () => {
     mesAno: null,
     veiculoTexto: "",
     registros: [],
+    viagemAberta: null,
   };
 
   const limparFormulario = () => {
-    document.getElementById("dia").value = "";
-    document.getElementById("saida_horario").value = "";
-    document.getElementById("saida_km").value = "";
-    document.getElementById("saida_local").value = "";
-    document.getElementById("chegada_horario").value = "";
-    document.getElementById("chegada_km").value = "";
-    document.getElementById("chegada_local").value = "";
-    document.getElementById("processo").value = "";
-    document.getElementById("tipo_servico").value = "";
-    document.getElementById("ocorrencias").value = "";
+    prvForm.reset();
     hiddenRegistroIdInput.value = "";
   };
 
-  const preencherDadosAtuais = () => {
+  const preencherDadosAtuaisSaida = () => {
     const agora = new Date();
-    const diaAtual = agora.getDate();
-    const horaAtual = agora.toTimeString().slice(0, 5);
-    document.getElementById("dia").value = diaAtual;
-    document.getElementById("saida_horario").value = horaAtual;
+    document.getElementById("dia").value = agora.getDate();
+    document.getElementById("saida_horario").value = agora
+      .toTimeString()
+      .slice(0, 5);
     document.getElementById("saida_km").focus();
   };
 
-  const populateFormForEdit = (registroId) => {
-    const registro = currentState.registros.find((r) => r.id == registroId);
-    if (!registro) return;
-    limparFormulario();
-    hiddenRegistroIdInput.value = registro.id;
-    for (const key in registro) {
-      const input = document.getElementById(key);
-      if (input) {
-        if (input.type === "time" && registro[key]) {
-          input.value = registro[key].substring(0, 5);
-        } else {
-          input.value = registro[key];
-        }
-      }
-    }
-    window.scrollTo({ top: formContainer.offsetTop, behavior: "smooth" });
+  const preencherDadosAtuaisChegada = () => {
+    const agora = new Date();
+    document.getElementById("chegada_horario").value = agora
+      .toTimeString()
+      .slice(0, 5);
+    document.getElementById("chegada_km").focus();
   };
+
+  const toggleFormFields = (tipo) => {
+    if (tipo === "saida") {
+      saidaFields.style.display = "block";
+      chegadaFields.style.display = "none";
+      salvarBtn.textContent = "Salvar Saída";
+    } else {
+      saidaFields.style.display = "none";
+      chegadaFields.style.display = "block";
+      salvarBtn.textContent = "Salvar Chegada";
+    }
+  };
+
+  const atualizarUiComEstado = () => {
+    limparFormulario();
+    if (currentState.viagemAberta) {
+      tipoLancamentoSaida.disabled = true;
+      tipoLancamentoChegada.disabled = false;
+      tipoLancamentoChegada.checked = true;
+      toggleFormFields("chegada");
+
+      const saida = currentState.viagemAberta;
+      infoViagemAbertaEl.innerHTML = `
+        <strong>Viagem em andamento:</strong><br>
+        Saindo de: <strong>${saida.saida_local}</strong><br>
+        KM de Saída: <strong>${
+          saida.saida_km
+        }</strong> | Horário: <strong>${saida.saida_horario.substring(
+        0,
+        5
+      )}</strong>
+      `;
+      preencherDadosAtuaisChegada();
+    } else {
+      tipoLancamentoSaida.disabled = false;
+      tipoLancamentoChegada.disabled = true;
+      tipoLancamentoSaida.checked = true;
+      toggleFormFields("saida");
+      preencherDadosAtuaisSaida();
+    }
+  };
+
+  tipoLancamentoSaida.addEventListener("change", () =>
+    toggleFormFields("saida")
+  );
+  tipoLancamentoChegada.addEventListener("change", () =>
+    toggleFormFields("chegada")
+  );
 
   const renderTable = () => {
     prvTableBody.innerHTML = "";
@@ -110,15 +149,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  const loadPrvRecords = async () => {
+  const carregarDadosPrv = async () => {
+    const { veiculoId, mesAno } = currentState;
     try {
-      const { veiculoId, mesAno } = currentState;
-      const response = await fetch(
+      const statusResponse = await fetch(
+        `/api/prv/status?veiculoId=${veiculoId}`
+      );
+      if (!statusResponse.ok)
+        throw new Error("Falha ao verificar status da viagem.");
+      currentState.viagemAberta = await statusResponse.json();
+
+      const registrosResponse = await fetch(
         `/api/prv/registros?veiculoId=${veiculoId}&mesAno=${mesAno}`
       );
-      if (!response.ok) throw new Error("Falha ao carregar registros.");
-      currentState.registros = await response.json();
+      if (!registrosResponse.ok)
+        throw new Error("Falha ao carregar registros.");
+      currentState.registros = await registrosResponse.json();
+
       renderTable();
+      atualizarUiComEstado();
     } catch (error) {
       showToast(error.message, "error");
     }
@@ -157,39 +206,48 @@ document.addEventListener("DOMContentLoaded", () => {
     infoVeiculoEl.textContent = currentState.veiculoTexto;
     const [ano, mes] = mesAno.split("-");
     infoPeriodoEl.textContent = `Período: ${mes}/${ano}`;
+
     modalInstance.hide();
     infoPrvHeader.style.display = "block";
     formContainer.style.display = "block";
     tableContainer.style.display = "block";
-    loadPrvRecords();
-    limparFormulario();
-    preencherDadosAtuais();
+
+    carregarDadosPrv();
   });
 
   prvForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const registroId = hiddenRegistroIdInput.value;
-    const isEditing = !!registroId;
-    const formData = {
-      dia: document.getElementById("dia").value,
-      saida_horario: document.getElementById("saida_horario").value || null,
-      saida_km: document.getElementById("saida_km").value || null,
-      saida_local: document.getElementById("saida_local").value,
-      chegada_horario: document.getElementById("chegada_horario").value || null,
-      chegada_km: document.getElementById("chegada_km").value || null,
-      chegada_local: document.getElementById("chegada_local").value,
-      processo: document.getElementById("processo").value,
-      tipo_servico: document.getElementById("tipo_servico").value,
-      ocorrencias: document.getElementById("ocorrencias").value,
-    };
-    const url = isEditing
-      ? `/api/prv/registros/${registroId}`
-      : "/api/prv/registros";
-    const method = isEditing ? "PUT" : "POST";
-    if (!isEditing) {
-      formData.veiculo_id = currentState.veiculoId;
-      formData.mes_ano_referencia = currentState.mesAno;
+
+    const tipoLancamento = document.querySelector(
+      'input[name="tipoLancamento"]:checked'
+    ).value;
+    let formData = {};
+    let url = "/api/prv/registros";
+    let method = "POST";
+
+    if (tipoLancamento === "saida") {
+      formData = {
+        veiculo_id: currentState.veiculoId,
+        mes_ano_referencia: currentState.mesAno,
+        dia: document.getElementById("dia").value,
+        saida_horario: document.getElementById("saida_horario").value || null,
+        saida_km: document.getElementById("saida_km").value || null,
+        saida_local: document.getElementById("saida_local").value,
+      };
+    } else {
+      formData = {
+        chegada_horario:
+          document.getElementById("chegada_horario").value || null,
+        chegada_km: document.getElementById("chegada_km").value || null,
+        chegada_local: document.getElementById("chegada_local").value,
+        processo: document.getElementById("processo").value,
+        tipo_servico: document.getElementById("tipo_servico").value,
+        ocorrencias: document.getElementById("ocorrencias").value,
+      };
+      url = `/api/prv/registros/${currentState.viagemAberta.id}`;
+      method = "PUT";
     }
+
     try {
       const response = await fetch(url, {
         method: method,
@@ -199,9 +257,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message);
       showToast(result.message, "success");
-      limparFormulario();
-      preencherDadosAtuais();
-      loadPrvRecords();
+
+      carregarDadosPrv();
     } catch (error) {
       showToast(error.message, "error");
     }
@@ -211,11 +268,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const target = e.target.closest("button");
     if (!target) return;
     const registroId = target.dataset.id;
+
     if (target.classList.contains("edit-btn")) {
-      populateFormForEdit(registroId);
+      showToast(
+        "A funcionalidade de edição precisa ser adaptada para o novo modelo.",
+        "info"
+      );
     }
+
     if (target.classList.contains("delete-btn")) {
-      if (confirm("Tem certeza que deseja excluir este lançamento?")) {
+      if (
+        confirm(
+          "Tem certeza que deseja excluir este lançamento completo (saída e chegada)?"
+        )
+      ) {
         try {
           const response = await fetch(`/api/prv/registros/${registroId}`, {
             method: "DELETE",
@@ -223,7 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const result = await response.json();
           if (!response.ok) throw new Error(result.message);
           showToast(result.message, "success");
-          loadPrvRecords();
+          carregarDadosPrv();
         } catch (error) {
           showToast(error.message, "error");
         }
