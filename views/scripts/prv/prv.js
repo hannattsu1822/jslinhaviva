@@ -64,14 +64,18 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const toggleFormFields = (tipo) => {
+    const dataViagemInput = document.getElementById("data_viagem");
+
     if (tipo === "saida") {
       saidaFields.style.display = "block";
       chegadaFields.style.display = "none";
       salvarBtn.textContent = "Salvar Saída";
+      dataViagemInput.required = true;
     } else {
       saidaFields.style.display = "none";
       chegadaFields.style.display = "block";
       salvarBtn.textContent = "Salvar Chegada";
+      dataViagemInput.required = false;
     }
   };
 
