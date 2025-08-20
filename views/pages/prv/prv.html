@@ -41,128 +41,148 @@
           </div>
           <div class="card-body">
             <form id="prv-form">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <div class="p-3 border rounded">
-                    <h6 class="border-bottom pb-2 mb-3">Saída</h6>
-                    <div class="row">
-                      <div class="col-md-4 mb-3">
-                        <label for="dia" class="form-label">Dia</label>
-                        <input
-                          type="number"
-                          class="form-control"
-                          id="dia"
-                          min="1"
-                          max="31"
-                          required
-                        />
-                      </div>
-                      <div class="col-md-4 mb-3">
-                        <label for="saida_horario" class="form-label"
-                          >Horário</label
-                        >
-                        <input
-                          type="time"
-                          class="form-control"
-                          id="saida_horario"
-                        />
-                      </div>
-                      <div class="col-md-4 mb-3">
-                        <label for="saida_km" class="form-label"
-                          >KM Saída</label
-                        >
-                        <input
-                          type="number"
-                          class="form-control"
-                          id="saida_km"
-                        />
-                      </div>
-                      <div class="col-12 mb-3">
-                        <label for="saida_local" class="form-label"
-                          >Local de Saída</label
-                        >
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="saida_local"
-                        />
-                      </div>
-                    </div>
-                  </div>
+              <div class="mb-3">
+                <label class="form-label">Tipo de Lançamento</label>
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="tipoLancamento"
+                    id="tipoLancamentoSaida"
+                    value="saida"
+                    checked
+                  />
+                  <label class="form-check-label" for="tipoLancamentoSaida">
+                    Registrar Saída
+                  </label>
                 </div>
-
-                <div class="col-md-6">
-                  <div class="p-3 border rounded">
-                    <h6 class="border-bottom pb-2 mb-3">Chegada</h6>
-                    <div class="row">
-                      <div class="col-md-6 mb-3">
-                        <label for="chegada_horario" class="form-label"
-                          >Horário</label
-                        >
-                        <input
-                          type="time"
-                          class="form-control"
-                          id="chegada_horario"
-                        />
-                      </div>
-                      <div class="col-md-6 mb-3">
-                        <label for="chegada_km" class="form-label"
-                          >KM Chegada</label
-                        >
-                        <input
-                          type="number"
-                          class="form-control"
-                          id="chegada_km"
-                        />
-                      </div>
-                      <div class="col-12 mb-3">
-                        <label for="chegada_local" class="form-label"
-                          >Local de Chegada</label
-                        >
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="chegada_local"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="tipoLancamento"
+                    id="tipoLancamentoChegada"
+                    value="chegada"
+                  />
+                  <label class="form-check-label" for="tipoLancamentoChegada">
+                    Registrar Chegada
+                  </label>
                 </div>
+              </div>
 
-                <div class="col-12">
-                  <div class="p-3 border rounded">
-                    <h6 class="border-bottom pb-2 mb-3">Detalhes do Serviço</h6>
-                    <div class="row">
-                      <div class="col-md-6 mb-3">
-                        <label for="processo" class="form-label"
-                          >Processo</label
-                        >
-                        <input type="text" class="form-control" id="processo" />
-                      </div>
-                      <div class="col-md-6 mb-3">
-                        <label for="tipo_servico" class="form-label"
-                          >Tipo de Serviço</label
-                        >
-                        <input
-                          type="text"
-                          class="form-control"
-                          id="tipo_servico"
-                        />
-                      </div>
-                      <div class="col-12 mb-3">
-                        <label for="ocorrencias" class="form-label"
-                          >Ocorrências no Uso do Veículo</label
-                        >
-                        <textarea
-                          class="form-control"
-                          id="ocorrencias"
-                          rows="2"
-                        ></textarea>
-                      </div>
+              <div id="saida-fields">
+                <div class="p-3 border rounded">
+                  <h6 class="border-bottom pb-2 mb-3">Dados da Saída</h6>
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label for="dia" class="form-label">Dia</label>
+                      <input
+                        type="number"
+                        class="form-control"
+                        id="dia"
+                        min="1"
+                        max="31"
+                        required
+                      />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label for="saida_horario" class="form-label"
+                        >Horário</label
+                      >
+                      <input
+                        type="time"
+                        class="form-control"
+                        id="saida_horario"
+                      />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label for="saida_km" class="form-label">KM Saída</label>
+                      <input type="number" class="form-control" id="saida_km" />
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label for="saida_local" class="form-label"
+                        >Local de Saída</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="saida_local"
+                      />
                     </div>
                   </div>
                 </div>
               </div>
+
+              <div id="chegada-fields" style="display: none">
+                <div class="p-3 border rounded">
+                  <h6 class="border-bottom pb-2 mb-3">Dados da Chegada</h6>
+                  <div class="alert alert-info" id="info-viagem-aberta"></div>
+
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="chegada_horario" class="form-label"
+                        >Horário</label
+                      >
+                      <input
+                        type="time"
+                        class="form-control"
+                        id="chegada_horario"
+                      />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="chegada_km" class="form-label"
+                        >KM Chegada</label
+                      >
+                      <input
+                        type="number"
+                        class="form-control"
+                        id="chegada_km"
+                      />
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label for="chegada_local" class="form-label"
+                        >Local de Chegada</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="chegada_local"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-3 border rounded mt-3">
+                  <h6 class="border-bottom pb-2 mb-3">Detalhes do Serviço</h6>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="processo" class="form-label">Processo</label>
+                      <input type="text" class="form-control" id="processo" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="tipo_servico" class="form-label"
+                        >Tipo de Serviço</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="tipo_servico"
+                      />
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label for="ocorrencias" class="form-label"
+                        >Ocorrências no Uso do Veículo</label
+                      >
+                      <textarea
+                        class="form-control"
+                        id="ocorrencias"
+                        rows="2"
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="d-flex justify-content-end mt-3">
                 <button
                   type="button"
@@ -171,7 +191,7 @@
                 >
                   Limpar
                 </button>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" id="salvar-btn">
                   Salvar Lançamento
                 </button>
               </div>
