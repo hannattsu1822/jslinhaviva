@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const veiculoSelect = document.getElementById("veiculoSelect");
-  const mesAnoInput = document.getElementById("mesAnoInput");
+  const dataInicioInput = document.getElementById("dataInicioInput");
+  const dataFimInput = document.getElementById("dataFimInput");
   const gerarRelatorioBtn = document.getElementById("gerar-relatorio-btn");
   const exportExcelBtn = document.getElementById("export-excel-btn");
 
@@ -16,21 +17,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let currentState = {
     veiculoId: null,
-    mesAno: null,
+    dataInicio: null,
+    dataFim: null,
   };
 
   const showLoading = (isLoading) => {
     loadingMessage.classList.toggle("hidden", !isLoading);
   };
 
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return "";
+    const [year, month, day] = dateString.split("-");
+    return `${day}/${month}/${year}`;
+  };
+
   const renderReport = (data) => {
     const { veiculo, registros } = data;
-    const [ano, mes] = currentState.mesAno.split("-");
+
+    const dataInicioFmt = formatDateForDisplay(currentState.dataInicio);
+    const dataFimFmt = formatDateForDisplay(currentState.dataFim);
 
     reportTitle.textContent = `Relatório de Viagem: ${veiculo.modelo || ""} - ${
       veiculo.placa || ""
     }`;
-    reportSubtitle.textContent = `Período de Referência: ${mes}/${ano}`;
+    reportSubtitle.textContent = `Período de Referência: ${dataInicioFmt} a ${dataFimFmt}`;
     reportTableBody.innerHTML = "";
 
     if (registros.length === 0) {
@@ -39,11 +49,11 @@ document.addEventListener("DOMContentLoaded", () => {
       registros.forEach((r) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${r.dia || ""}</td>
-          <td>${r.saida_horario || ""}</td>
+          <td>${r.dia ? formatDateForDisplay(r.dia.substring(0, 10)) : ""}</td>
+          <td>${r.saida_horario ? r.saida_horario.substring(0, 5) : ""}</td>
           <td>${r.saida_local || ""}</td>
           <td>${r.saida_km || ""}</td>
-          <td>${r.chegada_horario || ""}</td>
+          <td>${r.chegada_horario ? r.chegada_horario.substring(0, 5) : ""}</td>
           <td>${r.chegada_local || ""}</td>
           <td>${r.chegada_km || ""}</td>
           <td>${r.motorista_matricula || ""}</td>
@@ -70,7 +80,11 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const loadInitialData = async () => {
-    mesAnoInput.value = new Date().toISOString().slice(0, 7);
+    const hoje = new Date();
+    const primeiroDiaDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    dataInicioInput.value = primeiroDiaDoMes.toISOString().slice(0, 10);
+    dataFimInput.value = hoje.toISOString().slice(0, 10);
+
     try {
       const response = await fetch("/api/prv/veiculos");
       if (!response.ok)
@@ -89,22 +103,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   gerarRelatorioBtn.addEventListener("click", async () => {
     const veiculoId = veiculoSelect.value;
-    const mesAno = mesAnoInput.value;
+    const dataInicio = dataInicioInput.value;
+    const dataFim = dataFimInput.value;
 
-    if (!veiculoId || !mesAno) {
-      showToast("Por favor, selecione um veículo e um período.", "error");
+    if (!veiculoId || !dataInicio || !dataFim) {
+      showToast(
+        "Por favor, selecione um veículo e o período completo.",
+        "error"
+      );
       return;
     }
 
     currentState.veiculoId = veiculoId;
-    currentState.mesAno = mesAno;
+    currentState.dataInicio = dataInicio;
+    currentState.dataFim = dataFim;
 
     showLoading(true);
     reportContainer.classList.add("hidden");
 
     try {
       const response = await fetch(
-        `/api/relatorios/prv?veiculoId=${veiculoId}&mesAno=${mesAno}`
+        `/api/relatorios/prv?veiculoId=${veiculoId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
       );
       const result = await response.json();
       if (!response.ok) throw new Error(result.message);
@@ -117,12 +136,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   exportExcelBtn.addEventListener("click", () => {
-    const { veiculoId, mesAno } = currentState;
-    if (!veiculoId || !mesAno) {
+    const { veiculoId, dataInicio, dataFim } = currentState;
+    if (!veiculoId || !dataInicio || !dataFim) {
       showToast("Gere um relatório antes de exportar.", "error");
       return;
     }
-    const url = `/api/relatorios/prv/export?veiculoId=${veiculoId}&mesAno=${mesAno}`;
+    const url = `/api/relatorios/prv/export?veiculoId=${veiculoId}&dataInicio=${dataInicio}&dataFim=${dataFim}`;
     window.location.href = url;
   });
 
