@@ -40,11 +40,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const limparFormulario = () => {
     prvForm.reset();
     hiddenRegistroIdInput.value = "";
+    document.getElementById("data_viagem").value = new Date().toISOString().slice(0, 10);
   };
 
   const preencherDadosAtuaisSaida = () => {
     const agora = new Date();
-    document.getElementById("dia").value = agora.getDate();
+    document.getElementById("data_viagem").value = agora.toISOString().slice(0, 10);
     document.getElementById("saida_horario").value = agora
       .toTimeString()
       .slice(0, 5);
@@ -135,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>
           <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${
             r.id
-          }" title="Editar">
+          }" title="Editar" disabled>
             <span class="material-symbols-outlined">edit</span>
           </button>
           <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${
@@ -185,7 +186,8 @@ document.addEventListener("DOMContentLoaded", () => {
       veiculos.forEach((v) => {
         veiculoSelect.innerHTML += `<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
       });
-    } catch (error) {
+    } catch (error)
+    {
       showToast(error.message, "error");
     } finally {
       modalInstance.show();
@@ -205,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
       veiculoSelect.options[veiculoSelect.selectedIndex].text;
     infoVeiculoEl.textContent = currentState.veiculoTexto;
     const [ano, mes] = mesAno.split("-");
-    infoPeriodoEl.textContent = `Período: ${mes}/${ano}`;
+    infoPeriodoEl.textContent = `Período de Referência: ${mes}/${ano}`;
 
     modalInstance.hide();
     infoPrvHeader.style.display = "block";
@@ -228,8 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tipoLancamento === "saida") {
       formData = {
         veiculo_id: currentState.veiculoId,
-        mes_ano_referencia: currentState.mesAno,
-        dia: document.getElementById("dia").value,
+        data_viagem: document.getElementById("data_viagem").value,
         saida_horario: document.getElementById("saida_horario").value || null,
         saida_km: document.getElementById("saida_km").value || null,
         saida_local: document.getElementById("saida_local").value,
@@ -271,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (target.classList.contains("edit-btn")) {
       showToast(
-        "A funcionalidade de edição precisa ser adaptada para o novo modelo.",
+        "A funcionalidade de edição foi desativada temporariamente.",
         "info"
       );
     }
@@ -298,6 +299,3 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   limparFormBtn.addEventListener("click", limparFormulario);
-
-  loadInitialData();
-});
