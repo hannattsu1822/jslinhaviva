@@ -46,9 +46,8 @@ router.get("/api/prv/status", autenticar, async (req, res) => {
   }
 });
 
-// ROTA CORRIGIDA
 router.get("/api/prv/registros", autenticar, async (req, res) => {
-  const { veiculoId, mesAno } = req.query; // mesAno vem como "YYYY-MM"
+  const { veiculoId, mesAno } = req.query;
 
   if (!veiculoId || !mesAno) {
     return res
@@ -57,13 +56,12 @@ router.get("/api/prv/registros", autenticar, async (req, res) => {
   }
 
   try {
-    // NOVO: Converte o formato da data YYYY-MM para MM/YYYY
     const [ano, mes] = mesAno.split("-");
-    const mesAnoFormatado = `${mes}/${ano}`; // ex: "05/2024"
+    const mesAnoFormatado = `${mes}/${ano}`;
 
     const [registros] = await promisePool.query(
       "SELECT * FROM prv_registros WHERE veiculo_id = ? AND mes_ano_referencia = ? AND chegada_km IS NOT NULL ORDER BY dia, saida_horario",
-      [veiculoId, mesAnoFormatado] // USA A VARIÁVEL FORMATADA
+      [veiculoId, mesAnoFormatado]
     );
     res.json(registros);
   } catch (error) {
@@ -72,24 +70,22 @@ router.get("/api/prv/registros", autenticar, async (req, res) => {
   }
 });
 
-// ROTA CORRIGIDA
 router.post("/api/prv/registros", autenticar, async (req, res) => {
   try {
     const { matricula } = req.session.user;
     const {
       veiculo_id,
-      mes_ano_referencia, // vem como "YYYY-MM"
-      dia,
+      data_viagem,
       saida_horario,
       saida_local,
       saida_km,
     } = req.body;
 
-    if (!veiculo_id || !mes_ano_referencia || !dia || !saida_km) {
+    if (!veiculo_id || !data_viagem || !saida_km) {
       return res
         .status(400)
         .json({
-          message: "Veículo, Mês/Ano, Dia e KM de Saída são obrigatórios.",
+          message: "Veículo, Data da Viagem e KM de Saída são obrigatórios.",
         });
     }
 
@@ -105,9 +101,8 @@ router.post("/api/prv/registros", autenticar, async (req, res) => {
       });
     }
 
-    // NOVO: Converte o formato da data YYYY-MM para MM/YYYY
-    const [ano, mes] = mes_ano_referencia.split("-");
-    const mesAnoFormatado = `${mes}/${ano}`; // ex: "05/2024"
+    const [ano, mes, dia] = data_viagem.split("-");
+    const mesAnoFormatado = `${mes}/${ano}`;
 
     const sql = `
       INSERT INTO prv_registros 
@@ -117,7 +112,7 @@ router.post("/api/prv/registros", autenticar, async (req, res) => {
 
     const [result] = await promisePool.query(sql, [
       veiculo_id,
-      mesAnoFormatado, // USA A VARIÁVEL FORMATADA
+      mesAnoFormatado,
       dia,
       saida_horario,
       saida_local,
