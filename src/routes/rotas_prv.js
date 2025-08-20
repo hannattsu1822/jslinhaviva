@@ -23,6 +23,24 @@ router.get("/api/prv/veiculos", autenticar, async (req, res) => {
   }
 });
 
+router.get("/api/prv/ultimo-km", autenticar, async (req, res) => {
+  const { veiculoId } = req.query;
+  if (!veiculoId) {
+    return res.status(400).json({ message: "ID do veículo é obrigatório." });
+  }
+  try {
+    const [rows] = await promisePool.query(
+      "SELECT chegada_km FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NOT NULL ORDER BY id DESC LIMIT 1",
+      [veiculoId]
+    );
+    const ultimoKm = rows.length > 0 ? rows[0].chegada_km : null;
+    res.json({ ultimoKm });
+  } catch (error) {
+    console.error("Erro ao buscar último KM:", error);
+    res.status(500).json({ message: "Erro interno ao buscar último KM." });
+  }
+});
+
 router.get("/api/prv/status", autenticar, async (req, res) => {
   const { veiculoId } = req.query;
   if (!veiculoId) {
@@ -99,6 +117,20 @@ router.post("/api/prv/registros", autenticar, async (req, res) => {
         message:
           "Não é possível iniciar uma nova viagem. Já existe uma em andamento para este veículo.",
       });
+    }
+
+    const [ultimoKmRows] = await promisePool.query(
+      "SELECT chegada_km FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NOT NULL ORDER BY id DESC LIMIT 1",
+      [veiculo_id]
+    );
+
+    if (ultimoKmRows.length > 0) {
+      const ultimoKmRegistrado = ultimoKmRows[0].chegada_km;
+      if (parseInt(saida_km, 10) !== ultimoKmRegistrado) {
+        return res.status(400).json({
+          message: `O KM de saída (${saida_km}) não corresponde ao último KM final registrado (${ultimoKmRegistrado}) para este veículo.`,
+        });
+      }
     }
 
     const [ano, mes, dia] = data_viagem.split("-");
