@@ -186,8 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
       veiculos.forEach((v) => {
         veiculoSelect.innerHTML += `<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
       });
-    } catch (error)
-    {
+    } catch (error) {
       showToast(error.message, "error");
     } finally {
       modalInstance.show();
@@ -299,3 +298,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   limparFormBtn.addEventListener("click", limparFormulario);
+
+  loadInitialData();
+});
