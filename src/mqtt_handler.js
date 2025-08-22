@@ -1,25 +1,19 @@
 const mqtt = require("mqtt");
 const { promisePool } = require("./init");
 
-const LIMITE_TEMPERATURA_VENTILACAO = 60.0;
-const HISTERESE_TEMPERATURA = 5.0;
-
 let estadoVentilacao = {};
 
-async function verificarEAtualizarVentilacao(
-  serialNumber,
-  temperaturaAtual,
-  timestampLeitura
-) {
+const INDICE_ALARME_VENTILACAO = 1;
+
+async function verificarVentilacaoPorAlarme(serialNumber, data, timestampLeitura) {
+  const alarmeAtivo = data.alarms && data.alarms[INDICE_ALARME_VENTILACAO] === 1;
+
   const estadoAtual = estadoVentilacao[serialNumber] || {
     ligada: false,
     ultimoId: null,
   };
 
-  if (
-    !estadoAtual.ligada &&
-    temperaturaAtual >= LIMITE_TEMPERATURA_VENTILACAO
-  ) {
+  if (alarmeAtivo && !estadoAtual.ligada) {
     const [result] = await promisePool.query(
       `INSERT INTO historico_ventilacao (serial_number, timestamp_inicio) VALUES (?, ?)`,
       [serialNumber, timestampLeitura]
@@ -29,19 +23,16 @@ async function verificarEAtualizarVentilacao(
       ultimoId: result.insertId,
     };
     console.log(
-      `[Ventilação Handler] LIGADA para SN: ${serialNumber} no ID: ${result.insertId}`
+      `[Ventilação Handler] LIGADA por ALARME (índice ${INDICE_ALARME_VENTILACAO}) para SN: ${serialNumber} no ID: ${result.insertId}`
     );
-  } else if (
-    estadoAtual.ligada &&
-    temperaturaAtual < LIMITE_TEMPERATURA_VENTILACAO - HISTERESE_TEMPERATURA
-  ) {
+  } else if (!alarmeAtivo && estadoAtual.ligada) {
     if (estadoAtual.ultimoId) {
       await promisePool.query(
         `UPDATE historico_ventilacao SET timestamp_fim = ?, duracao_segundos = TIMESTAMPDIFF(SECOND, timestamp_inicio, ?) WHERE id = ?`,
         [timestampLeitura, timestampLeitura, estadoAtual.ultimoId]
       );
       console.log(
-        `[Ventilação Handler] DESLIGADA para SN: ${serialNumber} no ID: ${estadoAtual.ultimoId}`
+        `[Ventilação Handler] DESLIGADA por ALARME (índice ${INDICE_ALARME_VENTILACAO}) para SN: ${serialNumber} no ID: ${estadoAtual.ultimoId}`
       );
     }
     estadoVentilacao[serialNumber] = { ligada: false, ultimoId: null };
@@ -50,13 +41,13 @@ async function verificarEAtualizarVentilacao(
 
 async function salvarLeituraLogBox(serialNumber, data, wss) {
   try {
-    const temperatura = data.ch_analog_1;
+    const temperatura = data.value_channels ? data.value_channels[2] : undefined;
     const bateria = data.battery;
     const tDateTime = data.timestamp;
 
     if (temperatura === undefined) {
       console.error(
-        "[MQTT Handler] Valor de temperatura (ch_analog_1) não encontrado no payload:",
+        "[MQTT Handler] Valor de temperatura não encontrado no payload (data.value_channels[2]):",
         data
       );
       return;
@@ -86,11 +77,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
 
     await salvarInfoDispositivo(serialNumber, data, wss);
 
-    await verificarEAtualizarVentilacao(
-      serialNumber,
-      temperatura,
-      timestampLeitura
-    );
+    await verificarVentilacaoPorAlarme(serialNumber, data, timestampLeitura);
 
     if (wss) {
       const [deviceRows] = await promisePool.query(
