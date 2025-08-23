@@ -16,16 +16,27 @@ function formatarDuracao(segundos) {
 }
 
 async function getReportData(filters) {
-  const { deviceId, startDate, endDate } = filters;
-  let whereClauseLeituras = "WHERE l.timestamp_leitura BETWEEN ? AND ?";
-  let whereClauseVentilacao = "WHERE v.timestamp_inicio BETWEEN ? AND ?";
-  let params = [startDate, endDate];
+  const { deviceId, reportType, date, month, year } = filters;
   let deviceInfo = null;
+  let startDate, endDate;
+
+  switch (reportType) {
+    case "monthly":
+      startDate = new Date(`${month}-01T00:00:00`);
+      endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case "annual":
+      startDate = new Date(`${year}-01-01T00:00:00`);
+      endDate = new Date(`${year}-12-31T23:59:59.999`);
+      break;
+    default: // detailed
+      startDate = new Date(`${date}T00:00:00`);
+      endDate = new Date(`${date}T23:59:59.999`);
+      break;
+  }
 
   if (deviceId !== "all") {
-    whereClauseLeituras += " AND d.id = ?";
-    whereClauseVentilacao += " AND d.id = ?";
-    params.push(deviceId);
     const [deviceRows] = await promisePool.query(
       "SELECT * FROM dispositivos_logbox WHERE id = ?",
       [deviceId]
@@ -33,33 +44,111 @@ async function getReportData(filters) {
     if (deviceRows.length > 0) deviceInfo = deviceRows[0];
   }
 
-  const [leituras] = await promisePool.query(
-    `SELECT l.timestamp_leitura, JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS temperatura FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras} ORDER BY l.timestamp_leitura ASC`,
-    params
-  );
+  let leiturasAgregadas = [];
+  let fanHistoryAgregado = [];
+  let labels = [];
+  let tempMinData = [];
+  let tempAvgData = [];
+  let tempMaxData = [];
+
+  let params = [startDate, endDate];
+  if (deviceId !== "all") {
+    params.push(deviceId);
+  }
+  const deviceWhereClause = deviceId !== "all" ? "AND d.id = ?" : "";
+  const tempFieldSQL = `CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')), JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.value_channels[2]'))) AS DECIMAL(10,2))`;
+
+  switch (reportType) {
+    case "monthly":
+      [leiturasAgregadas] = await promisePool.query(
+        `SELECT DATE_FORMAT(l.timestamp_leitura, '%Y-%m-%d') as dia,
+          MIN(${tempFieldSQL}) as temp_min, AVG(${tempFieldSQL}) as temp_avg, MAX(${tempFieldSQL}) as temp_max
+        FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number
+        WHERE l.timestamp_leitura BETWEEN ? AND ? ${deviceWhereClause}
+        GROUP BY dia ORDER BY dia ASC`,
+        params
+      );
+      [fanHistoryAgregado] = await promisePool.query(
+        `SELECT DATE_FORMAT(v.timestamp_inicio, '%Y-%m-%d') as dia, COUNT(*) as count, SUM(v.duracao_segundos) as total_duration
+        FROM historico_ventilacao v JOIN dispositivos_logbox d ON v.serial_number = d.serial_number
+        WHERE v.timestamp_inicio BETWEEN ? AND ? ${deviceWhereClause}
+        GROUP BY dia ORDER BY dia ASC`,
+        params
+      );
+      break;
+    case "annual":
+      [leiturasAgregadas] = await promisePool.query(
+        `SELECT DATE_FORMAT(l.timestamp_leitura, '%Y-%m') as mes,
+          MIN(${tempFieldSQL}) as temp_min, AVG(${tempFieldSQL}) as temp_avg, MAX(${tempFieldSQL}) as temp_max
+        FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number
+        WHERE l.timestamp_leitura BETWEEN ? AND ? ${deviceWhereClause}
+        GROUP BY mes ORDER BY mes ASC`,
+        params
+      );
+      [fanHistoryAgregado] = await promisePool.query(
+        `SELECT DATE_FORMAT(v.timestamp_inicio, '%Y-%m') as mes, COUNT(*) as count, SUM(v.duracao_segundos) as total_duration
+        FROM historico_ventilacao v JOIN dispositivos_logbox d ON v.serial_number = d.serial_number
+        WHERE v.timestamp_inicio BETWEEN ? AND ? ${deviceWhereClause}
+        GROUP BY mes ORDER BY mes ASC`,
+        params
+      );
+      break;
+    default: // detailed
+      const [leiturasDetalhadas] = await promisePool.query(
+        `SELECT l.timestamp_leitura, ${tempFieldSQL} AS temperatura
+         FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number
+         WHERE l.timestamp_leitura BETWEEN ? AND ? ${deviceWhereClause}
+         ORDER BY l.timestamp_leitura ASC`,
+        params
+      );
+      labels = leiturasDetalhadas.map((r) => new Date(r.timestamp_leitura).toLocaleString("pt-BR", { hour: '2-digit', minute: '2-digit' }));
+      tempAvgData = leiturasDetalhadas.map((r) => parseFloat(r.temperatura));
+      break;
+  }
+
+  if (reportType === "monthly" || reportType === "annual") {
+    const key = reportType === "monthly" ? "dia" : "mes";
+    labels = leiturasAgregadas.map((r) => r[key]);
+    tempMinData = leiturasAgregadas.map((r) => parseFloat(r.temp_min));
+    tempAvgData = leiturasAgregadas.map((r) => parseFloat(r.temp_avg));
+    tempMaxData = leiturasAgregadas.map((r) => parseFloat(r.temp_max));
+  }
+
   const [stats] = await promisePool.query(
-    `SELECT MIN(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_min, AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_avg, MAX(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.payload_json, '$.ch_analog_1')) AS DECIMAL(10,2))) as temp_max FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number ${whereClauseLeituras}`,
+    `SELECT MIN(${tempFieldSQL}) as temp_min, AVG(${tempFieldSQL}) as temp_avg, MAX(${tempFieldSQL}) as temp_max
+    FROM leituras_logbox l JOIN dispositivos_logbox d ON l.serial_number = d.serial_number
+    WHERE l.timestamp_leitura BETWEEN ? AND ? ${deviceWhereClause}`,
     params
   );
-  const [fanHistory] = await promisePool.query(
-    `SELECT v.* FROM historico_ventilacao v JOIN dispositivos_logbox d ON v.serial_number = d.serial_number ${whereClauseVentilacao} ORDER BY v.timestamp_inicio ASC`,
+  
+  const [fanStats] = await promisePool.query(
+    `SELECT COUNT(*) as total_count, SUM(v.duracao_segundos) as total_duration
+     FROM historico_ventilacao v JOIN dispositivos_logbox d ON v.serial_number = d.serial_number
+     WHERE v.timestamp_inicio BETWEEN ? AND ? ${deviceWhereClause}`,
     params
   );
 
-  const labels = leituras.map((r) =>
-    new Date(r.timestamp_leitura).toLocaleString("pt-BR")
+  const [fanHistory] = (reportType !== 'detailed') ? [[]] : await promisePool.query(
+    `SELECT v.* FROM historico_ventilacao v JOIN dispositivos_logbox d ON v.serial_number = d.serial_number
+     WHERE v.timestamp_inicio BETWEEN ? AND ? ${deviceWhereClause}
+     ORDER BY v.timestamp_inicio ASC`,
+    params
   );
-  const temperaturas = leituras.map((r) => parseFloat(r.temperatura));
 
   return {
     device: deviceInfo || { local_tag: "Todos os Equipamentos" },
-    filters,
+    filters: { ...filters, startDate, endDate },
     chartData: {
       labels,
-      datasets: [{ label: "Temperatura", data: temperaturas }],
+      datasets: [
+        { label: "Temp. Mínima", data: tempMinData },
+        { label: "Temp. Média", data: tempAvgData },
+        { label: "Temp. Máxima", data: tempMaxData },
+      ],
     },
-    stats: stats[0],
-    fanHistory,
+    stats: { ...stats[0], ...fanStats[0] },
+    fanHistory: fanHistory,
+    fanHistoryAgregado: fanHistoryAgregado,
   };
 }
 
@@ -475,11 +564,51 @@ router.post(
         height,
         backgroundColour: "#ffffff",
       });
+      
+      const datasets = [];
+      if (data.filters.reportType === 'detailed') {
+          datasets.push({
+              type: 'line',
+              label: 'Temperatura',
+              data: data.chartData.datasets[1].data,
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              fill: true,
+          });
+      } else {
+          datasets.push({
+              type: 'line',
+              label: 'Temp. Mínima',
+              data: data.chartData.datasets[0].data,
+              borderColor: 'rgba(54, 162, 235, 1)',
+              fill: false,
+          });
+          datasets.push({
+              type: 'line',
+              label: 'Temp. Média',
+              data: data.chartData.datasets[1].data,
+              borderColor: 'rgba(255, 159, 64, 1)',
+              backgroundColor: 'rgba(255, 159, 64, 0.2)',
+              fill: true,
+          });
+          datasets.push({
+              type: 'line',
+              label: 'Temp. Máxima',
+              data: data.chartData.datasets[2].data,
+              borderColor: 'rgba(255, 99, 132, 1)',
+              fill: false,
+          });
+      }
+
       const configuration = {
         type: "line",
-        data: data.chartData,
+        data: {
+            labels: data.chartData.labels,
+            datasets: datasets
+        },
         options: { responsive: false },
       };
+
       const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
       const pdfDoc = await PDFDocument.create();
       const page = pdfDoc.addPage();
@@ -541,25 +670,37 @@ router.post(
         size: 14,
       });
       y -= 20;
-      page.drawText("Início", { x: 60, y, font: fontBold, size: 10 });
-      page.drawText("Fim", { x: 220, y, font: fontBold, size: 10 });
-      page.drawText("Duração", { x: 380, y, font: fontBold, size: 10 });
+      
+      const tableData = data.filters.reportType === 'detailed' ? data.fanHistory : data.fanHistoryAgregado;
+      const isAggregated = data.filters.reportType !== 'detailed';
+      
+      const headers = isAggregated ? ['Período', 'Acionamentos', 'Duração Total'] : ['Início', 'Fim', 'Duração'];
+      page.drawText(headers[0], { x: 60, y, font: fontBold, size: 10 });
+      page.drawText(headers[1], { x: 220, y, font: fontBold, size: 10 });
+      page.drawText(headers[2], { x: 380, y, font: fontBold, size: 10 });
       y -= 15;
-      data.fanHistory.forEach((item) => {
+
+      tableData.forEach((item) => {
         if (y < 50) {
           page = pdfDoc.addPage();
           y = pageHeight - 50;
         }
-        const inicio = new Date(item.timestamp_inicio).toLocaleString("pt-BR");
-        const fim = item.timestamp_fim
-          ? new Date(item.timestamp_fim).toLocaleString("pt-BR")
-          : "Ativa";
-        const duracao = formatarDuracao(item.duracao_segundos);
-        page.drawText(inicio, { x: 60, y, font, size: 10 });
-        page.drawText(fim, { x: 220, y, font, size: 10 });
-        page.drawText(duracao, { x: 380, y, font, size: 10 });
+        let col1, col2, col3;
+        if (isAggregated) {
+            col1 = item.dia || item.mes;
+            col2 = item.count.toString();
+            col3 = formatarDuracao(item.total_duration);
+        } else {
+            col1 = new Date(item.timestamp_inicio).toLocaleString("pt-BR");
+            col2 = item.timestamp_fim ? new Date(item.timestamp_fim).toLocaleString("pt-BR") : "Ativa";
+            col3 = formatarDuracao(item.duracao_segundos);
+        }
+        page.drawText(col1, { x: 60, y, font, size: 10 });
+        page.drawText(col2, { x: 220, y, font, size: 10 });
+        page.drawText(col3, { x: 380, y, font, size: 10 });
         y -= 15;
       });
+
       const pdfBytes = await pdfDoc.save();
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
