@@ -63,7 +63,7 @@ async function carregarStatusInicial() {
       const latestData = await latestReadingResponse.json();
       const payloadObjeto = JSON.parse(latestData.payload);
       const tempExterna =
-        payloadObjeto.ch_analog_1 || payloadObjeto.value_channels[2];
+        payloadObjeto.ch_analog_1 || (payloadObjeto.value_channels ? payloadObjeto.value_channels[2] : undefined);
       if (tempExterna !== undefined) {
         document.getElementById("latest-temp").textContent =
           tempExterna.toFixed(1);
@@ -83,9 +83,18 @@ function atualizarPainelCompleto(status) {
     return;
   }
 
-  const temperaturaExterna = status.ch_analog_1;
+  const connectionBadge = document.getElementById("connection-status-badge");
+  if (status.connection_status === "offline") {
+    connectionBadge.textContent = "Offline";
+    connectionBadge.className = "badge ms-3 fs-6 bg-danger";
+  } else {
+    connectionBadge.textContent = "Online";
+    connectionBadge.className = "badge ms-3 fs-6 bg-success";
+  }
+
+  const temperaturaExterna = status.ch_analog_1 || (status.value_channels ? status.value_channels[2] : undefined);
   const tensaoFonteExterna = status.ch_analog_2;
-  const tensaoBateria = status.ch_analog_3;
+  const tensaoBateria = status.ch_analog_3 || status.battery;
   const sinalWifi = status.lqi;
   const alarmes = status.alarms;
   const temperaturaInterna = status.temperature;
@@ -129,9 +138,23 @@ function atualizarListaAlarmes(alarms) {
   const alarmList = document.getElementById("active-alarms-list");
   alarmList.innerHTML = "";
 
-  const activeAlarms = alarms
-    ? Object.entries(alarms).filter(([key, value]) => value === true)
-    : [];
+  if (!alarms) {
+    alarmList.innerHTML =
+      '<div class="list-group-item text-muted text-center placeholder">Nenhum alarme ativo.</div>';
+    return;
+  }
+
+  let activeAlarms = [];
+  if (Array.isArray(alarms)) {
+    const alarmNames = ["A1.L", "A1.H", "A2.L", "A2.H", "A3.L", "A3.H", "D1.H"];
+    alarms.forEach((status, index) => {
+      if (status === 1 && alarmNames[index]) {
+        activeAlarms.push([alarmNames[index], true]);
+      }
+    });
+  } else {
+    activeAlarms = Object.entries(alarms).filter(([key, value]) => value === true);
+  }
 
   if (activeAlarms.length === 0) {
     alarmList.innerHTML =
@@ -253,15 +276,17 @@ function atualizarStatusGeral() {
   const indicator = document.getElementById("geral-status-indicator");
   const pt100Badge = document.getElementById("diag-pt100-status");
   const alarmsList = document.getElementById("active-alarms-list");
+  const connectionBadge = document.getElementById("connection-status-badge");
 
   if (
+    connectionBadge.classList.contains("bg-danger") ||
     pt100Badge.classList.contains("bg-status-critical") ||
     alarmsList.querySelector(".alarm-item")
   ) {
     indicator.className = "status-indicator critical";
     indicator.setAttribute(
       "title",
-      "Status Crítico: Falha no sensor ou alarme ativo!"
+      "Status Crítico: Dispositivo offline, falha no sensor ou alarme ativo!"
     );
   } else if (
     document
