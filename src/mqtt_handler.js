@@ -3,6 +3,47 @@ const { promisePool } = require("./init");
 
 let estadoVentilacao = {};
 
+async function verificarDispositivosOffline(wss) {
+  try {
+    const cincoMinutosAtras = new Date(Date.now() - 5 * 60 * 1000);
+
+    const [offlineDevices] = await promisePool.query(
+      "SELECT serial_number, status_json FROM dispositivos_logbox WHERE ativo = 1 AND ultima_leitura < ?",
+      [cincoMinutosAtras]
+    );
+
+    for (const device of offlineDevices) {
+      const status = device.status_json ? JSON.parse(device.status_json) : {};
+
+      if (status.connection_status !== "offline") {
+        status.connection_status = "offline";
+        
+        await promisePool.query(
+          "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
+          [JSON.stringify(status), device.serial_number]
+        );
+
+        const payloadWebSocket = {
+          type: "atualizacao_status",
+          dados: {
+            serial_number: device.serial_number,
+            status: status,
+          },
+        };
+
+        wss.clients.forEach((client) => {
+          if (client.readyState === client.OPEN) {
+            client.send(JSON.stringify(payloadWebSocket));
+          }
+        });
+        console.log(`[Offline Checker] Dispositivo ${device.serial_number} marcado como OFFLINE.`);
+      }
+    }
+  } catch (err) {
+    console.error("[Offline Checker] Erro ao verificar dispositivos offline:", err);
+  }
+}
+
 async function verificarVentilacaoPorAlarme(serialNumber, alarmeAtivo, timestampLeitura) {
   const estadoAtual = estadoVentilacao[serialNumber] || {
     ligada: false,
@@ -141,6 +182,8 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
       ? JSON.parse(rows[0].status_json)
       : {};
     const novoStatus = Object.assign(statusAtual, data);
+    
+    novoStatus.connection_status = "online";
 
     await promisePool.query(
       "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
@@ -287,6 +330,13 @@ function iniciarClienteMQTT(app) {
   client.on("error", (error) => {
     console.error("[MQTT Handler] Erro de conexão com o broker:", error);
   });
+
+  setInterval(() => {
+    const wss = app.get("wss");
+    if (wss) {
+      verificarDispositivosOffline(wss);
+    }
+  }, 30000);
 }
 
 module.exports = {
