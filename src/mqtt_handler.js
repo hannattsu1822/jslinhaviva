@@ -13,7 +13,13 @@ async function verificarDispositivosOffline(wss) {
     );
 
     for (const device of offlineDevices) {
-      const status = device.status_json ? JSON.parse(device.status_json) : {};
+      let status = {};
+      try {
+        status = typeof device.status_json === 'string' ? JSON.parse(device.status_json) : (device.status_json || {});
+      } catch (e) {
+        console.error(`[Offline Checker] Erro ao parsear status_json para SN ${device.serial_number}:`, device.status_json);
+        status = {};
+      }
 
       if (status.connection_status !== "offline") {
         status.connection_status = "offline";
@@ -178,9 +184,14 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
       return;
     }
 
-    const statusAtual = rows[0].status_json
-      ? JSON.parse(rows[0].status_json)
-      : {};
+    let statusAtual = {};
+    try {
+        statusAtual = rows[0].status_json ? JSON.parse(rows[0].status_json) : {};
+    } catch (e) {
+        console.error(`[Device Info Handler] Erro ao parsear status_json para SN ${serialNumber}:`, rows[0].status_json);
+        statusAtual = {};
+    }
+    
     const novoStatus = Object.assign(statusAtual, data);
     
     novoStatus.connection_status = "online";
@@ -239,9 +250,14 @@ async function salvarStatusConexao(data, wss) {
       return;
     }
 
-    const statusAtual = rows[0].status_json
-      ? JSON.parse(rows[0].status_json)
-      : {};
+    let statusAtual = {};
+    try {
+        statusAtual = rows[0].status_json ? JSON.parse(rows[0].status_json) : {};
+    } catch (e) {
+        console.error(`[Connection Status Handler] Erro ao parsear status_json para SN ${serialNumber}:`, rows[0].status_json);
+        statusAtual = {};
+    }
+
     const novoStatus = Object.assign(statusAtual, data);
 
     await promisePool.query(
