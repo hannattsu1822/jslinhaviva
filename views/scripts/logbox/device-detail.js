@@ -17,6 +17,7 @@ function inicializarPainel() {
     carregarStatusInicial(),
     carregarEstatisticasDetalhes(),
     carregarDadosVentilacao(),
+    carregarHistoricoConexao(),
   ])
     .then(() => {
       console.log("Painel inicializado com sucesso.");
@@ -232,6 +233,9 @@ function iniciarWebSocket() {
     ) {
       console.log("Atualização de status recebida:", message.dados.status);
       atualizarPainelCompleto(message.dados.status);
+      if (message.dados.status.connection_status === 'online') {
+        carregarHistoricoConexao();
+      }
     }
   };
 }
@@ -352,6 +356,35 @@ async function carregarDadosVentilacao() {
     }
   } catch (error) {
     console.error("Erro ao carregar dados da ventilação:", error);
+  }
+}
+
+async function carregarHistoricoConexao() {
+  try {
+    const response = await fetch(`/api/logbox-device/${serialNumber}/connection-history`);
+    if (!response.ok) throw new Error("Falha ao buscar histórico de conexão");
+
+    const data = await response.json();
+
+    document.getElementById("conn-total-disconnects").textContent = data.summary.total_disconnects;
+    document.getElementById("conn-avg-duration").textContent = formatarDuracao(data.summary.avg_duration_seconds);
+
+    const tableBody = document.getElementById("connection-history-table-body");
+    tableBody.innerHTML = "";
+
+    if (data.history.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum evento de desconexão registrado.</td></tr>';
+    } else {
+      data.history.forEach((item) => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).textContent = new Date(item.timestamp_offline).toLocaleString("pt-BR");
+        row.insertCell(1).textContent = item.timestamp_online ? new Date(item.timestamp_online).toLocaleString("pt-BR") : "Ainda Offline";
+        row.insertCell(2).textContent = formatarDuracao(item.duracao_segundos);
+        row.insertCell(3).textContent = item.ultimo_rssi ? `${item.ultimo_rssi} dBm` : "N/A";
+      });
+    }
+  } catch (error) {
+    console.error("Erro ao carregar histórico de conexão:", error);
   }
 }
 
