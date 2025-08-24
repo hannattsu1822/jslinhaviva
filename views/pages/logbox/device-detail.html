@@ -117,7 +117,7 @@
             </div>
           </div>
 
-          <div class="card shadow-sm">
+          <div class="card shadow-sm mb-4">
             <div class="card-header d-flex align-items-center">
               <span class="material-symbols-outlined me-2"
                 >history_toggle_off</span
@@ -142,6 +142,40 @@
               </div>
             </div>
           </div>
+
+          <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex align-items-center">
+              <span class="material-symbols-outlined me-2">signal_wifi_off</span>
+              Histórico de Conexão
+            </div>
+            <div class="card-body">
+              <div class="row text-center mb-4">
+                <div class="col-6">
+                  <h6 class="text-muted">Total de Desconexões</h6>
+                  <p id="conn-total-disconnects" class="h4 fw-bold">--</p>
+                </div>
+                <div class="col-6 border-start">
+                  <h6 class="text-muted">Duração Média</h6>
+                  <p id="conn-avg-duration" class="h4 fw-bold">--</p>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table id="connection-history-table" class="table table-striped table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col">Desconectado em</th>
+                      <th scope="col">Reconectado em</th>
+                      <th scope="col">Duração</th>
+                      <th scope="col">Sinal Wi-Fi (RSSI)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="connection-history-table-body">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div class="col-lg-4">
