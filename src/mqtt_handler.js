@@ -8,7 +8,7 @@ async function verificarDispositivosOffline(wss) {
     const cincoMinutosAtras = new Date(Date.now() - 5 * 60 * 1000);
 
     const [offlineDevices] = await promisePool.query(
-      "SELECT serial_number, status_json FROM dispositivos_logbox WHERE ativo = 1 AND ultima_leitura < ?",
+      "SELECT serial_number, status_json, ultima_leitura FROM dispositivos_logbox WHERE ativo = 1 AND ultima_leitura < ?",
       [cincoMinutosAtras]
     );
 
@@ -29,6 +29,12 @@ async function verificarDispositivosOffline(wss) {
           [JSON.stringify(status), device.serial_number]
         );
 
+        const ultimo_rssi = status.lqi || null;
+        await promisePool.query(
+          "INSERT INTO historico_conexao (serial_number, timestamp_offline, ultimo_rssi) VALUES (?, ?, ?)",
+          [device.serial_number, device.ultima_leitura, ultimo_rssi]
+        );
+
         const payloadWebSocket = {
           type: "atualizacao_status",
           dados: {
@@ -42,7 +48,7 @@ async function verificarDispositivosOffline(wss) {
             client.send(JSON.stringify(payloadWebSocket));
           }
         });
-        console.log(`[Offline Checker] Dispositivo ${device.serial_number} marcado como OFFLINE.`);
+        console.log(`[Offline Checker] Dispositivo ${device.serial_number} marcado como OFFLINE. Evento registrado.`);
       }
     }
   } catch (err) {
@@ -90,11 +96,9 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
     const tDateTime = data.timestamp;
 
     if (data.value_channels !== undefined) {
-      console.log(`[MQTT Handler] Payload formato 'value_channels' detectado para SN: ${serialNumber}`);
       temperatura = data.value_channels[2];
       alarmeAtivo = data.alarms && data.alarms[1] === 1;
     } else if (data.ch_analog_1 !== undefined) {
-      console.log(`[MQTT Handler] Payload formato 'ch_analog_1' detectado para SN: ${serialNumber}`);
       temperatura = data.ch_analog_1;
       alarmeAtivo = data.alarm_01 === 1;
     } else {
@@ -132,7 +136,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
       `[MQTT Handler] Payload de canais salvo para SN: ${serialNumber}`
     );
 
-    await salvarInfoDispositivo(serialNumber, data, wss);
+    await salvarInfoDispositivo(serialNumber, data, wss, timestampLeitura);
 
     await verificarVentilacaoPorAlarme(serialNumber, alarmeAtivo, timestampLeitura);
 
@@ -170,7 +174,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
   }
 }
 
-async function salvarInfoDispositivo(serialNumber, data, wss) {
+async function salvarInfoDispositivo(serialNumber, data, wss, timestampLeitura) {
   try {
     const [rows] = await promisePool.query(
       "SELECT status_json FROM dispositivos_logbox WHERE serial_number = ?",
@@ -178,9 +182,6 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
     );
 
     if (rows.length === 0) {
-      console.log(
-        `[Device Info Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`
-      );
       return;
     }
 
@@ -188,22 +189,28 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
     try {
         statusAtual = rows[0].status_json ? JSON.parse(rows[0].status_json) : {};
     } catch (e) {
-        console.error(`[Device Info Handler] Erro ao parsear status_json para SN ${serialNumber}:`, rows[0].status_json);
         statusAtual = {};
     }
     
+    const eraOffline = statusAtual.connection_status === 'offline';
     const novoStatus = Object.assign(statusAtual, data);
-    
     novoStatus.connection_status = "online";
 
     await promisePool.query(
-      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
-      [JSON.stringify(novoStatus), serialNumber]
+      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = ? WHERE serial_number = ?",
+      [JSON.stringify(novoStatus), timestampLeitura, serialNumber]
     );
 
-    console.log(
-      `[Device Info Handler] Status atualizado para SN: ${serialNumber} com dados de canais.`
-    );
+    if (eraOffline) {
+      await promisePool.query(
+        `UPDATE historico_conexao 
+         SET timestamp_online = ?, duracao_segundos = TIMESTAMPDIFF(SECOND, timestamp_offline, ?)
+         WHERE serial_number = ? AND timestamp_online IS NULL 
+         ORDER BY id DESC LIMIT 1`,
+        [timestampLeitura, timestampLeitura, serialNumber]
+      );
+      console.log(`[Offline Checker] Dispositivo ${serialNumber} reconectado. Evento finalizado.`);
+    }
 
     if (wss) {
       const payloadWebSocket = {
@@ -231,9 +238,6 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
 async function salvarStatusConexao(data, wss) {
   const serialNumber = data.serial;
   if (!serialNumber) {
-    console.error(
-      "[Connection Status Handler] Serial number não encontrado no payload de 'neighbor'."
-    );
     return;
   }
 
@@ -244,9 +248,6 @@ async function salvarStatusConexao(data, wss) {
     );
 
     if (rows.length === 0) {
-      console.log(
-        `[Connection Status Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`
-      );
       return;
     }
 
@@ -254,7 +255,6 @@ async function salvarStatusConexao(data, wss) {
     try {
         statusAtual = rows[0].status_json ? JSON.parse(rows[0].status_json) : {};
     } catch (e) {
-        console.error(`[Connection Status Handler] Erro ao parsear status_json para SN ${serialNumber}:`, rows[0].status_json);
         statusAtual = {};
     }
 
@@ -263,10 +263,6 @@ async function salvarStatusConexao(data, wss) {
     await promisePool.query(
       "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
       [JSON.stringify(novoStatus), serialNumber]
-    );
-
-    console.log(
-      `[Connection Status Handler] Status de conexão atualizado para SN: ${serialNumber}.`
     );
 
     if (wss) {
@@ -326,12 +322,8 @@ function iniciarClienteMQTT(app) {
 
       if (topic.includes("status/channels")) {
         const serialNumber = topic.split("/")[1];
-        console.log(
-          `[MQTT Router] Mensagem de CANAIS recebida para SN: ${serialNumber}`
-        );
         salvarLeituraLogBox(serialNumber, dados, wss);
       } else if (topic === "novus/neighbor") {
-        console.log(`[MQTT Router] Mensagem de CONEXÃO recebida.`);
         salvarStatusConexao(dados, wss);
       }
     } catch (e) {
