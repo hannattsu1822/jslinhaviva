@@ -714,5 +714,34 @@ router.post(
     }
   }
 );
+router.get(
+  "/api/logbox-device/:serialNumber/connection-history",
+  autenticar,
+  async (req, res) => {
+    const { serialNumber } = req.params;
+    try {
+      const [history] = await promisePool.query(
+        "SELECT * FROM historico_conexao WHERE serial_number = ? ORDER BY timestamp_offline DESC LIMIT 100",
+        [serialNumber]
+      );
 
+      const [[summary]] = await promisePool.query(
+        "SELECT COUNT(*) as total_disconnects, AVG(duracao_segundos) as avg_duration FROM historico_conexao WHERE serial_number = ?",
+        [serialNumber]
+      );
+
+      res.json({
+        summary: {
+          total_disconnects: summary.total_disconnects || 0,
+          avg_duration_seconds: summary.avg_duration ? Math.round(summary.avg_duration) : 0,
+        },
+        history: history,
+      });
+    } catch (err) {
+      console.error("Erro ao buscar histórico de conexão:", err);
+      res.status(500).json({ message: "Erro interno no servidor" });
+    }
+  }
+);
 module.exports = router;
+
