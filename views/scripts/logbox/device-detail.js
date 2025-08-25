@@ -99,6 +99,8 @@ function atualizarPainelCompleto(status) {
   const sinalWifi = status.lqi;
   const alarmes = status.alarms;
   const temperaturaInterna = status.temperature;
+  const ipAddress = status.ip;
+  const firmwareVersion = status.firmware_version;
 
   const { text: wifiText, className: wifiClass } = getWifiStatus(sinalWifi);
   atualizarBadge("diag-wifi-rssi", `${sinalWifi || "--"} dBm`, wifiClass);
@@ -122,6 +124,9 @@ function atualizarPainelCompleto(status) {
 
   const { text: mqttText, className: mqttClass } = getMqttStatus(true);
   atualizarBadge("diag-mqtt-status", mqttText, mqttClass);
+
+  atualizarBadge("diag-ip-address", ipAddress || "--", "bg-info text-dark");
+  atualizarBadge("diag-firmware-version", firmwareVersion || "--", "bg-info text-dark");
 
   atualizarListaAlarmes(alarmes);
   atualizarStatusGeral();
