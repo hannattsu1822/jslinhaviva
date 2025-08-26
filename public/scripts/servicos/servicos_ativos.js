@@ -44,6 +44,8 @@ function showToast(message, type = "success") {
     toastLiveEl.classList.add("text-bg-danger", "border-0");
   } else if (type === "warning") {
     toastLiveEl.classList.add("text-bg-warning", "border-0");
+  } else if (type === "info") {
+    toastLiveEl.classList.add("text-bg-info", "border-0");
   } else {
     toastLiveEl.classList.add("text-bg-secondary", "border-0");
   }
@@ -510,7 +512,6 @@ function controlarCamposFinalizacao() {
   )
     return;
 
-  // Ambos os status (concluído e não concluído) agora exigem data e hora
   camposSomenteConcluido.style.display = "block";
   dataConclusaoInput.required = true;
   horaConclusaoInput.required = true;
@@ -520,7 +521,6 @@ function controlarCamposFinalizacao() {
       "Observações da conclusão (opcional)";
     observacoesFinalizacaoInput.required = false;
   } else {
-    // nao_concluido
     observacoesFinalizacaoInput.placeholder =
       "Motivo da não conclusão (obrigatório)";
     observacoesFinalizacaoInput.required = true;
@@ -555,99 +555,109 @@ async function submeterFinalizacaoServico() {
   btnSalvarFinalizacao.innerHTML =
     '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
 
+  const statusFinal = document.getElementById("statusFinalServico").value;
+  const observacoes = document.getElementById("observacoesFinalizacao").value;
+  const dataConclusao = document.getElementById("dataConclusao").value;
+  const horaConclusao = document.getElementById("horaConclusao").value;
+  const fotosInput = document.getElementById("fotosConclusao");
+  const files = fotosInput ? Array.from(fotosInput.files) : [];
+
   try {
-    const statusFinal = document.getElementById("statusFinalServico").value;
-    const formData = new FormData();
-    formData.append("status_final", statusFinal);
-
-    const observacoes = document.getElementById("observacoesFinalizacao").value;
-    const fotosInput = document.getElementById("fotosConclusao");
-    const dataInput = document.getElementById("dataConclusao").value;
-    const horaInput = document.getElementById("horaConclusao").value;
-
-    // Validação de data e hora para ambos os status
-    if (!dataInput || !horaInput) {
-      throw new Error(
-        "Data e Hora de Conclusão são obrigatórias para finalizar o serviço."
-      );
-    }
-    formData.append("dataConclusao", dataInput);
-    formData.append("horaConclusao", horaInput);
-
-    formData.append("observacoes", observacoes);
-
-    if (fotosInput && fotosInput.files.length > 0) {
-      for (let i = 0; i < fotosInput.files.length; i++) {
-        formData.append("fotos_conclusao", fotosInput.files[i]);
-      }
-    }
-
+    const infoPayload = {
+      status_final: statusFinal,
+      dataConclusao: dataConclusao,
+      horaConclusao: horaConclusao,
+      observacoes: observacoes,
+    };
     if (statusFinal === "nao_concluido") {
-      if (!observacoes || observacoes.trim() === "") {
-        throw new Error(
-          "As observações (motivo da não conclusão) são obrigatórias."
-        );
+      infoPayload.motivo_nao_conclusao = observacoes;
+    }
+
+    const infoResponse = await fetch(
+      `/api/servicos/${currentServicoId}/concluir`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(infoPayload),
       }
-      formData.append("motivo_nao_conclusao", observacoes);
-    }
-
-    const response = await fetch(`/api/servicos/${currentServicoId}/concluir`, {
-      method: "POST",
-      body: formData,
-    });
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      throw new Error(
-        text ||
-          `Resposta inválida do servidor ao ${
-            statusFinal === "concluido" ? "concluir" : "não concluir"
-          }`
-      );
-    }
-    const data = await response.json();
-    if (!response.ok || !data.success) {
-      throw new Error(
-        data.message ||
-          `Erro ao ${
-            statusFinal === "concluido" ? "concluir" : "não concluir"
-          } serviço`
-      );
-    }
-
-    const formConcluir = document.getElementById("formConcluirServico");
-    if (formConcluir) formConcluir.reset();
-    const previewContainer = document.getElementById("previewContainer");
-    if (previewContainer) previewContainer.innerHTML = "";
-
-    showToast(
-      data.message ||
-        `Serviço marcado como ${
-          statusFinal === "concluido" ? "Concluído" : "Não Concluído"
-        } com sucesso!`,
-      "success"
     );
-    if (concluirModalInstance) concluirModalInstance.hide();
-    await carregarServicosAtivos();
+
+    const infoResult = await infoResponse.json();
+    if (!infoResponse.ok) {
+      throw new Error(
+        infoResult.message || "Erro ao salvar informações do serviço."
+      );
+    }
+    showToast(infoResult.message, "info");
+
+    if (files.length > 0) {
+      showToast(`Iniciando upload de ${files.length} arquivos...`, "info");
+      const errosUpload = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const previewItem = document.getElementById(`preview-item-${i}`);
+        const statusOverlay = previewItem
+          ? previewItem.querySelector(".upload-status-overlay")
+          : null;
+
+        if (statusOverlay) {
+          statusOverlay.classList.remove("d-none");
+          statusOverlay.innerHTML =
+            '<div class="spinner-border spinner-border-sm text-light" role="status"></div>';
+        }
+
+        const fileFormData = new FormData();
+        fileFormData.append("foto_conclusao", file);
+        fileFormData.append("status_final", statusFinal);
+
+        try {
+          const fileResponse = await fetch(
+            `/api/servicos/${currentServicoId}/upload-foto-conclusao`,
+            {
+              method: "POST",
+              body: fileFormData,
+            }
+          );
+
+          const fileResult = await fileResponse.json();
+          if (!fileResponse.ok) {
+            throw new Error(
+              fileResult.message || `Falha no upload de ${file.name}`
+            );
+          }
+
+          if (statusOverlay) {
+            statusOverlay.innerHTML =
+              '<span class="material-symbols-outlined text-success">check_circle</span>';
+          }
+        } catch (uploadError) {
+          errosUpload.push(`${file.name}: ${uploadError.message}`);
+          if (statusOverlay) {
+            statusOverlay.innerHTML =
+              '<span class="material-symbols-outlined text-danger">error</span>';
+          }
+        }
+      }
+
+      if (errosUpload.length > 0) {
+        showToast(`Concluído com ${errosUpload.length} erros.`, "warning");
+        console.error("Erros de upload:", errosUpload);
+      } else {
+        showToast("Todos os arquivos foram enviados com sucesso!", "success");
+      }
+    }
+
+    setTimeout(async () => {
+      if (concluirModalInstance) concluirModalInstance.hide();
+      await carregarServicosAtivos();
+    }, 1500);
   } catch (error) {
-    console.error(
-      `Erro ao ${
-        statusFinal === "concluido" ? "concluir" : "não concluir"
-      } serviço:`,
-      error
-    );
-    let errorMessage = error.message;
-    if (errorMessage.startsWith("<!DOCTYPE"))
-      errorMessage = `Erro interno no servidor ao ${
-        statusFinal === "concluido" ? "concluir" : "não concluir"
-      } serviço`;
-    showToast(errorMessage, "danger");
+    console.error("Erro ao finalizar serviço:", error);
+    showToast(error.message, "danger");
   } finally {
-    if (btnSalvarFinalizacao) {
-      btnSalvarFinalizacao.disabled = false;
-      btnSalvarFinalizacao.innerHTML = originalBtnText;
-    }
+    btnSalvarFinalizacao.disabled = false;
+    btnSalvarFinalizacao.innerHTML = originalBtnText;
   }
 }
 
@@ -742,10 +752,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const btnSalvarFinalizacao = document.getElementById("btnSalvarFinalizacao");
   if (btnSalvarFinalizacao) {
-    btnSalvarFinalizacao.addEventListener("click", () => {
-      const statusFinal = document.getElementById("statusFinalServico").value;
-      submeterFinalizacaoServico(statusFinal);
-    });
+    btnSalvarFinalizacao.addEventListener("click", submeterFinalizacaoServico);
   }
 
   const btnConfirmarUploadAPR = document.getElementById(
@@ -824,16 +831,17 @@ document.addEventListener("DOMContentLoaded", function () {
             const col = document.createElement("div");
             col.className = "col-6 col-md-4 col-lg-3 mb-2";
             col.innerHTML = `
-                                <div class="preview-item position-relative">
-                                    <img src="${
-                                      event.target.result
-                                    }" alt="Preview ${
+                <div class="preview-item position-relative" id="preview-item-${index}">
+                    <img src="${event.target.result}" alt="Preview ${
               index + 1
             }" class="img-fluid rounded">
-                                    <button type="button" class="btn-remove position-absolute top-0 end-0 btn btn-sm btn-danger m-1" onclick="removerFotoPreview(${index})" style="line-height: 1; padding: 0.1rem 0.3rem;">
-                                        <span class="material-symbols-outlined" style="font-size: 0.8em;">close</span>
-                                    </button>
-                                </div>`;
+                    <button type="button" class="btn-remove position-absolute top-0 end-0 btn btn-sm btn-danger m-1" onclick="removerFotoPreview(${index})" style="line-height: 1; padding: 0.1rem 0.3rem;">
+                        <span class="material-symbols-outlined" style="font-size: 0.8em;">close</span>
+                    </button>
+                    <div class="upload-status-overlay d-none">
+                        <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+                    </div>
+                </div>`;
             previewContainer.appendChild(col);
           };
           reader.readAsDataURL(file);
