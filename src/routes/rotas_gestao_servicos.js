@@ -771,11 +771,9 @@ router.post(
   "/api/servicos/:id/concluir",
   autenticar,
   verificarNivel(3),
-  upload.array("fotos_conclusao", 5),
   async (req, res) => {
     const { id: servicoId } = req.params;
     const connection = await promisePool.getConnection();
-    let filePathsParaLimpeza = req.files ? req.files.map((f) => f.path) : [];
 
     try {
       await connection.beginTransaction();
@@ -789,7 +787,6 @@ router.post(
       const matricula = req.user?.matricula;
 
       if (!matricula) {
-        limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
         return res.status(400).json({
@@ -799,7 +796,6 @@ router.post(
       }
 
       if (status_final !== "concluido" && status_final !== "nao_concluido") {
-        limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
         return res.status(400).json({
@@ -813,7 +809,6 @@ router.post(
         [servicoId]
       );
       if (servicoExistenteRows.length === 0) {
-        limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
         return res
@@ -827,7 +822,6 @@ router.post(
       let motivoNaoConclusaoParaSalvar = null;
 
       if (!dataConclusao || !horaConclusao) {
-        limparArquivosTemporarios(req.files);
         await connection.rollback();
         connection.release();
         return res.status(400).json({
@@ -841,7 +835,6 @@ router.post(
         auditMessage = `Serviço ${servicoId} (${servicoExistente.processo}) concluído em ${dataHoraConclusaoParaSalvar}`;
       } else {
         if (!motivo_nao_conclusao || motivo_nao_conclusao.trim() === "") {
-          limparArquivosTemporarios(req.files);
           await connection.rollback();
           connection.release();
           return res.status(400).json({
@@ -871,53 +864,7 @@ router.post(
         ]
       );
 
-      if (req.files && req.files.length > 0) {
-        const nomeDaPastaParaAnexos =
-          await determinarNomePastaParaServicoExistente(connection, servicoId);
-        const diretorioDoProcesso = path.join(
-          __dirname,
-          "../../upload_arquivos",
-          nomeDaPastaParaAnexos
-        );
-        if (!fs.existsSync(diretorioDoProcesso)) {
-          fs.mkdirSync(diretorioDoProcesso, { recursive: true });
-        }
-
-        let processedFilePaths = [];
-        for (const file of req.files) {
-          const fileExt = path.extname(file.originalname).toLowerCase();
-          const newFilename = `${
-            status_final === "concluido"
-              ? "conclusao"
-              : "nao_conclusao_registro"
-          }_${Date.now()}${fileExt}`;
-          const novoPathCompleto = path.join(diretorioDoProcesso, newFilename);
-
-          await fsPromises.rename(file.path, novoPathCompleto);
-          processedFilePaths.push(file.path);
-
-          const tipoAnexo =
-            status_final === "concluido"
-              ? "foto_conclusao"
-              : "foto_nao_conclusao";
-          await connection.query(
-            `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tipo_anexo, tamanho) VALUES (?, ?, ?, ?, ?)`,
-            [
-              servicoId,
-              file.originalname,
-              `/api/upload_arquivos/${nomeDaPastaParaAnexos}/${newFilename}`,
-              tipoAnexo,
-              file.size,
-            ]
-          );
-        }
-        filePathsParaLimpeza = filePathsParaLimpeza.filter(
-          (p) => !processedFilePaths.includes(p)
-        );
-      }
-
       await connection.commit();
-      limparArquivosTemporarios(filePathsParaLimpeza);
 
       await registrarAuditoria(
         matricula,
@@ -928,23 +875,95 @@ router.post(
       );
       res.status(200).json({
         success: true,
-        message: `Serviço marcado como ${
+        message: `Informações do serviço marcadas como ${
           status_final === "concluido" ? "Concluído" : "Não Concluído"
-        } com sucesso`,
+        } com sucesso.`,
       });
     } catch (error) {
       await connection.rollback();
-      limparArquivosTemporarios(req.files);
-      console.error("Erro ao finalizar/não concluir serviço:", error);
+      console.error("Erro ao finalizar/não concluir serviço (info):", error);
       res.status(500).json({
         success: false,
-        message: "Erro interno ao processar serviço",
+        message: "Erro interno ao processar informações do serviço",
         error:
           process.env.NODE_ENV === "development"
             ? error.message
             : error.code === "WARN_DATA_TRUNCATED"
             ? "Tipo de anexo inválido."
             : undefined,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.post(
+  "/api/servicos/:servicoId/upload-foto-conclusao",
+  autenticar,
+  verificarNivel(3),
+  upload.single("foto_conclusao"),
+  async (req, res) => {
+    const { servicoId } = req.params;
+    const { status_final } = req.body;
+    const connection = await promisePool.getConnection();
+
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Nenhum arquivo enviado." });
+      }
+
+      await connection.beginTransaction();
+
+      const nomeDaPastaParaAnexos =
+        await determinarNomePastaParaServicoExistente(connection, servicoId);
+      const diretorioDoProcesso = path.join(
+        __dirname,
+        "../../upload_arquivos",
+        nomeDaPastaParaAnexos
+      );
+      if (!fs.existsSync(diretorioDoProcesso)) {
+        fs.mkdirSync(diretorioDoProcesso, { recursive: true });
+      }
+
+      const file = req.file;
+      const fileExt = path.extname(file.originalname).toLowerCase();
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const newFilename = `${
+        status_final === "concluido" ? "conclusao" : "nao_conclusao_registro"
+      }_${Date.now()}_${randomSuffix}${fileExt}`;
+      const novoPathCompleto = path.join(diretorioDoProcesso, newFilename);
+
+      await fsPromises.rename(file.path, novoPathCompleto);
+
+      const tipoAnexo =
+        status_final === "concluido" ? "foto_conclusao" : "foto_nao_conclusao";
+      await connection.query(
+        `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tipo_anexo, tamanho) VALUES (?, ?, ?, ?, ?)`,
+        [
+          servicoId,
+          file.originalname,
+          `/api/upload_arquivos/${nomeDaPastaParaAnexos}/${newFilename}`,
+          tipoAnexo,
+          file.size,
+        ]
+      );
+
+      await connection.commit();
+
+      res.status(201).json({
+        success: true,
+        message: `Arquivo ${file.originalname} enviado com sucesso.`,
+      });
+    } catch (error) {
+      await connection.rollback();
+      limparArquivosTemporarios(req.file);
+      console.error("Erro ao fazer upload de foto de conclusão:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erro interno ao processar o upload do arquivo.",
       });
     } finally {
       if (connection) connection.release();
