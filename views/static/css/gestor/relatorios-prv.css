@@ -1,43 +1,5 @@
-.hidden {
-  display: none !important;
-}
-
-.filters-card .card-body .filters-container {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  gap: 1rem;
-  align-items: flex-end;
-}
-
-.report-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.report-table thead th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.report-table tbody td {
-  vertical-align: middle;
-}
-
 .ocorrencias-box {
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  padding: 1rem;
-  font-size: 0.9rem;
-  white-space: pre-wrap;
-}
-
-@media (max-width: 768px) {
-  .filters-card .card-body .filters-container {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
+  white-space: pre-wrap; /* Mantém as quebras de linha do texto das ocorrências */
+  max-height: 200px;
+  overflow-y: auto;
 }

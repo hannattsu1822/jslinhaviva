@@ -14,6 +14,11 @@
 
 body {
   font-family: "Roboto", sans-serif;
+  background-color: #f8f9fa; /* Um fundo leve para a área de conteúdo */
+}
+
+.page-container {
+  display: flex;
 }
 
 .sidebar {
@@ -27,13 +32,8 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 1000;
-  transform: translateX(-100%);
   transition: transform var(--sidebar-transition-speed) ease-in-out;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.sidebar.open {
-  transform: translateX(0);
 }
 
 .sidebar-header {
@@ -49,7 +49,7 @@ body {
 }
 
 .user-icon {
-  font-size: 2.8rem;
+  font-size: 2.5rem;
   color: var(--sidebar-link-active-bg);
 }
 
@@ -97,9 +97,11 @@ body {
   border-left: 4px solid transparent;
 }
 
-.nav-link .material-symbols-outlined {
+.nav-link i {
   color: var(--sidebar-icon-color);
   transition: color 0.2s;
+  width: 24px; /* Garante alinhamento dos ícones */
+  text-align: center;
 }
 
 .nav-link:hover {
@@ -107,7 +109,7 @@ body {
   color: var(--sidebar-text-hover-color);
 }
 
-.nav-link:hover .material-symbols-outlined {
+.nav-link:hover i {
   color: var(--sidebar-text-hover-color);
 }
 
@@ -118,7 +120,7 @@ body {
   border-left-color: var(--sidebar-link-active-bg);
 }
 
-.nav-link.active .material-symbols-outlined {
+.nav-link.active i {
   color: var(--sidebar-link-active-bg);
 }
 
@@ -174,6 +176,7 @@ body {
   cursor: pointer;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   color: #333;
+  transition: left var(--sidebar-transition-speed) ease-in-out;
 }
 
 .sidebar-overlay {
@@ -195,6 +198,26 @@ body {
   visibility: visible;
 }
 
+/* === A CORREÇÃO PRINCIPAL ESTÁ AQUI === */
+
+.main-content {
+  width: 100%;
+  padding: 1.5rem;
+  transition: margin-left var(--sidebar-transition-speed) ease-in-out;
+}
+
+@media (max-width: 767.98px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .main-content {
+    margin-left: 0;
+  }
+}
+
 @media (min-width: 768px) {
   .sidebar {
     transform: translateX(0);
@@ -205,38 +228,6 @@ body {
   }
   .main-content {
     margin-left: var(--sidebar-width);
-  }
-}
-
-/* Adicione estas classes ao final do seu arquivo sidebar.css */
-
-.sidebar-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 998; /* Abaixo da sidebar */
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.sidebar-overlay.open {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* Em telas menores, a sidebar começa escondida */
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
-    z-index: 1000;
-  }
-
-  .sidebar.open {
-    transform: translateX(0);
+    width: calc(100% - var(--sidebar-width));
   }
 }
