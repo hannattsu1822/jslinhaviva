@@ -501,6 +501,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await carregarDetalhesServico();
 
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user && user.nivel <= 2) {
+      const btnEditar = document.getElementById("btn-editar");
+      const btnExcluir = document.getElementById("btn-excluir");
+
+      if (btnEditar) {
+        btnEditar.style.display = "none";
+      }
+      if (btnExcluir) {
+        btnExcluir.style.display = "none";
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao verificar nível de usuário para ajustar a UI.", e);
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const servicoId = urlParams.get("id");
 
