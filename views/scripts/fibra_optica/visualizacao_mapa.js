@@ -29,13 +29,23 @@ document.addEventListener("DOMContentLoaded", () => {
               map
             );
 
-            marker.bindPopup(`
-              <b>TAG:</b> ${ponto.tag}<br>
-              <b>Tipo:</b> ${ponto.tipo_ponto}<br>
-              <b>Altitude:</b> ${ponto.altitude || "N/A"} m<br>
-              <b>Coletor:</b> ${ponto.nome_coletor || "N/A"}<br>
-              <b>Data:</b> ${new Date(ponto.created_at).toLocaleString("pt-BR")}
-            `);
+            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${ponto.latitude},${ponto.longitude}`;
+
+            const popupContent = `
+              <div style="font-family: Arial, sans-serif; font-size: 14px;">
+                <b>Tipo:</b> ${ponto.tipo_ponto}<br>
+                <b>TAG:</b> ${ponto.tag}<br>
+                <b>Localização (UTM):</b><br>
+                <small>Easting: ${ponto.easting}</small><br>
+                <small>Northing: ${ponto.northing}</small>
+                <hr style="margin: 8px 0;">
+                <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm w-100">
+                  <i class="fa-solid fa-route me-2"></i>Criar Rota
+                </a>
+              </div>
+            `;
+
+            marker.bindPopup(popupContent);
 
             bounds.push([ponto.latitude, ponto.longitude]);
           }
