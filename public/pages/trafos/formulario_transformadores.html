@@ -13,6 +13,37 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
+    <style>
+      .form-group-obs {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #e0e0e0;
+      }
+      .obs-label {
+        font-size: 0.9em;
+        color: #555;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+      }
+      textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-family: "Poppins", sans-serif;
+        font-size: 0.95em;
+        resize: vertical;
+        min-height: 50px;
+      }
+      textarea:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+      }
+    </style>
   </head>
 
   <body>
@@ -98,6 +129,17 @@
             <button type="button" data-value="CORROSAO">Corrosão</button>
           </div>
           <input type="hidden" id="detalhes_tanque" name="detalhes_tanque" />
+          <div class="form-group-obs">
+            <label for="obs_detalhes_tanque" class="obs-label"
+              ><i class="fas fa-comment-dots"></i> Observações do Tanque:</label
+            >
+            <textarea
+              id="obs_detalhes_tanque"
+              name="obs_detalhes_tanque"
+              rows="2"
+              placeholder="Ex: Pequeno amassado na base..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-group" id="tipoCorrosaoGroup" style="display: none">
@@ -125,6 +167,18 @@
             </button>
           </div>
           <input type="hidden" id="buchas_primarias" name="buchas_primarias" />
+          <div class="form-group-obs">
+            <label for="obs_buchas_primarias" class="obs-label"
+              ><i class="fas fa-comment-dots"></i> Observações das Buchas
+              Primárias:</label
+            >
+            <textarea
+              id="obs_buchas_primarias"
+              name="obs_buchas_primarias"
+              rows="2"
+              placeholder="Ex: Vedação da bucha H1 ressecada..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-group">
@@ -146,6 +200,18 @@
             id="buchas_secundarias"
             name="buchas_secundarias"
           />
+          <div class="form-group-obs">
+            <label for="obs_buchas_secundarias" class="obs-label"
+              ><i class="fas fa-comment-dots"></i> Observações das Buchas
+              Secundárias:</label
+            >
+            <textarea
+              id="obs_buchas_secundarias"
+              name="obs_buchas_secundarias"
+              rows="2"
+              placeholder="Ex: Bucha X2 com folga na base..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-group">
@@ -161,6 +227,18 @@
             </button>
           </div>
           <input type="hidden" id="conectores" name="conectores" />
+          <div class="form-group-obs">
+            <label for="obs_conectores" class="obs-label"
+              ><i class="fas fa-comment-dots"></i> Observações dos
+              Conectores:</label
+            >
+            <textarea
+              id="obs_conectores"
+              name="obs_conectores"
+              rows="2"
+              placeholder="Ex: Parafuso do conector X1 faltando..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-group">
@@ -177,6 +255,18 @@
             id="avaliacao_bobina_i"
             name="avaliacao_bobina_i"
           />
+          <div class="form-group-obs">
+            <label for="obs_bobina_i" class="obs-label"
+              ><i class="fas fa-comment-dots"></i> Observações da Bobina
+              I:</label
+            >
+            <textarea
+              id="obs_bobina_i"
+              name="obs_bobina_i"
+              rows="2"
+              placeholder="Valores medidos, se aplicável..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-group">
@@ -193,6 +283,18 @@
             id="avaliacao_bobina_ii"
             name="avaliacao_bobina_ii"
           />
+          <div class="form-group-obs">
+            <label for="obs_bobina_ii" class="obs-label"
+              ><i class="fas fa-comment-dots"></i> Observações da Bobina
+              II:</label
+            >
+            <textarea
+              id="obs_bobina_ii"
+              name="obs_bobina_ii"
+              rows="2"
+              placeholder="Valores medidos, se aplicável..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-group">
@@ -209,6 +311,18 @@
             id="avaliacao_bobina_iii"
             name="avaliacao_bobina_iii"
           />
+          <div class="form-group-obs">
+            <label for="obs_bobina_iii" class="obs-label"
+              ><i class="fas fa-comment-dots"></i> Observações da Bobina
+              III:</label
+            >
+            <textarea
+              id="obs_bobina_iii"
+              name="obs_bobina_iii"
+              rows="2"
+              placeholder="Valores medidos, se aplicável..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-group">
@@ -257,8 +371,13 @@
         </div>
 
         <div class="form-group">
-          <label for="observacoes">Observações:</label>
-          <textarea id="observacoes" name="observacoes" rows="3"></textarea>
+          <label for="observacoes">Observações Gerais:</label>
+          <textarea
+            id="observacoes"
+            name="observacoes"
+            rows="3"
+            placeholder="Observações gerais sobre o checklist..."
+          ></textarea>
         </div>
 
         <button type="submit" id="submitButton">
