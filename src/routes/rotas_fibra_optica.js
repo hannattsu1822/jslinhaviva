@@ -526,6 +526,8 @@ router.get(
         f.latitude,
         f.longitude,
         f.altitude,
+        f.easting,
+        f.northing,
         f.created_at,
         u.nome as nome_coletor
       FROM fibra_maps f
