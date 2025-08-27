@@ -1,10 +1,43 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const proj4 = require("proj4");
 const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 const { promisePool, upload, projectRootDir } = require("../init");
 
 const router = express.Router();
+
+const convertUtmToLatLon = (easting, northing, utmZoneString) => {
+  if (!utmZoneString || !easting || !northing) {
+    throw new Error("Dados UTM incompletos para conversão.");
+  }
+
+  const zoneNumber = parseInt(utmZoneString, 10);
+  const zoneLetterMatch = utmZoneString.match(/[A-Za-z]/);
+
+  if (isNaN(zoneNumber) || !zoneLetterMatch) {
+    throw new Error(`Zona UTM inválida: ${utmZoneString}`);
+  }
+
+  const zoneLetter = zoneLetterMatch[0];
+  const isSouthernHemisphere = zoneLetter.toUpperCase() >= "N";
+
+  const utmProjection = `+proj=utm +zone=${zoneNumber} ${
+    isSouthernHemisphere ? "+south" : ""
+  } +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
+  const wgs84Projection = `+proj=longlat +datum=WGS84 +no_defs`;
+
+  try {
+    const [longitude, latitude] = proj4(utmProjection, wgs84Projection, [
+      parseFloat(easting),
+      parseFloat(northing),
+    ]);
+    return { latitude, longitude };
+  } catch (error) {
+    console.error("Erro na conversão de coordenadas:", error);
+    throw new Error("Erro interno ao converter coordenadas UTM.");
+  }
+};
 
 const salvarAnexosFibra = async (
   servicoId,
@@ -534,15 +567,27 @@ router.post(
 
       if (pontosMapa && Array.isArray(pontosMapa) && pontosMapa.length > 0) {
         const sqlInsertPonto =
-          "INSERT INTO fibra_maps (servico_id, tipo_ponto, tag, coordenada_x, coordenada_y, coletado_por_matricula) VALUES ?";
-        const values = pontosMapa.map((ponto) => [
-          servicoId,
-          ponto.tipo,
-          ponto.tag,
-          ponto.x,
-          ponto.y,
-          matriculaUsuario,
-        ]);
+          "INSERT INTO fibra_maps (servico_id, tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
+
+        const values = pontosMapa.map((ponto) => {
+          const { latitude, longitude } = convertUtmToLatLon(
+            ponto.easting,
+            ponto.northing,
+            ponto.utm_zone
+          );
+          return [
+            servicoId,
+            ponto.tipo,
+            ponto.tag,
+            ponto.utm_zone,
+            ponto.easting,
+            ponto.northing,
+            ponto.altitude,
+            latitude,
+            longitude,
+            matriculaUsuario,
+          ];
+        });
         await connection.query(sqlInsertPonto, [values]);
       }
 
@@ -669,15 +714,26 @@ router.post(
       await connection.beginTransaction();
 
       const sqlInsert =
-        "INSERT INTO fibra_maps (tipo_ponto, tag, coordenada_x, coordenada_y, coletado_por_matricula) VALUES ?";
+        "INSERT INTO fibra_maps (tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
 
-      const values = pontos.map((ponto) => [
-        ponto.tipo,
-        ponto.tag,
-        ponto.x,
-        ponto.y,
-        matriculaUsuario,
-      ]);
+      const values = pontos.map((ponto) => {
+        const { latitude, longitude } = convertUtmToLatLon(
+          ponto.easting,
+          ponto.northing,
+          ponto.utm_zone
+        );
+        return [
+          ponto.tipo,
+          ponto.tag,
+          ponto.utm_zone,
+          ponto.easting,
+          ponto.northing,
+          ponto.altitude,
+          latitude,
+          longitude,
+          matriculaUsuario,
+        ];
+      });
 
       await connection.query(sqlInsert, [values]);
 
