@@ -36,7 +36,7 @@ const convertUtmToLatLon = (easting, northing, utmZoneString) => {
       northingSanitized,
     ]);
     return { latitude, longitude };
-  } catch (error)
+  } catch (error) {
     console.error("Erro na conversão de coordenadas:", error);
     throw new Error("Erro interno ao converter coordenadas UTM.");
   }
