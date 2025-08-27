@@ -5,174 +5,180 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Serviços Concluídos - Fibra Óptica</title>
     
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/static/css/components/bootstrap-overrides.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
     <link rel="stylesheet" href="/static/css/components/sidebar.css" />
     <link rel="stylesheet" href="/static/css/fibra_optica/projetos_concluidos.css" />
 </head>
 <body>
-    <!-- Modais -->
-    <div id="apr-modal" class="modal-container hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Anexar APR ao Serviço <strong id="apr-service-id"></strong></h2>
-                <button class="modal-close-btn" aria-label="Fechar modal">&times;</button>
+    <div class="modal fade" id="apr-modal" tabindex="-1" aria-labelledby="aprModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aprModalLabel">Anexar APR ao Serviço <strong id="apr-service-id"></strong></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="apr-form">
+                    <div class="modal-body">
+                        <div class="file-drop-zone">
+                            <i class="fa-solid fa-upload fa-2x text-muted"></i>
+                            <p class="mt-2 mb-0">Arraste e solte os arquivos aqui, ou clique para selecionar.</p>
+                            <input type="file" id="apr-file-input" name="anexosAPR" multiple hidden>
+                        </div>
+                        <div id="apr-file-list-wrapper" class="mt-3" style="display: none;">
+                            <div id="apr-file-list" class="list-group"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-paperclip me-2"></i>Anexar
+                        </button>
+                    </div>
+                </form>
             </div>
-            <form id="apr-form">
-                <div class="modal-body">
-                    <div class="file-drop-zone">
-                        <span class="material-symbols-outlined">upload_file</span>
-                        <p>Arraste e solte os arquivos aqui, ou clique para selecionar.</p>
-                        <input type="file" id="apr-file-input" name="anexosAPR" multiple>
-                    </div>
-                    <div id="apr-file-list-wrapper">
-                        <div id="apr-file-list"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" id="btn-cancel-apr" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Anexar</button>
-                </div>
-            </form>
         </div>
     </div>
 
-    <div id="confirmation-modal" class="modal-container hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="confirmation-title" class="modal-title">Confirmar Ação</h2>
-            </div>
-            <div class="modal-body">
-                <p id="confirmation-message">Você tem certeza que deseja continuar?</p>
-            </div>
-            <div class="modal-footer">
-                <button id="btn-cancel-confirmation" class="btn btn-secondary">Cancelar</button>
-                <button id="btn-confirm-action" class="btn btn-danger">Confirmar</button>
+    <div class="modal fade" id="confirmation-modal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmation-title">Confirmar Ação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmation-message">Você tem certeza que deseja continuar?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btn-confirm-action" class="btn btn-danger">Confirmar</button>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="page-container">
-        <!-- CORREÇÃO: Adicionada a extensão .html -->
         <%- include('../../partials/sidebar.html') %>
 
         <main class="main-content">
             <header class="main-header">
                 <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
-                    <span class="material-symbols-outlined">menu</span>
+                    <i class="fa-solid fa-bars"></i>
                 </button>
                 <div class="header-content">
                     <h1 class="page-title">
-                        <span class="material-symbols-outlined">task_alt</span>
+                        <i class="fa-solid fa-check-double"></i>
                         Serviços Concluídos
                     </h1>
                 </div>
             </header>
 
-            <div class="filter-container">
-                <form class="filter-form" method="GET" action="/projetos_fibra_concluidos">
-                    <div class="filter-group">
-                        <% if (user.nivel >= 4) { %>
-                        <div class="form-group">
-                            <label for="encarregado">Encarregado</label>
-                            <select id="encarregado" name="encarregado">
-                                <option value="">Todos</option>
-                                <% encarregados.forEach(enc => { %>
-                                    <option value="<%= enc.matricula %>" <%= filtros.encarregado == enc.matricula ? 'selected' : '' %>><%= enc.nome %></option>
-                                <% }) %>
-                            </select>
-                        </div>
-                        <% } %>
-                        <div class="form-group">
-                            <label for="tipoOrdem">Tipo de Ordem</label>
-                            <select id="tipoOrdem" name="tipoOrdem">
-                                <option value="">Todos</option>
-                                <option value="ODI" <%= filtros.tipoOrdem == 'ODI' ? 'selected' : '' %>>ODI</option>
-                                <option value="ODD" <%= filtros.tipoOrdem == 'ODD' ? 'selected' : '' %>>ODD</option>
-                                <option value="ODS" <%= filtros.tipoOrdem == 'ODS' ? 'selected' : '' %>>ODS</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="status">Status</label>
-                            <select id="status" name="status">
-                                <option value="">Todos</option>
-                                <% statusOptions.forEach(opt => { %>
-                                    <option value="<%= opt %>" <%= filtros.status == opt ? 'selected' : '' %>><%= opt %></option>
-                                <% }) %>
-                            </select>
-                        </div>
+            <div class="container-fluid">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <form class="row g-3 align-items-end" method="GET" action="/projetos_fibra_concluidos">
+                            <% if (user.nivel >= 4) { %>
+                            <div class="col-md-3">
+                                <label for="encarregado" class="form-label">Encarregado</label>
+                                <select id="encarregado" name="encarregado" class="form-select">
+                                    <option value="">Todos</option>
+                                    <% encarregados.forEach(enc => { %>
+                                        <option value="<%= enc.matricula %>" <%= filtros.encarregado == enc.matricula ? 'selected' : '' %>><%= enc.nome %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <% } %>
+                            <div class="col-md-3">
+                                <label for="tipoOrdem" class="form-label">Tipo de Ordem</label>
+                                <select id="tipoOrdem" name="tipoOrdem" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="ODI" <%= filtros.tipoOrdem == 'ODI' ? 'selected' : '' %>>ODI</option>
+                                    <option value="ODD" <%= filtros.tipoOrdem == 'ODD' ? 'selected' : '' %>>ODD</option>
+                                    <option value="ODS" <%= filtros.tipoOrdem == 'ODS' ? 'selected' : '' %>>ODS</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select id="status" name="status" class="form-select">
+                                    <option value="">Todos</option>
+                                    <% statusOptions.forEach(opt => { %>
+                                        <option value="<%= opt %>" <%= filtros.status == opt ? 'selected' : '' %>><%= opt %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-flex">
+                                    <button type="submit" class="btn btn-primary flex-grow-1 me-2"><i class="fa-solid fa-filter me-2"></i>Filtrar</button>
+                                    <a href="/projetos_fibra_concluidos" class="btn btn-outline-secondary"><i class="fa-solid fa-eraser"></i></a>
+                                </div>
+                            </div>
+                        </form>
                     </div>
-                    <div class="filter-actions">
-                        <a href="/projetos_fibra_concluidos" class="btn btn-secondary">Limpar</a>
-                        <button type="submit" class="btn btn-primary">Filtrar</button>
-                    </div>
-                </form>
-            </div>
+                </div>
 
-            <div class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Processo</th>
-                            <th>Tipo</th>
-                            <th>Data Conclusão</th>
-                            <th>Encarregado</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (servicos && servicos.length > 0) { %>
-                            <% servicos.forEach(servico => { %>
-                                <tr data-servico-id="<%= servico.id %>">
-                                    <td data-label="Processo"><%= servico.processo %></td>
-                                    <td data-label="Tipo">
-                                        <% if (servico.tipo_ordem === 'ODI') { %> <span class="badge badge-odi">ODI</span> <% } %>
-                                        <% if (servico.tipo_ordem === 'ODD') { %> <span class="badge badge-odd">ODD</span> <% } %>
-                                        <% if (servico.tipo_ordem === 'ODS') { %> <span class="badge badge-ods">ODS</span> <% } %>
-                                    </td>
-                                    <td data-label="Data Conclusão"><%= new Date(servico.data_conclusao).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
-                                    <td data-label="Encarregado"><%= servico.nome_encarregado || 'N/A' %></td>
-                                    <td data-label="Status">
-                                        <% if (servico.status === 'Concluído') { %> <span class="badge status-concluido">Concluído</span> <% } %>
-                                        <% if (servico.status === 'Concluído com Pendência') { %> <span class="badge status-concluido-com-pendencia">Com Pendência</span> <% } %>
-                                        <% if (servico.status === 'Cancelado') { %> <span class="badge status-cancelado">Cancelado</span> <% } %>
-                                    </td>
-                                    <td data-label="Ações">
-                                        <div class="action-buttons">
-                                            <a href="/fibra/servico/<%= servico.id %>" class="btn-action" aria-label="Ver Detalhes">
-                                                <span class="material-symbols-outlined">visibility</span>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle data-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Processo</th>
+                                <th>Tipo</th>
+                                <th>Data Conclusão</th>
+                                <th>Encarregado</th>
+                                <th>Status</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (servicos && servicos.length > 0) { %>
+                                <% servicos.forEach(servico => { %>
+                                    <tr data-servico-id="<%= servico.id %>">
+                                        <td data-label="Processo"><%= servico.processo %></td>
+                                        <td data-label="Tipo"><span class="badge bg-secondary"><%= servico.tipo_ordem %></span></td>
+                                        <td data-label="Data Conclusão"><%= new Date(servico.data_conclusao).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) %></td>
+                                        <td data-label="Encarregado"><%= servico.nome_encarregado || 'N/A' %></td>
+                                        <td data-label="Status">
+                                            <% if (servico.status === 'Concluído') { %> <span class="badge bg-success">Concluído</span> <% } %>
+                                            <% if (servico.status === 'Concluído com Pendência') { %> <span class="badge bg-warning text-dark">Com Pendência</span> <% } %>
+                                            <% if (servico.status === 'Cancelado') { %> <span class="badge bg-danger">Cancelado</span> <% } %>
+                                        </td>
+                                        <td data-label="Ações" class="text-end">
+                                            <a href="/fibra/servico/<%= servico.id %>" class="btn btn-sm btn-outline-secondary" aria-label="Ver Detalhes">
+                                                <i class="fa-solid fa-eye"></i>
                                             </a>
-                                            <button class="btn-action btn-apr <%= servico.apr_count > 0 ? 'has-apr' : '' %>" aria-label="Anexar APR">
-                                                <span class="material-symbols-outlined">assignment_add</span>
+                                            <button class="btn btn-sm btn-outline-info btn-apr <%= servico.apr_count > 0 ? 'active' : '' %>" aria-label="Anexar APR">
+                                                <i class="fa-solid fa-file-signature"></i>
                                             </button>
                                             <% if (user.nivel >= 4) { %>
-                                            <button class="btn-action btn-reabrir" aria-label="Reabrir Serviço">
-                                                <span class="material-symbols-outlined">history</span>
+                                            <button class="btn btn-sm btn-outline-warning btn-reabrir" aria-label="Reabrir Serviço">
+                                                <i class="fa-solid fa-history"></i>
                                             </button>
                                             <% } %>
                                         </div>
                                     </td>
                                 </tr>
-                            <% }) %>
-                        <% } else { %>
-                            <tr>
-                                <td colspan="6" class="empty-state">
-                                    <span class="material-symbols-outlined">search_off</span>
-                                    <p>Nenhum serviço concluído encontrado.</p>
-                                </td>
-                            </tr>
-                        <% } %>
-                    </tbody>
-                </table>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center p-5">
+                                        <i class="fa-solid fa-search-minus fa-2x text-muted mb-2"></i>
+                                        <p class="mb-0">Nenhum serviço concluído encontrado.</p>
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
 
     <div id="toast-container"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
     <script src="/scripts/components/sidebar.js"></script>
     <script src="/scripts/utils/toast.js"></script>
     <script src="/scripts/fibra_optica/projetos_concluidos.js"></script>
