@@ -943,34 +943,34 @@ router.put(
   async (req, res) => {
     const { servicoId } = req.params;
     const { servico } = req;
-    if (servico.status !== "CONCLUIDO" && servico.status !== "CANCELADO") {
+
+    const statusPermitidosParaReabertura = [
+      "CONCLUIDO",
+      "CANCELADO",
+      "CONCLUIDO_COM_PENDENCIA",
+      "CONCLUIDO_COM_RESSALVAS",
+    ];
+    if (!statusPermitidosParaReabertura.includes(servico.status)) {
       return res.status(400).json({
-        message: `Serviço (Processo: ${servico.processo}) ${servico.status} não pode ser reaberto.`,
+        message: `Serviço (Processo: ${servico.processo}) com status ${servico.status} não pode ser reaberto.`,
       });
     }
+
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
+
       await connection.query(
         "UPDATE servicos_subestacoes SET status = 'EM_ANDAMENTO', data_conclusao = NULL, observacoes_conclusao = NULL WHERE id = ?",
         [servicoId]
       );
-      await connection.query(
-        "UPDATE servico_itens_escopo SET status_item_escopo = 'PENDENTE', data_conclusao_item = NULL, observacoes_conclusao_item = NULL WHERE servico_id = ? AND (status_item_escopo LIKE 'CONCLUIDO%')",
-        [servicoId]
-      );
 
-      const [itensDoServico] = await connection.query(
-        "SELECT id FROM servico_itens_escopo WHERE servico_id = ?",
+      await connection.query(
+        `UPDATE servico_itens_escopo 
+         SET status_item_escopo = 'PENDENTE', data_conclusao_item = NULL, observacoes_conclusao_item = NULL 
+         WHERE servico_id = ? AND status_item_escopo IN ('CONCLUIDO_COM_PENDENCIA', 'NAO_CONCLUIDO', 'CONCLUIDO_COM_RESSALVAS')`,
         [servicoId]
       );
-      if (itensDoServico.length > 0) {
-        const idsItens = itensDoServico.map((i) => i.id);
-        await connection.query(
-          "DELETE FROM servico_item_escopo_anexos WHERE item_escopo_id IN (?)",
-          [idsItens]
-        );
-      }
 
       if (req.user?.matricula) {
         await registrarAuditoria(
