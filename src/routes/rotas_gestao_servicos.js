@@ -31,7 +31,7 @@ function formatarTamanhoArquivo(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-router.get("/gestao-servicos", autenticar, verificarNivel(3), (req, res) => {
+router.get("/gestao-servicos", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/gestao_servico.html")
   );
@@ -52,7 +52,7 @@ router.get("/servicos_ativos", autenticar, verificarNivel(3), (req, res) => {
 router.get(
   "/servicos_concluidos",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(2),
   (req, res) => {
     res.sendFile(
       path.join(
@@ -63,7 +63,7 @@ router.get(
   }
 );
 
-router.get("/detalhes_servico", autenticar, verificarNivel(3), (req, res) => {
+router.get("/detalhes_servico", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/detalhes_servico.html")
   );
@@ -340,9 +340,11 @@ router.post(
   }
 );
 
-router.get("/api/servicos", autenticar, verificarNivel(3), async (req, res) => {
+router.get("/api/servicos", autenticar, verificarNivel(2), async (req, res) => {
   try {
     const { status } = req.query;
+    const userLevel = req.user.nivel;
+
     let query = `
             SELECT 
                 p.id, p.processo, p.data_prevista_execucao, p.desligamento, 
@@ -360,14 +362,25 @@ router.get("/api/servicos", autenticar, verificarNivel(3), async (req, res) => {
             LEFT JOIN users u ON p.responsavel_matricula = u.matricula
         `;
     const params = [];
+    let whereClauses = [];
+
     if (status) {
       if (status === "concluido") {
-        query += " WHERE p.status IN ('concluido', 'nao_concluido')";
+        whereClauses.push("p.status IN ('concluido', 'nao_concluido')");
       } else {
-        query += " WHERE p.status = ?";
+        whereClauses.push("p.status = ?");
         params.push(status);
       }
     }
+
+    if (userLevel <= 2) {
+      whereClauses.push("p.ordem_obra IN ('ODI', 'ODS')");
+    }
+
+    if (whereClauses.length > 0) {
+      query += " WHERE " + whereClauses.join(" AND ");
+    }
+
     query += " ORDER BY p.data_prevista_execucao ASC, p.id DESC";
     const [servicos] = await promisePool.query(query, params);
     res.status(200).json(servicos);
@@ -384,7 +397,7 @@ router.get("/api/servicos", autenticar, verificarNivel(3), async (req, res) => {
 router.get(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(2),
   async (req, res) => {
     const connection = await promisePool.getConnection();
     try {
@@ -1359,7 +1372,7 @@ async function preencherTemplateHtml(servicoData) {
 router.get(
   "/api/servicos/:id/consolidar-pdfs",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(2),
   async (req, res) => {
     const { id: servicoId } = req.params;
     const connection = await promisePool.getConnection();
