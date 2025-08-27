@@ -1,5 +1,3 @@
-// public/scripts/trafos/formulario_transformadores.js
-
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
   const numeroSerieFromURL = urlParams.get("numero_serie");
@@ -59,39 +57,48 @@ function setupButtonGroup(buttonGroup, hiddenInput, isSingleSelect = false) {
     }
   });
 
-  buttonGroup.addEventListener("click", (e) => {
-    if (e.target.tagName === "BUTTON") {
-      e.preventDefault(); // Prevenir comportamento padrão se o botão estiver em um form
-      const value = e.target.getAttribute("data-value");
+  const handleInteraction = (event) => {
+    if (event.target.tagName !== "BUTTON") {
+      return;
+    }
 
-      if (isSingleSelect) {
-        buttonGroup.querySelectorAll("button").forEach((btn) => {
-          btn.classList.remove("selected");
-        });
-        selectedOptions.clear();
-        selectedOptions.add(value);
-        e.target.classList.add("selected");
+    event.preventDefault();
+
+    const button = event.target;
+    const value = button.getAttribute("data-value");
+
+    if (isSingleSelect) {
+      buttonGroup.querySelectorAll("button").forEach((btn) => {
+        btn.classList.remove("selected");
+      });
+      selectedOptions.clear();
+
+      selectedOptions.add(value);
+      button.classList.add("selected");
+    } else {
+      if (selectedOptions.has(value)) {
+        selectedOptions.delete(value);
+        button.classList.remove("selected");
       } else {
-        if (selectedOptions.has(value)) {
-          selectedOptions.delete(value);
-          e.target.classList.remove("selected");
-        } else {
-          selectedOptions.add(value);
-          e.target.classList.add("selected");
-        }
-      }
-      hiddenInput.value = Array.from(selectedOptions).join(",");
-
-      if (hiddenInput.id === "detalhes_tanque") {
-        const tipoCorrosaoGroup = document.getElementById("tipoCorrosaoGroup");
-        if (tipoCorrosaoGroup) {
-          tipoCorrosaoGroup.style.display = selectedOptions.has("CORROSAO")
-            ? "block"
-            : "none";
-        }
+        selectedOptions.add(value);
+        button.classList.add("selected");
       }
     }
-  });
+
+    hiddenInput.value = Array.from(selectedOptions).join(",");
+
+    if (hiddenInput.id === "detalhes_tanque") {
+      const tipoCorrosaoGroup = document.getElementById("tipoCorrosaoGroup");
+      if (tipoCorrosaoGroup) {
+        tipoCorrosaoGroup.style.display = selectedOptions.has("CORROSAO")
+          ? "block"
+          : "none";
+      }
+    }
+  };
+
+  buttonGroup.addEventListener("click", handleInteraction);
+  buttonGroup.addEventListener("touchend", handleInteraction);
 }
 
 async function carregarResponsaveis() {
@@ -137,6 +144,16 @@ async function carregarSupervisores() {
 async function handleSubmitChecklistForm(event) {
   event.preventDefault();
 
+  const observacoes_secoes = {
+    tanque: document.getElementById("obs_detalhes_tanque").value,
+    buchas_primarias: document.getElementById("obs_buchas_primarias").value,
+    buchas_secundarias: document.getElementById("obs_buchas_secundarias").value,
+    conectores: document.getElementById("obs_conectores").value,
+    bobina_i: document.getElementById("obs_bobina_i").value,
+    bobina_ii: document.getElementById("obs_bobina_ii").value,
+    bobina_iii: document.getElementById("obs_bobina_iii").value,
+  };
+
   const formData = {
     numero_serie: document.getElementById("numero_serie").value,
     data_fabricacao: document.getElementById("ano_fabricacao").value
@@ -162,6 +179,7 @@ async function handleSubmitChecklistForm(event) {
       .value,
     matricula_supervisor: document.getElementById("matricula_supervisor").value,
     observacoes: document.getElementById("observacoes").value,
+    observacoes_secoes: observacoes_secoes,
   };
 
   const submitButton = document.getElementById("submitButton");
