@@ -319,6 +319,11 @@ function atualizarTabela() {
           dataFinalizacaoDisplay = formatarData(servico.data_conclusao);
         }
 
+        let reativarButtonHtml = "";
+        if (user && user.nivel > 2) {
+          reativarButtonHtml = `<button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${servico.id})" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>`;
+        }
+
         tr.innerHTML = `
           <td>${servico.id || "N/A"}</td>
           <td>${servico.processo || "Não informado"}</td>
@@ -342,9 +347,7 @@ function atualizarTabela() {
               <button class="btn btn-sm glass-btn btn-success me-1" onclick="solicitarRelatorioCompleto(${
                 servico.id
               })" title="Gerar Relatório Completo (PDF)"><span class="material-symbols-outlined">picture_as_pdf</span></button>
-              <button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${
-                servico.id
-              })" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>
+              ${reativarButtonHtml}
             </div>
           </td>`;
         elementos.tabela.appendChild(tr);
