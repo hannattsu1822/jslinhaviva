@@ -18,9 +18,9 @@ const convertUtmToLatLon = (easting, northing, utmZoneString) => {
   if (isNaN(zoneNumber) || !zoneLetterMatch) {
     throw new Error(`Zona UTM inválida: ${utmZoneString}`);
   }
-
+  
   const zoneLetter = zoneLetterMatch[0];
-  const isSouthernHemisphere = zoneLetter.toUpperCase() >= "N";
+  const isSouthernHemisphere = zoneLetter.toUpperCase() < "N";
 
   const utmProjection = `+proj=utm +zone=${zoneNumber} ${
     isSouthernHemisphere ? "+south" : ""
@@ -28,12 +28,15 @@ const convertUtmToLatLon = (easting, northing, utmZoneString) => {
   const wgs84Projection = `+proj=longlat +datum=WGS84 +no_defs`;
 
   try {
+    const eastingSanitized = parseFloat(String(easting).replace(",", "."));
+    const northingSanitized = parseFloat(String(northing).replace(",", "."));
+
     const [longitude, latitude] = proj4(utmProjection, wgs84Projection, [
-      parseFloat(easting),
-      parseFloat(northing),
+      eastingSanitized,
+      northingSanitized,
     ]);
     return { latitude, longitude };
-  } catch (error) {
+  } catch (error)
     console.error("Erro na conversão de coordenadas:", error);
     throw new Error("Erro interno ao converter coordenadas UTM.");
   }
@@ -568,21 +571,17 @@ router.post(
       if (pontosMapa && Array.isArray(pontosMapa) && pontosMapa.length > 0) {
         const sqlInsertPonto =
           "INSERT INTO fibra_maps (servico_id, tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
-
+        
         const values = pontosMapa.map((ponto) => {
-          const { latitude, longitude } = convertUtmToLatLon(
-            ponto.easting,
-            ponto.northing,
-            ponto.utm_zone
-          );
+          const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
           return [
             servicoId,
             ponto.tipo,
             ponto.tag,
             ponto.utm_zone,
-            ponto.easting,
-            ponto.northing,
-            ponto.altitude,
+            String(ponto.easting).replace(",", "."),
+            String(ponto.northing).replace(",", "."),
+            String(ponto.altitude).replace(",", "."),
             latitude,
             longitude,
             matriculaUsuario,
@@ -717,18 +716,14 @@ router.post(
         "INSERT INTO fibra_maps (tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
 
       const values = pontos.map((ponto) => {
-        const { latitude, longitude } = convertUtmToLatLon(
-          ponto.easting,
-          ponto.northing,
-          ponto.utm_zone
-        );
+        const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
         return [
           ponto.tipo,
           ponto.tag,
           ponto.utm_zone,
-          ponto.easting,
-          ponto.northing,
-          ponto.altitude,
+          String(ponto.easting).replace(",", "."),
+          String(ponto.northing).replace(",", "."),
+          String(ponto.altitude).replace(",", "."),
           latitude,
           longitude,
           matriculaUsuario,
