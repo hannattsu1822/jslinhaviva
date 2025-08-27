@@ -711,6 +711,7 @@ router.post(
       matricula_responsavel,
       matricula_supervisor,
       observacoes,
+      observacoes_secoes,
     } = req.body;
     if (
       !numero_serie ||
@@ -739,9 +740,13 @@ router.post(
       if (isReformado && data_reformado && /^\d{4}$/.test(data_reformado))
         dataReformadoFormatada = `${data_reformado}-01-01`;
 
+      const observacoesSecoesJSON = observacoes_secoes
+        ? JSON.stringify(observacoes_secoes)
+        : null;
+
       await promisePool.query(
-        `INSERT INTO checklist_transformadores (numero_serie, data_fabricacao, reformado, data_reformado, detalhes_tanque, corrosao_tanque, buchas_primarias, buchas_secundarias, conectores, avaliacao_bobina_i, avaliacao_bobina_ii, avaliacao_bobina_iii, conclusao, transformador_destinado, matricula_responsavel, supervisor_tecnico, observacoes, data_checklist) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        `INSERT INTO checklist_transformadores (numero_serie, data_fabricacao, reformado, data_reformado, detalhes_tanque, corrosao_tanque, buchas_primarias, buchas_secundarias, conectores, avaliacao_bobina_i, avaliacao_bobina_ii, avaliacao_bobina_iii, conclusao, transformador_destinado, matricula_responsavel, supervisor_tecnico, observacoes, observacoes_secoes, data_checklist) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           numero_serie,
           dataFabricacaoFormatada,
@@ -760,6 +765,7 @@ router.post(
           matricula_responsavel,
           matricula_supervisor,
           observacoes,
+          observacoesSecoesJSON,
         ]
       );
       await registrarAuditoria(
