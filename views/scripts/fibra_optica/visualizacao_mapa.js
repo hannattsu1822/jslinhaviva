@@ -1,71 +1,74 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const mapElement = document.getElementById('map');
+  const mapElement = document.getElementById("map");
   if (!mapElement) {
     console.error("Elemento do mapa não encontrado!");
     return;
   }
 
-  const map = L.map('map').setView([-14.235, -51.925], 5);
+  const map = L.map("map").setView([-14.235, -51.925], 5);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
+  // --- NOVA LÓGICA DE ÍCONES COM FONT AWESOME ---
   const getPontoIcon = (tipo) => {
-    let iconUrl = '/static/icons/default-marker.png';
-    let iconColorClass = '';
+    let iconName = "fa-question-circle"; // Ícone padrão
+    let markerColor = "gray"; // Cor padrão
 
     switch (tipo) {
-      case 'Cliente':
-        iconUrl = '/static/icons/cliente-marker.png';
-        iconColorClass = 'marker-cliente';
+      case "Cliente":
+        iconName = "fa-user";
+        markerColor = "blue";
         break;
-      case 'Caixa de Emenda':
-        iconUrl = '/static/icons/caixa-marker.png';
-        iconColorClass = 'marker-caixa';
+      case "Caixa de Emenda":
+        iconName = "fa-inbox";
+        markerColor = "darkred";
         break;
-      case 'Poste':
-        iconUrl = '/static/icons/poste-marker.png';
-        iconColorClass = 'marker-poste';
+      case "Poste":
+        iconName = "fa-bolt";
+        markerColor = "orange";
         break;
-      case 'Reserva':
-        iconUrl = '/static/icons/reserva-marker.png';
-        iconColorClass = 'marker-reserva';
+      case "Reserva":
+        iconName = "fa-circle-nodes";
+        markerColor = "green";
         break;
       default:
+        iconName = "fa-map-marker-alt";
+        markerColor = "cadetblue";
         break;
     }
 
-    return L.icon({
-      iconUrl: iconUrl,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32],
-      className: iconColorClass
+    return L.AwesomeMarkers.icon({
+      icon: iconName,
+      markerColor: markerColor,
+      prefix: "fa", // Usa a biblioteca Font Awesome
+      iconColor: "white",
     });
   };
 
   const fetchAndDrawPoints = async () => {
     try {
-      const response = await fetch('/api/fibra/todos-os-pontos');
+      const response = await fetch("/api/fibra/todos-os-pontos");
       if (!response.ok) {
-        throw new Error('Falha ao carregar os pontos do mapa.');
+        throw new Error("Falha ao carregar os pontos do mapa.");
       }
-      
+
       const pontos = await response.json();
 
       if (pontos.length > 0) {
         const bounds = [];
-        pontos.forEach(ponto => {
-          // --- CORREÇÃO APLICADA AQUI ---
-          // Converte as coordenadas de string para número antes de usar
+        pontos.forEach((ponto) => {
           const lat = parseFloat(ponto.latitude);
           const lon = parseFloat(ponto.longitude);
 
           if (!isNaN(lat) && !isNaN(lon)) {
             const customIcon = getPontoIcon(ponto.tipo_ponto);
-            const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
-            
+            const marker = L.marker([lat, lon], { icon: customIcon }).addTo(
+              map
+            );
+
             const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
 
             const popupContent = `
@@ -81,9 +84,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 </a>
               </div>
             `;
-            
+
             marker.bindPopup(popupContent);
-            
+
             bounds.push([lat, lon]);
           }
         });
@@ -96,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (error) {
       console.error(error);
-      showToast(error.message, 'error');
+      showToast(error.message, "error");
     }
   };
 
