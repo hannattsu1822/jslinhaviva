@@ -1,11 +1,7 @@
-<button class="sidebar-toggle-button" aria-label="Toggle sidebar">
-  <span class="material-symbols-outlined">menu</span>
-</button>
-
 <aside class="sidebar">
   <div class="sidebar-header">
     <div class="user-profile">
-      <span class="material-symbols-outlined user-icon">badge</span>
+      <i class="fa-solid fa-user-shield user-icon"></i>
       <div class="user-details">
         <h5 class="user-name"><%= user.nome %></h5>
         <p class="user-role"><%= user.cargo %></p>
@@ -17,67 +13,61 @@
     <ul class="nav-list">
       <li class="nav-item">
         <a href="/dashboard" class="nav-link"
-          ><span class="material-symbols-outlined">space_dashboard</span
-          >Dashboard Principal</a
+          ><i class="fa-solid fa-house"></i>Dashboard Principal</a
         >
       </li>
       <li class="nav-item">
         <a href="/subestacoes-dashboard" class="nav-link"
-          ><span class="material-symbols-outlined">electrical_services</span
-          >Subestações</a
+          ><i class="fa-solid fa-building-shield"></i>Subestações</a
         >
       </li>
       <li class="nav-item">
         <a href="/transformadores" class="nav-link"
-          ><span class="material-symbols-outlined">bolt</span>Transformadores</a
+          ><i class="fa-solid fa-bolt"></i>Transformadores</a
         >
       </li>
       <li class="nav-item">
         <a href="/frota" class="nav-link"
-          ><span class="material-symbols-outlined">local_shipping</span>Frota</a
+          ><i class="fa-solid fa-truck"></i>Frota</a
         >
       </li>
       <li class="nav-item">
         <a href="/gestao-servicos" class="nav-link"
-          ><span class="material-symbols-outlined">build_circle</span>Gestão de
-          Serviços</a
+          ><i class="fa-solid fa-circle-nodes"></i>Gestão de Serviços</a
         >
       </li>
       <li class="nav-item">
         <a href="/gestao-turmas" class="nav-link"
-          ><span class="material-symbols-outlined">groups</span>Gestão de
-          Turmas</a
+          ><i class="fa-solid fa-users"></i>Gestão de Turmas</a
         >
       </li>
       <li class="nav-item">
         <a href="/fibra-optica" class="nav-link"
-          ><span class="material-symbols-outlined">cable</span>Fibra Óptica</a
+          ><i class="fa-solid fa-network-wired"></i>Fibra Óptica</a
         >
       </li>
       <li class="nav-item">
         <a href="/inspecoes-redes" class="nav-link"
-          ><span class="material-symbols-outlined">cell_tower</span>Inspeções de
-          Redes</a
+          ><i class="fa-solid fa-tower-cell"></i>Inspeções de Redes</a
         >
       </li>
       <li class="nav-item">
         <a href="/avulsos-dashboard" class="nav-link"
-          ><span class="material-symbols-outlined">extension</span>Serviços
-          Avulsos</a
+          ><i class="fa-solid fa-puzzle-piece"></i>Serviços Avulsos</a
         >
       </li>
 
       <% if (user.nivel >= 4) { %>
       <li class="nav-item">
         <a href="/dashboard-gestor" class="nav-link">
-          <span class="material-symbols-outlined">admin_panel_settings</span>
+          <i class="fa-solid fa-user-gear"></i>
           Painel de Gestão
         </a>
       </li>
       <% } %> <% if (user.nivel >= 10) { %>
       <li class="nav-item">
         <a href="/auditoria" class="nav-link">
-          <span class="material-symbols-outlined">policy</span>
+          <i class="fa-solid fa-shield-halved"></i>
           Auditoria
         </a>
       </li>
@@ -91,13 +81,12 @@
       <span id="sidebar-time">--:--:--</span>
     </div>
     <button id="sidebar-logout-btn" class="btn-logout">
-      <span class="material-symbols-outlined">logout</span>
+      <i class="fa-solid fa-right-from-bracket"></i>
       Sair
     </button>
   </div>
 </aside>
 
-<!-- CORREÇÃO: Ação do formulário aponta para a rota correta da API -->
 <form
   id="logout-form"
   action="/api/logout"
