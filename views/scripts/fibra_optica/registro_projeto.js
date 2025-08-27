@@ -1,5 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const choiceModal = document.getElementById("choice-modal");
+  const choiceModalEl = document.getElementById("choice-modal");
+  const choiceModal = choiceModalEl
+    ? new bootstrap.Modal(choiceModalEl, {
+        backdrop: "static",
+        keyboard: false,
+      })
+    : null;
+
   const formContainer = document.getElementById("form-container");
   const form = document.getElementById("form-registro-servico");
 
@@ -10,9 +17,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const serviceTypeDisplay = document.getElementById("service-type-display");
   const processoInput = document.getElementById("processo");
-  const processoLabel = processoInput.previousElementSibling;
+  const processoLabel = document.querySelector('label[for="processo"]');
 
-  const fileDropZone = document.querySelector(".file-drop-zone"); // Seleciona a área clicável
+  const fileDropZone = document.querySelector(".file-drop-zone");
   const fileInput = document.getElementById("file-input");
   const fileListWrapper = document.getElementById("file-list-wrapper");
   const fileListContainer = document.getElementById("file-list");
@@ -22,14 +29,15 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentServiceType = null;
   let storedFiles = [];
 
-  // --- CORREÇÃO 3: Adicionando o event listener para o botão de anexo ---
+  if (choiceModal) {
+    choiceModal.show();
+  }
+
   if (fileDropZone && fileInput) {
-    // Abre o seletor de arquivos ao clicar na área
     fileDropZone.addEventListener("click", () => {
       fileInput.click();
     });
 
-    // Permite o uso do teclado para acessibilidade
     fileDropZone.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
@@ -61,17 +69,16 @@ document.addEventListener("DOMContentLoaded", () => {
     storedFiles.forEach((file, index) => {
       totalSize += file.size;
       const fileItem = document.createElement("div");
-      fileItem.className = "file-list-item";
+      fileItem.className =
+        "list-group-item d-flex justify-content-between align-items-center";
       fileItem.innerHTML = `
-                <div class="file-details">
-                    <span class="material-symbols-outlined">description</span>
-                    <span class="file-name">${file.name}</span>
-                    <span class="file-size">(${formatBytes(file.size)})</span>
-                </div>
-                <button type="button" class="remove-file-btn" data-index="${index}" aria-label="Remover arquivo">
-                    <span class="material-symbols-outlined">delete</span>
-                </button>
-            `;
+        <span>
+          <i class="fa-solid fa-file me-2"></i>
+          ${file.name}
+          <small class="text-muted ms-2">(${formatBytes(file.size)})</small>
+        </span>
+        <button type="button" class="btn-close" data-index="${index}" aria-label="Remover arquivo"></button>
+      `;
       fileListContainer.appendChild(fileItem);
     });
 
@@ -80,14 +87,14 @@ document.addEventListener("DOMContentLoaded", () => {
     fileSizeInfo.innerHTML = `<span>Tamanho total: <strong>${totalSizeMB} MB / ${limitMB} MB</strong></span>`;
 
     if (totalSize > MAX_TOTAL_SIZE) {
-      fileSizeInfo.classList.add("limit-exceeded");
+      fileSizeInfo.classList.add("text-danger");
       submitButton.disabled = true;
       showToast(
         `Tamanho total dos arquivos excede o limite de ${limitMB} MB.`,
         "error"
       );
     } else {
-      fileSizeInfo.classList.remove("limit-exceeded");
+      fileSizeInfo.classList.remove("text-danger");
       submitButton.disabled = false;
     }
   };
@@ -100,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   fileListContainer.addEventListener("click", (event) => {
-    const removeButton = event.target.closest(".remove-file-btn");
+    const removeButton = event.target.closest(".btn-close");
     if (removeButton) {
       const indexToRemove = parseInt(removeButton.dataset.index, 10);
       storedFiles.splice(indexToRemove, 1);
@@ -111,20 +118,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const setupFormForServiceType = (type) => {
     currentServiceType = type;
     const isNormal = type === "normal";
-    serviceTypeDisplay.textContent = isNormal ? "Normal" : "Emergencial";
-    processoInput.required = isNormal;
-
-    const requiredSpan = processoLabel.querySelector(".required");
-    if (requiredSpan) requiredSpan.remove();
 
     if (isNormal) {
-      const newSpan = document.createElement("span");
-      newSpan.className = "required";
-      newSpan.textContent = "*";
-      processoLabel.appendChild(newSpan);
+      serviceTypeDisplay.innerHTML =
+        '<span class="badge bg-primary">Normal</span>';
+    } else {
+      serviceTypeDisplay.innerHTML =
+        '<span class="badge bg-danger">Emergencial</span>';
     }
 
-    choiceModal.classList.add("hidden");
+    processoInput.required = isNormal;
+    processoLabel.classList.toggle("required", isNormal);
+
+    if (choiceModal) choiceModal.hide();
     formContainer.classList.remove("hidden");
   };
 
@@ -133,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
     form.reset();
     storedFiles = [];
     updateFileList();
-    choiceModal.classList.remove("hidden");
+    if (choiceModal) choiceModal.show();
     currentServiceType = null;
   };
 
@@ -150,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const originalButtonHTML = submitButton.innerHTML;
     submitButton.disabled = true;
-    submitButton.innerHTML = `<span class="material-symbols-outlined rotating">progress_activity</span> Salvando...`;
+    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...`;
 
     const formData = new FormData(form);
     formData.append("tipoGeracao", currentServiceType);

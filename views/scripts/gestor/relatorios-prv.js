@@ -22,13 +22,13 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const showLoading = (isLoading) => {
-    loadingMessage.classList.toggle("hidden", !isLoading);
+    if (loadingMessage) loadingMessage.classList.toggle("d-none", !isLoading);
   };
 
   const formatDateForDisplay = (dateString) => {
     if (!dateString) return "";
-    const [year, month, day] = dateString.split("-");
-    return `${day}/${month}/${year}`;
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(date);
   };
 
   const renderReport = (data) => {
@@ -44,12 +44,12 @@ document.addEventListener("DOMContentLoaded", () => {
     reportTableBody.innerHTML = "";
 
     if (registros.length === 0) {
-      reportTableBody.innerHTML = `<tr><td colspan="10" class="text-center">Nenhum registro encontrado para este período.</td></tr>`;
+      reportTableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">Nenhum registro encontrado para este período.</td></tr>`;
     } else {
       registros.forEach((r) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${r.dia ? formatDateForDisplay(r.dia.substring(0, 10)) : ""}</td>
+          <td>${r.dia ? formatDateForDisplay(r.dia) : ""}</td>
           <td>${r.saida_horario ? r.saida_horario.substring(0, 5) : ""}</td>
           <td>${r.saida_local || ""}</td>
           <td>${r.saida_km || ""}</td>
@@ -71,12 +71,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (todasOcorrencias) {
       ocorrenciasText.textContent = todasOcorrencias;
-      ocorrenciasContainer.classList.remove("hidden");
+      ocorrenciasContainer.classList.remove("d-none");
     } else {
-      ocorrenciasContainer.classList.add("hidden");
+      ocorrenciasContainer.classList.add("d-none");
     }
 
-    reportContainer.classList.remove("hidden");
+    reportContainer.classList.remove("d-none");
   };
 
   const loadInitialData = async () => {
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const veiculos = await response.json();
       veiculoSelect.innerHTML =
-        '<option value="">Selecione um veículo...</option>';
+        '<option value="" selected>Selecione um veículo...</option>';
       veiculos.forEach((v) => {
         veiculoSelect.innerHTML += `<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
       });
@@ -114,12 +114,14 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    currentState.veiculoId = veiculoId;
-    currentState.dataInicio = dataInicio;
-    currentState.dataFim = dataFim;
+    currentState = { veiculoId, dataInicio, dataFim };
 
     showLoading(true);
-    reportContainer.classList.add("hidden");
+    reportContainer.classList.add("d-none");
+
+    const originalButtonHTML = gerarRelatorioBtn.innerHTML;
+    gerarRelatorioBtn.disabled = true;
+    gerarRelatorioBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gerando...`;
 
     try {
       const response = await fetch(
@@ -132,6 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast(error.message, "error");
     } finally {
       showLoading(false);
+      gerarRelatorioBtn.disabled = false;
+      gerarRelatorioBtn.innerHTML = originalButtonHTML;
     }
   });
 

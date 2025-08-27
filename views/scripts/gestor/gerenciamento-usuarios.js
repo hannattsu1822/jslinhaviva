@@ -4,10 +4,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const addUserBtn = document.getElementById("add-user-btn");
   const paginationContainer = document.getElementById("pagination-container");
 
-  const modal = document.getElementById("user-modal");
+  const userModalEl = document.getElementById("user-modal");
+  const userModal = userModalEl ? new bootstrap.Modal(userModalEl) : null;
+
+  const confirmationModalEl = document.getElementById("confirmation-modal");
+  const confirmationModal = confirmationModalEl
+    ? new bootstrap.Modal(confirmationModalEl)
+    : null;
+
   const modalTitle = document.getElementById("modal-title");
-  const closeModalBtn = document.getElementById("close-modal-btn");
-  const cancelBtn = document.getElementById("cancel-btn");
   const saveBtn = document.getElementById("save-btn");
 
   const userForm = document.getElementById("user-form");
@@ -24,16 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const filtroNivel = document.getElementById("filtro-nivel");
   const clearFiltersBtn = document.getElementById("clear-filters-btn");
 
-  const confirmationModal = document.getElementById("confirmation-modal");
   const confirmationTitle = document.getElementById("confirmation-title");
   const confirmationMessage = document.getElementById("confirmation-message");
-  const confirmationCancelBtn = document.getElementById(
-    "confirmation-cancel-btn"
-  );
   const confirmationConfirmBtn = document.getElementById(
     "confirmation-confirm-btn"
   );
-  const toastContainer = document.getElementById("toast-container");
 
   let editingUserId = null;
   let currentPage = 1;
@@ -63,43 +63,22 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ nivelAtual }),
       }),
     deleteUser: (id) =>
-      fetch(`/api/gerenciamento/usuarios/${id}`, {
-        method: "DELETE",
-      }),
-  };
-
-  const showToast = (message, type = "success") => {
-    const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-    const icon = type === "success" ? "check_circle" : "error";
-    toast.innerHTML = `<span class="material-symbols-outlined toast-icon">${icon}</span> <p>${message}</p>`;
-    toastContainer.appendChild(toast);
-    setTimeout(() => toast.classList.add("show"), 10);
-    setTimeout(() => {
-      toast.classList.remove("show");
-      toast.addEventListener("transitionend", () => toast.remove());
-    }, 4000);
+      fetch(`/api/gerenciamento/usuarios/${id}`, { method: "DELETE" }),
   };
 
   const showConfirmation = (title, message, onConfirm) => {
     confirmationTitle.textContent = title;
     confirmationMessage.textContent = message;
     confirmCallback = onConfirm;
-    confirmationModal.classList.remove("hidden");
-  };
-
-  const hideConfirmation = () => {
-    confirmationModal.classList.add("hidden");
-    confirmCallback = null;
+    if (confirmationModal) confirmationModal.show();
   };
 
   confirmationConfirmBtn.addEventListener("click", () => {
     if (typeof confirmCallback === "function") {
       confirmCallback();
     }
-    hideConfirmation();
+    if (confirmationModal) confirmationModal.hide();
   });
-  confirmationCancelBtn.addEventListener("click", hideConfirmation);
 
   const openModal = (mode = "add", user = null) => {
     userForm.reset();
@@ -115,45 +94,54 @@ document.addEventListener("DOMContentLoaded", () => {
       editingUserId = null;
       modalTitle.textContent = "Adicionar Novo Usuário";
     }
-    modal.classList.remove("hidden");
-  };
-
-  const closeModal = () => {
-    modal.classList.add("hidden");
+    if (userModal) userModal.show();
   };
 
   const renderTable = (users) => {
     userTableBody.innerHTML = "";
     if (users.length === 0) {
-      loadingMessage.textContent =
-        "Nenhum usuário encontrado com os filtros aplicados.";
-      loadingMessage.style.display = "block";
+      const colCount =
+        userTableBody.previousElementSibling.querySelectorAll("th").length;
+      userTableBody.innerHTML = `<tr><td colspan="${colCount}" class="text-center p-5"><i class="fa-solid fa-user-slash fa-2x text-muted mb-2"></i><p>Nenhum usuário encontrado.</p></td></tr>`;
       return;
     }
-    loadingMessage.style.display = "none";
 
     users.forEach((user) => {
       const tr = document.createElement("tr");
       if (user.nivel === 0) {
-        tr.classList.add("desativado");
+        tr.classList.add("table-secondary", "text-muted");
       }
 
       const isAtivo = user.nivel > 0;
-      const toggleIcon = isAtivo ? "toggle_off" : "toggle_on";
+      const toggleIcon = isAtivo
+        ? "fa-solid fa-toggle-off"
+        : "fa-solid fa-toggle-on";
       const toggleTitle = isAtivo ? "Desativar" : "Ativar";
-      const toggleClass = isAtivo ? "" : "ativar";
+      const toggleClass = isAtivo ? "text-secondary" : "text-success";
 
       tr.innerHTML = `
-                <td>${user.nome}</td>
-                <td>${user.matricula}</td>
-                <td>${user.cargo}</td>
-                <td>${user.nivel}</td>
-                <td class="actions-column">
-                    <button class="action-btn toggle-status ${toggleClass}" data-user-id="${user.id}" data-user-nivel="${user.nivel}" title="${toggleTitle}"><span class="material-symbols-outlined">${toggleIcon}</span></button>
-                    <button class="action-btn edit" data-user-id="${user.id}" title="Editar"><span class="material-symbols-outlined">edit</span></button>
-                    <button class="action-btn delete" data-user-id="${user.id}" data-user-name="${user.nome}" title="Excluir"><span class="material-symbols-outlined">delete</span></button>
-                </td>
-            `;
+        <td>${user.nome}</td>
+        <td>${user.matricula}</td>
+        <td>${user.cargo}</td>
+        <td><span class="badge ${
+          isAtivo ? "bg-primary" : "bg-secondary"
+        }">Nível ${user.nivel}</span></td>
+        <td class="text-end">
+            <button class="btn btn-sm btn-outline-secondary toggle-status" data-user-id="${
+              user.id
+            }" data-user-nivel="${
+        user.nivel
+      }" title="${toggleTitle}"><i class="${toggleIcon} ${toggleClass}"></i></button>
+            <button class="btn btn-sm btn-outline-primary edit" data-user-id="${
+              user.id
+            }" title="Editar"><i class="fa-solid fa-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger delete" data-user-id="${
+              user.id
+            }" data-user-name="${
+        user.nome
+      }" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+        </td>
+      `;
       userTableBody.appendChild(tr);
     });
   };
@@ -162,40 +150,47 @@ document.addEventListener("DOMContentLoaded", () => {
     paginationContainer.innerHTML = "";
     if (totalPages <= 1) return;
 
-    const createButton = (text, page, isDisabled = false, isActive = false) => {
-      const button = document.createElement("button");
-      button.innerHTML = text;
-      button.className = "pagination-btn";
-      if (isDisabled) button.disabled = true;
-      if (isActive) button.classList.add("active");
-      button.addEventListener("click", () => {
-        if (!isDisabled) {
-          loadUsers(page);
-        }
+    const createPageItem = (
+      page,
+      text,
+      isDisabled = false,
+      isActive = false
+    ) => {
+      const li = document.createElement("li");
+      li.className = `page-item ${isDisabled ? "disabled" : ""} ${
+        isActive ? "active" : ""
+      }`;
+      const a = document.createElement("a");
+      a.className = "page-link";
+      a.href = "#";
+      a.innerHTML = text;
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!isDisabled) loadUsers(page);
       });
-      return button;
+      li.appendChild(a);
+      return li;
     };
 
-    paginationContainer.appendChild(
-      createButton("Anterior", currentPage - 1, currentPage === 1)
-    );
+    const ul = document.createElement("ul");
+    ul.className = "pagination justify-content-center";
 
+    ul.appendChild(
+      createPageItem(currentPage - 1, "&laquo;", currentPage === 1)
+    );
     for (let i = 1; i <= totalPages; i++) {
-      paginationContainer.appendChild(
-        createButton(i, i, false, i === currentPage)
-      );
+      ul.appendChild(createPageItem(i, i, false, i === currentPage));
     }
-
-    paginationContainer.appendChild(
-      createButton("Próximo", currentPage + 1, currentPage === totalPages)
+    ul.appendChild(
+      createPageItem(currentPage + 1, "&raquo;", currentPage === totalPages)
     );
+
+    paginationContainer.appendChild(ul);
   };
 
   const loadUsers = async (page = 1) => {
     currentPage = page;
-    loadingMessage.textContent = "Carregando usuários...";
-    loadingMessage.style.display = "block";
-    userTableBody.innerHTML = "";
+    userTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>`;
     paginationContainer.innerHTML = "";
 
     const params = new URLSearchParams({
@@ -210,8 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderTable(data.users);
       renderPagination(data.totalPages, data.currentPage);
     } catch (error) {
-      loadingMessage.textContent = "Erro ao carregar usuários.";
-      console.error(error);
+      userTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-5 text-danger">Erro ao carregar usuários.</td></tr>`;
     }
   };
 
@@ -232,8 +226,9 @@ document.addEventListener("DOMContentLoaded", () => {
       userData.senha = senhaInput.value;
     }
 
+    const originalButtonHTML = saveBtn.innerHTML;
     saveBtn.disabled = true;
-    saveBtn.textContent = "Salvando...";
+    saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...`;
 
     try {
       let response;
@@ -246,35 +241,32 @@ document.addEventListener("DOMContentLoaded", () => {
             "error"
           );
           saveBtn.disabled = false;
-          saveBtn.textContent = "Salvar";
+          saveBtn.innerHTML = originalButtonHTML;
           return;
         }
         response = await api.createUser(userData);
       }
 
       const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.message);
-      }
+      if (!response.ok) throw new Error(result.message);
 
       showToast(result.message, "success");
-      closeModal();
+      if (userModal) userModal.hide();
       loadUsers();
     } catch (error) {
       showToast(`Erro ao salvar: ${error.message}`, "error");
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = "Salvar";
+      saveBtn.innerHTML = originalButtonHTML;
     }
   };
 
   addUserBtn.addEventListener("click", () => openModal("add"));
-  closeModalBtn.addEventListener("click", closeModal);
-  cancelBtn.addEventListener("click", closeModal);
   saveBtn.addEventListener("click", handleSave);
 
-  filtroTermo.addEventListener("input", () => loadUsers(1));
-  filtroCargo.addEventListener("input", () => loadUsers(1));
+  [filtroTermo, filtroCargo].forEach((el) =>
+    el.addEventListener("input", () => loadUsers(1))
+  );
   filtroNivel.addEventListener("change", () => loadUsers(1));
 
   clearFiltersBtn.addEventListener("click", () => {
@@ -285,7 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   userTableBody.addEventListener("click", async (e) => {
-    const target = e.target.closest(".action-btn");
+    const target = e.target.closest(".btn");
     if (!target) return;
 
     const userId = target.dataset.userId;
@@ -293,9 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (target.classList.contains("edit")) {
       try {
         const userToEdit = await api.getUserById(userId);
-        if (userToEdit) {
-          openModal("edit", userToEdit);
-        }
+        if (userToEdit) openModal("edit", userToEdit);
       } catch (error) {
         showToast("Não foi possível carregar os dados do usuário.", "error");
       }
@@ -305,7 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const nivelAtual = target.dataset.userNivel;
       const acao = nivelAtual > 0 ? "desativar" : "ativar";
       showConfirmation(
-        `Confirmar ${acao}`,
+        `Confirmar ${acao.charAt(0).toUpperCase() + acao.slice(1)}`,
         `Tem certeza que deseja ${acao} este usuário?`,
         async () => {
           try {

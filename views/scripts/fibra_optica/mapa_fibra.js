@@ -9,12 +9,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const addMapPointRow = () => {
     const rowWrapper = document.createElement("div");
-    rowWrapper.className = "map-point-row";
+    rowWrapper.className = "map-point-row border rounded p-3 mb-4";
     rowWrapper.innerHTML = `
-      <div class="input-row">
-        <div class="input-group flex-2">
-          <label>Tipo de Ponto</label>
-          <select class="map-point-type" required>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Tipo de Ponto</label>
+          <select class="form-select map-point-type" required>
             <option value="" disabled selected>Selecione o Tipo</option>
             <option value="Reserva">Reserva</option>
             <option value="Poste">Poste</option>
@@ -23,63 +23,34 @@ document.addEventListener("DOMContentLoaded", () => {
             <option value="Outro">Outro</option>
           </select>
         </div>
-        <div class="input-group flex-1">
-          <label>TAG do Ponto</label>
-          <input type="text" class="map-point-tag" placeholder="Identificação" required>
+        <div class="col-md-6">
+          <label class="form-label">TAG do Ponto</label>
+          <input type="text" class="form-control map-point-tag" placeholder="Identificação do ponto" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Zona UTM</label>
+          <input type="text" class="form-control map-point-utm-zone" placeholder="Ex: 24L" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Coordenada Leste</label>
+          <input type="number" step="any" class="form-control map-point-easting" placeholder="Easting" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Coordenada Norte</label>
+          <input type="number" step="any" class="form-control map-point-northing" placeholder="Northing" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Elevação (m)</label>
+          <input type="number" step="any" class="form-control map-point-altitude" placeholder="Altitude" required>
         </div>
       </div>
-      <div class="input-row">
-        <div class="input-group">
-          <label>Latitude</label>
-          <input type="number" step="any" class="map-point-x" placeholder="-22.123456" required>
-        </div>
-      </div>
-      <div class="input-row">
-        <div class="input-group">
-          <label>Longitude</label>
-          <input type="number" step="any" class="map-point-y" placeholder="-45.123456" required>
-        </div>
-      </div>
-      <div class="input-row action-row">
-        <div class="input-group-buttons">
-          <button type="button" class="btn-get-coords" aria-label="Obter Coordenadas GPS">
-            <span class="material-symbols-outlined">my_location</span>
-            Obter GPS
-          </button>
-          <button type="button" class="btn-remove-point" aria-label="Remover Ponto">
-            <span class="material-symbols-outlined">delete</span>
-          </button>
-        </div>
+      <div class="d-flex justify-content-end mt-3">
+        <button type="button" class="btn btn-danger btn-sm btn-remove-point" aria-label="Remover Ponto">
+          <i class="fa-solid fa-trash-can"></i> Remover
+        </button>
       </div>
     `;
     mapPointsContainer.appendChild(rowWrapper);
-  };
-
-  const handleGetCoordinates = (button) => {
-    if (!navigator.geolocation) {
-      showToast("Geolocalização não é suportada por este navegador.", "error");
-      return;
-    }
-    button.disabled = true;
-    button.innerHTML = `<span class="material-symbols-outlined rotating">progress_activity</span>`;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const row = button.closest(".map-point-row");
-        row.querySelector(".map-point-x").value =
-          position.coords.latitude.toFixed(8);
-        row.querySelector(".map-point-y").value =
-          position.coords.longitude.toFixed(8);
-        showToast("Coordenadas obtidas com sucesso!", "success");
-        button.disabled = false;
-        button.innerHTML = `<span class="material-symbols-outlined">my_location</span> Obter GPS`;
-      },
-      (error) => {
-        showToast(`Erro ao obter GPS: ${error.message}`, "error");
-        button.disabled = false;
-        button.innerHTML = `<span class="material-symbols-outlined">my_location</span> Obter GPS`;
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   };
 
   const handleDeletePoint = async (pointId) => {
@@ -113,12 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   mapPointsContainer.addEventListener("click", (event) => {
     const removeButton = event.target.closest(".btn-remove-point");
-    const getCoordsButton = event.target.closest(".btn-get-coords");
     if (removeButton) {
       removeButton.closest(".map-point-row").remove();
-    }
-    if (getCoordsButton) {
-      handleGetCoordinates(getCoordsButton);
     }
   });
 
@@ -138,10 +105,13 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".map-point-row").forEach((row) => {
       const tipo = row.querySelector(".map-point-type").value;
       const tag = row.querySelector(".map-point-tag").value;
-      const x = row.querySelector(".map-point-x").value;
-      const y = row.querySelector(".map-point-y").value;
-      if (tipo && tag && x && y) {
-        pontosMapa.push({ tipo, tag, x, y });
+      const utm_zone = row.querySelector(".map-point-utm-zone").value;
+      const easting = row.querySelector(".map-point-easting").value;
+      const northing = row.querySelector(".map-point-northing").value;
+      const altitude = row.querySelector(".map-point-altitude").value;
+
+      if (tipo && tag && utm_zone && easting && northing && altitude) {
+        pontosMapa.push({ tipo, tag, utm_zone, easting, northing, altitude });
       }
     });
 
@@ -152,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const originalButtonHTML = submitButton.innerHTML;
     submitButton.disabled = true;
-    submitButton.innerHTML = `<span class="material-symbols-outlined rotating">progress_activity</span> Salvando...`;
+    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...`;
 
     try {
       const response = await fetch("/api/fibra/salvar-pontos-mapa", {

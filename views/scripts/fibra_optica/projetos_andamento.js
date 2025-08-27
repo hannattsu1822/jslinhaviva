@@ -1,9 +1,18 @@
 document.addEventListener("DOMContentLoaded", () => {
   const tableBody = document.querySelector(".data-table tbody");
 
-  const assignModal = document.getElementById("assign-modal");
-  const confirmationModal = document.getElementById("confirmation-modal");
-  const completionModal = document.getElementById("completion-modal");
+  const assignModalEl = document.getElementById("assign-modal");
+  const assignModal = assignModalEl ? new bootstrap.Modal(assignModalEl) : null;
+
+  const confirmationModalEl = document.getElementById("confirmation-modal");
+  const confirmationModal = confirmationModalEl
+    ? new bootstrap.Modal(confirmationModalEl)
+    : null;
+
+  const completionModalEl = document.getElementById("completion-modal");
+  const completionModal = completionModalEl
+    ? new bootstrap.Modal(completionModalEl)
+    : null;
 
   const encarregadoSelect = document.getElementById("encarregado-select");
   const assignServiceIdSpan = document.getElementById("assign-service-id");
@@ -32,26 +41,23 @@ document.addEventListener("DOMContentLoaded", () => {
   let confirmActionCallback = null;
   let completionFiles = [];
 
-  const showModal = (modal) => modal.classList.remove("hidden");
-  const hideModal = (modal) => modal.classList.add("hidden");
-
   const getFileIcon = (extension) => {
     const ext = extension.toLowerCase();
     if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
-      return "image";
+      return "fa-solid fa-file-image";
     switch (ext) {
       case "pdf":
-        return "picture_as_pdf";
+        return "fa-solid fa-file-pdf";
       case "doc":
       case "docx":
-        return "description";
+        return "fa-solid fa-file-word";
       case "xls":
       case "xlsx":
-        return "spreadsheet";
+        return "fa-solid fa-file-excel";
       case "txt":
-        return "article";
+        return "fa-solid fa-file-lines";
       default:
-        return "draft";
+        return "fa-solid fa-file";
     }
   };
 
@@ -78,13 +84,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const addMapPointRow = () => {
     const row = document.createElement("div");
-    row.className = "map-point-row";
+    row.className = "map-point-row border rounded p-3 mb-3";
     row.innerHTML = `
-      <div class="input-row">
-        <div class="input-group flex-2">
-          <label>Tipo de Ponto</label>
-          <select class="map-point-type" required>
-            <option value="" disabled selected>Selecione o Tipo</option>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Tipo de Ponto</label>
+          <select class="form-select map-point-type" required>
+            <option value="" disabled selected>Selecione...</option>
             <option value="Reserva">Reserva</option>
             <option value="Poste">Poste</option>
             <option value="Caixa de Emenda">Caixa de Emenda</option>
@@ -92,28 +98,31 @@ document.addEventListener("DOMContentLoaded", () => {
             <option value="Outro">Outro</option>
           </select>
         </div>
-        <div class="input-group flex-1">
-          <label>TAG do Ponto</label>
-          <input type="text" class="map-point-tag" placeholder="Identificação" required>
+        <div class="col-md-6">
+          <label class="form-label">TAG do Ponto</label>
+          <input type="text" class="form-control map-point-tag" placeholder="Identificação" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Zona UTM</label>
+          <input type="text" class="form-control map-point-utm-zone" placeholder="Ex: 24L" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Coordenada Leste</label>
+          <input type="number" step="any" class="form-control map-point-easting" placeholder="Easting" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Coordenada Norte</label>
+          <input type="number" step="any" class="form-control map-point-northing" placeholder="Northing" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Elevação (m)</label>
+          <input type="number" step="any" class="form-control map-point-altitude" placeholder="Altitude" required>
         </div>
       </div>
-      <div class="input-row">
-        <div class="input-group">
-          <label>Latitude</label>
-          <input type="number" step="any" class="map-point-x" placeholder="-22.123456" required>
-        </div>
-        <div class="input-group">
-          <label>Longitude</label>
-          <input type="number" step="any" class="map-point-y" placeholder="-45.123456" required>
-        </div>
-        <div class="input-group-buttons">
-          <button type="button" class="btn-get-coords" aria-label="Obter Coordenadas GPS">
-            <span class="material-symbols-outlined">my_location</span>
-          </button>
-          <button type="button" class="btn-remove-point" aria-label="Remover Ponto">
-            <span class="material-symbols-outlined">delete</span>
-          </button>
-        </div>
+      <div class="d-flex justify-content-end mt-2">
+        <button type="button" class="btn btn-danger btn-sm btn-remove-point" aria-label="Remover Ponto">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
       </div>
     `;
     mapPointsContainer.appendChild(row);
@@ -130,58 +139,31 @@ document.addEventListener("DOMContentLoaded", () => {
       const card = document.createElement("div");
       card.className = "file-preview-card";
       const extension = file.name.split(".").pop();
-      const fileType = getFileIcon(extension);
+      const fileTypeIcon = getFileIcon(extension);
       let previewHTML = "";
-      if (fileType === "image") {
+      if (fileTypeIcon === "fa-solid fa-file-image") {
         previewHTML = `<img src="${URL.createObjectURL(
           file
         )}" alt="Pré-visualização de ${file.name}">`;
       } else {
-        previewHTML = `<span class="material-symbols-outlined">${fileType}</span>`;
+        previewHTML = `<i class="${fileTypeIcon}"></i>`;
       }
       card.innerHTML = `
         <div class="file-preview-thumbnail">${previewHTML}</div>
         <div class="file-preview-info"><span class="file-preview-name">${file.name}</span></div>
         <button type="button" class="remove-file-btn" data-index="${index}" aria-label="Remover arquivo">
-            <span class="material-symbols-outlined">close</span>
+            <i class="fa-solid fa-xmark"></i>
         </button>
       `;
       completionFileListContainer.appendChild(card);
     });
   };
 
-  const handleGetCoordinates = (button) => {
-    if (!navigator.geolocation) {
-      showToast("Geolocalização não é suportada por este navegador.", "error");
-      return;
-    }
-    button.innerHTML = `<span class="material-symbols-outlined rotating">progress_activity</span>`;
-    button.disabled = true;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const row = button.closest(".map-point-row");
-        row.querySelector(".map-point-x").value =
-          position.coords.latitude.toFixed(8);
-        row.querySelector(".map-point-y").value =
-          position.coords.longitude.toFixed(8);
-        showToast("Coordenadas obtidas com sucesso!", "success");
-        button.innerHTML = `<span class="material-symbols-outlined">my_location</span>`;
-        button.disabled = false;
-      },
-      (error) => {
-        showToast(`Erro ao obter GPS: ${error.message}`, "error");
-        button.innerHTML = `<span class="material-symbols-outlined">my_location</span>`;
-        button.disabled = false;
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
   const handleAssignClick = (servicoId) => {
     currentServiceId = servicoId;
     assignServiceIdSpan.textContent = `#${servicoId}`;
     fetchEncarregados();
-    showModal(assignModal);
+    if (assignModal) assignModal.show();
   };
 
   const showConfirmation = (title, message, buttonClass, onConfirm) => {
@@ -189,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
     confirmationMessage.textContent = message;
     confirmActionButton.className = `btn ${buttonClass}`;
     confirmActionCallback = onConfirm;
-    showModal(confirmationModal);
+    if (confirmationModal) confirmationModal.show();
   };
 
   const handleConcluirClick = (servicoId) => {
@@ -204,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
     mapPointsContainer.innerHTML = "";
     completionFiles = [];
     updateCompletionFileList();
-    showModal(completionModal);
+    if (completionModal) completionModal.show();
   };
 
   const handleExcluirClick = (servicoId) => {
@@ -220,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const result = await response.json();
           if (!response.ok) throw new Error(result.message);
           showToast(result.message, "success");
-          hideModal(confirmationModal);
+          if (confirmationModal) confirmationModal.hide();
           window.location.reload();
         } catch (error) {
           showToast(error.message, "error");
@@ -247,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document
     .getElementById("btn-confirm-assign")
-    .addEventListener("click", async () => {
+    ?.addEventListener("click", async () => {
       const encarregadoMatricula = encarregadoSelect.value;
       if (!encarregadoMatricula) {
         showToast("Por favor, selecione um encarregado.", "error");
@@ -265,35 +247,33 @@ document.addEventListener("DOMContentLoaded", () => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.message);
         showToast(result.message, "success");
-        hideModal(assignModal);
+        if (assignModal) assignModal.hide();
         window.location.reload();
       } catch (error) {
         showToast(error.message, "error");
       }
     });
 
-  confirmActionButton.addEventListener("click", () => {
+  confirmActionButton?.addEventListener("click", () => {
     if (typeof confirmActionCallback === "function") {
       confirmActionCallback();
     }
   });
 
-  btnAddMapPoint.addEventListener("click", addMapPointRow);
+  btnAddMapPoint?.addEventListener("click", addMapPointRow);
 
-  mapPointsContainer.addEventListener("click", (event) => {
+  mapPointsContainer?.addEventListener("click", (event) => {
     const removeButton = event.target.closest(".btn-remove-point");
-    const getCoordsButton = event.target.closest(".btn-get-coords");
     if (removeButton) removeButton.closest(".map-point-row").remove();
-    if (getCoordsButton) handleGetCoordinates(getCoordsButton);
   });
 
-  completionFileInput.addEventListener("change", (event) => {
+  completionFileInput?.addEventListener("change", (event) => {
     completionFiles.push(...Array.from(event.target.files));
     updateCompletionFileList();
     event.target.value = "";
   });
 
-  completionFileListContainer.addEventListener("click", (event) => {
+  completionFileListContainer?.addEventListener("click", (event) => {
     const removeButton = event.target.closest(".remove-file-btn");
     if (removeButton) {
       const indexToRemove = parseInt(removeButton.dataset.index, 10);
@@ -302,7 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  completionForm.addEventListener("submit", async (event) => {
+  completionForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const pontosMapa = [];
@@ -311,9 +291,13 @@ document.addEventListener("DOMContentLoaded", () => {
       .forEach((row) => {
         const tipo = row.querySelector(".map-point-type").value;
         const tag = row.querySelector(".map-point-tag").value;
-        const x = row.querySelector(".map-point-x").value;
-        const y = row.querySelector(".map-point-y").value;
-        if (tipo && tag && x && y) pontosMapa.push({ tipo, tag, x, y });
+        const utm_zone = row.querySelector(".map-point-utm-zone").value;
+        const easting = row.querySelector(".map-point-easting").value;
+        const northing = row.querySelector(".map-point-northing").value;
+        const altitude = row.querySelector(".map-point-altitude").value;
+        if (tipo && tag && utm_zone && easting && northing && altitude) {
+          pontosMapa.push({ tipo, tag, utm_zone, easting, northing, altitude });
+        }
       });
 
     const formData = new FormData();
@@ -336,33 +320,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) throw new Error(result.message);
 
       showToast(result.message, "success");
-      hideModal(completionModal);
+      if (completionModal) completionModal.hide();
       window.location.reload();
     } catch (error) {
       showToast(error.message, "error");
     }
   });
-
-  assignModal
-    .querySelector(".modal-close-btn")
-    .addEventListener("click", () => hideModal(assignModal));
-  document
-    .getElementById("btn-cancel-assign")
-    .addEventListener("click", () => hideModal(assignModal));
-  confirmationModal
-    .querySelector(".modal-close-btn")
-    ?.addEventListener("click", () => hideModal(confirmationModal));
-  document
-    .getElementById("btn-cancel-confirmation")
-    .addEventListener("click", () => hideModal(confirmationModal));
-  completionModal
-    .querySelector(".modal-close-btn")
-    .addEventListener("click", () => hideModal(completionModal));
-  document
-    .getElementById("btn-cancel-completion")
-    .addEventListener("click", () => hideModal(completionModal));
-
-  const style = document.createElement("style");
-  style.innerHTML = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .rotating { animation: spin 1s linear infinite; }`;
-  document.head.appendChild(style);
 });

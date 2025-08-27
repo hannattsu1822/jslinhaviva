@@ -1,8 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
   const tableBody = document.querySelector(".data-table tbody");
 
-  const aprModal = document.getElementById("apr-modal");
-  const confirmationModal = document.getElementById("confirmation-modal");
+  const aprModalEl = document.getElementById("apr-modal");
+  const aprModal = aprModalEl ? new bootstrap.Modal(aprModalEl) : null;
+
+  const confirmationModalEl = document.getElementById("confirmation-modal");
+  const confirmationModal = confirmationModalEl
+    ? new bootstrap.Modal(confirmationModalEl)
+    : null;
 
   const aprForm = document.getElementById("apr-form");
   const aprServiceIdSpan = document.getElementById("apr-service-id");
@@ -17,9 +22,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentServiceId = null;
   let confirmActionCallback = null;
   let aprFiles = [];
-
-  const showModal = (modal) => modal.classList.remove("hidden");
-  const hideModal = (modal) => modal.classList.add("hidden");
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return "0 Bytes";
@@ -39,17 +41,16 @@ document.addEventListener("DOMContentLoaded", () => {
     aprFileListWrapper.style.display = "block";
     aprFiles.forEach((file, index) => {
       const fileItem = document.createElement("div");
-      fileItem.className = "file-list-item";
+      fileItem.className =
+        "list-group-item d-flex justify-content-between align-items-center";
       fileItem.innerHTML = `
-                <div class="file-details">
-                    <span class="material-symbols-outlined">description</span>
-                    <span class="file-name">${file.name}</span>
-                    <span class="file-size">(${formatBytes(file.size)})</span>
-                </div>
-                <button type="button" class="remove-file-btn" data-index="${index}" aria-label="Remover arquivo">
-                    <span class="material-symbols-outlined">delete</span>
-                </button>
-            `;
+        <span>
+          <i class="fa-solid fa-file-lines me-2"></i>
+          ${file.name}
+          <small class="text-muted ms-2">(${formatBytes(file.size)})</small>
+        </span>
+        <button type="button" class="btn-close" data-index="${index}" aria-label="Remover arquivo"></button>
+      `;
       aprFileListContainer.appendChild(fileItem);
     });
   };
@@ -59,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     confirmationMessage.textContent = message;
     confirmActionButton.className = `btn ${buttonClass}`;
     confirmActionCallback = onConfirm;
-    showModal(confirmationModal);
+    if (confirmationModal) confirmationModal.show();
   };
 
   const handleAprClick = (servicoId) => {
@@ -67,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     aprServiceIdSpan.textContent = `#${servicoId}`;
     aprFiles = [];
     updateAprFileList();
-    showModal(aprModal);
+    if (aprModal) aprModal.show();
   };
 
   const handleReabrirClick = (servicoId) => {
@@ -86,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!response.ok) throw new Error(result.message);
 
           showToast(result.message, "success");
-          hideModal(confirmationModal);
+          if (confirmationModal) confirmationModal.hide();
           window.location.reload();
         } catch (error) {
           showToast(error.message, "error");
@@ -111,20 +112,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  confirmActionButton.addEventListener("click", () => {
+  confirmActionButton?.addEventListener("click", () => {
     if (typeof confirmActionCallback === "function") {
       confirmActionCallback();
     }
   });
 
-  aprFileInput.addEventListener("change", (event) => {
+  aprFileInput?.addEventListener("change", (event) => {
     aprFiles.push(...Array.from(event.target.files));
     updateAprFileList();
     event.target.value = "";
   });
 
-  aprFileListContainer.addEventListener("click", (event) => {
-    const removeButton = event.target.closest(".remove-file-btn");
+  aprFileListContainer?.addEventListener("click", (event) => {
+    const removeButton = event.target.closest(".btn-close");
     if (removeButton) {
       const indexToRemove = parseInt(removeButton.dataset.index, 10);
       aprFiles.splice(indexToRemove, 1);
@@ -132,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  aprForm.addEventListener("submit", async (event) => {
+  aprForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (aprFiles.length === 0) {
       showToast("Por favor, selecione ao menos um arquivo.", "error");
@@ -143,6 +144,11 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("servicoId", currentServiceId);
     aprFiles.forEach((file) => formData.append("anexosAPR", file));
 
+    const submitButton = aprForm.querySelector('button[type="submit"]');
+    const originalButtonHTML = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Anexando...`;
+
     try {
       const response = await fetch("/api/fibra/upload-apr", {
         method: "POST",
@@ -152,20 +158,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) throw new Error(result.message);
 
       showToast(result.message, "success");
-      hideModal(aprModal);
+      if (aprModal) aprModal.hide();
       window.location.reload();
     } catch (error) {
       showToast(error.message, "error");
+    } finally {
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalButtonHTML;
     }
   });
-
-  aprModal
-    .querySelector(".modal-close-btn")
-    .addEventListener("click", () => hideModal(aprModal));
-  document
-    .getElementById("btn-cancel-apr")
-    .addEventListener("click", () => hideModal(aprModal));
-  document
-    .getElementById("btn-cancel-confirmation")
-    .addEventListener("click", () => hideModal(confirmationModal));
 });

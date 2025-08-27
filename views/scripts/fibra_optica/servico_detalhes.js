@@ -6,17 +6,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     switch (ext) {
       case "pdf":
-        return "picture_as_pdf";
+        return "fa-solid fa-file-pdf text-danger";
       case "doc":
       case "docx":
-        return "description";
+        return "fa-solid fa-file-word text-primary";
       case "xls":
       case "xlsx":
-        return "spreadsheet";
+        return "fa-solid fa-file-excel text-success";
       case "txt":
-        return "article";
+        return "fa-solid fa-file-lines text-secondary";
       default:
-        return "draft";
+        return "fa-solid fa-file text-muted";
     }
   };
 
@@ -34,11 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const img = document.createElement("img");
         img.src = fileUrl;
         img.alt = `Pré-visualização de ${filename}`;
+        img.className = "img-fluid";
         previewContainer.appendChild(img);
       } else {
-        const icon = document.createElement("span");
-        icon.className = "material-symbols-outlined";
-        icon.textContent = fileType;
+        const icon = document.createElement("i");
+        icon.className = `${fileType} fa-3x`;
         previewContainer.appendChild(icon);
       }
     });

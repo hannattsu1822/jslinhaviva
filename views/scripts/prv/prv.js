@@ -41,17 +41,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const limparFormulario = () => {
     prvForm.reset();
     hiddenRegistroIdInput.value = "";
-    document.getElementById("data_viagem").value = new Date().toISOString().slice(0, 10);
+    document.getElementById("data_viagem").value = new Date()
+      .toISOString()
+      .slice(0, 10);
     atualizarUiComEstado();
   };
 
   const preencherDadosAtuaisSaida = () => {
     const agora = new Date();
-    document.getElementById("data_viagem").value = agora.toISOString().slice(0, 10);
+    document.getElementById("data_viagem").value = agora
+      .toISOString()
+      .slice(0, 10);
     document.getElementById("saida_horario").value = agora
       .toTimeString()
       .slice(0, 5);
-    
     document.getElementById("saida_local").focus();
   };
 
@@ -65,29 +68,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const toggleFormFields = (tipo) => {
     const dataViagemInput = document.getElementById("data_viagem");
-
     if (tipo === "saida") {
-      saidaFields.style.display = "block";
-      chegadaFields.style.display = "none";
-      salvarBtn.textContent = "Salvar Saída";
+      saidaFields.classList.remove("d-none");
+      chegadaFields.classList.add("d-none");
+      salvarBtn.innerHTML =
+        '<i class="fa-solid fa-truck-fast me-2"></i>Salvar Saída';
       dataViagemInput.required = true;
     } else {
-      saidaFields.style.display = "none";
-      chegadaFields.style.display = "block";
-      salvarBtn.textContent = "Salvar Chegada";
+      saidaFields.classList.add("d-none");
+      chegadaFields.classList.remove("d-none");
+      salvarBtn.innerHTML =
+        '<i class="fa-solid fa-flag-checkered me-2"></i>Salvar Chegada';
       dataViagemInput.required = false;
     }
   };
 
   const atualizarUiComEstado = () => {
     const saidaKmInput = document.getElementById("saida_km");
-
     if (currentState.viagemAberta) {
       tipoLancamentoSaida.disabled = true;
       tipoLancamentoChegada.disabled = false;
       tipoLancamentoChegada.checked = true;
       toggleFormFields("chegada");
-
       const saida = currentState.viagemAberta;
       infoViagemAbertaEl.innerHTML = `
         <strong>Viagem em andamento:</strong><br>
@@ -97,15 +99,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }</strong> | Horário: <strong>${saida.saida_horario.substring(
         0,
         5
-      )}</strong>
-      `;
+      )}</strong>`;
       preencherDadosAtuaisChegada();
     } else {
       tipoLancamentoSaida.disabled = false;
       tipoLancamentoChegada.disabled = true;
       tipoLancamentoSaida.checked = true;
       toggleFormFields("saida");
-      
       if (currentState.ultimoKmRegistrado !== null) {
         saidaKmInput.value = currentState.ultimoKmRegistrado;
         saidaKmInput.readOnly = true;
@@ -118,48 +118,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  tipoLancamentoSaida.addEventListener("change", () =>
-    toggleFormFields("saida")
-  );
-  tipoLancamentoChegada.addEventListener("change", () =>
-    toggleFormFields("chegada")
+  [tipoLancamentoSaida, tipoLancamentoChegada].forEach((el) =>
+    el.addEventListener("change", (e) => toggleFormFields(e.target.value))
   );
 
   const renderTable = () => {
     prvTableBody.innerHTML = "";
     if (currentState.registros.length === 0) {
-      prvTableBody.innerHTML = `<tr><td colspan="7" class="text-center">Nenhum lançamento encontrado para este período.</td></tr>`;
+      prvTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-4">Nenhum lançamento encontrado.</td></tr>`;
       return;
     }
     currentState.registros.forEach((r) => {
       const kmPercorrido =
         r.chegada_km && r.saida_km ? r.chegada_km - r.saida_km : "N/A";
       const saidaInfo = `${r.saida_local || ""} <br><small class="text-muted">${
-        r.saida_horario || ""
+        r.saida_horario ? r.saida_horario.substring(0, 5) : ""
       } - ${r.saida_km || ""} KM</small>`;
       const chegadaInfo = `${
         r.chegada_local || ""
-      } <br><small class="text-muted">${r.chegada_horario || ""} - ${
-        r.chegada_km || ""
-      } KM</small>`;
+      } <br><small class="text-muted">${
+        r.chegada_horario ? r.chegada_horario.substring(0, 5) : ""
+      } - ${r.chegada_km || ""} KM</small>`;
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${r.dia}</td>
+        <td>${new Date(r.dia).toLocaleDateString("pt-BR", {
+          timeZone: "UTC",
+        })}</td>
         <td>${saidaInfo}</td>
         <td>${chegadaInfo}</td>
         <td>${kmPercorrido}</td>
         <td>${r.motorista_matricula}</td>
         <td>${r.tipo_servico || ""}</td>
         <td>
-          <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${
-            r.id
-          }" title="Editar" disabled>
-            <span class="material-symbols-outlined">edit</span>
-          </button>
           <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${
             r.id
           }" title="Excluir">
-            <span class="material-symbols-outlined">delete</span>
+            <i class="fa-solid fa-trash-can"></i>
           </button>
         </td>
       `;
@@ -173,21 +167,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const [statusRes, ultimoKmRes, registrosRes] = await Promise.all([
         fetch(`/api/prv/status?veiculoId=${veiculoId}`),
         fetch(`/api/prv/ultimo-km?veiculoId=${veiculoId}`),
-        fetch(`/api/prv/registros?veiculoId=${veiculoId}&mesAno=${mesAno}`)
+        fetch(`/api/prv/registros?veiculoId=${veiculoId}&mesAno=${mesAno}`),
       ]);
-
-      if (!statusRes.ok) throw new Error("Falha ao verificar status da viagem.");
-      if (!ultimoKmRes.ok) throw new Error("Falha ao buscar último KM.");
-      if (!registrosRes.ok) throw new Error("Falha ao carregar registros.");
-
+      if (!statusRes.ok || !ultimoKmRes.ok || !registrosRes.ok)
+        throw new Error("Falha ao carregar dados da planilha.");
       const viagemAberta = await statusRes.json();
       const { ultimoKm } = await ultimoKmRes.json();
       const registros = await registrosRes.json();
-
-      currentState.viagemAberta = viagemAberta;
-      currentState.ultimoKmRegistrado = ultimoKm;
-      currentState.registros = registros;
-
+      currentState = {
+        ...currentState,
+        viagemAberta,
+        ultimoKmRegistrado: ultimoKm,
+        registros,
+      };
       renderTable();
       atualizarUiComEstado();
     } catch (error) {
@@ -203,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error("Não foi possível carregar a lista de veículos.");
       const veiculos = await response.json();
       veiculoSelect.innerHTML =
-        '<option value="">Selecione um veículo...</option>';
+        '<option value="" selected>Selecione um veículo...</option>';
       veiculos.forEach((v) => {
         veiculoSelect.innerHTML += `<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
       });
@@ -227,19 +219,16 @@ document.addEventListener("DOMContentLoaded", () => {
       veiculoSelect.options[veiculoSelect.selectedIndex].text;
     infoVeiculoEl.textContent = currentState.veiculoTexto;
     const [ano, mes] = mesAno.split("-");
-    infoPeriodoEl.textContent = `Período de Referência: ${mes}/${ano}`;
-
+    infoPeriodoEl.textContent = `Período: ${mes}/${ano}`;
     modalInstance.hide();
-    infoPrvHeader.style.display = "block";
-    formContainer.style.display = "block";
-    tableContainer.style.display = "block";
-
+    infoPrvHeader.classList.remove("d-none");
+    formContainer.classList.remove("d-none");
+    tableContainer.classList.remove("d-none");
     carregarDadosPrv();
   });
 
   prvForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const tipoLancamento = document.querySelector(
       'input[name="tipoLancamento"]:checked'
     ).value;
@@ -269,52 +258,49 @@ document.addEventListener("DOMContentLoaded", () => {
       method = "PUT";
     }
 
+    const originalButtonHTML = salvarBtn.innerHTML;
+    salvarBtn.disabled = true;
+    salvarBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...`;
+
     try {
       const response = await fetch(url, {
-        method: method,
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message);
       showToast(result.message, "success");
-
       prvForm.reset();
       carregarDadosPrv();
     } catch (error) {
       showToast(error.message, "error");
+    } finally {
+      salvarBtn.disabled = false;
+      salvarBtn.innerHTML = originalButtonHTML;
     }
   });
 
   prvTableBody.addEventListener("click", async (e) => {
-    const target = e.target.closest("button");
+    const target = e.target.closest(".delete-btn");
     if (!target) return;
     const registroId = target.dataset.id;
 
-    if (target.classList.contains("edit-btn")) {
-      showToast(
-        "A funcionalidade de edição foi desativada temporariamente.",
-        "info"
-      );
-    }
-
-    if (target.classList.contains("delete-btn")) {
-      if (
-        confirm(
-          "Tem certeza que deseja excluir este lançamento completo (saída e chegada)?"
-        )
-      ) {
-        try {
-          const response = await fetch(`/api/prv/registros/${registroId}`, {
-            method: "DELETE",
-          });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.message);
-          showToast(result.message, "success");
-          carregarDadosPrv();
-        } catch (error) {
-          showToast(error.message, "error");
-        }
+    if (
+      confirm(
+        "Tem certeza que deseja excluir este lançamento completo (saída e chegada)?"
+      )
+    ) {
+      try {
+        const response = await fetch(`/api/prv/registros/${registroId}`, {
+          method: "DELETE",
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message);
+        showToast(result.message, "success");
+        carregarDadosPrv();
+      } catch (error) {
+        showToast(error.message, "error");
       }
     }
   });
