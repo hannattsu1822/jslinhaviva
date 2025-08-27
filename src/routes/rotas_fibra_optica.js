@@ -18,7 +18,7 @@ const convertUtmToLatLon = (easting, northing, utmZoneString) => {
   if (isNaN(zoneNumber) || !zoneLetterMatch) {
     throw new Error(`Zona UTM inválida: ${utmZoneString}`);
   }
-  
+
   const zoneLetter = zoneLetterMatch[0];
   const isSouthernHemisphere = zoneLetter.toUpperCase() < "N";
 
@@ -132,6 +132,17 @@ router.get("/mapa_fibra", autenticar, verificarNivel(3), async (req, res) => {
     res.status(500).send("Erro ao carregar a página do mapa.");
   }
 });
+
+router.get(
+  "/visualizacao_mapa_fibra",
+  autenticar,
+  verificarNivel(3),
+  (req, res) => {
+    res.render("pages/fibra_optica/visualizacao_mapa.html", {
+      user: req.session.user,
+    });
+  }
+);
 
 router.post(
   "/registro_projeto_fibra",
@@ -501,6 +512,34 @@ router.get(
   }
 );
 
+router.get(
+  "/api/fibra/todos-os-pontos",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [pontos] = await promisePool.query(`
+      SELECT 
+        f.id,
+        f.tipo_ponto,
+        f.tag,
+        f.latitude,
+        f.longitude,
+        f.altitude,
+        f.created_at,
+        u.nome as nome_coletor
+      FROM fibra_maps f
+      LEFT JOIN users u ON f.coletado_por_matricula = u.matricula
+      ORDER BY f.id DESC
+    `);
+      res.json(pontos);
+    } catch (error) {
+      console.error("Erro ao buscar todos os pontos de fibra:", error);
+      res.status(500).json({ message: "Erro interno ao buscar os pontos." });
+    }
+  }
+);
+
 router.post(
   "/api/fibra/atribuir-encarregado",
   autenticar,
@@ -571,9 +610,13 @@ router.post(
       if (pontosMapa && Array.isArray(pontosMapa) && pontosMapa.length > 0) {
         const sqlInsertPonto =
           "INSERT INTO fibra_maps (servico_id, tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
-        
+
         const values = pontosMapa.map((ponto) => {
-          const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
+          const { latitude, longitude } = convertUtmToLatLon(
+            ponto.easting,
+            ponto.northing,
+            ponto.utm_zone
+          );
           return [
             servicoId,
             ponto.tipo,
@@ -716,7 +759,11 @@ router.post(
         "INSERT INTO fibra_maps (tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
 
       const values = pontos.map((ponto) => {
-        const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
+        const { latitude, longitude } = convertUtmToLatLon(
+          ponto.easting,
+          ponto.northing,
+          ponto.utm_zone
+        );
         return [
           ponto.tipo,
           ponto.tag,
