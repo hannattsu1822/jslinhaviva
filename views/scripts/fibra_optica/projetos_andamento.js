@@ -3,16 +3,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const assignModalEl = document.getElementById("assign-modal");
   const assignModal = assignModalEl ? new bootstrap.Modal(assignModalEl) : null;
-
+  
   const confirmationModalEl = document.getElementById("confirmation-modal");
-  const confirmationModal = confirmationModalEl
-    ? new bootstrap.Modal(confirmationModalEl)
-    : null;
+  const confirmationModal = confirmationModalEl ? new bootstrap.Modal(confirmationModalEl) : null;
 
   const completionModalEl = document.getElementById("completion-modal");
-  const completionModal = completionModalEl
-    ? new bootstrap.Modal(completionModalEl)
-    : null;
+  const completionModal = completionModalEl ? new bootstrap.Modal(completionModalEl) : null;
 
   const encarregadoSelect = document.getElementById("encarregado-select");
   const assignServiceIdSpan = document.getElementById("assign-service-id");
@@ -104,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="col-md-3">
           <label class="form-label">Zona UTM</label>
-          <input type="text" class="form-control map-point-utm-zone" placeholder="Ex: 24L" required>
+          <input type="text" class="form-control map-point-utm-zone" placeholder="Ex: 24L" value="24L" required>
         </div>
         <div class="col-md-3">
           <label class="form-label">Coordenada Leste</label>
