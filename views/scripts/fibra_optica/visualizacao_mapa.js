@@ -12,6 +12,41 @@ document.addEventListener("DOMContentLoaded", () => {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
+  const getPontoIcon = (tipo) => {
+    let iconUrl = "/static/icons/default-marker.png"; // Ícone padrão
+    let iconColorClass = "";
+
+    switch (tipo) {
+      case "Cliente":
+        iconUrl = "/static/icons/cliente-marker.png";
+        iconColorClass = "marker-cliente"; // Classe para customização futura
+        break;
+      case "Caixa de Emenda":
+        iconUrl = "/static/icons/caixa-marker.png";
+        iconColorClass = "marker-caixa";
+        break;
+      case "Poste":
+        iconUrl = "/static/icons/poste-marker.png";
+        iconColorClass = "marker-poste";
+        break;
+      case "Reserva":
+        iconUrl = "/static/icons/reserva-marker.png";
+        iconColorClass = "marker-reserva";
+        break;
+      default:
+        // Usa o ícone padrão para 'Outro' ou tipos não definidos
+        break;
+    }
+
+    return L.icon({
+      iconUrl: iconUrl,
+      iconSize: [32, 32], // Tamanho do ícone
+      iconAnchor: [16, 32], // Ponto do ícone que corresponde à localização do marcador
+      popupAnchor: [0, -32], // Ponto a partir do qual o pop-up deve abrir
+      className: iconColorClass,
+    });
+  };
+
   const fetchAndDrawPoints = async () => {
     try {
       const response = await fetch("/api/fibra/todos-os-pontos");
@@ -25,9 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const bounds = [];
         pontos.forEach((ponto) => {
           if (ponto.latitude && ponto.longitude) {
-            const marker = L.marker([ponto.latitude, ponto.longitude]).addTo(
-              map
-            );
+            const customIcon = getPontoIcon(ponto.tipo_ponto);
+            const marker = L.marker([ponto.latitude, ponto.longitude], {
+              icon: customIcon,
+            }).addTo(map);
 
             const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${ponto.latitude},${ponto.longitude}`;
 
@@ -35,9 +71,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <div style="font-family: Arial, sans-serif; font-size: 14px;">
                 <b>Tipo:</b> ${ponto.tipo_ponto}<br>
                 <b>TAG:</b> ${ponto.tag}<br>
-                <b>Localização (UTM):</b><br>
-                <small>Easting: ${ponto.easting}</small><br>
-                <small>Northing: ${ponto.northing}</small>
+                <b>Localização (Lat/Lon):</b><br>
+                <small>Lat: ${ponto.latitude.toFixed(6)}</small><br>
+                <small>Lon: ${ponto.longitude.toFixed(6)}</small>
                 <hr style="margin: 8px 0;">
                 <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm w-100">
                   <i class="fa-solid fa-route me-2"></i>Criar Rota
