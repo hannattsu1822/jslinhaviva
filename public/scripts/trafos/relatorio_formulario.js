@@ -1,5 +1,3 @@
-// public/scripts/trafos/relatorio_formulario.js
-
 function tratarValor(valor) {
   return valor || "Não informado";
 }
@@ -15,28 +13,23 @@ function formatarValoresConcatenados(valor) {
 function formatarData(data, tipo = "completa", incluirHoras = false) {
   if (!data) return "Não informado";
 
-  // Se a API já envia no formato DD/MM/YYYY ou DD/MM/YYYY HH:MM:SS
   if (typeof data === "string" && data.match(/^\d{2}\/\d{2}\/\d{4}/)) {
     if (tipo === "ano" && data.length === 10) {
-      // Ex: "10/06/2025" -> "2025"
       return data.slice(6, 10);
     }
-    // Se for para incluir horas e já tem, ou se não for para incluir e já está sem, retorna como está
-    // Se for para incluir horas e não tem, ou não for para incluir e tem, a lógica abaixo cuida
     if (
       (incluirHoras && data.length > 10) ||
       (!incluirHoras && data.length === 10)
     ) {
       return data;
     }
-    // Se precisar adicionar/remover horas de um DD/MM/YYYY
   }
 
   let dateStringParaConverter = String(data);
   if (dateStringParaConverter.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    dateStringParaConverter += "T00:00:00Z"; // Garante interpretação UTC para YYYY-MM-DD
+    dateStringParaConverter += "T00:00:00Z";
   } else if (dateStringParaConverter.match(/^\d{4}$/) && tipo === "ano") {
-    return dateStringParaConverter; // Se for apenas ano e o tipo for "ano"
+    return dateStringParaConverter;
   }
 
   const dateObj = new Date(dateStringParaConverter);
@@ -95,9 +88,35 @@ async function carregarRelatorio() {
     }
     const data = await response.json();
 
-    // data.data_formulario_completa já vem formatada da API como DD/MM/YYYY HH:MM:SS
-    // data.data_entrada_almoxarifado_formatada e data_processamento_remessa_formatada já vêm como DD/MM/YYYY
-    // data.data_fabricacao_formatada e data_reformado_formatada já vêm como YYYY (ano)
+    let obsSecoes = {};
+    if (data.observacoes_secoes) {
+      try {
+        obsSecoes = JSON.parse(data.observacoes_secoes);
+      } catch (e) {
+        console.error("Erro ao decodificar observacoes_secoes JSON:", e);
+        obsSecoes = {};
+      }
+    }
+
+    const criarObsHtml = (key) => {
+      const obsTexto = obsSecoes[key];
+      if (obsTexto && obsTexto.trim() !== "") {
+        const textoFormatado = obsTexto
+          .trim()
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\n/g, "<br>");
+        return `
+          <div class="obs-secao">
+            <i class="fas fa-comment-dots"></i>
+            <p>${textoFormatado}</p>
+          </div>
+        `;
+      }
+      return "";
+    };
+
     relatorioContent.innerHTML = `
         <div class="divisao">
           <h2>Informações Gerais do Checklist</h2>
@@ -160,30 +179,61 @@ async function carregarRelatorio() {
         <div class="divisao">
           <h2>Avaliação do Checklist</h2>
           <div class="checklist-grid">
-            <div class="checklist-item"><i class="fas fa-box-open"></i><p><strong>Detalhes do Tanque:</strong> ${formatarValoresConcatenados(
-              data.detalhes_tanque
-            )}</p></div>
-            <div class="checklist-item"><i class="fas fa-flask"></i><p><strong>Corrosão do Tanque:</strong> ${tratarValor(
-              data.corrosao_tanque
-            )}</p></div>
-            <div class="checklist-item"><i class="fas fa-oil-can"></i><p><strong>Buchas Primárias:</strong> ${formatarValoresConcatenados(
-              data.buchas_primarias
-            )}</p></div>
-            <div class="checklist-item"><i class="fas fa-oil-can"></i><p><strong>Buchas Secundárias:</strong> ${formatarValoresConcatenados(
-              data.buchas_secundarias
-            )}</p></div>
-            <div class="checklist-item"><i class="fas fa-plug"></i><p><strong>Conectores:</strong> ${formatarValoresConcatenados(
-              data.conectores
-            )}</p></div>
-            <div class="checklist-item"><i class="fas fa-wave-square"></i><p><strong>Bobina I:</strong> ${tratarValor(
-              data.avaliacao_bobina_i
-            )}</p></div>
-            <div class="checklist-item"><i class="fas fa-wave-square"></i><p><strong>Bobina II:</strong> ${tratarValor(
-              data.avaliacao_bobina_ii
-            )}</p></div>
-            <div class="checklist-item"><i class="fas fa-wave-square"></i><p><strong>Bobina III:</strong> ${tratarValor(
-              data.avaliacao_bobina_iii
-            )}</p></div>
+            <div class="checklist-item">
+                <i class="fas fa-box-open"></i>
+                <p><strong>Detalhes do Tanque:</strong> ${formatarValoresConcatenados(
+                  data.detalhes_tanque
+                )}</p>
+                ${criarObsHtml("tanque")}
+            </div>
+            <div class="checklist-item">
+                <i class="fas fa-flask"></i>
+                <p><strong>Corrosão do Tanque:</strong> ${tratarValor(
+                  data.corrosao_tanque
+                )}</p>
+            </div>
+            <div class="checklist-item">
+                <i class="fas fa-oil-can"></i>
+                <p><strong>Buchas Primárias:</strong> ${formatarValoresConcatenados(
+                  data.buchas_primarias
+                )}</p>
+                ${criarObsHtml("buchas_primarias")}
+            </div>
+            <div class="checklist-item">
+                <i class="fas fa-oil-can"></i>
+                <p><strong>Buchas Secundárias:</strong> ${formatarValoresConcatenados(
+                  data.buchas_secundarias
+                )}</p>
+                ${criarObsHtml("buchas_secundarias")}
+            </div>
+            <div class="checklist-item">
+                <i class="fas fa-plug"></i>
+                <p><strong>Conectores:</strong> ${formatarValoresConcatenados(
+                  data.conectores
+                )}</p>
+                ${criarObsHtml("conectores")}
+            </div>
+            <div class="checklist-item">
+                <i class="fas fa-wave-square"></i>
+                <p><strong>Bobina I:</strong> ${tratarValor(
+                  data.avaliacao_bobina_i
+                )}</p>
+                ${criarObsHtml("bobina_i")}
+            </div>
+            <div class="checklist-item">
+                <i class="fas fa-wave-square"></i>
+                <p><strong>Bobina II:</strong> ${tratarValor(
+                  data.avaliacao_bobina_ii
+                )}</p>
+                ${criarObsHtml("bobina_ii")}
+            </div>
+            <div class="checklist-item">
+                <i class="fas fa-wave-square"></i>
+                <p><strong>Bobina III:</strong> ${tratarValor(
+                  data.avaliacao_bobina_iii
+                )}</p>
+                ${criarObsHtml("bobina_iii")}
+            </div>
           </div>
         </div>
         
@@ -203,7 +253,7 @@ async function carregarRelatorio() {
           data.observacoes
             ? `
           <div class="divisao">
-            <h2>Observações Adicionais</h2>
+            <h2>Observações Gerais</h2>
             <div class="relatorio-item observacoes-item">
               <i class="fas fa-comment-dots"></i>
               <p>${data.observacoes}</p>
