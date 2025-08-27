@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="col-md-3">
           <label class="form-label">Zona UTM</label>
-          <input type="text" class="form-control map-point-utm-zone" placeholder="Ex: 24L" required>
+          <input type="text" class="form-control map-point-utm-zone" placeholder="Ex: 24L" value="24L" required>
         </div>
         <div class="col-md-3">
           <label class="form-label">Coordenada Leste</label>
