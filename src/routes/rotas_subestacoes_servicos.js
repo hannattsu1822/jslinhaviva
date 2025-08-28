@@ -1470,7 +1470,7 @@ router.put(
 
 const playwright = require("playwright");
 
-async function processarImagensParaCaminhoLocal(anexos) {
+async function processarImagensParaUrlLocal(anexos) {
     if (!anexos || anexos.length === 0) {
         return [];
     }
@@ -1479,18 +1479,14 @@ async function processarImagensParaCaminhoLocal(anexos) {
     return imagens
         .map((img) => {
             if (!img.caminho_servidor) return null;
-            const caminhoRelativo = img.caminho_servidor.replace("/upload_arquivos_subestacoes/", "");
-            const caminhoFisico = path.join(uploadsSubestacoesDir, caminhoRelativo);
+            
+            const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
+            const imageUrl = new URL(img.caminho_servidor, serverUrl).href;
 
-            if (fs.existsSync(caminhoFisico)) {
-                return {
-                    src: `file://${caminhoFisico}`,
-                    nome: img.nome_original,
-                };
-            } else {
-                console.warn(`Arquivo de imagem não encontrado no caminho físico: ${caminhoFisico}`);
-                return null;
-            }
+            return {
+                src: imageUrl,
+                nome: img.nome_original,
+            };
         })
         .filter(Boolean);
 }
@@ -1541,7 +1537,7 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
     for (const item of servicoData.itens_escopo) {
       const statusTexto = (item.status_item_escopo || "PENDENTE").replace(/_/g, " ");
       const statusClasse = (item.status_item_escopo || "pendente").toLowerCase();
-      const imagensItemLocal = await processarImagensParaCaminhoLocal(item.anexos || []);
+      const imagensItemLocal = await processarImagensParaUrlLocal(item.anexos || []);
       const galeriaItemHtml = gerarGaleriaHtml(imagensItemLocal);
 
       itensEscopoHtml += `
@@ -1560,7 +1556,7 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
   }
 
   const anexosGerais = servicoData.anexos || [];
-  const galeriaAnexosGerais = gerarGaleriaHtml(await processarImagensParaCaminhoLocal(anexosGerais));
+  const galeriaAnexosGerais = gerarGaleriaHtml(await processarImagensParaUrlLocal(anexosGerais));
   
   const statusFinalTexto = (servicoData.status || "N/A").replace(/_/g, " ");
   const statusFinalClasse = (servicoData.status || "desconhecido").toLowerCase();
