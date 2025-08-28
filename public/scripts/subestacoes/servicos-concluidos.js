@@ -239,6 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
               <button class="btn text-info btn-ver-detalhes" data-id="${
                 serv.id
               }" title="Ver Relatório Final"><span class="material-symbols-outlined">visibility</span></button>
+              <button class="btn text-danger btn-gerar-relatorio" data-id="${
+                serv.id
+              }" title="Gerar Relatório PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button>
               <button class="btn text-warning btn-reabrir-servico" data-id="${
                 serv.id
               }" data-processo="${
@@ -257,6 +260,16 @@ document.addEventListener("DOMContentLoaded", () => {
           `/servicos/${e.currentTarget.dataset.id}/detalhes-concluido`,
           "_blank"
         )
+      );
+      tr.querySelector(".btn-gerar-relatorio")?.addEventListener(
+        "click",
+        (e) => {
+          const servicoId = e.currentTarget.dataset.id;
+          window.open(
+            `/api/servicos-subestacoes/${servicoId}/relatorio-pdf`,
+            "_blank"
+          );
+        }
       );
       tr.querySelector(".btn-reabrir-servico")?.addEventListener("click", (e) =>
         abrirModalReabrir(
