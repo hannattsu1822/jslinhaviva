@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const path = require("path");
-const fs = require("fs").promises;
+const fs = require("fs");
+const fsPromises = require("fs").promises;
 const {
   promisePool,
   upload,
@@ -384,7 +385,7 @@ router.post(
         "servicos",
         `servico_${String(novoServicoId)}`
       );
-      await fs.mkdir(servicoUploadDir, { recursive: true });
+      await fsPromises.mkdir(servicoUploadDir, { recursive: true });
 
       for (const file of arquivos) {
         const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
@@ -392,7 +393,7 @@ router.post(
           "_"
         )}`;
         const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-        await fs.rename(file.path, caminhoDestino);
+        await fsPromises.rename(file.path, caminhoDestino);
         arquivosMovidosComSucesso.push(caminhoDestino);
         const caminhoRelativoServidor = `servicos/servico_${novoServicoId}/${nomeUnicoArquivo}`;
 
@@ -443,7 +444,7 @@ router.post(
       await connection.rollback();
       for (const caminho of arquivosMovidosComSucesso) {
         try {
-          await fs.unlink(caminho);
+          await fsPromises.unlink(caminho);
         } catch (e) {}
       }
       if (arquivos?.length)
@@ -530,9 +531,11 @@ router.put(
               "public",
               anexo.caminho_servidor
             );
-            fs.unlink(fullPath).catch((err) =>
-              console.warn(`Falha ao deletar arquivo físico: ${fullPath}`)
-            );
+            fsPromises
+              .unlink(fullPath)
+              .catch((err) =>
+                console.warn(`Falha ao deletar arquivo físico: ${fullPath}`)
+              );
           }
         }
 
@@ -593,7 +596,7 @@ router.put(
         "servicos",
         `servico_${String(servicoId)}`
       );
-      await fs.mkdir(servicoUploadDir, { recursive: true });
+      await fsPromises.mkdir(servicoUploadDir, { recursive: true });
 
       for (const file of novosArquivos) {
         const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
@@ -601,7 +604,7 @@ router.put(
           "_"
         )}`;
         const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-        await fs.rename(file.path, caminhoDestino);
+        await fsPromises.rename(file.path, caminhoDestino);
         arquivosMovidosComSucesso.push(caminhoDestino);
         const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
 
@@ -648,7 +651,7 @@ router.put(
       await connection.rollback();
       for (const caminho of arquivosMovidosComSucesso) {
         try {
-          await fs.unlink(caminho);
+          await fsPromises.unlink(caminho);
         } catch (e) {}
       }
       res.status(500).json({
@@ -711,7 +714,7 @@ router.delete(
         "servicos",
         `servico_${String(servicoId)}`
       );
-      await fs
+      await fsPromises
         .rm(servicoUploadDir, { recursive: true, force: true })
         .catch((err) => {
           if (err.code !== "ENOENT")
@@ -1113,7 +1116,7 @@ router.post(
         "servicos",
         `servico_${String(servicoId)}`
       );
-      await fs.mkdir(servicoUploadDir, { recursive: true });
+      await fsPromises.mkdir(servicoUploadDir, { recursive: true });
 
       for (const file of arquivos) {
         const nomeUnicoArquivo = `${Date.now()}_POST_${file.originalname.replace(
@@ -1121,7 +1124,7 @@ router.post(
           "_"
         )}`;
         const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-        await fs.rename(file.path, caminhoDestino);
+        await fsPromises.rename(file.path, caminhoDestino);
         arquivosMovidosComSucesso.push(caminhoDestino);
 
         const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
@@ -1145,7 +1148,7 @@ router.post(
       await connection.rollback();
       for (const caminho of arquivosMovidosComSucesso) {
         try {
-          await fs.unlink(caminho);
+          await fsPromises.unlink(caminho);
         } catch (e) {}
       }
       res.status(500).json({
@@ -1184,7 +1187,7 @@ router.post(
         "servicos",
         `servico_${String(servicoId)}`
       );
-      await fs.mkdir(servicoUploadDir, { recursive: true });
+      await fsPromises.mkdir(servicoUploadDir, { recursive: true });
 
       for (const file of arquivos) {
         const nomeUnicoArquivo = `${Date.now()}_APR_${file.originalname.replace(
@@ -1192,7 +1195,7 @@ router.post(
           "_"
         )}`;
         const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-        await fs.rename(file.path, caminhoDestino);
+        await fsPromises.rename(file.path, caminhoDestino);
         arquivosMovidosComSucesso.push(caminhoDestino);
 
         const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
@@ -1222,7 +1225,7 @@ router.post(
       await connection.rollback();
       for (const caminho of arquivosMovidosComSucesso) {
         try {
-          await fs.unlink(caminho);
+          await fsPromises.unlink(caminho);
         } catch (e) {}
       }
       res.status(500).json({
@@ -1267,7 +1270,7 @@ router.delete(
           anexo.caminho_servidor
         );
         try {
-          await fs.unlink(fullPath);
+          await fsPromises.unlink(fullPath);
         } catch (err) {
           if (err.code !== "ENOENT") {
             console.warn(
@@ -1367,7 +1370,7 @@ router.put(
           `servico_${String(servico_id)}`,
           "itens_conclusao"
         );
-        await fs.mkdir(itemAnexoDir, { recursive: true });
+        await fsPromises.mkdir(itemAnexoDir, { recursive: true });
 
         for (const file of arquivosConclusao) {
           const nomeUnicoArq = `${Date.now()}_ITEM${itemEscopoId}_${file.originalname.replace(
@@ -1375,7 +1378,7 @@ router.put(
             "_"
           )}`;
           const finalPath = path.join(itemAnexoDir, nomeUnicoArq);
-          await fs.rename(file.path, finalPath);
+          await fsPromises.rename(file.path, finalPath);
           arquivosMovidosComSucesso.push(finalPath);
 
           const caminhoRelServ = `servicos/servico_${servico_id}/itens_conclusao/${nomeUnicoArq}`;
@@ -1460,6 +1463,253 @@ router.put(
       res.status(500).json({
         message: "Erro interno ao atualizar o status do item.",
         detalhes: error.message,
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+const playwright = require("playwright");
+
+async function processarImagensParaBase64(imagens) {
+  const imagensProcessadas = await Promise.all(
+    imagens.map(async (img) => {
+      if (!img.caminho_servidor) return null;
+      const caminhoRelativo = img.caminho_servidor.replace(
+        "/upload_arquivos_subestacoes/",
+        ""
+      );
+      const caminhoFisico = path.join(
+        projectRootDir,
+        "public/upload_arquivos_subestacoes",
+        caminhoRelativo
+      );
+
+      if (fs.existsSync(caminhoFisico)) {
+        try {
+          const buffer = await fsPromises.readFile(caminhoFisico);
+          const ext = path.extname(img.nome_original).substring(1);
+          return {
+            src: `data:image/${ext};base64,${buffer.toString("base64")}`,
+            nome: img.nome_original,
+          };
+        } catch (e) {
+          console.error(`Erro ao ler o arquivo de imagem: ${caminhoFisico}`, e);
+          return null;
+        }
+      }
+      return null;
+    })
+  );
+  return imagensProcessadas.filter(Boolean);
+}
+
+function gerarGaleriaHtml(imagens) {
+  if (!imagens || imagens.length === 0) {
+    return '<p class="no-content">Nenhuma imagem encontrada.</p>';
+  }
+  let galleryHtml = "";
+  for (let i = 0; i < imagens.length; i += 4) {
+    const chunk = imagens.slice(i, i + 4);
+    galleryHtml += '<div class="photo-grid-container">';
+    galleryHtml += '<div class="photo-grid-4">';
+    chunk.forEach((img) => {
+      galleryHtml += `
+        <div class="gallery-item">
+            <img src="${img.src}" alt="${img.nome}">
+            <p class="caption">${img.nome}</p>
+        </div>`;
+    });
+    galleryHtml += "</div></div>";
+  }
+  return galleryHtml;
+}
+
+async function preencherTemplateHtmlServicoSubestacao(servicoData) {
+  const templatePath = path.join(
+    projectRootDir,
+    "public/pages/templates/relatorio_servico_subestacao.html"
+  );
+  let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
+
+  const formatarData = (dataStr) => {
+    if (!dataStr) return "N/A";
+    const dataObj = new Date(dataStr);
+    return isNaN(dataObj.getTime())
+      ? "Data inválida"
+      : new Date(
+          dataObj.getTime() + dataObj.getTimezoneOffset() * 60000
+        ).toLocaleDateString("pt-BR");
+  };
+
+  const formatarHora = (horaStr) => {
+    if (!horaStr || typeof horaStr !== "string") return "N/A";
+    return horaStr.substring(0, 5);
+  };
+
+  let itensEscopoHtml = "";
+  if (servicoData.itens_escopo && servicoData.itens_escopo.length > 0) {
+    for (const item of servicoData.itens_escopo) {
+      const statusTexto = (item.status_item_escopo || "PENDENTE").replace(
+        /_/g,
+        " "
+      );
+      const statusClasse = (
+        item.status_item_escopo || "pendente"
+      ).toLowerCase();
+      const imagensItemBase64 = await processarImagensParaBase64(
+        item.anexos || []
+      );
+      const galeriaItemHtml = gerarGaleriaHtml(imagensItemBase64);
+
+      itensEscopoHtml += `
+        <div class="item-card">
+          <p class="item-card-header">${item.descricao_item_servico}</p>
+          <div class="item-card-details">
+            <p><strong>TAG:</strong> ${
+              item.tag_equipamento_alvo || "N/A"
+            } | <strong>Encarregado:</strong> ${
+        item.encarregado_item_nome || "N/A"
+      } | <strong>Status:</strong> <span class="status-badge status-${statusClasse}">${statusTexto}</span></p>
+            ${
+              item.observacoes_conclusao_item
+                ? `<p><strong>Obs. Conclusão:</strong> ${item.observacoes_conclusao_item}</p>`
+                : ""
+            }
+            ${galeriaItemHtml}
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    itensEscopoHtml =
+      '<p class="no-content">Nenhum item de escopo detalhado para este serviço.</p>';
+  }
+
+  const anexosGerais = servicoData.anexos || [];
+  const galeriaAnexosGerais = gerarGaleriaHtml(
+    await processarImagensParaBase64(anexosGerais)
+  );
+
+  const statusFinalTexto = (servicoData.status || "N/A").replace(/_/g, " ");
+  const statusFinalClasse = (
+    servicoData.status || "desconhecido"
+  ).toLowerCase();
+
+  const dadosParaTemplate = {
+    processo: servicoData.processo || "N/A",
+    subestacao_nome: servicoData.subestacao_nome,
+    subestacao_sigla: servicoData.subestacao_sigla,
+    tipo_ordem: servicoData.tipo_ordem || "N/A",
+    prioridade: servicoData.prioridade || "N/A",
+    responsavel_nome: servicoData.responsavel_nome || "N/A",
+    data_prevista: formatarData(servicoData.data_prevista),
+    horario_previsto: `${formatarHora(
+      servicoData.horario_inicio
+    )} às ${formatarHora(servicoData.horario_fim)}`,
+    motivo: servicoData.motivo || "Nenhum.",
+    itens_escopo_html: itensEscopoHtml,
+    status_final_classe: `status-${statusFinalClasse}`,
+    status_final_texto: statusFinalTexto,
+    data_conclusao: formatarData(servicoData.data_conclusao),
+    horario_fim: formatarHora(servicoData.horario_fim),
+    observacoes_conclusao: servicoData.observacoes_conclusao || "Nenhuma.",
+    galeria_anexos_gerais: galeriaAnexosGerais,
+    data_geracao: new Date().toLocaleString("pt-BR"),
+  };
+
+  for (const key in dadosParaTemplate) {
+    const regex = new RegExp(`{{${key}}}`, "g");
+    templateHtml = templateHtml.replace(regex, dadosParaTemplate[key]);
+  }
+
+  return templateHtml;
+}
+
+router.get(
+  "/api/servicos-subestacoes/:id/relatorio-pdf",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { id: servicoId } = req.params;
+    const connection = await promisePool.getConnection();
+    let browser;
+
+    try {
+      const [servicoRows] = await connection.query(
+        `SELECT ss.*, s.sigla as subestacao_sigla, s.nome as subestacao_nome, u.nome as responsavel_nome 
+         FROM servicos_subestacoes ss 
+         JOIN subestacoes s ON ss.subestacao_id = s.Id 
+         JOIN users u ON ss.responsavel_id = u.id 
+         WHERE ss.id = ?`,
+        [servicoId]
+      );
+      if (servicoRows.length === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Serviço não encontrado" });
+      }
+      const servicoData = servicoRows[0];
+
+      const [anexosGerais] = await connection.query(
+        `SELECT * FROM servicos_subestacoes_anexos WHERE id_servico = ?`,
+        [servicoId]
+      );
+
+      const [itensEscopo] = await connection.query(
+        `SELECT sie.*, u.nome as encarregado_item_nome 
+         FROM servico_itens_escopo sie 
+         LEFT JOIN users u ON sie.encarregado_item_id = u.id 
+         WHERE sie.servico_id = ?`,
+        [servicoId]
+      );
+
+      for (const item of itensEscopo) {
+        const [anexosItem] = await connection.query(
+          `SELECT * FROM servico_item_escopo_anexos WHERE item_escopo_id = ?`,
+          [item.id]
+        );
+        item.anexos = anexosItem;
+      }
+
+      servicoData.anexos = anexosGerais;
+      servicoData.itens_escopo = itensEscopo;
+
+      const htmlContent = await preencherTemplateHtmlServicoSubestacao(
+        servicoData
+      );
+
+      browser = await playwright.chromium.launch();
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: "networkidle" });
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "20mm", right: "10mm", bottom: "20mm", left: "10mm" },
+      });
+      await browser.close();
+      browser = null;
+
+      const nomeArquivo = `relatorio_servico_${(
+        servicoData.processo || servicoId
+      ).replace(/\//g, "-")}.pdf`;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${nomeArquivo}"`
+      );
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error(
+        "Erro ao gerar relatório de serviço de subestação PDF:",
+        error
+      );
+      if (browser) await browser.close();
+      res.status(500).json({
+        success: false,
+        message: "Erro interno ao gerar o relatório PDF.",
+        error: error.message,
       });
     } finally {
       if (connection) connection.release();
