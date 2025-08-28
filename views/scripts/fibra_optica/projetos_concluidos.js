@@ -11,7 +11,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const aprForm = document.getElementById("apr-form");
   const aprServiceIdSpan = document.getElementById("apr-service-id");
+
+  // --- INÍCIO DA CORREÇÃO ---
+  const aprFileDropZone = document.querySelector("#apr-modal .file-drop-zone");
   const aprFileInput = document.getElementById("apr-file-input");
+  // --- FIM DA CORREÇÃO ---
+
   const aprFileListWrapper = document.getElementById("apr-file-list-wrapper");
   const aprFileListContainer = document.getElementById("apr-file-list");
 
@@ -22,6 +27,15 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentServiceId = null;
   let confirmActionCallback = null;
   let aprFiles = [];
+
+  // --- INÍCIO DA CORREÇÃO ---
+  // Adiciona o evento de clique na área de upload para ativar o input de arquivo
+  if (aprFileDropZone && aprFileInput) {
+    aprFileDropZone.addEventListener("click", () => {
+      aprFileInput.click();
+    });
+  }
+  // --- FIM DA CORREÇÃO ---
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return "0 Bytes";
