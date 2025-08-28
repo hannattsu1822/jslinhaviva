@@ -531,9 +531,11 @@ router.put(
               "public",
               anexo.caminho_servidor
             );
-            fsPromises.unlink(fullPath).catch((err) =>
-              console.warn(`Falha ao deletar arquivo físico: ${fullPath}`)
-            );
+            fsPromises
+              .unlink(fullPath)
+              .catch((err) =>
+                console.warn(`Falha ao deletar arquivo físico: ${fullPath}`)
+              );
           }
         }
 
@@ -1481,7 +1483,7 @@ async function processarImagensParaUrlLocal(anexos) {
             if (!img.caminho_servidor) return null;
             
             const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
-            const imageUrl = new URL(img.caminho_servidor, serverUrl).href;
+            const imageUrl = `${serverUrl}${img.caminho_servidor}`;
 
             return {
                 src: imageUrl,
@@ -1524,42 +1526,64 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
     const dataObj = new Date(dataStr);
     return isNaN(dataObj.getTime())
       ? "Data inválida"
-      : new Date(dataObj.getTime() + dataObj.getTimezoneOffset() * 60000).toLocaleDateString("pt-BR");
+      : new Date(
+          dataObj.getTime() + dataObj.getTimezoneOffset() * 60000
+        ).toLocaleDateString("pt-BR");
   };
-  
+
   const formatarHora = (horaStr) => {
-      if (!horaStr || typeof horaStr !== 'string') return "N/A";
-      return horaStr.substring(0,5);
-  }
+    if (!horaStr || typeof horaStr !== "string") return "N/A";
+    return horaStr.substring(0, 5);
+  };
 
   let itensEscopoHtml = "";
   if (servicoData.itens_escopo && servicoData.itens_escopo.length > 0) {
     for (const item of servicoData.itens_escopo) {
-      const statusTexto = (item.status_item_escopo || "PENDENTE").replace(/_/g, " ");
-      const statusClasse = (item.status_item_escopo || "pendente").toLowerCase();
-      const imagensItemLocal = await processarImagensParaUrlLocal(item.anexos || []);
+      const statusTexto = (item.status_item_escopo || "PENDENTE").replace(
+        /_/g,
+        " "
+      );
+      const statusClasse = (
+        item.status_item_escopo || "pendente"
+      ).toLowerCase();
+      const imagensItemLocal = await processarImagensParaUrlLocal(
+        item.anexos || []
+      );
       const galeriaItemHtml = gerarGaleriaHtml(imagensItemLocal);
 
       itensEscopoHtml += `
         <div class="item-card">
           <p class="item-card-header">${item.descricao_item_servico}</p>
           <div class="item-card-details">
-            <p><strong>TAG:</strong> ${item.tag_equipamento_alvo || "N/A"} | <strong>Encarregado:</strong> ${item.encarregado_item_nome || "N/A"} | <strong>Status:</strong> <span class="status-badge status-${statusClasse}">${statusTexto}</span></p>
-            ${item.observacoes_conclusao_item ? `<p><strong>Obs. Conclusão:</strong> ${item.observacoes_conclusao_item}</p>` : ''}
+            <p><strong>TAG:</strong> ${
+              item.tag_equipamento_alvo || "N/A"
+            } | <strong>Encarregado:</strong> ${
+        item.encarregado_item_nome || "N/A"
+      } | <strong>Status:</strong> <span class="status-badge status-${statusClasse}">${statusTexto}</span></p>
+            ${
+              item.observacoes_conclusao_item
+                ? `<p><strong>Obs. Conclusão:</strong> ${item.observacoes_conclusao_item}</p>`
+                : ""
+            }
             ${galeriaItemHtml}
           </div>
         </div>
       `;
     }
   } else {
-    itensEscopoHtml = '<p class="no-content">Nenhum item de escopo detalhado para este serviço.</p>';
+    itensEscopoHtml =
+      '<p class="no-content">Nenhum item de escopo detalhado para este serviço.</p>';
   }
 
   const anexosGerais = servicoData.anexos || [];
-  const galeriaAnexosGerais = gerarGaleriaHtml(await processarImagensParaUrlLocal(anexosGerais));
-  
+  const galeriaAnexosGerais = gerarGaleriaHtml(
+    await processarImagensParaUrlLocal(anexosGerais)
+  );
+
   const statusFinalTexto = (servicoData.status || "N/A").replace(/_/g, " ");
-  const statusFinalClasse = (servicoData.status || "desconhecido").toLowerCase();
+  const statusFinalClasse = (
+    servicoData.status || "desconhecido"
+  ).toLowerCase();
 
   const dadosParaTemplate = {
     processo: servicoData.processo || "N/A",
@@ -1569,7 +1593,9 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
     prioridade: servicoData.prioridade || "N/A",
     responsavel_nome: servicoData.responsavel_nome || "N/A",
     data_prevista: formatarData(servicoData.data_prevista),
-    horario_previsto: `${formatarHora(servicoData.horario_inicio)} às ${formatarHora(servicoData.horario_fim)}`,
+    horario_previsto: `${formatarHora(
+      servicoData.horario_inicio
+    )} às ${formatarHora(servicoData.horario_fim)}`,
     motivo: servicoData.motivo || "Nenhum.",
     itens_escopo_html: itensEscopoHtml,
     status_final_classe: `status-${statusFinalClasse}`,
@@ -1608,7 +1634,9 @@ router.get(
         [servicoId]
       );
       if (servicoRows.length === 0) {
-        return res.status(404).json({ success: false, message: "Serviço não encontrado" });
+        return res
+          .status(404)
+          .json({ success: false, message: "Serviço não encontrado" });
       }
       const servicoData = servicoRows[0];
 
@@ -1616,7 +1644,7 @@ router.get(
         `SELECT * FROM servicos_subestacoes_anexos WHERE id_servico = ?`,
         [servicoId]
       );
-      
+
       const [itensEscopo] = await connection.query(
         `SELECT sie.*, u.nome as encarregado_item_nome 
          FROM servico_itens_escopo sie 
@@ -1625,18 +1653,20 @@ router.get(
         [servicoId]
       );
 
-      for(const item of itensEscopo) {
-          const [anexosItem] = await connection.query(
-              `SELECT * FROM servico_item_escopo_anexos WHERE item_escopo_id = ?`,
-              [item.id]
-          );
-          item.anexos = anexosItem;
+      for (const item of itensEscopo) {
+        const [anexosItem] = await connection.query(
+          `SELECT * FROM servico_item_escopo_anexos WHERE item_escopo_id = ?`,
+          [item.id]
+        );
+        item.anexos = anexosItem;
       }
 
       servicoData.anexos = anexosGerais;
       servicoData.itens_escopo = itensEscopo;
 
-      const htmlContent = await preencherTemplateHtmlServicoSubestacao(servicoData);
+      const htmlContent = await preencherTemplateHtmlServicoSubestacao(
+        servicoData
+      );
 
       browser = await playwright.chromium.launch();
       const page = await browser.newPage();
@@ -1649,18 +1679,25 @@ router.get(
       await browser.close();
       browser = null;
 
-      const nomeArquivo = `relatorio_servico_${(servicoData.processo || servicoId).replace(/\//g, "-")}.pdf`;
+      const nomeArquivo = `relatorio_servico_${(
+        servicoData.processo || servicoId
+      ).replace(/\//g, "-")}.pdf`;
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${nomeArquivo}"`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${nomeArquivo}"`
+      );
       res.send(pdfBuffer);
-
     } catch (error) {
-      console.error("Erro ao gerar relatório de serviço de subestação PDF:", error);
+      console.error(
+        "Erro ao gerar relatório de serviço de subestação PDF:",
+        error
+      );
       if (browser) await browser.close();
       res.status(500).json({
         success: false,
         message: "Erro interno ao gerar o relatório PDF.",
-        error: error.message
+        error: error.message,
       });
     } finally {
       if (connection) connection.release();
