@@ -1,6 +1,4 @@
 const express = require("express");
-const path = require("path");
-const fs = require("fs");
 const multer = require("multer");
 const XLSX = require("xlsx");
 const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
@@ -8,46 +6,20 @@ const { promisePool, upload } = require("../init");
 
 const router = express.Router();
 
-router.get("/avulsos-dashboard", autenticar, verificarNivel(2), (req, res) =>
-  res.sendFile(
-    path.join(__dirname, "../../public/pages/avulsos/dashboard_avulsos.html")
-  )
-);
+// --- ROTAS DE RENDERIZAÇÃO DE PÁGINAS (Refatoradas) ---
+
+router.get("/avulsos-dashboard", autenticar, verificarNivel(2), (req, res) => {
+  res.render("pages/avulsos/dashboard_avulsos.html", { user: req.user });
+});
 
 router.get(
   "/autorizacao-horas-extras",
   autenticar,
   verificarNivel(2),
-  (req, res) =>
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../public/pages/avulsos/autorizacao_horas_extras.html"
-      )
-    )
-);
-
-router.get("/bas_cadastro", autenticar, verificarNivel(2), (req, res) => {
-  const p = path.join(
-    __dirname,
-    "../../public/pages/avulsos/bas_cadastro.html"
-  );
-  if (fs.existsSync(p)) res.sendFile(p);
-  else res.status(404).send("Página de cadastro de BAS não encontrada.");
-});
-
-router.get(
-  "/hora_extra_cadastro",
-  autenticar,
-  verificarNivel(2),
   (req, res) => {
-    const p = path.join(
-      __dirname,
-      "../../public/pages/avulsos/hora_extra_cadastro.html"
-    );
-    if (fs.existsSync(p)) res.sendFile(p);
-    else
-      res.status(404).send("Página de cadastro de Hora Extra não encontrada.");
+    res.render("pages/avulsos/autorizacao_horas_extras.html", {
+      user: req.user,
+    });
   }
 );
 
@@ -55,63 +27,34 @@ router.get(
   "/bas-importar-dados-pagina",
   autenticar,
   verificarNivel(2),
-  (req, res) =>
-    res.sendFile(
-      path.join(__dirname, "../../public/pages/avulsos/bas_importar_dados.html")
-    )
-);
-
-router.get(
-  "/gerar-formulario-bas-construcao",
-  autenticar,
-  verificarNivel(2),
-  (req, res) =>
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../public/pages/avulsos/gerar_formulario_bas_construcao.html"
-      )
-    )
-);
-
-router.get(
-  "/gerar-formulario-bas-linhaviva",
-  autenticar,
-  verificarNivel(2),
-  (req, res) =>
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../public/pages/avulsos/gerar_formulario_bas_linhaviva.html"
-      )
-    )
+  (req, res) => {
+    res.render("pages/avulsos/bas_importar_dados.html", { user: req.user });
+  }
 );
 
 router.get(
   "/gerar-formulario-txt-bas",
   autenticar,
   verificarNivel(2),
-  (req, res) =>
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../public/pages/avulsos/gerar_formulario_txt_bas.html"
-      )
-    )
+  (req, res) => {
+    res.render("pages/avulsos/gerar_formulario_txt_bas.html", {
+      user: req.user,
+    });
+  }
 );
 
 router.get(
   "/gerar-formulario-txt-bas-linhaviva",
   autenticar,
   verificarNivel(2),
-  (req, res) =>
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../public/pages/avulsos/gerar_formulario_txt_bas_linhaviva.html"
-      )
-    )
+  (req, res) => {
+    res.render("pages/avulsos/gerar_formulario_txt_bas_linhaviva.html", {
+      user: req.user,
+    });
+  }
 );
+
+// --- ROTAS DE API (Permanecem Inalteradas) ---
 
 router.get(
   "/api/avulsos/turmas-encarregados",
