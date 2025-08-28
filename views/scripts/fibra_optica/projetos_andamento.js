@@ -3,12 +3,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const assignModalEl = document.getElementById("assign-modal");
   const assignModal = assignModalEl ? new bootstrap.Modal(assignModalEl) : null;
-  
+
   const confirmationModalEl = document.getElementById("confirmation-modal");
-  const confirmationModal = confirmationModalEl ? new bootstrap.Modal(confirmationModalEl) : null;
+  const confirmationModal = confirmationModalEl
+    ? new bootstrap.Modal(confirmationModalEl)
+    : null;
 
   const completionModalEl = document.getElementById("completion-modal");
-  const completionModal = completionModalEl ? new bootstrap.Modal(completionModalEl) : null;
+  const completionModal = completionModalEl
+    ? new bootstrap.Modal(completionModalEl)
+    : null;
 
   const encarregadoSelect = document.getElementById("encarregado-select");
   const assignServiceIdSpan = document.getElementById("assign-service-id");
@@ -25,7 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const completionTimeInput = document.getElementById("completion-time");
   const mapPointsContainer = document.getElementById("map-points-container");
   const btnAddMapPoint = document.getElementById("btn-add-map-point");
+
+  const completionFileDropZone = document.querySelector(
+    "#completion-modal .file-drop-zone"
+  );
   const completionFileInput = document.getElementById("completion-file-input");
+
   const completionFileListWrapper = document.getElementById(
     "completion-file-list-wrapper"
   );
@@ -36,6 +45,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentServiceId = null;
   let confirmActionCallback = null;
   let completionFiles = [];
+
+  if (completionFileDropZone && completionFileInput) {
+    completionFileDropZone.addEventListener("click", () => {
+      completionFileInput.click();
+    });
+  }
 
   const getFileIcon = (extension) => {
     const ext = extension.toLowerCase();
