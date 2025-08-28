@@ -1514,6 +1514,24 @@ function gerarGaleriaHtml(imagens) {
   return galleryHtml;
 }
 
+function gerarListaDocumentosHtml(anexos) {
+    if (!anexos || anexos.length === 0) {
+        return '<p class="no-content">Nenhum documento encontrado.</p>';
+    }
+    const documentos = anexos.filter(anexo => !anexo.tipo_mime || !anexo.tipo_mime.startsWith('image/'));
+
+    if (documentos.length === 0) {
+        return '<p class="no-content">Nenhum documento encontrado.</p>';
+    }
+
+    let listHtml = '<ul class="doc-list">';
+    documentos.forEach(doc => {
+        listHtml += `<li>${doc.nome_original}</li>`;
+    });
+    listHtml += '</ul>';
+    return listHtml;
+}
+
 async function preencherTemplateHtmlServicoSubestacao(servicoData) {
   const templatePath = path.join(
     projectRootDir,
@@ -1579,6 +1597,7 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
   const galeriaAnexosGerais = gerarGaleriaHtml(
     await processarImagensParaUrlLocal(anexosGerais)
   );
+  const listaDocumentosGerais = gerarListaDocumentosHtml(anexosGerais);
 
   const statusFinalTexto = (servicoData.status || "N/A").replace(/_/g, " ");
   const statusFinalClasse = (
@@ -1604,6 +1623,7 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
     horario_fim: formatarHora(servicoData.horario_fim),
     observacoes_conclusao: servicoData.observacoes_conclusao || "Nenhuma.",
     galeria_anexos_gerais: galeriaAnexosGerais,
+    lista_documentos_gerais: listaDocumentosGerais,
     data_geracao: new Date().toLocaleString("pt-BR"),
   };
 
