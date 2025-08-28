@@ -1470,36 +1470,22 @@ router.put(
 
 const playwright = require("playwright");
 
-async function processarImagensParaBase64(imagens) {
-  const imagensProcessadas = await Promise.all(
-    imagens.map(async (img) => {
-      if (!img.caminho_servidor) return null;
-      const caminhoRelativo = img.caminho_servidor.replace(
-        "/upload_arquivos_subestacoes/",
-        ""
-      );
-      const caminhoFisico = path.join(
-        uploadsSubestacoesDir,
-        caminhoRelativo
-      );
+async function processarImagensParaCaminhoLocal(imagens) {
+    return imagens
+        .map((img) => {
+            if (!img.caminho_servidor) return null;
+            const caminhoRelativo = img.caminho_servidor.replace("/upload_arquivos_subestacoes/", "");
+            const caminhoFisico = path.join(uploadsSubestacoesDir, caminhoRelativo);
 
-      if (fs.existsSync(caminhoFisico)) {
-        try {
-          const buffer = await fsPromises.readFile(caminhoFisico);
-          const ext = path.extname(img.nome_original).substring(1);
-          return {
-            src: `data:image/${ext};base64,${buffer.toString("base64")}`,
-            nome: img.nome_original,
-          };
-        } catch (e) {
-          console.error(`Erro ao ler o arquivo de imagem: ${caminhoFisico}`, e);
-          return null;
-        }
-      }
-      return null;
-    })
-  );
-  return imagensProcessadas.filter(Boolean);
+            if (fs.existsSync(caminhoFisico)) {
+                return {
+                    src: `file://${caminhoFisico}`,
+                    nome: img.nome_original,
+                };
+            }
+            return null;
+        })
+        .filter(Boolean);
 }
 
 function gerarGaleriaHtml(imagens) {
@@ -1548,8 +1534,8 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
     for (const item of servicoData.itens_escopo) {
       const statusTexto = (item.status_item_escopo || "PENDENTE").replace(/_/g, " ");
       const statusClasse = (item.status_item_escopo || "pendente").toLowerCase();
-      const imagensItemBase64 = await processarImagensParaBase64(item.anexos || []);
-      const galeriaItemHtml = gerarGaleriaHtml(imagensItemBase64);
+      const imagensItemLocal = await processarImagensParaCaminhoLocal(item.anexos || []);
+      const galeriaItemHtml = gerarGaleriaHtml(imagensItemLocal);
 
       itensEscopoHtml += `
         <div class="item-card">
@@ -1567,7 +1553,7 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
   }
 
   const anexosGerais = servicoData.anexos || [];
-  const galeriaAnexosGerais = gerarGaleriaHtml(await processarImagensParaBase64(anexosGerais));
+  const galeriaAnexosGerais = gerarGaleriaHtml(await processarImagensParaCaminhoLocal(anexosGerais));
   
   const statusFinalTexto = (servicoData.status || "N/A").replace(/_/g, " ");
   const statusFinalClasse = (servicoData.status || "desconhecido").toLowerCase();
