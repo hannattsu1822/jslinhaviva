@@ -77,6 +77,9 @@ document.addEventListener("DOMContentLoaded", () => {
     "templateItemCardEdicao"
   );
   const templateAnexoCard = document.getElementById("templateAnexoCard");
+  const templateHistoricoItem = document.getElementById(
+    "templateHistoricoItem"
+  );
 
   const imageLightboxDetalhesEl = document.getElementById(
     "imageLightboxDetalhes"
@@ -128,6 +131,13 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     if (isNaN(dataObj.getTime())) return "Data inválida";
     return dataObj.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  }
+
+  function formatarDataHora(dataISO) {
+    if (!dataISO) return "Não informado";
+    const dataObj = new Date(dataISO);
+    if (isNaN(dataObj.getTime())) return "Data inválida";
+    return dataObj.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
   }
 
   function formatarHoraSimples(hora) {
@@ -391,6 +401,41 @@ document.addEventListener("DOMContentLoaded", () => {
         e.target.value = "";
       });
 
+      const historyContainer = itemCard.querySelector(
+        ".item-history-container"
+      );
+      if (item.historico && item.historico.length > 0) {
+        item.historico.forEach((hist) => {
+          const historyClone = templateHistoricoItem.content.cloneNode(true);
+          historyClone.querySelector(".history-data").textContent =
+            formatarDataHora(hist.data_conclusao);
+          historyClone.querySelector(".history-status").textContent = (
+            hist.status_conclusao_anterior || ""
+          ).replace(/_/g, " ");
+          historyClone.querySelector(".history-usuario").textContent =
+            hist.usuario_conclusao_nome || "Não informado";
+          historyClone.querySelector(".history-obs").textContent =
+            hist.observacoes_conclusao || "Nenhuma observação.";
+
+          const historyAnexosContainer = historyClone.querySelector(
+            ".history-anexos-container"
+          );
+          if (hist.anexos && hist.anexos.length > 0) {
+            const title = document.createElement("p");
+            title.innerHTML = "<strong>Anexos desta conclusão:</strong>";
+            historyAnexosContainer.appendChild(title);
+            renderizarAnexos(
+              hist.anexos,
+              historyAnexosContainer,
+              `hist_${hist.historico_id}`,
+              false
+            );
+          }
+
+          historyContainer.appendChild(historyClone);
+        });
+      }
+
       containerItensEscopo.appendChild(clone);
     });
   }
@@ -438,7 +483,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderizarAnexos(anexos, container, parentId, isEditMode) {
-    container.innerHTML = "";
+    if (!isEditMode) container.innerHTML = "";
+
     if (anexos) {
       anexos.forEach((anexo) => {
         const { anexoCard, btnDeleteAnexo } = renderAnexo(anexo, false);
