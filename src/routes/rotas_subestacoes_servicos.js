@@ -1471,6 +1471,7 @@ router.put(
 );
 
 const playwright = require("playwright");
+const { PDFDocument } = require("pdf-lib");
 
 async function processarImagensParaUrlLocal(anexos) {
     if (!anexos || anexos.length === 0) {
@@ -1699,6 +1700,42 @@ router.get(
       await browser.close();
       browser = null;
 
+      const pdfsAnexos = servicoData.anexos.filter(
+        (anexo) => anexo.tipo_mime === "application/pdf"
+      );
+
+      let finalPdfBytes = pdfBuffer;
+
+      if (pdfsAnexos.length > 0) {
+        const mergedPdfDoc = await PDFDocument.load(pdfBuffer);
+        for (const anexo of pdfsAnexos) {
+          const caminhoRelativo = anexo.caminho_servidor.replace(
+            "/upload_arquivos_subestacoes/",
+            ""
+          );
+          const caminhoFisico = path.join(uploadsSubestacoesDir, caminhoRelativo);
+
+          if (fs.existsSync(caminhoFisico)) {
+            const anexoPdfBytes = await fsPromises.readFile(caminhoFisico);
+            try {
+              const anexoPdfDoc = await PDFDocument.load(anexoPdfBytes, {
+                ignoreEncryption: true,
+              });
+              const copiedPages = await mergedPdfDoc.copyPages(
+                anexoPdfDoc,
+                anexoPdfDoc.getPageIndices()
+              );
+              copiedPages.forEach((page) => mergedPdfDoc.addPage(page));
+            } catch (pdfError) {
+              console.error(
+                `Falha ao processar o anexo PDF ${anexo.nome_original}: ${pdfError.message}. Anexo ignorado.`
+              );
+            }
+          }
+        }
+        finalPdfBytes = await mergedPdfDoc.save();
+      }
+
       const nomeArquivo = `relatorio_servico_${(
         servicoData.processo || servicoId
       ).replace(/\//g, "-")}.pdf`;
@@ -1707,7 +1744,7 @@ router.get(
         "Content-Disposition",
         `attachment; filename="${nomeArquivo}"`
       );
-      res.send(pdfBuffer);
+      res.send(Buffer.from(finalPdfBytes));
     } catch (error) {
       console.error(
         "Erro ao gerar relatório de serviço de subestação PDF:",
