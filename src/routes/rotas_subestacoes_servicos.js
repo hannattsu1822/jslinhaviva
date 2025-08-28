@@ -1470,7 +1470,12 @@ router.put(
 
 const playwright = require("playwright");
 
-async function processarImagensParaCaminhoLocal(imagens) {
+async function processarImagensParaCaminhoLocal(anexos) {
+    if (!anexos || anexos.length === 0) {
+        return [];
+    }
+    const imagens = anexos.filter(anexo => anexo.tipo_mime && anexo.tipo_mime.startsWith('image/'));
+
     return imagens
         .map((img) => {
             if (!img.caminho_servidor) return null;
@@ -1482,8 +1487,10 @@ async function processarImagensParaCaminhoLocal(imagens) {
                     src: `file://${caminhoFisico}`,
                     nome: img.nome_original,
                 };
+            } else {
+                console.warn(`Arquivo de imagem não encontrado no caminho físico: ${caminhoFisico}`);
+                return null;
             }
-            return null;
         })
         .filter(Boolean);
 }
