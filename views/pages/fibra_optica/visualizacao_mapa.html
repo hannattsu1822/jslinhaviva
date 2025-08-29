@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="/static/css/components/sidebar.css" />
     <style>
       #map {
-        height: calc(100vh - 210px);
+        height: calc(100vh - 280px); /* Altura ajustada para caber os filtros */
         width: 100%;
         border-radius: 0.375rem;
       }
@@ -71,6 +71,39 @@
             </div>
           </div>
 
+          <!-- PAINEL DE FILTROS ADICIONADO -->
+          <div class="card shadow-sm mb-3">
+            <div class="card-body d-flex justify-content-between align-items-center flex-wrap" id="map-filter-container">
+              <div class="filter-group d-flex align-items-center flex-wrap">
+                <strong class="me-3">Filtrar por tipo:</strong>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filter-checkbox" type="checkbox" id="filterCliente" value="Cliente" checked>
+                  <label class="form-check-label" for="filterCliente">Cliente</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filter-checkbox" type="checkbox" id="filterCaixa" value="Caixa de Emenda" checked>
+                  <label class="form-check-label" for="filterCaixa">Caixa de Emenda</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filter-checkbox" type="checkbox" id="filterPoste" value="Poste" checked>
+                  <label class="form-check-label" for="filterPoste">Poste</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filter-checkbox" type="checkbox" id="filterReserva" value="Reserva" checked>
+                  <label class="form-check-label" for="filterReserva">Reserva</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input filter-checkbox" type="checkbox" id="filterOutro" value="Outro" checked>
+                  <label class="form-check-label" for="filterOutro">Outro</label>
+                </div>
+              </div>
+              <div class="filter-actions mt-2 mt-md-0">
+                <button class="btn btn-sm btn-outline-secondary" id="selectAllBtn">Marcar Todos</button>
+                <button class="btn btn-sm btn-outline-secondary ms-2" id="deselectAllBtn">Desmarcar Todos</button>
+              </div>
+            </div>
+          </div>
+
           <div class="card shadow-sm">
             <div class="card-body p-2">
               <div id="map"></div>
@@ -83,11 +116,8 @@
     <div id="toast-container"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.min.js"></script>
-
     <script src="/scripts/components/sidebar.js"></script>
     <script src="/scripts/utils/toast.js"></script>
     <script src="/scripts/fibra_optica/visualizacao_mapa.js"></script>
