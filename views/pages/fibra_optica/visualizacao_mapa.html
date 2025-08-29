@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="/static/css/components/sidebar.css" />
     <style>
       #map {
-        height: calc(100vh - 150px);
+        height: calc(100vh - 210px);
         width: 100%;
         border-radius: 0.375rem;
       }
@@ -45,6 +45,9 @@
               Visualização do Mapa de Fibra
             </h1>
             <div class="header-actions">
+              <button id="route-tool-btn" class="btn btn-success">
+                <i class="fa-solid fa-road me-2"></i>Criar Rota
+              </button>
               <button id="measure-tool-btn" class="btn btn-info">
                 <i class="fa-solid fa-ruler-horizontal me-2"></i>Medir Vão
               </button>
@@ -56,6 +59,18 @@
         </header>
 
         <div class="container-fluid">
+          <div id="route-panel" class="alert alert-success d-none mb-3" role="alert">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>Modo de Criação de Rota Ativado.</strong>
+                <span id="route-info" class="ms-3">Pontos: 0 | Distância Total: 0.00 m</span>
+              </div>
+              <button id="generate-maps-route-btn" class="btn btn-light btn-sm" disabled>
+                <i class="fa-solid fa-map-location-dot me-2"></i>Gerar Rota no Maps
+              </button>
+            </div>
+          </div>
+
           <div class="card shadow-sm">
             <div class="card-body p-2">
               <div id="map"></div>
