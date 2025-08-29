@@ -18,7 +18,7 @@ const convertUtmToLatLon = (easting, northing, utmZoneString) => {
   if (isNaN(zoneNumber) || !zoneLetterMatch) {
     throw new Error(`Zona UTM inválida: ${utmZoneString}`);
   }
-
+  
   const zoneLetter = zoneLetterMatch[0];
   const isSouthernHemisphere = zoneLetter.toUpperCase() < "N";
 
@@ -133,16 +133,11 @@ router.get("/mapa_fibra", autenticar, verificarNivel(3), async (req, res) => {
   }
 });
 
-router.get(
-  "/visualizacao_mapa_fibra",
-  autenticar,
-  verificarNivel(3),
-  (req, res) => {
-    res.render("pages/fibra_optica/visualizacao_mapa.html", {
-      user: req.session.user,
-    });
-  }
-);
+router.get("/visualizacao_mapa_fibra", autenticar, verificarNivel(3), (req, res) => {
+  res.render("pages/fibra_optica/visualizacao_mapa.html", {
+    user: req.session.user,
+  });
+});
 
 router.post(
   "/registro_projeto_fibra",
@@ -512,13 +507,9 @@ router.get(
   }
 );
 
-router.get(
-  "/api/fibra/todos-os-pontos",
-  autenticar,
-  verificarNivel(3),
-  async (req, res) => {
-    try {
-      const [pontos] = await promisePool.query(`
+router.get("/api/fibra/todos-os-pontos", autenticar, verificarNivel(3), async (req, res) => {
+  try {
+    const [pontos] = await promisePool.query(`
       SELECT 
         f.id,
         f.tipo_ponto,
@@ -534,44 +525,52 @@ router.get(
       LEFT JOIN users u ON f.coletado_por_matricula = u.matricula
       ORDER BY f.id DESC
     `);
-      res.json(pontos);
-    } catch (error) {
-      console.error("Erro ao buscar todos os pontos de fibra:", error);
-      res.status(500).json({ message: "Erro interno ao buscar os pontos." });
-    }
+    res.json(pontos);
+  } catch (error) {
+    console.error("Erro ao buscar todos os pontos de fibra:", error);
+    res.status(500).json({ message: "Erro interno ao buscar os pontos." });
   }
-);
+});
 
 router.post(
-  "/api/fibra/atribuir-encarregado",
+  "/api/fibra/modificar-atribuicao",
   autenticar,
   verificarNivel(4),
   async (req, res) => {
     const { servicoId, encarregadoMatricula } = req.body;
 
-    if (!servicoId || !encarregadoMatricula) {
-      return res.status(400).json({
-        message: "ID do serviço e matrícula do encarregado são obrigatórios.",
-      });
+    if (!servicoId) {
+      return res.status(400).json({ message: "ID do serviço é obrigatório." });
     }
 
     try {
-      await promisePool.query(
-        "UPDATE servicos_fibra_optica SET encarregado_matricula = ?, status = 'Em Andamento' WHERE id = ?",
-        [encarregadoMatricula, servicoId]
-      );
-
-      await registrarAuditoria(
-        req.session.user.matricula,
-        "ATRIBUICAO_ENCARREGADO_FIBRA",
-        `Encarregado Matrícula ${encarregadoMatricula} atribuído ao Serviço ID ${servicoId}.`
-      );
-
-      res.json({ message: "Encarregado atribuído com sucesso!" });
+      if (encarregadoMatricula) {
+        await promisePool.query(
+          "UPDATE servicos_fibra_optica SET encarregado_matricula = ?, status = 'Em Andamento' WHERE id = ?",
+          [encarregadoMatricula, servicoId]
+        );
+        await registrarAuditoria(
+          req.session.user.matricula,
+          "ATRIBUICAO_ENCARREGADO_FIBRA",
+          `Encarregado Matrícula ${encarregadoMatricula} atribuído ao Serviço ID ${servicoId}.`
+        );
+        res.json({ message: "Encarregado atribuído com sucesso!" });
+      } else {
+        await promisePool.query(
+          "UPDATE servicos_fibra_optica SET encarregado_matricula = NULL, status = 'Pendente' WHERE id = ?",
+          [servicoId]
+        );
+        await registrarAuditoria(
+          req.session.user.matricula,
+          "REMOCAO_ENCARREGADO_FIBRA",
+          `Atribuição removida do Serviço ID ${servicoId}. Status alterado para Pendente.`
+        );
+        res.json({ message: "Atribuição removida e serviço retornado para pendente." });
+      }
     } catch (error) {
       res
         .status(500)
-        .json({ message: "Erro interno ao atribuir encarregado." });
+        .json({ message: "Erro interno ao modificar atribuição." });
     }
   }
 );
@@ -612,13 +611,9 @@ router.post(
       if (pontosMapa && Array.isArray(pontosMapa) && pontosMapa.length > 0) {
         const sqlInsertPonto =
           "INSERT INTO fibra_maps (servico_id, tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
-
+        
         const values = pontosMapa.map((ponto) => {
-          const { latitude, longitude } = convertUtmToLatLon(
-            ponto.easting,
-            ponto.northing,
-            ponto.utm_zone
-          );
+          const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
           return [
             servicoId,
             ponto.tipo,
@@ -761,11 +756,7 @@ router.post(
         "INSERT INTO fibra_maps (tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
 
       const values = pontos.map((ponto) => {
-        const { latitude, longitude } = convertUtmToLatLon(
-          ponto.easting,
-          ponto.northing,
-          ponto.utm_zone
-        );
+        const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
         return [
           ponto.tipo,
           ponto.tag,
