@@ -3,16 +3,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const assignModalEl = document.getElementById("assign-modal");
   const assignModal = assignModalEl ? new bootstrap.Modal(assignModalEl) : null;
-
+  
   const confirmationModalEl = document.getElementById("confirmation-modal");
-  const confirmationModal = confirmationModalEl
-    ? new bootstrap.Modal(confirmationModalEl)
-    : null;
+  const confirmationModal = confirmationModalEl ? new bootstrap.Modal(confirmationModalEl) : null;
 
   const completionModalEl = document.getElementById("completion-modal");
-  const completionModal = completionModalEl
-    ? new bootstrap.Modal(completionModalEl)
-    : null;
+  const completionModal = completionModalEl ? new bootstrap.Modal(completionModalEl) : null;
 
   const encarregadoSelect = document.getElementById("encarregado-select");
   const assignServiceIdSpan = document.getElementById("assign-service-id");
@@ -29,12 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const completionTimeInput = document.getElementById("completion-time");
   const mapPointsContainer = document.getElementById("map-points-container");
   const btnAddMapPoint = document.getElementById("btn-add-map-point");
-
-  const completionFileDropZone = document.querySelector(
-    "#completion-modal .file-drop-zone"
-  );
   const completionFileInput = document.getElementById("completion-file-input");
-
   const completionFileListWrapper = document.getElementById(
     "completion-file-list-wrapper"
   );
@@ -45,12 +36,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentServiceId = null;
   let confirmActionCallback = null;
   let completionFiles = [];
-
-  if (completionFileDropZone && completionFileInput) {
-    completionFileDropZone.addEventListener("click", () => {
-      completionFileInput.click();
-    });
-  }
 
   const getFileIcon = (extension) => {
     const ext = extension.toLowerCase();
@@ -78,8 +63,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) throw new Error("Falha ao buscar encarregados.");
 
       const encarregados = await response.json();
-      encarregadoSelect.innerHTML =
-        '<option value="" disabled selected>Selecione um encarregado</option>';
+      encarregadoSelect.innerHTML = '<option value="" disabled selected>Selecione uma ação...</option>';
+      
+      const removeOption = document.createElement("option");
+      removeOption.value = "";
+      removeOption.textContent = "--- Remover Atribuição (Voltar para Pendente) ---";
+      encarregadoSelect.appendChild(removeOption);
+
       encarregados.forEach((enc) => {
         const option = document.createElement("option");
         option.value = enc.matricula;
@@ -242,12 +232,12 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("btn-confirm-assign")
     ?.addEventListener("click", async () => {
       const encarregadoMatricula = encarregadoSelect.value;
-      if (!encarregadoMatricula) {
-        showToast("Por favor, selecione um encarregado.", "error");
+      if (encarregadoSelect.selectedIndex === 0) {
+        showToast("Por favor, selecione uma ação válida.", "error");
         return;
       }
       try {
-        const response = await fetch("/api/fibra/atribuir-encarregado", {
+        const response = await fetch("/api/fibra/modificar-atribuicao", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
