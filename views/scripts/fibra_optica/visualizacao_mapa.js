@@ -11,6 +11,50 @@ document.addEventListener("DOMContentLoaded", () => {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
 
+  const allMarkers = {}; // Objeto para armazenar todos os marcadores, agrupados por tipo
+
+  // --- LÓGICA DE FILTROS ---
+  const filterContainer = document.getElementById('map-filter-container');
+  const selectAllBtn = document.getElementById('selectAllBtn');
+  const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+  const applyMapFilter = () => {
+    const selectedTypes = new Set();
+    filterContainer.querySelectorAll('.filter-checkbox:checked').forEach(checkbox => {
+      selectedTypes.add(checkbox.value);
+    });
+
+    let visibleMarkersBounds = [];
+
+    for (const type in allMarkers) {
+      allMarkers[type].forEach(marker => {
+        if (selectedTypes.has(type)) {
+          marker.addTo(map);
+          visibleMarkersBounds.push(marker.getLatLng());
+        } else {
+          marker.removeFrom(map);
+        }
+      });
+    }
+    
+    if (visibleMarkersBounds.length > 0) {
+        map.fitBounds(L.latLngBounds(visibleMarkersBounds), { padding: [50, 50] });
+    }
+  };
+
+  filterContainer.addEventListener('change', applyMapFilter);
+
+  selectAllBtn.addEventListener('click', () => {
+    filterContainer.querySelectorAll('.filter-checkbox').forEach(checkbox => checkbox.checked = true);
+    applyMapFilter();
+  });
+
+  deselectAllBtn.addEventListener('click', () => {
+    filterContainer.querySelectorAll('.filter-checkbox').forEach(checkbox => checkbox.checked = false);
+    applyMapFilter();
+  });
+  // --- FIM DA LÓGICA DE FILTROS ---
+
   const measureToolBtn = document.getElementById('measure-tool-btn');
   let isMeasuring = false;
   let measureFirstPoint = null;
@@ -114,58 +158,36 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const getPontoIcon = (tipo) => {
-    let iconName = 'fa-question-circle';
-    let markerColor = 'gray';
-
+    let iconName = 'fa-question-circle', markerColor = 'gray';
     switch (tipo) {
-      case 'Cliente':
-        iconName = 'fa-user';
-        markerColor = 'blue';
-        break;
-      case 'Caixa de Emenda':
-        iconName = 'fa-inbox';
-        markerColor = 'darkred';
-        break;
-      case 'Poste':
-        iconName = 'fa-bolt';
-        markerColor = 'orange';
-        break;
-      case 'Reserva':
-        iconName = 'fa-circle-nodes';
-        markerColor = 'green';
-        break;
-      default:
-        iconName = 'fa-map-marker-alt';
-        markerColor = 'cadetblue';
-        break;
+      case 'Cliente': iconName = 'fa-user'; markerColor = 'blue'; break;
+      case 'Caixa de Emenda': iconName = 'fa-inbox'; markerColor = 'darkred'; break;
+      case 'Poste': iconName = 'fa-bolt'; markerColor = 'orange'; break;
+      case 'Reserva': iconName = 'fa-circle-nodes'; markerColor = 'green'; break;
+      default: iconName = 'fa-map-marker-alt'; markerColor = 'cadetblue'; break;
     }
-
-    return L.AwesomeMarkers.icon({
-      icon: iconName,
-      markerColor: markerColor,
-      prefix: 'fa',
-      iconColor: 'white'
-    });
+    return L.AwesomeMarkers.icon({ icon: iconName, markerColor: markerColor, prefix: 'fa', iconColor: 'white' });
   };
 
   const fetchAndDrawPoints = async () => {
     try {
       const response = await fetch('/api/fibra/todos-os-pontos');
-      if (!response.ok) {
-        throw new Error('Falha ao carregar os pontos do mapa.');
-      }
-      
+      if (!response.ok) throw new Error('Falha ao carregar os pontos do mapa.');
       const pontos = await response.json();
 
       if (pontos.length > 0) {
-        const bounds = [];
         pontos.forEach(ponto => {
           const lat = parseFloat(ponto.latitude);
           const lon = parseFloat(ponto.longitude);
 
           if (!isNaN(lat) && !isNaN(lon)) {
             const customIcon = getPontoIcon(ponto.tipo_ponto);
-            const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
+            const marker = L.marker([lat, lon], { icon: customIcon });
+            
+            if (!allMarkers[ponto.tipo_ponto]) {
+              allMarkers[ponto.tipo_ponto] = [];
+            }
+            allMarkers[ponto.tipo_ponto].push(marker);
             
             marker.on('click', () => {
               const currentLatLng = L.latLng(lat, lon);
@@ -205,14 +227,10 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
             
             marker.bindPopup(popupContent);
-            
-            bounds.push([lat, lon]);
           }
         });
-
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, { padding: [50, 50] });
-        }
+        
+        applyMapFilter(); // Aplica o filtro inicial (todos marcados)
       } else {
         showToast("Nenhum ponto de mapa encontrado para exibir.", "info");
       }
