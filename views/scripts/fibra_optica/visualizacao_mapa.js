@@ -13,13 +13,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const measureToolBtn = document.getElementById('measure-tool-btn');
   let isMeasuring = false;
-  let firstPoint = null;
+  let measureFirstPoint = null;
   let measurementLayer = L.layerGroup().addTo(map);
 
   const startMeasureTool = () => {
+    stopRouteTool();
     isMeasuring = true;
-    measurementLayer.clearLayers(); // Limpa medições antigas ao iniciar uma nova
-    firstPoint = null;
+    measurementLayer.clearLayers();
+    measureFirstPoint = null;
     measureToolBtn.classList.add('active', 'btn-danger');
     measureToolBtn.classList.remove('btn-info');
     measureToolBtn.innerHTML = '<i class="fa-solid fa-xmark me-2"></i>Cancelar Medição';
@@ -28,8 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const stopMeasureTool = () => {
     isMeasuring = false;
-    firstPoint = null;
-    // NÃO limpa a camada aqui, para que a medição permaneça visível
+    measureFirstPoint = null;
     measureToolBtn.classList.remove('active', 'btn-danger');
     measureToolBtn.classList.add('btn-info');
     measureToolBtn.innerHTML = '<i class="fa-solid fa-ruler-horizontal me-2"></i>Medir Vão';
@@ -39,16 +39,77 @@ document.addEventListener("DOMContentLoaded", () => {
   measureToolBtn.addEventListener('click', () => {
     if (isMeasuring) {
       stopMeasureTool();
-      measurementLayer.clearLayers(); // Limpa se o usuário cancelar manualmente
+      measurementLayer.clearLayers();
     } else {
       startMeasureTool();
     }
   });
 
+  const routeToolBtn = document.getElementById('route-tool-btn');
+  const routePanel = document.getElementById('route-panel');
+  const routeInfo = document.getElementById('route-info');
+  const generateMapsRouteBtn = document.getElementById('generate-maps-route-btn');
+  let isRouting = false;
+  let routeWaypoints = [];
+  let routeLayer = L.layerGroup().addTo(map);
+
+  const startRouteTool = () => {
+    stopMeasureTool();
+    isRouting = true;
+    routeWaypoints = [];
+    routeLayer.clearLayers();
+    routePanel.classList.remove('d-none');
+    routeToolBtn.classList.add('active', 'btn-danger');
+    routeToolBtn.classList.remove('btn-success');
+    routeToolBtn.innerHTML = '<i class="fa-solid fa-xmark me-2"></i>Cancelar Rota';
+    mapElement.style.cursor = 'pointer';
+    updateRoutePanel();
+  };
+
+  const stopRouteTool = () => {
+    isRouting = false;
+    routePanel.classList.add('d-none');
+    routeToolBtn.classList.remove('active', 'btn-danger');
+    routeToolBtn.classList.add('btn-success');
+    routeToolBtn.innerHTML = '<i class="fa-solid fa-road me-2"></i>Criar Rota';
+    mapElement.style.cursor = '';
+  };
+  
+  const updateRoutePanel = () => {
+    let totalDistance = 0;
+    for (let i = 1; i < routeWaypoints.length; i++) {
+      totalDistance += routeWaypoints[i-1].distanceTo(routeWaypoints[i]);
+    }
+    routeInfo.textContent = `Pontos: ${routeWaypoints.length} | Distância Total: ${totalDistance.toFixed(2)} m`;
+    generateMapsRouteBtn.disabled = routeWaypoints.length < 2;
+  };
+
+  routeToolBtn.addEventListener('click', () => {
+    if (isRouting) {
+      stopRouteTool();
+      routeLayer.clearLayers();
+    } else {
+      startRouteTool();
+    }
+  });
+
+  generateMapsRouteBtn.addEventListener('click', () => {
+    if (routeWaypoints.length < 2) return;
+    const origin = routeWaypoints[0];
+    const destination = routeWaypoints[routeWaypoints.length - 1];
+    const waypoints = routeWaypoints.slice(1, -1).map(wp => `${wp.lat},${wp.lng}`).join('|');
+    
+    let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}`;
+    if (waypoints) {
+      mapsUrl += `&waypoints=${waypoints}`;
+    }
+    window.open(mapsUrl, '_blank');
+  });
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === "Escape" && isMeasuring) {
-      stopMeasureTool();
-      measurementLayer.clearLayers();
+    if (e.key === "Escape") {
+      if (isMeasuring) { stopMeasureTool(); measurementLayer.clearLayers(); }
+      if (isRouting) { stopRouteTool(); routeLayer.clearLayers(); }
     }
   });
 
@@ -57,22 +118,42 @@ document.addEventListener("DOMContentLoaded", () => {
     let markerColor = 'gray';
 
     switch (tipo) {
-      case 'Cliente': iconName = 'fa-user'; markerColor = 'blue'; break;
-      case 'Caixa de Emenda': iconName = 'fa-inbox'; markerColor = 'darkred'; break;
-      case 'Poste': iconName = 'fa-bolt'; markerColor = 'orange'; break;
-      case 'Reserva': iconName = 'fa-circle-nodes'; markerColor = 'green'; break;
-      default: iconName = 'fa-map-marker-alt'; markerColor = 'cadetblue'; break;
+      case 'Cliente':
+        iconName = 'fa-user';
+        markerColor = 'blue';
+        break;
+      case 'Caixa de Emenda':
+        iconName = 'fa-inbox';
+        markerColor = 'darkred';
+        break;
+      case 'Poste':
+        iconName = 'fa-bolt';
+        markerColor = 'orange';
+        break;
+      case 'Reserva':
+        iconName = 'fa-circle-nodes';
+        markerColor = 'green';
+        break;
+      default:
+        iconName = 'fa-map-marker-alt';
+        markerColor = 'cadetblue';
+        break;
     }
 
     return L.AwesomeMarkers.icon({
-      icon: iconName, markerColor: markerColor, prefix: 'fa', iconColor: 'white'
+      icon: iconName,
+      markerColor: markerColor,
+      prefix: 'fa',
+      iconColor: 'white'
     });
   };
 
   const fetchAndDrawPoints = async () => {
     try {
       const response = await fetch('/api/fibra/todos-os-pontos');
-      if (!response.ok) throw new Error('Falha ao carregar os pontos do mapa.');
+      if (!response.ok) {
+        throw new Error('Falha ao carregar os pontos do mapa.');
+      }
       
       const pontos = await response.json();
 
@@ -87,20 +168,24 @@ document.addEventListener("DOMContentLoaded", () => {
             const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
             
             marker.on('click', () => {
-              if (!isMeasuring) return;
-
-              if (!firstPoint) {
-                firstPoint = { latlng: L.latLng(lat, lon) };
-                L.circleMarker(firstPoint.latlng, { radius: 8, color: '#0dcaf0', fillOpacity: 0.8 }).addTo(measurementLayer);
-              } else {
-                const secondPoint = { latlng: L.latLng(lat, lon) };
-                const distance = firstPoint.latlng.distanceTo(secondPoint.latlng);
-                const line = L.polyline([firstPoint.latlng, secondPoint.latlng], { color: '#0dcaf0', weight: 3 }).addTo(measurementLayer);
-                line.bindTooltip(`${distance.toFixed(2)} metros`, { permanent: true, className: 'measurement-tooltip' }).openTooltip();
-                
-                // --- MUDANÇA CRÍTICA AQUI ---
-                // Apenas para de medir, não limpa a tela
-                stopMeasureTool();
+              const currentLatLng = L.latLng(lat, lon);
+              if (isMeasuring) {
+                if (!measureFirstPoint) {
+                  measureFirstPoint = { latlng: currentLatLng };
+                  L.circleMarker(measureFirstPoint.latlng, { radius: 8, color: '#0dcaf0', fillOpacity: 0.8 }).addTo(measurementLayer);
+                } else {
+                  const distance = measureFirstPoint.latlng.distanceTo(currentLatLng);
+                  L.polyline([measureFirstPoint.latlng, currentLatLng], { color: '#0dcaf0', weight: 3 }).addTo(measurementLayer)
+                    .bindTooltip(`${distance.toFixed(2)} metros`, { permanent: true, className: 'measurement-tooltip' }).openTooltip();
+                  stopMeasureTool();
+                }
+              } else if (isRouting) {
+                routeWaypoints.push(currentLatLng);
+                L.circleMarker(currentLatLng, { radius: 6, color: '#198754', fillOpacity: 0.7 }).addTo(routeLayer);
+                if (routeWaypoints.length > 1) {
+                  L.polyline([routeWaypoints[routeWaypoints.length - 2], currentLatLng], { color: '#198754', weight: 4, opacity: 0.7 }).addTo(routeLayer);
+                }
+                updateRoutePanel();
               }
             });
 
@@ -125,7 +210,9 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
 
-        if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
       } else {
         showToast("Nenhum ponto de mapa encontrado para exibir.", "info");
       }
