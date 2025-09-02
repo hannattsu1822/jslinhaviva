@@ -205,9 +205,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span>${itemCounter++}. ${
           item.descricao_item
         }</span>
-                            <span class="avaliacao-badge ${item.avaliacao.toLowerCase()}">${
-          item.avaliacao
-        }</span>
+                            <span class="avaliacao-badge ${(
+                              item.avaliacao || ""
+                            ).toLowerCase()}">${item.avaliacao || "N/A"}</span>
                         </p>`;
 
         const anexosGeraisDoItem = anexos.filter(
@@ -280,9 +280,9 @@ document.addEventListener("DOMContentLoaded", () => {
                               item.equipamento
                             } <span class="tag">(${item.tag})</span></p>
                         </div>
-                        <span class="avulsa-condicao-badge ${item.condicao.toLowerCase()}">${
-          item.condicao
-        }</span>
+                        <span class="avulsa-condicao-badge ${(
+                          item.condicao || ""
+                        ).toLowerCase()}">${item.condicao || "N/A"}</span>
                     </div>
                     <div class="avulsa-item-body">
                         <p>${item.descricao}</p>
