@@ -440,6 +440,7 @@ router.put(
       checklist_items,
       registros_dinamicos,
       anexos_para_deletar,
+      deleted_ids,
     } = req.body;
 
     const connection = await promisePool.getConnection();
@@ -454,8 +455,8 @@ router.put(
         anexos_para_deletar.length > 0
       ) {
         const [anexosDb] = await connection.query(
-          "SELECT id, caminho_servidor FROM inspecoes_anexos WHERE id IN (?)",
-          [anexos_para_deletar]
+          "SELECT id, caminho_servidor FROM inspecoes_anexos WHERE id IN (?) AND inspecao_id = ?",
+          [anexos_para_deletar, inspecaoId]
         );
         for (const anexo of anexosDb) {
           const fullPath = path.join(
@@ -478,32 +479,37 @@ router.put(
         ]);
       }
 
-      const [respostasAntigas] = await connection.query(
-        "SELECT id FROM inspecoes_itens_respostas WHERE inspecao_id = ?",
-        [inspecaoId]
-      );
-      if (respostasAntigas.length > 0) {
-        const idsRespostasAntigas = respostasAntigas.map((r) => r.id);
-        await connection.query(
-          "DELETE FROM inspecoes_item_especificacoes WHERE item_resposta_id IN (?)",
-          [idsRespostasAntigas]
-        );
+      if (deleted_ids) {
+        if (
+          deleted_ids.especificacoes &&
+          deleted_ids.especificacoes.length > 0
+        ) {
+          await connection.query(
+            "DELETE FROM inspecoes_item_especificacoes WHERE id IN (?)",
+            [deleted_ids.especificacoes]
+          );
+        }
+        if (deleted_ids.respostas && deleted_ids.respostas.length > 0) {
+          await connection.query(
+            "DELETE FROM inspecoes_itens_respostas WHERE id IN (?) AND inspecao_id = ?",
+            [deleted_ids.respostas, inspecaoId]
+          );
+        }
+        if (deleted_ids.registros && deleted_ids.registros.length > 0) {
+          await connection.query(
+            "DELETE FROM inspecoes_registros WHERE id IN (?) AND inspecao_id = ?",
+            [deleted_ids.registros, inspecaoId]
+          );
+        }
+        if (deleted_ids.avulsos && deleted_ids.avulsos.length > 0) {
+          await connection.query(
+            "DELETE FROM inspecoes_avulsas_itens WHERE id IN (?) AND inspecao_id = ?",
+            [deleted_ids.avulsos, inspecaoId]
+          );
+        }
       }
-      await connection.query(
-        "DELETE FROM inspecoes_itens_respostas WHERE inspecao_id = ?",
-        [inspecaoId]
-      );
-      await connection.query(
-        "DELETE FROM inspecoes_registros WHERE inspecao_id = ?",
-        [inspecaoId]
-      );
-      await connection.query(
-        "DELETE FROM inspecoes_avulsas_itens WHERE inspecao_id = ?",
-        [inspecaoId]
-      );
 
       const dataAvaliacaoParaSalvar = data_avaliacao || null;
-
       await connection.query(
         `UPDATE inspecoes_subestacoes SET
             processo = ?, subestacao_id = ?, responsavel_levantamento_id = ?,
@@ -527,29 +533,56 @@ router.put(
       if (inspection_mode === "checklist") {
         if (checklist_items && Array.isArray(checklist_items)) {
           for (const item of checklist_items) {
-            const [resultResposta] = await connection.query(
-              `INSERT INTO inspecoes_itens_respostas (inspecao_id, item_checklist_id, avaliacao, observacao_item) VALUES (?, ?, ?, ?)`,
-              [
-                inspecaoId,
-                item.item_checklist_id,
-                item.avaliacao,
-                item.observacao_item || null,
-              ]
-            );
-            const novaRespostaId = resultResposta.insertId;
-            const mapaEspecificacoes = {};
+            let respostaId = item.id;
+            if (respostaId) {
+              await connection.query(
+                `UPDATE inspecoes_itens_respostas SET avaliacao = ?, observacao_item = ? WHERE id = ? AND inspecao_id = ?`,
+                [
+                  item.avaliacao,
+                  item.observacao_item || null,
+                  respostaId,
+                  inspecaoId,
+                ]
+              );
+            } else {
+              const [resultResposta] = await connection.query(
+                `INSERT INTO inspecoes_itens_respostas (inspecao_id, item_checklist_id, avaliacao, observacao_item) VALUES (?, ?, ?, ?)`,
+                [
+                  inspecaoId,
+                  item.item_checklist_id,
+                  item.avaliacao,
+                  item.observacao_item || null,
+                ]
+              );
+              respostaId = resultResposta.insertId;
+            }
 
+            const mapaEspecificacoes = {};
             if (item.especificacoes && item.especificacoes.length > 0) {
               for (const especificacao of item.especificacoes) {
-                const [resultEsp] = await connection.query(
-                  `INSERT INTO inspecoes_item_especificacoes (item_resposta_id, descricao_equipamento, observacao) VALUES (?, ?, ?)`,
-                  [
-                    novaRespostaId,
-                    especificacao.descricao_equipamento,
-                    especificacao.observacao || null,
-                  ]
-                );
-                mapaEspecificacoes[especificacao.temp_id] = resultEsp.insertId;
+                let especificacaoId = especificacao.id;
+                if (especificacaoId) {
+                  await connection.query(
+                    `UPDATE inspecoes_item_especificacoes SET descricao_equipamento = ?, observacao = ? WHERE id = ? AND item_resposta_id = ?`,
+                    [
+                      especificacao.descricao_equipamento,
+                      especificacao.observacao || null,
+                      especificacaoId,
+                      respostaId,
+                    ]
+                  );
+                } else {
+                  const [resultEsp] = await connection.query(
+                    `INSERT INTO inspecoes_item_especificacoes (item_resposta_id, descricao_equipamento, observacao) VALUES (?, ?, ?)`,
+                    [
+                      respostaId,
+                      especificacao.descricao_equipamento,
+                      especificacao.observacao || null,
+                    ]
+                  );
+                  especificacaoId = resultEsp.insertId;
+                }
+                mapaEspecificacoes[especificacao.temp_id] = especificacaoId;
               }
             }
 
@@ -558,16 +591,17 @@ router.put(
                 const especificacaoDbId =
                   anexo.associado_a === "geral"
                     ? null
-                    : mapaEspecificacoes[anexo.associado_a];
+                    : mapaEspecificacoes[anexo.associado_a] ||
+                      anexo.associado_a;
                 const caminhoMovido = await moverAnexo(
                   anexo,
                   inspecaoId,
-                  `respostas_itens/resposta_${novaRespostaId}/anexos`,
+                  `respostas_itens/resposta_${respostaId}/anexos`,
                   connection,
                   {
                     prefixo: "ITEM",
                     categoria_anexo: "ITEM_ANEXO",
-                    item_resposta_id: novaRespostaId,
+                    item_resposta_id: respostaId,
                     item_especificacao_id: especificacaoDbId,
                   }
                 );
@@ -578,31 +612,41 @@ router.put(
         }
         if (registros_dinamicos && Array.isArray(registros_dinamicos)) {
           for (const registro of registros_dinamicos) {
-            const [resultRegistro] = await connection.query(
-              `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, estado_item, referencia_externa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                inspecaoId,
-                registro.categoria,
-                registro.tipo,
-                registro.tag,
-                registro.obs,
-                null,
-                registro.valor,
-                registro.unidade,
-                registro.estado,
-                registro.ref_anterior,
-              ]
-            );
-            const novoRegistroId = resultRegistro.insertId;
-
-            if (
-              registro.anexos_existentes &&
-              registro.anexos_existentes.length > 0
-            ) {
+            let registroId = registro.id;
+            if (registroId) {
               await connection.query(
-                "UPDATE inspecoes_anexos SET registro_id = ? WHERE id IN (?)",
-                [novoRegistroId, registro.anexos_existentes]
+                `UPDATE inspecoes_registros SET categoria_registro = ?, tipo_especifico = ?, tag_equipamento = ?, descricao_item = ?, valor_numerico = ?, valor_texto = ?, unidade_medida = ?, estado_item = ?, referencia_externa = ? WHERE id = ? AND inspecao_id = ?`,
+                [
+                  registro.categoria,
+                  registro.tipo,
+                  registro.tag,
+                  registro.obs,
+                  null,
+                  registro.valor,
+                  registro.unidade,
+                  registro.estado,
+                  registro.ref_anterior,
+                  registroId,
+                  inspecaoId,
+                ]
               );
+            } else {
+              const [resultRegistro] = await connection.query(
+                `INSERT INTO inspecoes_registros (inspecao_id, categoria_registro, tipo_especifico, tag_equipamento, descricao_item, valor_numerico, valor_texto, unidade_medida, estado_item, referencia_externa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  inspecaoId,
+                  registro.categoria,
+                  registro.tipo,
+                  registro.tag,
+                  registro.obs,
+                  null,
+                  registro.valor,
+                  registro.unidade,
+                  registro.estado,
+                  registro.ref_anterior,
+                ]
+              );
+              registroId = resultRegistro.insertId;
             }
 
             if (registro.anexos && registro.anexos.length > 0) {
@@ -610,12 +654,12 @@ router.put(
                 const caminhoMovido = await moverAnexo(
                   anexo,
                   inspecaoId,
-                  `registros/registro_${novoRegistroId}`,
+                  `registros/registro_${registroId}`,
                   connection,
                   {
                     prefixo: "REG",
                     categoria_anexo: "REGISTRO_FOTO",
-                    registro_id: novoRegistroId,
+                    registro_id: registroId,
                   }
                 );
                 arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
@@ -626,28 +670,44 @@ router.put(
       } else if (inspection_mode === "avulsa") {
         if (avulsa_items && Array.isArray(avulsa_items)) {
           for (const item of avulsa_items) {
-            const [resultItemAvulso] = await connection.query(
-              `INSERT INTO inspecoes_avulsas_itens (inspecao_id, equipamento, tag, condicao, descricao) VALUES (?, ?, ?, ?, ?)`,
-              [
-                inspecaoId,
-                item.equipamento,
-                item.tag,
-                item.condicao,
-                item.descricao,
-              ]
-            );
-            const novoItemAvulsoId = resultItemAvulso.insertId;
+            let itemAvulsoId = item.id;
+            if (itemAvulsoId) {
+              await connection.query(
+                `UPDATE inspecoes_avulsas_itens SET equipamento = ?, tag = ?, condicao = ?, descricao = ? WHERE id = ? AND inspecao_id = ?`,
+                [
+                  item.equipamento,
+                  item.tag,
+                  item.condicao,
+                  item.descricao,
+                  itemAvulsoId,
+                  inspecaoId,
+                ]
+              );
+            } else {
+              const [resultItemAvulso] = await connection.query(
+                `INSERT INTO inspecoes_avulsas_itens (inspecao_id, equipamento, tag, condicao, descricao) VALUES (?, ?, ?, ?, ?)`,
+                [
+                  inspecaoId,
+                  item.equipamento,
+                  item.tag,
+                  item.condicao,
+                  item.descricao,
+                ]
+              );
+              itemAvulsoId = resultItemAvulso.insertId;
+            }
+
             if (item.anexos && Array.isArray(item.anexos)) {
               for (const anexo of item.anexos) {
                 const caminhoMovido = await moverAnexo(
                   anexo,
                   inspecaoId,
-                  `avulso_itens/item_${novoItemAvulsoId}`,
+                  `avulso_itens/item_${itemAvulsoId}`,
                   connection,
                   {
                     prefixo: "AVULSO",
                     categoria_anexo: "ITEM_AVULSO",
-                    item_avulso_id: novoItemAvulsoId,
+                    item_avulso_id: itemAvulsoId,
                   }
                 );
                 arquivosMovidosComSucessoParaRollback.push(caminhoMovido);
@@ -680,10 +740,9 @@ router.put(
         `Inspeção ID ${inspecaoId} (Modo: ${inspection_mode}) atualizada.`,
         connection
       );
-      res.status(200).json({
-        id: inspecaoId,
-        message: "Inspeção atualizada com sucesso!",
-      });
+      res
+        .status(200)
+        .json({ id: inspecaoId, message: "Inspeção atualizada com sucesso!" });
     } catch (error) {
       if (connection) await connection.rollback();
       for (const caminho of arquivosMovidosComSucessoParaRollback) {
