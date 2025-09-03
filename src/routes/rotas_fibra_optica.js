@@ -18,7 +18,7 @@ const convertUtmToLatLon = (easting, northing, utmZoneString) => {
   if (isNaN(zoneNumber) || !zoneLetterMatch) {
     throw new Error(`Zona UTM inválida: ${utmZoneString}`);
   }
-  
+
   const zoneLetter = zoneLetterMatch[0];
   const isSouthernHemisphere = zoneLetter.toUpperCase() < "N";
 
@@ -133,11 +133,16 @@ router.get("/mapa_fibra", autenticar, verificarNivel(3), async (req, res) => {
   }
 });
 
-router.get("/visualizacao_mapa_fibra", autenticar, verificarNivel(3), (req, res) => {
-  res.render("pages/fibra_optica/visualizacao_mapa.html", {
-    user: req.session.user,
-  });
-});
+router.get(
+  "/visualizacao_mapa_fibra",
+  autenticar,
+  verificarNivel(3),
+  (req, res) => {
+    res.render("pages/fibra_optica/visualizacao_mapa.html", {
+      user: req.session.user,
+    });
+  }
+);
 
 router.post(
   "/registro_projeto_fibra",
@@ -480,6 +485,150 @@ router.get(
 );
 
 router.get(
+  "/fibra/servico/:id/editar",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [servicoRows] = await promisePool.query(
+        "SELECT * FROM servicos_fibra_optica WHERE id = ?",
+        [id]
+      );
+
+      if (servicoRows.length === 0) {
+        return res.status(404).send("Serviço não encontrado.");
+      }
+
+      const [responsaveis] = await promisePool.query(
+        "SELECT matricula, nome FROM users WHERE nivel >= 3 ORDER BY nome ASC"
+      );
+
+      const [anexos] = await promisePool.query(
+        "SELECT id, nome_original FROM anexos_servicos_fibra WHERE servico_id = ?",
+        [id]
+      );
+
+      res.render("pages/fibra_optica/editar_servico.html", {
+        user: req.session.user,
+        servico: servicoRows[0],
+        responsaveis: responsaveis,
+        anexos: anexos,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar página de edição:", error);
+      res.status(500).send("Erro ao carregar a página de edição.");
+    }
+  }
+);
+
+router.post(
+  "/fibra/servico/:id/editar",
+  autenticar,
+  verificarNivel(4),
+  upload.array("anexos", 10),
+  async (req, res) => {
+    const { id } = req.params;
+    const {
+      processo,
+      tipoOrdem,
+      linkMaps,
+      localReferencia,
+      dataServico,
+      horarioInicio,
+      horarioFim,
+      responsavelMatricula,
+      descricao,
+      observacoes,
+      anexos_a_remover,
+    } = req.body;
+
+    let connection;
+    try {
+      connection = await promisePool.getConnection();
+      await connection.beginTransaction();
+
+      if (anexos_a_remover) {
+        const idsParaRemover = anexos_a_remover.split(",").filter(Boolean);
+        if (idsParaRemover.length > 0) {
+          for (const anexoId of idsParaRemover) {
+            const [anexoRows] = await connection.query(
+              "SELECT caminho_servidor FROM anexos_servicos_fibra WHERE id = ? AND servico_id = ?",
+              [anexoId, id]
+            );
+            if (anexoRows.length > 0) {
+              const caminhoRelativo = anexoRows[0].caminho_servidor;
+              // CORREÇÃO CRÍTICA: Remove a barra inicial para que o path.join funcione corretamente.
+              const caminhoCorrigido = caminhoRelativo.startsWith("/")
+                ? caminhoRelativo.substring(1)
+                : caminhoRelativo;
+              const caminhoCompleto = path.join(
+                projectRootDir,
+                caminhoCorrigido
+              );
+
+              if (fs.existsSync(caminhoCompleto)) {
+                fs.unlinkSync(caminhoCompleto);
+              }
+            }
+            await connection.query(
+              "DELETE FROM anexos_servicos_fibra WHERE id = ?",
+              [anexoId]
+            );
+          }
+        }
+      }
+
+      const sqlUpdate = `
+        UPDATE servicos_fibra_optica SET
+          processo = ?, tipo_ordem = ?, link_maps = ?, local_referencia = ?,
+          data_servico = ?, horario_inicio = ?, horario_fim = ?,
+          responsavel_matricula = ?, descricao = ?, observacoes = ?
+        WHERE id = ?
+      `;
+      const values = [
+        processo,
+        tipoOrdem,
+        linkMaps,
+        localReferencia,
+        dataServico || null,
+        horarioInicio,
+        horarioFim,
+        responsavelMatricula,
+        descricao,
+        observacoes,
+        id,
+      ];
+
+      await connection.query(sqlUpdate, values);
+
+      if (req.files && req.files.length > 0) {
+        await salvarAnexosFibra(id, req.files, "Edicao", "Geral", connection);
+      }
+
+      await registrarAuditoria(
+        req.session.user.matricula,
+        "EDICAO_SERVICO_FIBRA",
+        `Serviço ID ${id} foi atualizado.`,
+        connection
+      );
+
+      await connection.commit();
+      res.status(200).json({
+        message: "Serviço atualizado com sucesso!",
+        servicoId: id,
+      });
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error("Erro ao atualizar serviço:", error);
+      res.status(500).json({ message: "Erro interno ao atualizar o serviço." });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.get(
   "/api/fibra/encarregados",
   autenticar,
   verificarNivel(3),
@@ -507,9 +656,13 @@ router.get(
   }
 );
 
-router.get("/api/fibra/todos-os-pontos", autenticar, verificarNivel(3), async (req, res) => {
-  try {
-    const [pontos] = await promisePool.query(`
+router.get(
+  "/api/fibra/todos-os-pontos",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    try {
+      const [pontos] = await promisePool.query(`
       SELECT 
         f.id,
         f.tipo_ponto,
@@ -525,12 +678,13 @@ router.get("/api/fibra/todos-os-pontos", autenticar, verificarNivel(3), async (r
       LEFT JOIN users u ON f.coletado_por_matricula = u.matricula
       ORDER BY f.id DESC
     `);
-    res.json(pontos);
-  } catch (error) {
-    console.error("Erro ao buscar todos os pontos de fibra:", error);
-    res.status(500).json({ message: "Erro interno ao buscar os pontos." });
+      res.json(pontos);
+    } catch (error) {
+      console.error("Erro ao buscar todos os pontos de fibra:", error);
+      res.status(500).json({ message: "Erro interno ao buscar os pontos." });
+    }
   }
-});
+);
 
 router.post(
   "/api/fibra/modificar-atribuicao",
@@ -565,7 +719,9 @@ router.post(
           "REMOCAO_ENCARREGADO_FIBRA",
           `Atribuição removida do Serviço ID ${servicoId}. Status alterado para Pendente.`
         );
-        res.json({ message: "Atribuição removida e serviço retornado para pendente." });
+        res.json({
+          message: "Atribuição removida e serviço retornado para pendente.",
+        });
       }
     } catch (error) {
       res
@@ -611,9 +767,13 @@ router.post(
       if (pontosMapa && Array.isArray(pontosMapa) && pontosMapa.length > 0) {
         const sqlInsertPonto =
           "INSERT INTO fibra_maps (servico_id, tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
-        
+
         const values = pontosMapa.map((ponto) => {
-          const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
+          const { latitude, longitude } = convertUtmToLatLon(
+            ponto.easting,
+            ponto.northing,
+            ponto.utm_zone
+          );
           return [
             servicoId,
             ponto.tipo,
@@ -756,7 +916,11 @@ router.post(
         "INSERT INTO fibra_maps (tipo_ponto, tag, utm_zone, easting, northing, altitude, latitude, longitude, coletado_por_matricula) VALUES ?";
 
       const values = pontos.map((ponto) => {
-        const { latitude, longitude } = convertUtmToLatLon(ponto.easting, ponto.northing, ponto.utm_zone);
+        const { latitude, longitude } = convertUtmToLatLon(
+          ponto.easting,
+          ponto.northing,
+          ponto.utm_zone
+        );
         return [
           ponto.tipo,
           ponto.tag,
