@@ -160,6 +160,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let generalAttachments = [];
   let modalAttachments = [];
   let anexosParaDeletar = [];
+  let deletedIds = {
+    respostas: [],
+    especificacoes: [],
+    registros: [],
+    avulsos: [],
+  };
 
   const urlParams = new URLSearchParams(window.location.search);
   editInspecaoId = urlParams.get("editarId");
@@ -312,6 +318,8 @@ document.addEventListener("DOMContentLoaded", () => {
     paginaTitulo.innerHTML = `<span class="material-symbols-outlined">edit</span> Editando Inspeção #${id}`;
     btnSalvarInspecao.innerHTML =
       '<span class="material-symbols-outlined">save</span> Salvar Alterações';
+    
+    deletedIds = { respostas: [], especificacoes: [], registros: [], avulsos: [] };
 
     try {
       const inspecao = await fetchData(`/inspecoes-subestacoes/${id}`);
@@ -345,7 +353,8 @@ document.addEventListener("DOMContentLoaded", () => {
         formInspecaoAvulsaContainer.classList.remove("hidden");
         avulsoItems = inspecao.itens_avulsos.map((item) => ({
           ...item,
-          temp_id: item.id,
+          id: item.id,
+          temp_id: `avulso_${item.id}`,
           anexos: [],
           anexos_existentes: item.anexos || [],
         }));
@@ -440,6 +449,9 @@ document.addEventListener("DOMContentLoaded", () => {
       itemEl
         .querySelector(".btn-remover-linha")
         .addEventListener("click", () => {
+          if (item.id) {
+            deletedIds.avulsos.push(item.id);
+          }
           avulsoItems.splice(index, 1);
           renderAvulsoItems();
           checkAnormalidades();
@@ -603,6 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
     checklistTemplateFromAPI.forEach((grupo) => {
       grupo.itens.forEach((item) => {
         checklistState.itens[item.id] = {
+          item_checklist_id: item.id,
           avaliacao: null,
           observacao_item: "",
           especificacoes: [],
@@ -616,12 +629,15 @@ document.addEventListener("DOMContentLoaded", () => {
       inspecaoParaEditar.itens.forEach((itemEditado) => {
         if (checklistState.itens[itemEditado.item_checklist_id]) {
           checklistState.itens[itemEditado.item_checklist_id] = {
+            id: itemEditado.resposta_id,
+            item_checklist_id: itemEditado.item_checklist_id,
             avaliacao: itemEditado.avaliacao,
             observacao_item: itemEditado.observacao_item || "",
             especificacoes:
               itemEditado.especificacoes.map((e) => ({
                 ...e,
-                temp_id: e.id,
+                id: e.id,
+                temp_id: `spec_${e.id}`,
               })) || [],
             anexos: [],
             anexos_existentes:
@@ -639,7 +655,8 @@ document.addEventListener("DOMContentLoaded", () => {
         checklistState.medicoes = inspecaoParaEditar.registros
           .filter((r) => r.categoria_registro === "MEDICAO")
           .map((r) => ({
-            temp_id: r.id,
+            id: r.id,
+            temp_id: `medicao_${r.id}`,
             tipo: r.tipo_especifico,
             tag: r.tag_equipamento,
             valor: r.valor_texto,
@@ -654,7 +671,8 @@ document.addEventListener("DOMContentLoaded", () => {
         checklistState.equipamentosObservados = inspecaoParaEditar.registros
           .filter((r) => r.categoria_registro === "EQUIPAMENTO_OBSERVADO")
           .map((r) => ({
-            temp_id: r.id,
+            id: r.id,
+            temp_id: `equipamento_${r.id}`,
             tipo: r.tipo_especifico,
             tag: r.tag_equipamento,
             obs: r.descricao_item,
@@ -667,7 +685,8 @@ document.addEventListener("DOMContentLoaded", () => {
         checklistState.verificacoesAdicionais = inspecaoParaEditar.registros
           .filter((r) => r.categoria_registro === "VERIFICACAO_ADICIONAL")
           .map((r) => ({
-            temp_id: r.id,
+            id: r.id,
+            temp_id: `verificacao_${r.id}`,
             item_verificado: r.descricao_item,
             estado: r.estado_item,
             ref_anterior: r.referencia_externa,
@@ -712,6 +731,9 @@ document.addEventListener("DOMContentLoaded", () => {
       novaLinha
         .querySelector(".btn-remover-linha")
         .addEventListener("click", () => {
+          if (medicao.id) {
+            deletedIds.registros.push(medicao.id);
+          }
           const indexToRemove = checklistState.medicoes.findIndex(
             (i) => i.temp_id === medicao.temp_id
           );
@@ -761,6 +783,9 @@ document.addEventListener("DOMContentLoaded", () => {
       novaLinha
         .querySelector(".btn-remover-linha")
         .addEventListener("click", () => {
+          if (equip.id) {
+            deletedIds.registros.push(equip.id);
+          }
           const indexToRemove = checklistState.equipamentosObservados.findIndex(
             (i) => i.temp_id === equip.temp_id
           );
@@ -810,6 +835,9 @@ document.addEventListener("DOMContentLoaded", () => {
       novaLinha
         .querySelector(".btn-remover-linha")
         .addEventListener("click", () => {
+          if (verificacao.id) {
+            deletedIds.registros.push(verificacao.id);
+          }
           const indexToRemove = checklistState.verificacoesAdicionais.findIndex(
             (i) => i.temp_id === verificacao.temp_id
           );
@@ -967,6 +995,9 @@ document.addEventListener("DOMContentLoaded", () => {
     bloco
       .querySelector(".btn-remover-especificacao")
       .addEventListener("click", () => {
+        if (spec.id) {
+          deletedIds.especificacoes.push(spec.id);
+        }
         const state = getStateObject(currentEditingContext);
         state.especificacoes = state.especificacoes.filter(
           (s) => s.temp_id !== spec.temp_id
@@ -1112,6 +1143,10 @@ document.addEventListener("DOMContentLoaded", () => {
       .querySelector(".btn-remover-linha")
       .addEventListener("click", () => {
         if (stateArray) {
+          const itemToRemove = stateArray.find((i) => i.temp_id === tempId);
+          if (itemToRemove && itemToRemove.id) {
+            deletedIds.registros.push(itemToRemove.id);
+          }
           const indexToRemove = stateArray.findIndex(
             (i) => i.temp_id === tempId
           );
@@ -1325,15 +1360,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isEditMode) {
       payload.anexos_para_deletar = anexosParaDeletar;
+      payload.deleted_ids = deletedIds;
     }
 
     if (currentInspectionType === "checklist") {
-      payload.checklist_items = Object.entries(checklistState.itens).map(
-        ([itemId, itemData]) => ({
-          item_checklist_id: itemId,
+      payload.checklist_items = Object.values(checklistState.itens).map(
+        (itemData) => ({
+          id: itemData.id,
+          item_checklist_id: itemData.item_checklist_id,
           avaliacao: itemData.avaliacao,
           observacao_item: itemData.observacao_item,
-          especificacoes: itemData.especificacoes,
+          especificacoes: itemData.especificacoes.map(spec => ({
+            id: spec.id,
+            temp_id: spec.temp_id,
+            descricao_equipamento: spec.descricao_equipamento,
+            observacao: spec.observacao
+          })),
           anexos: itemData.anexos
             .filter((a) => a.status === "uploaded")
             .map((a) => ({
@@ -1352,6 +1394,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!stateItem) return;
 
           let data = {
+            id: stateItem.id,
             categoria: categoria,
             anexos: stateItem.anexos
               .filter((a) => a.status === "uploaded")
@@ -1359,7 +1402,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 tempFileName: a.tempFileName,
                 originalName: a.originalName,
               })),
-            anexos_existentes: stateItem.anexos_existentes.map((a) => a.id),
           };
 
           if (categoria === "MEDICAO") {
@@ -1404,7 +1446,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ];
     } else if (currentInspectionType === "avulsa") {
       payload.avulsa_items = avulsoItems.map((item) => ({
-        temp_id: item.temp_id,
+        id: item.id,
         equipamento: item.equipamento,
         tag: item.tag,
         condicao: item.condicao,
