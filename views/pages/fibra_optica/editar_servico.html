@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editar Serviço de Fibra #<%= servico.id %></title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <link
+      rel="stylesheet"
+      href="/static/css/components/bootstrap-overrides.css"
+    />
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link
+      rel="stylesheet"
+      href="/static/css/fibra_optica/registro_projeto.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <%- include('../../partials/sidebar.html') %>
+
+      <main class="main-content">
+        <header class="main-header">
+          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-content">
+            <h1 class="page-title">
+              <i class="fa-solid fa-pencil"></i>
+              Editar Serviço de Fibra Óptica #<%= servico.id %>
+            </h1>
+          </div>
+        </header>
+
+        <div class="container-fluid">
+          <form id="form-editar-servico" data-servico-id="<%= servico.id %>" novalidate>
+            <input type="hidden" id="anexos_a_remover_input" name="anexos_a_remover">
+
+            <div class="card shadow-sm">
+              <div class="card-body p-4">
+                <div class="row g-4">
+                  <div class="col-lg-6">
+                    <h5>
+                      <i class="fa-solid fa-clipboard-list me-2"></i>Detalhes do
+                      Serviço
+                    </h5>
+                    <hr class="mt-2" />
+                    <div class="mb-3">
+                      <label for="processo" class="form-label"
+                        >Nº do Processo</label
+                      >
+                      <input
+                        type="text"
+                        id="processo"
+                        name="processo"
+                        class="form-control"
+                        placeholder="Ex: 2024-12345"
+                        value="<%= servico.processo || '' %>"
+                      />
+                    </div>
+                    <div class="mb-3">
+                      <label for="tipoOrdem" class="form-label required"
+                        >Tipo de Ordem</label
+                      >
+                      <select
+                        id="tipoOrdem"
+                        name="tipoOrdem"
+                        class="form-select"
+                        required
+                      >
+                        <option value="ODI" <%= servico.tipo_ordem === 'ODI' ? 'selected' : '' %>>ODI</option>
+                        <option value="ODD" <%= servico.tipo_ordem === 'ODD' ? 'selected' : '' %>>ODD</option>
+                        <option value="ODS" <%= servico.tipo_ordem === 'ODS' ? 'selected' : '' %>>ODS</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label
+                        for="responsavelMatricula"
+                        class="form-label required"
+                        >Responsável Técnico</label
+                      >
+                      <select
+                        id="responsavelMatricula"
+                        name="responsavelMatricula"
+                        class="form-select"
+                        required
+                      >
+                        <% responsaveis.forEach(resp => { %>
+                        <option value="<%= resp.matricula %>" <%= servico.responsavel_matricula == resp.matricula ? 'selected' : '' %>>
+                          <%= resp.nome %>
+                        </option>
+                        <% }) %>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label for="descricao" class="form-label required"
+                        >Descrição do Serviço</label
+                      >
+                      <textarea
+                        id="descricao"
+                        name="descricao"
+                        rows="4"
+                        class="form-control"
+                        required
+                        placeholder="Descreva detalhadamente o serviço a ser executado..."
+                      ><%= servico.descricao %></textarea>
+                    </div>
+                  </div>
+
+                  <div class="col-lg-6">
+                    <h5>
+                      <i class="fa-solid fa-map-location-dot me-2"></i
+                      >Localização e Prazos
+                    </h5>
+                    <hr class="mt-2" />
+                    <div class="mb-3">
+                      <label for="localReferencia" class="form-label required"
+                        >Local/Referência</label
+                      >
+                      <input
+                        type="text"
+                        id="localReferencia"
+                        name="localReferencia"
+                        class="form-control"
+                        required
+                        placeholder="Ex: Rua Principal, 123, Bairro Centro"
+                        value="<%= servico.local_referencia %>"
+                      />
+                    </div>
+                    <div class="mb-3">
+                      <label for="linkMaps" class="form-label"
+                        >Link do Google Maps</label
+                      >
+                      <input
+                        type="url"
+                        id="linkMaps"
+                        name="linkMaps"
+                        class="form-control"
+                        placeholder="https://maps.app.goo.gl/..."
+                        value="<%= servico.link_maps || '' %>"
+                      />
+                    </div>
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <label for="dataServico" class="form-label"
+                          >Data Prevista</label
+                        >
+                        <input
+                          type="date"
+                          id="dataServico"
+                          name="dataServico"
+                          class="form-control"
+                          value="<%= servico.data_servico ? new Date(servico.data_servico).toISOString().split('T')[0] : '' %>"
+                        />
+                      </div>
+                      <div class="col-md-4">
+                        <label for="horarioInicio" class="form-label required"
+                          >Horário Início</label
+                        >
+                        <input
+                          type="time"
+                          id="horarioInicio"
+                          name="horarioInicio"
+                          class="form-control"
+                          required
+                          value="<%= servico.horario_inicio %>"
+                        />
+                      </div>
+                      <div class="col-md-4">
+                        <label for="horarioFim" class="form-label required"
+                          >Horário Fim</label
+                        >
+                        <input
+                          type="time"
+                          id="horarioFim"
+                          name="horarioFim"
+                          class="form-control"
+                          required
+                          value="<%= servico.horario_fim %>"
+                        />
+                      </div>
+                    </div>
+                    <h5 class="mt-4">
+                      <i class="fa-solid fa-paperclip me-2"></i>Anexos e
+                      Observações
+                    </h5>
+                    <hr class="mt-2" />
+                    <div class="mb-3">
+                        <label class="form-label">Anexos Existentes</label>
+                        <div id="anexos-existentes-container">
+                            <% if (anexos && anexos.length > 0) { %>
+                                <ul class="list-group">
+                                    <% anexos.forEach(anexo => { %>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center" data-anexo-id="<%= anexo.id %>">
+                                            <span><i class="fa-solid fa-file me-2"></i><%= anexo.nome_original %></span>
+                                            <!-- BOTÃO CORRIGIDO E ALTERADO PARA LIXEIRA -->
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-remover-anexo" aria-label="Remover anexo">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </li>
+                                    <% }); %>
+                                </ul>
+                            <% } else { %>
+                                <p class="text-muted" id="nenhum-anexo-msg">Nenhum anexo existente.</p>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="file-input" class="form-label"
+                        >Adicionar Novos Anexos</label
+                      >
+                      <div class="file-drop-zone" role="button" tabindex="0">
+                        <i class="fa-solid fa-upload fa-2x text-muted"></i>
+                        <p class="mt-2 mb-0">
+                          Arraste e solte os arquivos aqui ou
+                          <strong>clique para selecionar</strong>
+                        </p>
+                        <input
+                          type="file"
+                          id="file-input"
+                          name="anexos"
+                          multiple
+                          hidden
+                        />
+                      </div>
+                      <div
+                        id="file-list-wrapper"
+                        class="mt-3"
+                        style="display: none"
+                      >
+                        <div id="file-list" class="list-group"></div>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label for="observacoes" class="form-label"
+                        >Observações</label
+                      >
+                      <textarea
+                        id="observacoes"
+                        name="observacoes"
+                        rows="3"
+                        class="form-control"
+                        placeholder="Informações adicionais, se houver..."
+                      ><%= servico.observacoes || '' %></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card-footer text-end bg-light">
+                <a href="/fibra/servico/<%= servico.id %>" class="btn btn-secondary">
+                  <i class="fa-solid fa-times me-2"></i> Cancelar
+                </a>
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                >
+                  <i class="fa-solid fa-save me-2"></i> Salvar Alterações
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/scripts/utils/toast.js"></script>
+    <script src="/scripts/fibra_optica/editar_servico.js"></script>
+  </body>
+</html>
