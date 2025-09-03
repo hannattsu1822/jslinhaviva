@@ -3,12 +3,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const assignModalEl = document.getElementById("assign-modal");
   const assignModal = assignModalEl ? new bootstrap.Modal(assignModalEl) : null;
-  
+
   const confirmationModalEl = document.getElementById("confirmation-modal");
-  const confirmationModal = confirmationModalEl ? new bootstrap.Modal(confirmationModalEl) : null;
+  const confirmationModal = confirmationModalEl
+    ? new bootstrap.Modal(confirmationModalEl)
+    : null;
 
   const completionModalEl = document.getElementById("completion-modal");
-  const completionModal = completionModalEl ? new bootstrap.Modal(completionModalEl) : null;
+  const completionModal = completionModalEl
+    ? new bootstrap.Modal(completionModalEl)
+    : null;
 
   const encarregadoSelect = document.getElementById("encarregado-select");
   const assignServiceIdSpan = document.getElementById("assign-service-id");
@@ -31,6 +35,9 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   const completionFileListContainer = document.getElementById(
     "completion-file-list"
+  );
+  const completionFileDropZone = document.querySelector(
+    "#completion-modal .file-drop-zone"
   );
 
   let currentServiceId = null;
@@ -63,11 +70,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) throw new Error("Falha ao buscar encarregados.");
 
       const encarregados = await response.json();
-      encarregadoSelect.innerHTML = '<option value="" disabled selected>Selecione uma ação...</option>';
-      
+      encarregadoSelect.innerHTML =
+        '<option value="" disabled selected>Selecione uma ação...</option>';
+
       const removeOption = document.createElement("option");
-      removeOption.value = "";
-      removeOption.textContent = "--- Remover Atribuição (Voltar para Pendente) ---";
+      removeOption.value = "remover";
+      removeOption.textContent =
+        "--- Remover Atribuição (Voltar para Pendente) ---";
       encarregadoSelect.appendChild(removeOption);
 
       encarregados.forEach((enc) => {
@@ -179,11 +188,12 @@ document.addEventListener("DOMContentLoaded", () => {
     currentServiceId = servicoId;
     completionServiceIdSpan.textContent = `#${servicoId}`;
     const now = new Date();
-    completionDateInput.value = now.toISOString().split("T")[0];
-    completionTimeInput.value = now
-      .toTimeString()
-      .split(" ")[0]
-      .substring(0, 5);
+    const timezoneOffset = now.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(now - timezoneOffset).toISOString();
+
+    completionDateInput.value = localISOTime.split("T")[0];
+    completionTimeInput.value = localISOTime.split("T")[1].substring(0, 5);
+
     mapPointsContainer.innerHTML = "";
     completionFiles = [];
     updateCompletionFileList();
@@ -204,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!response.ok) throw new Error(result.message);
           showToast(result.message, "success");
           if (confirmationModal) confirmationModal.hide();
-          window.location.reload();
+          setTimeout(() => window.location.reload(), 1500);
         } catch (error) {
           showToast(error.message, "error");
         }
@@ -215,27 +225,34 @@ document.addEventListener("DOMContentLoaded", () => {
   if (tableBody) {
     tableBody.addEventListener("click", (event) => {
       const target = event.target;
+      const row = target.closest("tr");
+      if (!row) return;
+
+      const servicoId = row.dataset.servicoId;
+      if (!servicoId) return;
+
       const assignButton = target.closest(".btn-assign");
       const concluirButton = target.closest(".btn-concluir");
       const excluirButton = target.closest(".btn-excluir");
-      if (assignButton || concluirButton || excluirButton) {
-        const row = target.closest("tr");
-        const servicoId = row.dataset.servicoId;
-        if (assignButton) handleAssignClick(servicoId);
-        if (concluirButton) handleConcluirClick(servicoId);
-        if (excluirButton) handleExcluirClick(servicoId);
-      }
+
+      if (assignButton) handleAssignClick(servicoId);
+      if (concluirButton) handleConcluirClick(servicoId);
+      if (excluirButton) handleExcluirClick(servicoId);
     });
   }
 
   document
     .getElementById("btn-confirm-assign")
     ?.addEventListener("click", async () => {
-      const encarregadoMatricula = encarregadoSelect.value;
+      const selectedValue = encarregadoSelect.value;
       if (encarregadoSelect.selectedIndex === 0) {
         showToast("Por favor, selecione uma ação válida.", "error");
         return;
       }
+
+      const encarregadoMatricula =
+        selectedValue === "remover" ? null : selectedValue;
+
       try {
         const response = await fetch("/api/fibra/modificar-atribuicao", {
           method: "POST",
@@ -249,7 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!response.ok) throw new Error(result.message);
         showToast(result.message, "success");
         if (assignModal) assignModal.hide();
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 1500);
       } catch (error) {
         showToast(error.message, "error");
       }
@@ -268,6 +285,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (removeButton) removeButton.closest(".map-point-row").remove();
   });
 
+  if (completionFileDropZone) {
+    completionFileDropZone.addEventListener("click", () =>
+      completionFileInput.click()
+    );
+  }
+
   completionFileInput?.addEventListener("change", (event) => {
     completionFiles.push(...Array.from(event.target.files));
     updateCompletionFileList();
@@ -285,6 +308,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   completionForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!completionForm.checkValidity()) {
+      completionForm.classList.add("was-validated");
+      return;
+    }
 
     const pontosMapa = [];
     document
@@ -312,6 +339,11 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append("pontosMapa", JSON.stringify(pontosMapa));
     completionFiles.forEach((file) => formData.append("anexosConclusao", file));
 
+    const submitButton = completionForm.querySelector('button[type="submit"]');
+    const originalButtonHTML = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Finalizando...`;
+
     try {
       const response = await fetch("/api/fibra/finalizar-servico", {
         method: "POST",
@@ -322,9 +354,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       showToast(result.message, "success");
       if (completionModal) completionModal.hide();
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
       showToast(error.message, "error");
+    } finally {
+      submitButton.disabled = false;
+      submitButton.innerHTML = "Finalizar Serviço";
     }
   });
 });
