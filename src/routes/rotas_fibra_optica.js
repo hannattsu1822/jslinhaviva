@@ -552,29 +552,58 @@ router.post(
         const idsParaRemover = anexos_a_remover.split(",").filter(Boolean);
         if (idsParaRemover.length > 0) {
           for (const anexoId of idsParaRemover) {
+            // Log para ver qual anexo estamos processando
+            console.log("--- INICIANDO REMOÇÃO DE ANEXO ---");
+            console.log("ID do anexo para remover:", anexoId);
+
             const [anexoRows] = await connection.query(
               "SELECT caminho_servidor FROM anexos_servicos_fibra WHERE id = ? AND servico_id = ?",
               [anexoId, id]
             );
+
             if (anexoRows.length > 0) {
               const caminhoRelativo = anexoRows[0].caminho_servidor;
-              // CORREÇÃO CRÍTICA: Remove a barra inicial para que o path.join funcione corretamente.
+
+              // Logs para depurar a construção do caminho
+              console.log("Caminho relativo do banco:", caminhoRelativo);
+              console.log(
+                "Diretório raiz do projeto (projectRootDir):",
+                projectRootDir
+              );
+
               const caminhoCorrigido = caminhoRelativo.startsWith("/")
                 ? caminhoRelativo.substring(1)
                 : caminhoRelativo;
+
               const caminhoCompleto = path.join(
                 projectRootDir,
                 caminhoCorrigido
               );
 
+              // Log final antes de tentar a exclusão
+              console.log("Caminho final para exclusão:", caminhoCompleto);
+
               if (fs.existsSync(caminhoCompleto)) {
+                console.log("Arquivo encontrado. Tentando excluir...");
                 fs.unlinkSync(caminhoCompleto);
+                console.log("Arquivo excluído com sucesso.");
+              } else {
+                console.warn(
+                  "AVISO: Arquivo não encontrado no caminho para exclusão."
+                );
               }
+            } else {
+              console.warn(
+                `AVISO: Anexo com ID ${anexoId} não encontrado no banco de dados para o serviço ${id}.`
+              );
             }
+
             await connection.query(
               "DELETE FROM anexos_servicos_fibra WHERE id = ?",
               [anexoId]
             );
+            console.log(`Registro do anexo ID ${anexoId} removido do banco.`);
+            console.log("--- FIM DA REMOÇÃO DE ANEXO ---");
           }
         }
       }
@@ -1022,6 +1051,82 @@ router.delete(
     } catch (error) {
       if (connection) await connection.rollback();
       res.status(500).json({ message: "Erro interno ao excluir o serviço." });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.get(
+  "/api/fibra/servico/:id/aprs",
+  autenticar,
+  verificarNivel(3),
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [anexos] = await promisePool.query(
+        "SELECT id, nome_original, caminho_servidor FROM anexos_servicos_fibra WHERE servico_id = ? AND tipo_anexo = 'APR'",
+        [id]
+      );
+      res.json(anexos);
+    } catch (error) {
+      console.error("Erro ao buscar anexos APR:", error);
+      res.status(500).json({ message: "Erro interno ao buscar anexos." });
+    }
+  }
+);
+
+// ROTA 2: Excluir um anexo de APR específico pelo seu ID
+router.delete(
+  "/api/fibra/anexo-apr/:id",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { id } = req.params;
+    let connection;
+    try {
+      connection = await promisePool.getConnection();
+      await connection.beginTransaction();
+
+      const [anexoRows] = await connection.query(
+        "SELECT caminho_servidor FROM anexos_servicos_fibra WHERE id = ?",
+        [id]
+      );
+
+      if (anexoRows.length === 0) {
+        await connection.rollback(); // Apenas para liberar a conexão
+        return res.status(404).json({ message: "Anexo não encontrado." });
+      }
+
+      const caminhoRelativo = anexoRows[0].caminho_servidor;
+      if (caminhoRelativo) {
+        const caminhoCorrigido = caminhoRelativo.startsWith("/")
+          ? caminhoRelativo.substring(1)
+          : caminhoRelativo;
+        const caminhoCompleto = path.join(projectRootDir, caminhoCorrigido);
+
+        if (fs.existsSync(caminhoCompleto)) {
+          fs.unlinkSync(caminhoCompleto);
+        }
+      }
+
+      await connection.query("DELETE FROM anexos_servicos_fibra WHERE id = ?", [
+        id,
+      ]);
+
+      await registrarAuditoria(
+        req.session.user.matricula,
+        "EXCLUSAO_ANEXO_APR_FIBRA",
+        `Anexo APR ID ${id} foi excluído.`,
+        connection
+      );
+
+      await connection.commit();
+      res.json({ message: "Anexo APR excluído com sucesso!" });
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error("Erro ao excluir anexo APR:", error);
+      res.status(500).json({ message: "Erro interno ao excluir o anexo." });
     } finally {
       if (connection) connection.release();
     }
