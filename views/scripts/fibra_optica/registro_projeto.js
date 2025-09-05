@@ -19,6 +19,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const processoInput = document.getElementById("processo");
   const processoLabel = document.querySelector('label[for="processo"]');
 
+  const programadoSwitchContainer = document.getElementById(
+    "programado-switch-container"
+  );
+  const programadoSwitch = document.getElementById("servico-programado");
+  const horariosContainer = document.getElementById("horarios-container");
+  const horarioInicioInput = document.getElementById("horarioInicio");
+  const horarioFimInput = document.getElementById("horarioFim");
+
   const fileDropZone = document.querySelector(".file-drop-zone");
   const fileInput = document.getElementById("file-input");
   const fileListWrapper = document.getElementById("file-list-wrapper");
@@ -115,6 +123,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  programadoSwitch.addEventListener("change", () => {
+    const isProgramado = programadoSwitch.checked;
+    horariosContainer.style.display = isProgramado ? "block" : "none";
+    horarioInicioInput.required = isProgramado;
+    horarioFimInput.required = isProgramado;
+  });
+
   const setupFormForServiceType = (type) => {
     currentServiceType = type;
     const isNormal = type === "normal";
@@ -122,10 +137,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isNormal) {
       serviceTypeDisplay.innerHTML =
         '<span class="badge bg-primary">Normal</span>';
+      programadoSwitchContainer.style.display = "block";
     } else {
       serviceTypeDisplay.innerHTML =
         '<span class="badge bg-danger">Emergencial</span>';
+      programadoSwitchContainer.style.display = "none";
     }
+
+    programadoSwitch.checked = false;
+    horariosContainer.style.display = "none";
+    horarioInicioInput.required = false;
+    horarioFimInput.required = false;
 
     processoInput.required = isNormal;
     processoLabel.classList.toggle("required", isNormal);
