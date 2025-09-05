@@ -206,41 +206,59 @@
                         placeholder="https://maps.app.goo.gl/..."
                       />
                     </div>
-                    <div class="row g-3">
-                      <div class="col-md-4">
-                        <label for="dataServico" class="form-label"
-                          >Data Prevista</label
-                        >
-                        <input
-                          type="date"
-                          id="dataServico"
-                          name="dataServico"
-                          class="form-control"
-                        />
-                      </div>
-                      <div class="col-md-4">
-                        <label for="horarioInicio" class="form-label required"
-                          >Horário Início</label
-                        >
-                        <input
-                          type="time"
-                          id="horarioInicio"
-                          name="horarioInicio"
-                          class="form-control"
-                          required
-                        />
-                      </div>
-                      <div class="col-md-4">
-                        <label for="horarioFim" class="form-label required"
-                          >Horário Fim</label
-                        >
-                        <input
-                          type="time"
-                          id="horarioFim"
-                          name="horarioFim"
-                          class="form-control"
-                          required
-                        />
+                    <div class="mb-3">
+                      <label for="dataServico" class="form-label"
+                        >Data Prevista</label
+                      >
+                      <input
+                        type="date"
+                        id="dataServico"
+                        name="dataServico"
+                        class="form-control"
+                      />
+                    </div>
+
+                    <div
+                      class="mb-3 form-check form-switch"
+                      id="programado-switch-container"
+                      style="display: none"
+                    >
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        id="servico-programado"
+                        name="programado"
+                      />
+                      <label class="form-check-label" for="servico-programado"
+                        >Serviço Programado (definir horários)</label
+                      >
+                    </div>
+
+                    <div id="horarios-container" style="display: none">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label for="horarioInicio" class="form-label"
+                            >Horário Início</label
+                          >
+                          <input
+                            type="time"
+                            id="horarioInicio"
+                            name="horarioInicio"
+                            class="form-control"
+                          />
+                        </div>
+                        <div class="col-md-6">
+                          <label for="horarioFim" class="form-label"
+                            >Horário Fim</label
+                          >
+                          <input
+                            type="time"
+                            id="horarioFim"
+                            name="horarioFim"
+                            class="form-control"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
