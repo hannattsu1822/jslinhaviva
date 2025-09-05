@@ -80,20 +80,16 @@
                                 <input type="time" id="completion-time" class="form-control" required>
                             </div>
                         </div>
-
                         <hr>
-
                         <h6>Registrar Pontos no Mapa de Fibra</h6>
                         <div id="map-points-container" class="mb-3"></div>
                         <button type="button" id="btn-add-map-point" class="btn btn-outline-secondary btn-sm">
                             <i class="fa-solid fa-plus"></i> Adicionar Ponto
                         </button>
-
                         <hr>
-
                         <h6>Anexos de Conclusão</h6>
                         <div class="attachments-section">
-                            <div class="file-drop-zone">
+                            <div class="file-drop-zone" role="button" tabindex="0">
                                 <i class="fa-solid fa-upload"></i>
                                 <p>Arraste e solte os arquivos aqui, ou clique para selecionar.</p>
                                 <input type="file" id="completion-file-input" multiple hidden>
@@ -124,14 +120,17 @@
                         <i class="fa-solid fa-hourglass-half"></i>
                         Serviços de Fibra em Andamento
                     </h1>
-                    <a href="/fibra-optica" class="btn btn-secondary">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Voltar
-                    </a>
                 </div>
             </header>
             
             <div class="container-fluid">
+                <div class="d-flex justify-content-end mb-4">
+                    <a href="/fibra-optica" class="btn btn-secondary">
+                        <i class="fa-solid fa-arrow-left me-2"></i>
+                        Voltar
+                    </a>
+                </div>
+
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <form id="filter-form" class="row g-3 align-items-end" method="GET" action="/projetos_fibra_andamento">
@@ -191,7 +190,7 @@
                                 <th>Processo</th>
                                 <th>Tipo</th>
                                 <th>Data Prevista</th>
-                                <th>Horário</th>
+                                <th>Status</th>
                                 <th>Encarregado</th>
                                 <th class="text-end">Ações</th>
                             </tr>
@@ -200,42 +199,48 @@
                             <% if (servicos && servicos.length > 0) { %>
                                 <% servicos.forEach(servico => { %>
                                     <tr data-servico-id="<%= servico.id %>">
-                                        <td><%= servico.id %></td>
-                                        <td><%= servico.processo || 'N/A' %></td>
-                                        <td><span class="badge bg-secondary"><%= servico.tipo_ordem %></span></td>
-                                        <td><%= servico.data_servico ? new Date(servico.data_servico).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'A definir' %></td>
-                                        <td><%= servico.horario_inicio.substring(0, 5) %> - <%= servico.horario_fim.substring(0, 5) %></td>
-                                        <td>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span><%= servico.nome_encarregado || 'Não atribuído' %></span>
+                                        <td data-label="ID"><%= servico.id %></td>
+                                        <td data-label="Processo"><%= servico.processo || 'N/A' %></td>
+                                        <td data-label="Tipo"><span class="badge bg-secondary"><%= servico.tipo_ordem %></span></td>
+                                        <td data-label="Data Prevista"><%= servico.data_servico ? new Date(servico.data_servico).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'A definir' %></td>
+                                        <td data-label="Status">
+                                            <% if (servico.status === 'Pendente') { %>
+                                                <span class="badge bg-warning text-dark"><%= servico.status %></span>
+                                            <% } else if (servico.status === 'Em Andamento') { %>
+                                                <span class="badge bg-info text-dark"><%= servico.status %></span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary"><%= servico.status %></span>
+                                            <% } %>
+                                        </td>
+                                        <td data-label="Encarregado"><%= servico.nome_encarregado || 'Não atribuído' %></td>
+                                        <td data-label="Ações" class="text-end">
+                                            <div class="btn-group gap-1">
+                                                <a href="/fibra/servico/<%= servico.id %>" class="btn btn-sm btn-secondary" title="Ver Detalhes">
+                                                    <i class="fa-solid fa-eye"></i>
+                                                </a>
                                                 <% if (user.nivel >= 4) { %>
-                                                    <button class="btn btn-sm btn-outline-secondary ms-2 btn-assign" title="Modificar Atribuição">
-                                                        <i class="fa-solid fa-pencil"></i>
+                                                    <button class="btn btn-sm btn-primary btn-assign" title="Modificar Atribuição">
+                                                        <i class="fa-solid fa-user-tag"></i>
+                                                    </button>
+                                                <% } %>
+                                                <% if (user.nivel >= 3) { %>
+                                                    <button class="btn btn-sm btn-success btn-concluir" title="Finalizar Serviço">
+                                                        <i class="fa-solid fa-check-circle"></i>
+                                                    </button>
+                                                <% } %>
+                                                <% if (user.nivel >= 5) { %>
+                                                    <button class="btn btn-sm btn-danger btn-excluir" title="Excluir Serviço">
+                                                        <i class="fa-solid fa-trash-can"></i>
                                                     </button>
                                                 <% } %>
                                             </div>
-                                        </td>
-                                        <td class="text-end">
-                                            <a href="/fibra/servico/<%= servico.id %>" class="btn btn-sm btn-outline-secondary" aria-label="Ver detalhes">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </a>
-                                            <% if (user.nivel >= 3) { %>
-                                                <button class="btn btn-sm btn-outline-success btn-concluir" aria-label="Concluir serviço">
-                                                    <i class="fa-solid fa-check"></i>
-                                                </button>
-                                            <% } %>
-                                            <% if (user.nivel >= 5) { %>
-                                                <button class="btn btn-sm btn-outline-danger btn-excluir" aria-label="Excluir serviço">
-                                                    <i class="fa-solid fa-trash-can"></i>
-                                                </button>
-                                            <% } %>
                                         </td>
                                     </tr>
                                 <% }); %>
                             <% } else { %>
                                 <tr>
                                     <td colspan="7" class="text-center p-5">
-                                        <i class="fa-solid fa-magnifying-glass-minus fa-2x text-muted mb-2"></i>
+                                        <i class="fa-solid fa-magnifying-glass fa-2x text-muted mb-2"></i>
                                         <p class="mb-0">Nenhum serviço encontrado com os filtros aplicados.</p>
                                     </td>
                                 </tr>

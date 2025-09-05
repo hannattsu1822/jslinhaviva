@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard Fibra Óptica</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -12,7 +19,6 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -49,7 +55,7 @@
 
         <div class="container-fluid">
           <div class="row g-4">
-            <div class="col-md-6 col-lg-3">
+            <div class="col-md-6 col-lg-4">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/registro_projeto_fibra"
@@ -57,7 +63,7 @@
                 role="button"
               >
                 <div
-                  class="card-body text-center d-flex flex-column justify-content-center align-items-center"
+                  class="card-body text-center d-flex flex-column justify-content-center align-items-center p-4"
                 >
                   <div class="icon-circle bg-primary text-white mb-3">
                     <i class="fa-solid fa-circle-plus fa-2x"></i>
@@ -70,7 +76,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-3">
+            <div class="col-md-6 col-lg-4">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/projetos_fibra_andamento"
@@ -78,7 +84,7 @@
                 role="button"
               >
                 <div
-                  class="card-body text-center d-flex flex-column justify-content-center align-items-center"
+                  class="card-body text-center d-flex flex-column justify-content-center align-items-center p-4"
                 >
                   <div class="icon-circle bg-warning text-white mb-3">
                     <i class="fa-solid fa-hourglass-half fa-2x"></i>
@@ -91,7 +97,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-3">
+            <div class="col-md-6 col-lg-4">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/projetos_fibra_concluidos"
@@ -99,7 +105,7 @@
                 role="button"
               >
                 <div
-                  class="card-body text-center d-flex flex-column justify-content-center align-items-center"
+                  class="card-body text-center d-flex flex-column justify-content-center align-items-center p-4"
                 >
                   <div class="icon-circle bg-success text-white mb-3">
                     <i class="fa-solid fa-check-double fa-2x"></i>
@@ -113,7 +119,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-3">
+            <div class="col-md-6 col-lg-4">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/mapa_fibra"
@@ -121,10 +127,10 @@
                 role="button"
               >
                 <div
-                  class="card-body text-center d-flex flex-column justify-content-center align-items-center"
+                  class="card-body text-center d-flex flex-column justify-content-center align-items-center p-4"
                 >
                   <div class="icon-circle bg-info text-white mb-3">
-                    <i class="fa-solid fa-map-location-dot fa-2x"></i>
+                    <i class="fa-solid fa-map-pin fa-2x"></i>
                   </div>
                   <h5 class="card-title">Coletar Pontos</h5>
                   <p class="card-text text-muted">
@@ -134,7 +140,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-3">
+            <div class="col-md-6 col-lg-4">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/visualizacao_mapa_fibra"
@@ -142,7 +148,7 @@
                 role="button"
               >
                 <div
-                  class="card-body text-center d-flex flex-column justify-content-center align-items-center"
+                  class="card-body text-center d-flex flex-column justify-content-center align-items-center p-4"
                 >
                   <div class="icon-circle bg-secondary text-white mb-3">
                     <i class="fa-solid fa-map-marked-alt fa-2x"></i>
@@ -164,7 +170,6 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
-
     <script src="/scripts/components/sidebar.js"></script>
     <script src="/scripts/fibra_optica/dashboard_fibra.js"></script>
   </body>
