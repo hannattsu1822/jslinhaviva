@@ -162,14 +162,13 @@ router.post(
       responsavelMatricula,
       descricao,
       observacoes,
+      programado,
     } = req.body;
 
     if (
       !tipoGeracao ||
       !tipoOrdem ||
       !localReferencia ||
-      !horarioInicio ||
-      !horarioFim ||
       !responsavelMatricula ||
       !descricao
     ) {
@@ -190,6 +189,25 @@ router.post(
         );
       }
 
+      let horarioInicioFinal = null;
+      let horarioFimFinal = null;
+
+      if (tipoGeracao === "normal" && programado === "on") {
+        if (!horarioInicio || !horarioFim) {
+          throw new Error(
+            "Horário de início e fim são obrigatórios para serviços programados."
+          );
+        }
+        horarioInicioFinal = horarioInicio;
+        horarioFimFinal = horarioFim;
+      } else if (tipoGeracao === "emergencial") {
+        horarioInicioFinal = null;
+        horarioFimFinal = null;
+      } else {
+        horarioInicioFinal = horarioInicio || null;
+        horarioFimFinal = horarioFim || null;
+      }
+
       const sqlInsert = `
         INSERT INTO servicos_fibra_optica 
         (tipo_geracao, processo, tipo_ordem, link_maps, local_referencia, data_servico, horario_inicio, horario_fim, responsavel_matricula, descricao, observacoes, status) 
@@ -202,8 +220,8 @@ router.post(
         linkMaps,
         localReferencia,
         dataServico || null,
-        horarioInicio,
-        horarioFim,
+        horarioInicioFinal,
+        horarioFimFinal,
         responsavelMatricula,
         descricao,
         observacoes,
@@ -552,58 +570,28 @@ router.post(
         const idsParaRemover = anexos_a_remover.split(",").filter(Boolean);
         if (idsParaRemover.length > 0) {
           for (const anexoId of idsParaRemover) {
-            // Log para ver qual anexo estamos processando
-            console.log("--- INICIANDO REMOÇÃO DE ANEXO ---");
-            console.log("ID do anexo para remover:", anexoId);
-
             const [anexoRows] = await connection.query(
               "SELECT caminho_servidor FROM anexos_servicos_fibra WHERE id = ? AND servico_id = ?",
               [anexoId, id]
             );
-
             if (anexoRows.length > 0) {
               const caminhoRelativo = anexoRows[0].caminho_servidor;
-
-              // Logs para depurar a construção do caminho
-              console.log("Caminho relativo do banco:", caminhoRelativo);
-              console.log(
-                "Diretório raiz do projeto (projectRootDir):",
-                projectRootDir
-              );
-
               const caminhoCorrigido = caminhoRelativo.startsWith("/")
                 ? caminhoRelativo.substring(1)
                 : caminhoRelativo;
-
               const caminhoCompleto = path.join(
                 projectRootDir,
                 caminhoCorrigido
               );
 
-              // Log final antes de tentar a exclusão
-              console.log("Caminho final para exclusão:", caminhoCompleto);
-
               if (fs.existsSync(caminhoCompleto)) {
-                console.log("Arquivo encontrado. Tentando excluir...");
                 fs.unlinkSync(caminhoCompleto);
-                console.log("Arquivo excluído com sucesso.");
-              } else {
-                console.warn(
-                  "AVISO: Arquivo não encontrado no caminho para exclusão."
-                );
               }
-            } else {
-              console.warn(
-                `AVISO: Anexo com ID ${anexoId} não encontrado no banco de dados para o serviço ${id}.`
-              );
             }
-
             await connection.query(
               "DELETE FROM anexos_servicos_fibra WHERE id = ?",
               [anexoId]
             );
-            console.log(`Registro do anexo ID ${anexoId} removido do banco.`);
-            console.log("--- FIM DA REMOÇÃO DE ANEXO ---");
           }
         }
       }
@@ -1076,7 +1064,6 @@ router.get(
   }
 );
 
-// ROTA 2: Excluir um anexo de APR específico pelo seu ID
 router.delete(
   "/api/fibra/anexo-apr/:id",
   autenticar,
@@ -1094,7 +1081,7 @@ router.delete(
       );
 
       if (anexoRows.length === 0) {
-        await connection.rollback(); // Apenas para liberar a conexão
+        await connection.rollback();
         return res.status(404).json({ message: "Anexo não encontrado." });
       }
 
