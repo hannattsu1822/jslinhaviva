@@ -1,10 +1,8 @@
-/* Adiciona o asterisco vermelho para campos obrigatórios */
 .form-label.required::after {
   content: " *";
   color: #dc3545;
 }
 
-/* Estilos para a área de upload de arquivos */
 .file-drop-zone {
   border: 2px dashed #ccc;
   border-radius: 8px;
@@ -14,12 +12,12 @@
   transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
 
-.file-drop-zone:hover {
+.file-drop-zone:hover,
+.file-drop-zone:focus {
   background-color: #f8f9fa;
   border-color: #0d6efd;
 }
 
-/* Esconde o container do formulário até que um tipo de serviço seja escolhido */
 #form-container.hidden {
   display: none;
 }
