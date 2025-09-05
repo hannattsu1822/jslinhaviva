@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
           );
         }
 
-        listItem.style.display = "none";
+        listItem.classList.add("marked-for-removal");
       }
     });
   }

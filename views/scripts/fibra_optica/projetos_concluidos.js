@@ -11,14 +11,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const aprForm = document.getElementById("apr-form");
   const aprServiceIdSpan = document.getElementById("apr-service-id");
-
-  // --- INÍCIO DA CORREÇÃO ---
-  const aprFileDropZone = document.querySelector("#apr-modal .file-drop-zone");
   const aprFileInput = document.getElementById("apr-file-input");
-  // --- FIM DA CORREÇÃO ---
-
+  const aprFileDropZone = document.querySelector("#apr-modal .file-drop-zone");
   const aprFileListWrapper = document.getElementById("apr-file-list-wrapper");
   const aprFileListContainer = document.getElementById("apr-file-list");
+  const aprExistentesList = document.getElementById("apr-existentes-list");
 
   const confirmationTitle = document.getElementById("confirmation-title");
   const confirmationMessage = document.getElementById("confirmation-message");
@@ -28,14 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let confirmActionCallback = null;
   let aprFiles = [];
 
-  // --- INÍCIO DA CORREÇÃO ---
-  // Adiciona o evento de clique na área de upload para ativar o input de arquivo
   if (aprFileDropZone && aprFileInput) {
     aprFileDropZone.addEventListener("click", () => {
       aprFileInput.click();
     });
   }
-  // --- FIM DA CORREÇÃO ---
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return "0 Bytes";
@@ -77,11 +71,49 @@ document.addEventListener("DOMContentLoaded", () => {
     if (confirmationModal) confirmationModal.show();
   };
 
+  const loadExistingAprs = async (servicoId) => {
+    aprExistentesList.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm"></span> Carregando...</div>`;
+    try {
+      const response = await fetch(`/api/fibra/servico/${servicoId}/aprs`);
+      if (!response.ok) throw new Error("Falha ao buscar APRs existentes.");
+
+      const aprs = await response.json();
+      aprExistentesList.innerHTML = "";
+
+      if (aprs.length === 0) {
+        aprExistentesList.innerHTML = `<p class="text-muted text-center p-3 mb-0">Nenhuma APR anexada a este serviço.</p>`;
+      } else {
+        const list = document.createElement("ul");
+        list.className = "list-group";
+        aprs.forEach((anexo) => {
+          const listItem = document.createElement("li");
+          listItem.className =
+            "list-group-item d-flex justify-content-between align-items-center";
+          listItem.innerHTML = `
+            <span>
+              <i class="fa-solid fa-file-shield me-2"></i>
+              <a href="${anexo.caminho_servidor}" target="_blank" class="anexo-nome">${anexo.nome_original}</a>
+            </span>
+            <button class="btn btn-sm btn-outline-danger btn-remover-apr" data-anexo-id="${anexo.id}" data-anexo-nome="${anexo.nome_original}" title="Excluir Anexo">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          `;
+          list.appendChild(listItem);
+        });
+        aprExistentesList.appendChild(list);
+      }
+    } catch (error) {
+      aprExistentesList.innerHTML = `<p class="text-danger text-center p-3 mb-0">${error.message}</p>`;
+    }
+  };
+
   const handleAprClick = (servicoId) => {
     currentServiceId = servicoId;
     aprServiceIdSpan.textContent = `#${servicoId}`;
     aprFiles = [];
     updateAprFileList();
+    aprForm.reset();
+    loadExistingAprs(servicoId);
     if (aprModal) aprModal.show();
   };
 
@@ -147,10 +179,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  aprExistentesList.addEventListener("click", (event) => {
+    const removeButton = event.target.closest(".btn-remover-apr");
+    if (removeButton) {
+      const anexoId = removeButton.dataset.anexoId;
+      const anexoNome = removeButton.dataset.anexoNome;
+      showConfirmation(
+        "Excluir Anexo",
+        `Tem certeza que deseja excluir o anexo "${anexoNome}"? Esta ação não pode ser desfeita.`,
+        "btn-danger",
+        async () => {
+          try {
+            const response = await fetch(`/api/fibra/anexo-apr/${anexoId}`, {
+              method: "DELETE",
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message);
+
+            showToast(result.message, "success");
+            if (confirmationModal) confirmationModal.hide();
+            loadExistingAprs(currentServiceId);
+          } catch (error) {
+            showToast(error.message, "error");
+          }
+        }
+      );
+    }
+  });
+
   aprForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (aprFiles.length === 0) {
-      showToast("Por favor, selecione ao menos um arquivo.", "error");
+      showToast(
+        "Por favor, selecione ao menos um arquivo para anexar.",
+        "error"
+      );
       return;
     }
 
@@ -172,8 +235,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!response.ok) throw new Error(result.message);
 
       showToast(result.message, "success");
-      if (aprModal) aprModal.hide();
-      window.location.reload();
+      aprFiles = [];
+      updateAprFileList();
+      aprForm.reset();
+      loadExistingAprs(currentServiceId);
     } catch (error) {
       showToast(error.message, "error");
     } finally {
