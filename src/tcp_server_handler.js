@@ -54,7 +54,9 @@ async function registerDeviceByIp(socket) {
             socket.deviceId = deviceId;
             socket.isRegistered = true;
             clients.set(deviceId, socket);
-            console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteIp}) registrado com sucesso via IP.`);
+            console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteIp}) registrado com sucesso via IP. Iniciando login...`);
+            socket.loginState = 'AWAITING_ACC';
+            socket.write('ACC\n');
         } else {
             console.warn(`[TCP Server] Dispositivo com IP ${remoteIp} não encontrado ou inativo no banco de dados. Desconectando.`);
             socket.end();
@@ -69,13 +71,16 @@ function iniciarServidorTCP(app) {
     const port = process.env.TCP_SERVER_PORT;
     const pollInterval = parseInt(process.env.TELNET_POLL_INTERVAL_SECONDS, 10) * 1000;
     const command = process.env.TELNET_COMMAND + '\n';
+    const loginUser = 'ACC\n';
+    const loginPass = 'OTTER\n';
 
     const server = net.createServer((socket) => {
         const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
         console.log(`[TCP Server] Nova conexão recebida de ${remoteAddress}`);
         
         socket.isRegistered = false;
-        
+        socket.loginState = 'AWAITING_REGISTRATION';
+
         const registrationTimeout = setTimeout(() => {
             if (!socket.isRegistered) {
                 console.log(`[TCP Server] Nenhum pacote de registro recebido de ${remoteAddress}. Tentando identificar por IP...`);
@@ -85,6 +90,7 @@ function iniciarServidorTCP(app) {
 
         socket.on('data', (data) => {
             const rawData = data.toString().trim();
+            console.log(`[TCP Server] Dados brutos recebidos de ${socket.deviceId || remoteAddress}: "${rawData}"`);
 
             if (!socket.isRegistered) {
                 if (rawData.startsWith('reg:')) {
@@ -93,16 +99,32 @@ function iniciarServidorTCP(app) {
                     socket.deviceId = deviceId;
                     socket.isRegistered = true;
                     clients.set(deviceId, socket);
-                    console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado com sucesso via Pacote de Registro.`);
+                    console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado com sucesso via Pacote de Registro. Iniciando login...`);
+                    socket.loginState = 'AWAITING_ACC';
+                    socket.write(loginUser);
                 }
                 return;
             }
 
-            console.log(`[TCP Server] Dados recebidos de ${socket.deviceId}: ${rawData}`);
-            const parsedData = parseSelData(rawData);
-            if (parsedData) {
-                const wss = app.get('wss');
-                salvarLeituraSel(socket.deviceId, parsedData, rawData, wss);
+            if (socket.loginState === 'AWAITING_ACC') {
+                console.log(`[TCP Server] Resposta ao usuário recebida. Enviando senha...`);
+                socket.loginState = 'AWAITING_OTTER';
+                socket.write(loginPass);
+                return;
+            }
+
+            if (socket.loginState === 'AWAITING_OTTER') {
+                console.log(`[TCP Server] Login para ${socket.deviceId} concluído. Monitoramento iniciado.`);
+                socket.loginState = 'LOGGED_IN';
+                return;
+            }
+
+            if (socket.loginState === 'LOGGED_IN') {
+                const parsedData = parseSelData(rawData);
+                if (parsedData) {
+                    const wss = app.get('wss');
+                    salvarLeituraSel(socket.deviceId, parsedData, rawData, wss);
+                }
             }
         });
 
@@ -127,12 +149,9 @@ function iniciarServidorTCP(app) {
 
     setInterval(() => {
         if (clients.size > 0) {
-            console.log(`[TCP Server] Enviando comando de leitura para ${clients.size} dispositivo(s)...`);
             for (const [deviceId, socket] of clients.entries()) {
-                if (socket.writable) {
+                if (socket.loginState === 'LOGGED_IN' && socket.writable) {
                     socket.write(command);
-                } else {
-                    console.warn(`[TCP Server] Socket para ${deviceId} não está gravável.`);
                 }
             }
         }
