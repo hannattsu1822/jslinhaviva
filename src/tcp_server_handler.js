@@ -41,32 +41,6 @@ async function salvarLeituraSel(deviceId, parsedData, rawPayload, wss) {
     }
 }
 
-async function registerDeviceByIp(socket) {
-    const remoteIp = socket.remoteAddress;
-    try {
-        const [rows] = await promisePool.query(
-            "SELECT device_id FROM dispositivos_tcp WHERE ip_address = ? AND ativo = 1",
-            [remoteIp]
-        );
-
-        if (rows.length > 0) {
-            const deviceId = rows[0].device_id;
-            socket.deviceId = deviceId;
-            socket.isRegistered = true;
-            clients.set(deviceId, socket);
-            console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteIp}) registrado com sucesso via IP. Iniciando login...`);
-            socket.loginState = 'AWAITING_ACC';
-            socket.write('ACC\n');
-        } else {
-            console.warn(`[TCP Server] Dispositivo com IP ${remoteIp} não encontrado ou inativo no banco de dados. Desconectando.`);
-            socket.end();
-        }
-    } catch (error) {
-        console.error(`[TCP Server] Erro ao consultar dispositivo por IP ${remoteIp}:`, error);
-        socket.end();
-    }
-}
-
 function iniciarServidorTCP(app) {
     const port = process.env.TCP_SERVER_PORT;
     const pollInterval = parseInt(process.env.TELNET_POLL_INTERVAL_SECONDS, 10) * 1000;
@@ -81,23 +55,13 @@ function iniciarServidorTCP(app) {
         socket.isRegistered = false;
         socket.loginState = 'AWAITING_REGISTRATION';
 
-        const registrationTimeout = setTimeout(() => {
-            if (!socket.isRegistered) {
-                console.log(`[TCP Server] Nenhum pacote de registro recebido de ${remoteAddress}. Tentando identificar por IP...`);
-                registerDeviceByIp(socket);
-            }
-        }, 3000);
-
         socket.on('data', (data) => {
             const rawDataText = data.toString().trim();
-            // --- LINHA DE DEPURAÇÃO PRINCIPAL ---
             const rawDataHex = data.toString('hex');
             console.log(`[TCP Server DEBUG] Dados recebidos de ${socket.deviceId || remoteAddress}: TEXTO="${rawDataText}" | HEX="${rawDataHex}"`);
-            // ------------------------------------
 
             if (!socket.isRegistered) {
                 if (rawDataText.startsWith('reg:')) {
-                    clearTimeout(registrationTimeout);
                     const deviceId = rawDataText.substring(4);
                     socket.deviceId = deviceId;
                     socket.isRegistered = true;
@@ -105,6 +69,8 @@ function iniciarServidorTCP(app) {
                     console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado com sucesso via Pacote de Registro. Iniciando login...`);
                     socket.loginState = 'AWAITING_ACC';
                     socket.write(loginUser);
+                } else {
+                    console.log(`[TCP Server] Dado ignorado (aguardando pacote de registro): "${rawDataText}"`);
                 }
                 return;
             }
@@ -132,7 +98,6 @@ function iniciarServidorTCP(app) {
         });
 
         socket.on('close', () => {
-            clearTimeout(registrationTimeout);
             if (socket.deviceId) {
                 clients.delete(socket.deviceId);
                 console.log(`[TCP Server] Conexão com ${socket.deviceId} (${remoteAddress}) fechada.`);
