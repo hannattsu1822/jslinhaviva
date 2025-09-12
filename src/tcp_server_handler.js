@@ -89,13 +89,16 @@ function iniciarServidorTCP(app) {
         }, 3000);
 
         socket.on('data', (data) => {
-            const rawData = data.toString().trim();
-            console.log(`[TCP Server] Dados brutos recebidos de ${socket.deviceId || remoteAddress}: "${rawData}"`);
+            const rawDataText = data.toString().trim();
+            // --- LINHA DE DEPURAÇÃO PRINCIPAL ---
+            const rawDataHex = data.toString('hex');
+            console.log(`[TCP Server DEBUG] Dados recebidos de ${socket.deviceId || remoteAddress}: TEXTO="${rawDataText}" | HEX="${rawDataHex}"`);
+            // ------------------------------------
 
             if (!socket.isRegistered) {
-                if (rawData.startsWith('reg:')) {
+                if (rawDataText.startsWith('reg:')) {
                     clearTimeout(registrationTimeout);
-                    const deviceId = rawData.substring(4);
+                    const deviceId = rawDataText.substring(4);
                     socket.deviceId = deviceId;
                     socket.isRegistered = true;
                     clients.set(deviceId, socket);
@@ -120,10 +123,10 @@ function iniciarServidorTCP(app) {
             }
 
             if (socket.loginState === 'LOGGED_IN') {
-                const parsedData = parseSelData(rawData);
+                const parsedData = parseSelData(rawDataText);
                 if (parsedData) {
                     const wss = app.get('wss');
-                    salvarLeituraSel(socket.deviceId, parsedData, rawData, wss);
+                    salvarLeituraSel(socket.deviceId, parsedData, rawDataText, wss);
                 }
             }
         });
