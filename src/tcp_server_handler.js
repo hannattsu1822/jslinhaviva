@@ -1,21 +1,17 @@
 const net = require("net");
 const { promisePool } = require("./init");
 
-// MUDANÇA: Renomeei a 'clients' para ser mais específico.
 const releClients = new Map();
 
-// MUDANÇA: Adaptei a função de parse para o formato do SEL-2414 (com '=' e espaços)
 function parseSelData(rawString) {
   const data = {};
   try {
-    // Exemplo de resposta: "VA=220.1 VB=219.8 VC=220.5 IA=15.2 =>"
     const cleanedResponse = rawString.replace("=>", "").trim();
-    const pairs = cleanedResponse.split(/\s+/); // Divide por espaços
+    const pairs = cleanedResponse.split(/\s+/);
     
     pairs.forEach((pair) => {
       const [key, value] = pair.split("=");
       if (key && value) {
-        // MUDANÇA: Renomeei as chaves para corresponder ao banco de dados novo
         switch (key.toUpperCase()) {
           case 'VA': data.tensao_a = parseFloat(value); break;
           case 'VB': data.tensao_b = parseFloat(value); break;
@@ -35,48 +31,27 @@ function parseSelData(rawString) {
   }
 }
 
-// MUDANÇA: Adaptei a função de salvar para a nova tabela 'leituras_reles'
 async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
   try {
     const timestampLeitura = new Date();
     const { tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia } = parsedData;
 
-    // Primeiro, precisamos do ID numérico do relé a partir do seu local_tag (MAC)
     const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ?", [deviceId]);
-    if (rows.length === 0) {
-      console.warn(`[TCP Server] Tentativa de salvar leitura para dispositivo não cadastrado: ${deviceId}`);
-      return;
-    }
+    if (rows.length === 0) return;
     const releId = rows[0].id;
 
     const sqlInsert = `INSERT INTO leituras_reles (rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    await promisePool.query(sqlInsert, [
-      releId,
-      timestampLeitura,
-      tensao_a || null,
-      tensao_b || null,
-      tensao_c || null,
-      corrente_a || null,
-      corrente_b || null,
-      corrente_c || null,
-      frequencia || null,
-      rawPayload,
-    ]);
+    await promisePool.query(sqlInsert, [releId, timestampLeitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, rawPayload]);
+    
     console.log(`[TCP Server] Leitura do dispositivo ${deviceId} (ID: ${releId}) salva no banco.`);
 
-    // Atualiza o status na tabela principal
     const sqlUpdate = "UPDATE dispositivos_reles SET ultima_leitura = NOW(), status_json = ? WHERE id = ?";
     await promisePool.query(sqlUpdate, [JSON.stringify({ connection_status: "online", ...parsedData }), releId]);
 
     if (wss) {
       const payloadWebSocket = {
-        type: "nova_leitura_rele", // MUDANÇA: Novo tipo de evento para o frontend
-        dados: {
-          local_tag: deviceId,
-          rele_id: releId,
-          ...parsedData,
-          timestamp_leitura: timestampLeitura.toISOString(),
-        },
+        type: "nova_leitura_rele",
+        dados: { local_tag: deviceId, rele_id: releId, ...parsedData, timestamp_leitura: timestampLeitura.toISOString() },
       };
       wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
@@ -90,52 +65,73 @@ async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
 }
 
 function iniciarServidorTCP(app) {
-  const port = process.env.TCP_SERVER_PORT || 4000; // Garante que a porta é 4000
+  const port = process.env.TCP_SERVER_PORT || 4000;
   const pollInterval = parseInt(process.env.TELNET_POLL_INTERVAL_SECONDS, 10) * 1000 || 10000;
-  const command = (process.env.TELNET_COMMAND || "ME") + "\r\n"; // Usa \r\n para compatibilidade
+  
+  // Comandos de login e polling
+  const LOGIN_USER = "ACC\r\n";
+  const LOGIN_PASS = "OTTER\r\n";
+  const COMMANDS_TO_POLL = ["METG1\r\n", "MET RTD\r\n"]; // Adicione outros comandos aqui
+  let commandIndex = 0;
 
   const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Server] Nova conexão recebida de ${remoteAddress}. Aguardando identificação...`);
 
-    socket.isRegistered = false;
+    // Máquina de estados para cada socket
+    socket.state = 'AWAITING_REGISTRATION';
+    socket.deviceId = null;
 
-    // MUDANÇA: Lógica de registro simplificada para o MAC Address
-    socket.once('data', async (data) => {
-      // Converte o pacote de registro binário/HEX para uma string de texto
-      const deviceId = data.toString('hex').toUpperCase();
-      console.log(`[TCP Server] Pacote de registro recebido e convertido para: "${deviceId}"`);
+    socket.on('data', async (data) => {
+      const responseStr = data.toString().trim();
+      const isRegistrationPacket = socket.state === 'AWAITING_REGISTRATION';
 
-      try {
-        // Verifica se o MAC Address está cadastrado no banco de dados
-        const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
-        
-        if (rows.length > 0) {
-          socket.deviceId = deviceId;
-          socket.isRegistered = true;
-          releClients.set(deviceId, socket);
-          console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado com sucesso.`);
+      if (isRegistrationPacket) {
+        const deviceId = data.toString('hex').toUpperCase();
+        console.log(`[TCP Server] Pacote de registro recebido e convertido para: "${deviceId}"`);
 
-          // Agora que está registrado, escuta por respostas aos comandos de polling
-          socket.on('data', (responseData) => {
-            const responseStr = responseData.toString().trim();
-            const isRegistrationPacketAgain = responseData.toString('hex').toUpperCase() === deviceId;
-            if (isRegistrationPacketAgain) return; // Ignora se for o pacote de registro de novo
-
-            const parsedData = parseSelData(responseStr);
-            if (parsedData) {
-              const wss = app.get("wss");
-              salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
-            }
-          });
-
-        } else {
-          console.warn(`[TCP Server] Dispositivo com MAC "${deviceId}" não encontrado ou inativo no banco. Fechando conexão.`);
+        try {
+          const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
+          if (rows.length > 0) {
+            socket.deviceId = deviceId;
+            releClients.set(deviceId, socket);
+            console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado. Iniciando login...`);
+            socket.state = 'AWAITING_USER_PROMPT';
+            socket.write(LOGIN_USER);
+          } else {
+            console.warn(`[TCP Server] Dispositivo com MAC "${deviceId}" não encontrado. Fechando conexão.`);
+            socket.end();
+          }
+        } catch (err) {
+          console.error("[TCP Server] Erro de DB durante registro:", err);
           socket.end();
         }
-      } catch (err) {
-        console.error("[TCP Server] Erro de banco de dados durante o registro:", err);
-        socket.end();
+        return;
+      }
+
+      // Lógica da máquina de estados de login
+      switch (socket.state) {
+        case 'AWAITING_USER_PROMPT':
+          // O relé respondeu ao comando ACC, agora enviamos a senha
+          console.log(`[TCP Server] [${socket.deviceId}] Resposta ao usuário recebida. Enviando senha...`);
+          socket.state = 'AWAITING_PASS_PROMPT';
+          socket.write(LOGIN_PASS);
+          break;
+        
+        case 'AWAITING_PASS_PROMPT':
+          // O relé respondeu ao comando OTTER, o login está completo
+          console.log(`[TCP Server] [${socket.deviceId}] Login concluído. Monitoramento iniciado.`);
+          socket.state = 'LOGGED_IN';
+          break;
+
+        case 'LOGGED_IN':
+          // Recebemos dados em resposta a um comando de polling
+          const parsedData = parseSelData(responseStr);
+          if (parsedData) {
+            const wss = app.get("wss");
+            salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
+          }
+          break;
       }
     });
 
@@ -157,15 +153,20 @@ function iniciarServidorTCP(app) {
     console.log(`[TCP Server] Servidor TCP ouvindo na porta ${port}`);
   });
 
-  // MUDANÇA: Lógica de polling adaptada
+  // Lógica de polling que envia os comandos em sequência
   setInterval(() => {
     if (releClients.size > 0) {
-      console.log(`[TCP Server] Enviando comando de leitura para ${releClients.size} relé(s) conectado(s)...`);
+      const commandToSend = COMMANDS_TO_POLL[commandIndex];
+      console.log(`[TCP Server] Enviando comando "${commandToSend.trim()}" para ${releClients.size} relé(s) conectado(s)...`);
+      
       for (const socket of releClients.values()) {
-        if (socket.writable) {
-          socket.write(command);
+        if (socket.state === 'LOGGED_IN' && socket.writable) {
+          socket.write(commandToSend);
         }
       }
+      
+      // Avança para o próximo comando da lista para a próxima rodada de polling
+      commandIndex = (commandIndex + 1) % COMMANDS_TO_POLL.length;
     }
   }, pollInterval);
 }
