@@ -65,77 +65,73 @@ async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
 }
 
 function iniciarServidorTCP(app) {
-  // --- MUDANÇA: Ajustes para o teste ---
   const port = process.env.TCP_SERVER_PORT || 4000;
-  const pollInterval = 60000; // 60 segundos
+  const pollInterval = 15000; // Aumentado para 15s para dar tempo de resposta
   
   const LOGIN_USER = "ACC\r\n";
   const LOGIN_PASS = "OTTER\r\n";
-  const COMMAND_TO_POLL = "MET1\r\n"; // Apenas um comando
-  // --- FIM DA MUDANÇA ---
+  const COMMAND_TO_POLL = "MET1\r\n";
 
   const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-    console.log(`[TCP Server] Nova conexão recebida de ${remoteAddress}. Aguardando identificação...`);
+    console.log(`[TCP Server] Nova conexão de ${remoteAddress}. Aguardando registro.`);
 
     socket.state = 'AWAITING_REGISTRATION';
     socket.deviceId = null;
+    let accumulatedData = '';
 
     socket.on('data', async (data) => {
-      const responseStr = data.toString().trim();
-      const isRegistrationPacket = socket.state === 'AWAITING_REGISTRATION';
-
-      if (isRegistrationPacket) {
-        const deviceId = data.toString('hex').toUpperCase();
-        console.log(`[TCP Server] Pacote de registro recebido e convertido para: "${deviceId}"`);
-
-        try {
-          const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
-          if (rows.length > 0) {
-            socket.deviceId = deviceId;
-            releClients.set(deviceId, socket);
-            console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado.`);
-            console.log(`[TCP Server] [${socket.deviceId}] ENVIANDO usuário: ACC`);
-            socket.state = 'AWAITING_USER_PROMPT';
-            socket.write(LOGIN_USER);
-          } else {
-            console.warn(`[TCP Server] Dispositivo com MAC "${deviceId}" não encontrado. Fechando conexão.`);
-            socket.end();
-          }
-        } catch (err) {
-          console.error("[TCP Server] Erro de DB durante registro:", err);
-          socket.end();
-        }
-        return;
+      accumulatedData += data.toString();
+      
+      // Processa os dados apenas quando recebe o prompt '=>' ou uma nova linha
+      if (!accumulatedData.includes('=>') && !accumulatedData.includes('\n')) {
+        return; // Aguarda mais dados
       }
 
+      const responseStr = accumulatedData.trim();
+      accumulatedData = ''; // Limpa o buffer
+      
+      console.log(`[TCP Server] [${socket.deviceId || 'N/A'}] DADOS RECEBIDOS: "${responseStr}" | ESTADO ATUAL: ${socket.state}`);
+
       switch (socket.state) {
+        case 'AWAITING_REGISTRATION':
+          const deviceId = data.toString('hex').toUpperCase();
+          try {
+            const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
+            if (rows.length > 0) {
+              socket.deviceId = deviceId;
+              releClients.set(deviceId, socket);
+              console.log(`[TCP Server] [${deviceId}] Registrado. Enviando usuário 'ACC'.`);
+              socket.state = 'AWAITING_USER_PROMPT';
+              socket.write(LOGIN_USER);
+            } else {
+              console.warn(`[TCP Server] MAC "${deviceId}" não encontrado. Fechando.`);
+              socket.end();
+            }
+          } catch (err) {
+            console.error("[TCP Server] Erro de DB no registro:", err);
+            socket.end();
+          }
+          break;
+
         case 'AWAITING_USER_PROMPT':
-          // --- MUDANÇA: Log detalhado ---
-          console.log(`[TCP Server] [${socket.deviceId}] RESPOSTA recebida do relé: "${responseStr}"`);
-          console.log(`[TCP Server] [${socket.deviceId}] ENVIANDO senha: OTTER`);
-          // --- FIM DA MUDANÇA ---
+          console.log(`[TCP Server] [${socket.deviceId}] Resposta ao usuário recebida. Enviando senha 'OTTER'.`);
           socket.state = 'AWAITING_PASS_PROMPT';
           socket.write(LOGIN_PASS);
           break;
         
         case 'AWAITING_PASS_PROMPT':
-          // --- MUDANÇA: Log detalhado ---
-          console.log(`[TCP Server] [${socket.deviceId}] RESPOSTA recebida do relé: "${responseStr}"`);
-          console.log(`[TCP Server] [${socket.deviceId}] Login concluído com sucesso. Monitoramento iniciado.`);
-          // --- FIM DA MUDANÇA ---
-          socket.state = 'LOGGED_IN';
+          console.log(`[TCP Server] [${socket.deviceId}] Resposta à senha recebida. Login concluído.`);
+          socket.state = 'LOGGED_IN_IDLE';
           break;
 
-        case 'LOGGED_IN':
-          // --- MUDANÇA: Log detalhado ---
-          console.log(`[TCP Server] [${socket.deviceId}] RESPOSTA recebida do relé: "${responseStr}"`);
-          // --- FIM DA MUDANÇA ---
+        case 'LOGGED_IN_WAITING_RESPONSE':
           const parsedData = parseSelData(responseStr);
           if (parsedData) {
             const wss = app.get("wss");
             salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
           }
+          socket.state = 'LOGGED_IN_IDLE'; // Volta ao estado de espera
           break;
       }
     });
@@ -143,9 +139,9 @@ function iniciarServidorTCP(app) {
     socket.on("close", () => {
       if (socket.deviceId) {
         releClients.delete(socket.deviceId);
-        console.log(`[TCP Server] Conexão com ${socket.deviceId} (${remoteAddress}) fechada.`);
+        console.log(`[TCP Server] Conexão com ${socket.deviceId} fechada.`);
       } else {
-        console.log(`[TCP Server] Conexão com ${remoteAddress} (não registrado) fechada.`);
+        console.log(`[TCP Server] Conexão com ${remoteAddress} fechada.`);
       }
     });
 
@@ -159,18 +155,11 @@ function iniciarServidorTCP(app) {
   });
 
   setInterval(() => {
-    if (releClients.size > 0) {
-      const loggedInClients = Array.from(releClients.values()).filter(socket => socket.state === 'LOGGED_IN');
-      
-      if (loggedInClients.length > 0) {
-        // --- MUDANÇA: Log detalhado ---
-        console.log(`[TCP Server] ENVIANDO comando "${COMMAND_TO_POLL.trim()}" para ${loggedInClients.length} relé(s) logado(s)...`);
-        // --- FIM DA MUDANÇA ---
-        for (const socket of loggedInClients) {
-          if (socket.writable) {
-            socket.write(COMMAND_TO_POLL);
-          }
-        }
+    for (const socket of releClients.values()) {
+      if (socket.state === 'LOGGED_IN_IDLE' && socket.writable) {
+        console.log(`[TCP Server] [${socket.deviceId}] Enviando comando de polling 'MET1'.`);
+        socket.state = 'LOGGED_IN_WAITING_RESPONSE';
+        socket.write(COMMAND_TO_POLL);
       }
     }
   }, pollInterval);
