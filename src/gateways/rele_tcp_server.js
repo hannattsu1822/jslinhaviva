@@ -25,6 +25,8 @@ function parseSelData(rawString) {
   try {
     let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, "").trim();
     
+    console.log(`[Debug Parser] String Limpa para Análise: "${cleanedString}"`);
+
     const currentMatch = cleanedString.match(/Current\s*Magnitu\s*de\s*\(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
     if (currentMatch) {
       data.corrente_a = parseFloat(currentMatch[1]);
