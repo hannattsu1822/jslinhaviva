@@ -3,36 +3,30 @@ const { promisePool } = require("./init");
 
 const releClients = new Map();
 
-// --- INÍCIO DA NOVA FUNÇÃO PARSER ---
 function parseSelData(rawString) {
   const data = {};
   try {
-    // 1. Limpeza agressiva: remove todos os caracteres não imprimíveis e o lixo do heartbeat
-    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").trim();
+    // Limpeza agressiva para remover ecos e caracteres de controle
+    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").replace(/ACC|OTTER|MET|=>/g, "").trim();
     
-    // 2. Extração com expressões regulares (muito mais robusto)
     const currentMatch = cleanedString.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
-    if (currentMatch && currentMatch.length >= 4) {
+    if (currentMatch) {
       data.corrente_a = parseFloat(currentMatch[1]);
       data.corrente_b = parseFloat(currentMatch[2]);
       data.corrente_c = parseFloat(currentMatch[3]);
     }
 
     const voltageMatch = cleanedString.match(/Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
-    if (voltageMatch && voltageMatch.length >= 4) {
+    if (voltageMatch) {
       data.tensao_a = parseFloat(voltageMatch[1]);
       data.tensao_b = parseFloat(voltageMatch[2]);
       data.tensao_c = parseFloat(voltageMatch[3]);
     }
 
     const frequencyMatch = cleanedString.match(/Frequency \(Hz\)\s*=\s*([\d.-]+)/);
-    if (frequencyMatch && frequencyMatch.length >= 2) {
+    if (frequencyMatch) {
       data.frequencia = parseFloat(frequencyMatch[1]);
     }
-
-    console.log("--- DADOS EXTRAÍDOS PELO PARSER ---");
-    console.log(data);
-    console.log("------------------------------------");
 
     if (Object.keys(data).length === 0) return null;
     return data;
@@ -41,10 +35,7 @@ function parseSelData(rawString) {
     return null;
   }
 }
-// --- FIM DA NOVA FUNÇÃO PARSER ---
 
-
-// O resto do arquivo continua exatamente igual...
 async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
   try {
     const timestampLeitura = new Date();
@@ -117,14 +108,15 @@ function iniciarServidorTCP(app) {
         return;
       }
 
-      if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
+      // Processa o buffer apenas quando a mensagem estiver completa (termina com '=>')
+      if (socket.buffer.includes('=>')) {
         const responseStr = socket.buffer.trim();
-        socket.buffer = '';
-        console.log(`[TCP Server] [${socket.deviceId}] DADOS COMPLETOS RECEBIDOS.`);
+        socket.buffer = ''; // Limpa o buffer para a próxima mensagem
+        console.log(`[TCP Server] [${socket.deviceId}] Mensagem completa recebida.`);
 
         switch (socket.state) {
           case 'AWAITING_USER_PROMPT':
-            console.log(`[TCP Server] [${socket.deviceId}] Enviando 'OTTER'.`);
+            console.log(`[TCP Server] [${socket.deviceId}] Resposta ao usuário recebida. Enviando 'OTTER'.`);
             socket.state = 'AWAITING_PASS_PROMPT';
             socket.write(LOGIN_PASS);
             break;
@@ -140,7 +132,7 @@ function iniciarServidorTCP(app) {
               const wss = app.get("wss");
               salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
             } else {
-              console.warn(`[TCP Server] [${socket.deviceId}] Parser falhou.`);
+              console.warn(`[TCP Server] [${socket.deviceId}] Parser falhou ao extrair dados da resposta completa.`);
             }
             socket.state = 'LOGGED_IN_IDLE';
             break;
