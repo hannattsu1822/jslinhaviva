@@ -71,7 +71,7 @@ function iniciarServidorTCP(app) {
   
   const LOGIN_USER = "ACC\r\n";
   const LOGIN_PASS = "OTTER\r\n";
-  const COMMAND_TO_POLL = "THE\r\n"; // Apenas um comando
+  const COMMAND_TO_POLL = "METG1\r\n"; // Apenas um comando
   // --- FIM DA MUDANÇA ---
 
   const server = net.createServer((socket) => {
