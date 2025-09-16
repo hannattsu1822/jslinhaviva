@@ -80,10 +80,10 @@ function iniciarServidorTCP(app) {
     socket.isLoggedIn = false;
     socket.deviceId = null;
 
-    // Lógica de Registro (espera pelo Heartbeat)
     socket.once('data', async (data) => {
-      const deviceId = data.toString().trim(); // O Heartbeat é texto
-      console.log(`[TCP Server] Pacote de registro (Heartbeat) recebido: "${deviceId}"`);
+      // A LÓGICA DE CONVERSÃO HEX ESTÁ DE VOLTA
+      const deviceId = data.toString('hex').toUpperCase();
+      console.log(`[TCP Server] Pacote de registro recebido e convertido para: "${deviceId}"`);
 
       try {
         const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
@@ -93,17 +93,14 @@ function iniciarServidorTCP(app) {
           releClients.set(deviceId, socket);
           console.log(`[TCP Server] [${deviceId}] Registrado. Iniciando login...`);
           
-          // Inicia o processo de login
           socket.write(LOGIN_USER);
-          
-          // Aguarda a resposta da senha e depois considera logado
           setTimeout(() => {
             socket.write(LOGIN_PASS);
             setTimeout(() => {
-              console.log(`[TCP Server] [${deviceId}] Login concluído. Monitoramento iniciado.`);
+              console.log(`[TCP Server] [${deviceId}] Login (supostamente) concluído. Monitoramento iniciado.`);
               socket.isLoggedIn = true;
-            }, 2000); // Espera 2s após enviar a senha
-          }, 2000); // Espera 2s após enviar o usuário
+            }, 2000);
+          }, 2000);
 
         } else {
           console.warn(`[TCP Server] MAC "${deviceId}" não encontrado. Fechando.`);
@@ -115,13 +112,12 @@ function iniciarServidorTCP(app) {
       }
     });
 
-    // Lógica para receber as respostas dos comandos de polling
     socket.on('data', (data) => {
-        if (!socket.isLoggedIn) return; // Ignora dados antes do login completo
+        if (!socket.isLoggedIn) return;
 
         const responseStr = data.toString().trim();
-        // Ignora os pacotes de heartbeat que continuam chegando
-        if (responseStr === socket.deviceId) return; 
+        const isRegistrationPacketAgain = data.toString('hex').toUpperCase() === socket.deviceId;
+        if (isRegistrationPacketAgain) return;
 
         console.log(`[TCP Server] [${socket.deviceId}] DADOS RECEBIDOS: "${responseStr}"`);
         const parsedData = parseSelData(responseStr);
@@ -147,7 +143,6 @@ function iniciarServidorTCP(app) {
     console.log(`[TCP Server] Servidor TCP ouvindo na porta ${port}`);
   });
 
-  // Lógica de Polling
   setInterval(() => {
     for (const socket of releClients.values()) {
       if (socket.isLoggedIn && socket.writable) {
