@@ -72,22 +72,13 @@ const server = net.createServer((socket) => {
         
         case 'AWAITING_LOGIN':
           console.log(`[TCP Service] [${socket.deviceId}] Conexão estabelecida. Enviando usuário 'ACC'.`);
-          socket.state = 'AWAITING_PASSWORD_PROMPT';
+          socket.state = 'AWAITING_LOGIN_CONFIRMATION'; 
           socket.write("ACC\r\n");
-          break;
-
-        case 'AWAITING_PASSWORD_PROMPT':
-          if (socket.buffer.includes('Password:')) {
-            console.log(`[TCP Service] [${socket.deviceId}] Prompt de senha recebido. Enviando senha.`);
-            socket.buffer = '';
-            socket.state = 'AWAITING_LOGIN_CONFIRMATION';
-            socket.write("OTTER\r\n");
-          }
           break;
 
         case 'AWAITING_LOGIN_CONFIRMATION':
           if (socket.buffer.includes('=>')) {
-            console.log(`[TCP Service] [${socket.deviceId}] Login bem-sucedido! Prompt '=>' recebido.`);
+            console.log(`[TCP Service] [${socket.deviceId}] Login direto bem-sucedido! Prompt '=>' recebido.`);
             socket.buffer = '';
             socket.state = 'LOGGED_IN_IDLE';
             releClients.set(socket.deviceId, socket);
@@ -114,6 +105,8 @@ const server = net.createServer((socket) => {
                 } else {
                     console.warn(`[TCP Service] [${socket.deviceId}] Parser falhou ao extrair dados da resposta.`);
                 }
+                
+                console.log(`[Data Handler] Resposta recebida e processada. Resetando estado para LOGGED_IN_IDLE.`);
                 socket.state = 'LOGGED_IN_IDLE';
             }
             break;
@@ -164,9 +157,12 @@ server.listen(port, () => {
 });
 
 setInterval(() => {
+  console.log('[Polling Loop] Verificando clientes conectados...');
   for (const socket of releClients.values()) {
+    console.log(`[Polling Loop] Checando socket ${socket.deviceId}. Estado atual: ${socket.state}`); 
+    
     if (socket.state === 'LOGGED_IN_IDLE' && socket.writable) {
-      console.log(`[TCP Service] [${socket.deviceId}] Enviando comando 'MET'.`);
+      console.log(`[Polling Loop] [${socket.deviceId}] Socket está IDLE. Enviando comando 'MET'.`);
       socket.state = 'LOGGED_IN_WAITING_RESPONSE';
       socket.write("MET\r\n");
     }
