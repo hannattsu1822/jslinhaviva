@@ -3,12 +3,14 @@ const { promisePool } = require("./init");
 
 const releClients = new Map();
 
+// --- INÍCIO DA FUNÇÃO PARSER FINAL ---
 function parseSelData(rawString) {
   const data = {};
   try {
-    // Limpeza agressiva para remover ecos e caracteres de controle
-    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").replace(/ACC|OTTER|MET|=>/g, "").trim();
+    // Limpa o lixo de dados e caracteres de controle
+    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").trim();
     
+    // Usa Expressões Regulares para encontrar e extrair os valores, não importa a formatação
     const currentMatch = cleanedString.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
     if (currentMatch) {
       data.corrente_a = parseFloat(currentMatch[1]);
@@ -35,7 +37,10 @@ function parseSelData(rawString) {
     return null;
   }
 }
+// --- FIM DA FUNÇÃO PARSER FINAL ---
 
+
+// O resto do arquivo continua exatamente igual...
 async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
   try {
     const timestampLeitura = new Date();
@@ -108,15 +113,14 @@ function iniciarServidorTCP(app) {
         return;
       }
 
-      // Processa o buffer apenas quando a mensagem estiver completa (termina com '=>')
-      if (socket.buffer.includes('=>')) {
+      if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
         const responseStr = socket.buffer.trim();
-        socket.buffer = ''; // Limpa o buffer para a próxima mensagem
+        socket.buffer = '';
         console.log(`[TCP Server] [${socket.deviceId}] Mensagem completa recebida.`);
 
         switch (socket.state) {
           case 'AWAITING_USER_PROMPT':
-            console.log(`[TCP Server] [${socket.deviceId}] Resposta ao usuário recebida. Enviando 'OTTER'.`);
+            console.log(`[TCP Server] [${socket.deviceId}] Enviando 'OTTER'.`);
             socket.state = 'AWAITING_PASS_PROMPT';
             socket.write(LOGIN_PASS);
             break;
