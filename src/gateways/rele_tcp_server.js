@@ -54,46 +54,45 @@ function parseSelData(rawString) {
 
 const server = net.createServer((socket) => {
   const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-  console.log(`[TCP Service] Nova conexão de ${remoteAddress}. Aguardando registro.`);
+  console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
 
   socket.state = 'AWAITING_REGISTRATION';
   socket.deviceId = null;
   socket.buffer = '';
 
-  // FASE 1: Cuidar apenas do registro.
-  socket.once('data', async (data) => {
-    const deviceId = data.toString('hex').toUpperCase();
-    try {
-      const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
-      if (rows.length > 0) {
-        socket.deviceId = deviceId;
-        socket.rele_id_db = rows[0].id;
-        releClients.set(deviceId, socket);
-        console.log(`[TCP Service] [${deviceId}] Registrado. Iniciando login...`);
-        
-        // FASE 2: Agora que está registrado, ativamos o handler principal da conversa.
-        socket.on('data', sessionHandler);
-        
-        // Inicia o login
-        socket.state = 'AWAITING_USER_PROMPT';
-        socket.write("ACC\r\n");
-      } else {
-        console.warn(`[TCP Service] MAC "${deviceId}" não encontrado. Fechando.`);
-        socket.end();
-      }
-    } catch (err) {
-      console.error("[TCP Service] Erro de DB no registro:", err);
-      socket.end();
-    }
-  });
-
-  // Handler principal da conversa (login e polling)
-  const sessionHandler = (data) => {
+  // Listener ÚNICO e PERSISTENTE para todos os dados
+  socket.on('data', async (data) => {
     socket.buffer += data.toString();
 
+    // Lógica de Registro
+    if (socket.state === 'AWAITING_REGISTRATION') {
+      const deviceId = data.toString('hex').toUpperCase();
+      socket.buffer = ''; // Limpa o buffer após o registro
+      try {
+        const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
+        if (rows.length > 0) {
+          socket.deviceId = deviceId;
+          socket.rele_id_db = rows[0].id;
+          releClients.set(deviceId, socket);
+          console.log(`[TCP Service] [${deviceId}] Registrado. Enviando 'ACC'.`);
+          socket.state = 'AWAITING_USER_PROMPT';
+          socket.write("ACC\r\n");
+        } else {
+          console.warn(`[TCP Service] MAC "${deviceId}" não encontrado. Fechando.`);
+          socket.end();
+        }
+      } catch (err) {
+        console.error("[TCP Service] Erro de DB no registro:", err);
+        socket.end();
+      }
+      return;
+    }
+
+    // Lógica de Conversa (Login e Polling)
+    // Processa o buffer apenas quando a mensagem estiver completa
     if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
       const responseStr = socket.buffer.trim();
-      socket.buffer = '';
+      socket.buffer = ''; // Limpa o buffer para a próxima mensagem
       console.log(`[TCP Service] [${socket.deviceId}] Mensagem completa recebida.`);
 
       switch (socket.state) {
@@ -128,7 +127,7 @@ const server = net.createServer((socket) => {
           break;
       }
     }
-  };
+  });
 
   socket.on("close", () => {
     if (socket.deviceId) releClients.delete(socket.deviceId);
