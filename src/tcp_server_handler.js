@@ -70,7 +70,8 @@ function iniciarServidorTCP(app) {
   
   const LOGIN_USER = "ACC\r\n";
   const LOGIN_PASS = "OTTER\r\n";
-  const COMMAND_TO_POLL = "MET1\r\n";
+const COMMAND_TO_POLL = "HELP\r\n";
+
 
   const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
