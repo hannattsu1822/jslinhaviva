@@ -8,7 +8,7 @@ const RELE_SERVER_PORT = 4000;
 const POLLING_INTERVAL_MS = 10000;
 
 const dbConfig = {
-  host: process.env.DB_HOST,
+  host: '127.0.0.1',
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -68,48 +68,51 @@ const server = net.createServer((socket) => {
   console.log(`[Servidor Rele] Nova conexão recebida de: ${remoteIdentifier}. Aguardando identificação...`);
   
   let releId = null;
+  let registrationId = null;
 
-  socket.once('data', async (data) => {
-    // --- INÍCIO DA MUDANÇA ---
-    // O 'data' é um Buffer. Vamos convertê-lo de HEX para uma string legível.
-    let registrationId = '';
-    if (Buffer.isBuffer(data)) {
-      registrationId = data.toString('hex').toUpperCase();
-    } else {
-      registrationId = data.toString().trim();
-    }
-    // --- FIM DA MUDANÇA ---
-
-    console.log(`[Servidor Rele] Pacote de registro recebido e convertido para: "${registrationId}"`);
-
-    try {
-      const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [registrationId]);
-      
-      if (rows.length > 0) {
-        releId = rows[0].id;
-        connectedClients.set(releId, { socket: socket, tag: registrationId });
-        console.log(`[Servidor Rele] Cliente "${registrationId}" (ID: ${releId}) identificado e registrado com sucesso.`);
-        
-        socket.on('data', (responseData) => {
-          const responseStr = responseData.toString();
-          const isRegistrationPacketAgain = responseData.toString('hex').toUpperCase() === registrationId;
-          if (isRegistrationPacketAgain) return;
-
-          const parsedData = parseSelResponse(responseStr);
-          if (parsedData) {
-            salvarLeituraRele(parsedData, releId);
-          }
-        });
-
+  const dataHandler = async (data) => {
+    if (!releId) {
+      let receivedId = '';
+      if (Buffer.isBuffer(data)) {
+        receivedId = data.toString('hex').toUpperCase();
       } else {
-        console.warn(`[Servidor Rele] ID de registro "${registrationId}" não encontrado ou inativo no banco de dados. Fechando conexão.`);
+        receivedId = data.toString().trim();
+      }
+      
+      console.log(`[Servidor Rele] Pacote de registro recebido e convertido para: "${receivedId}"`);
+      registrationId = receivedId;
+
+      try {
+        const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [registrationId]);
+        
+        if (rows.length > 0) {
+          releId = rows[0].id;
+          connectedClients.set(releId, { socket: socket, tag: registrationId });
+          console.log(`[Servidor Rele] Cliente "${registrationId}" (ID: ${releId}) identificado e registrado com sucesso.`);
+        } else {
+          console.warn(`[Servidor Rele] ID de registro "${registrationId}" não encontrado ou inativo no banco de dados. Fechando conexão.`);
+          socket.end();
+        }
+      } catch (err) {
+        console.error("[Servidor Rele] Erro de banco de dados durante o registro:", err);
         socket.end();
       }
-    } catch (err) {
-      console.error("[Servidor Rele] Erro de banco de dados durante o registro:", err);
-      socket.end();
+    } else {
+      const responseStr = data.toString();
+      const isRegistrationPacketAgain = data.toString('hex').toUpperCase() === registrationId;
+      
+      if (isRegistrationPacketAgain) {
+        return;
+      }
+
+      const parsedData = parseSelResponse(responseStr);
+      if (parsedData) {
+        salvarLeituraRele(parsedData, releId);
+      }
     }
-  });
+  };
+
+  socket.on('data', dataHandler);
 
   socket.on('close', () => {
     if (releId) {
