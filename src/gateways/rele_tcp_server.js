@@ -23,16 +23,16 @@ const releClients = new Map();
 function parseSelData(rawString) {
   const data = {};
   try {
-    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").trim();
+    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, "").trim();
     
-    const currentMatch = cleanedString.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+    const currentMatch = cleanedString.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
     if (currentMatch) {
       data.corrente_a = parseFloat(currentMatch[1]);
       data.corrente_b = parseFloat(currentMatch[2]);
       data.corrente_c = parseFloat(currentMatch[3]);
     }
 
-    const voltageMatch = cleanedString.match(/Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+    const voltageMatch = cleanedString.match(/ge Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
     if (voltageMatch) {
       data.tensao_a = parseFloat(voltageMatch[1]);
       data.tensao_b = parseFloat(voltageMatch[2]);
@@ -44,7 +44,7 @@ function parseSelData(rawString) {
       data.frequencia = parseFloat(frequencyMatch[1]);
     }
 
-    if (Object.keys(data).length === 0) return null;
+    if (Object.keys(data).length < 3) return null;
     return data;
   } catch (error) {
     console.error("[TCP Service] Erro ao fazer parse:", error);
@@ -119,7 +119,6 @@ const server = net.createServer((socket) => {
                     console.log(`[TCP Service] [${socket.deviceId}] Dados publicados no MQTT.`);
                 } else {
                     console.warn(`[TCP Service] [${socket.deviceId}] Parser falhou ao extrair dados da resposta.`);
-                    console.log(`[Debug Parser] O texto que causou a falha foi: "${responseStr}"`);
                 }
                 
                 socket.state = 'LOGGED_IN_IDLE';
