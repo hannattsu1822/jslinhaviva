@@ -32,7 +32,7 @@ function parseSelData(rawString) {
       data.corrente_c = parseFloat(currentMatch[3]);
     }
 
-    const voltageMatch = cleanedString.match(/ge\s*Magnitude\s*\(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
+    const voltageMatch = cleanedString.match(/Volta\s*ge\s*Magnitude\s*\(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
     if (voltageMatch) {
       data.tensao_a = parseFloat(voltageMatch[1]);
       data.tensao_b = parseFloat(voltageMatch[2]);
@@ -43,6 +43,8 @@ function parseSelData(rawString) {
     if (frequencyMatch) {
       data.frequencia = parseFloat(frequencyMatch[1]);
     }
+    
+    console.log(`[Debug Parser Interno] Corrente: ${currentMatch ? 'OK' : 'FALHOU'}, Tensão: ${voltageMatch ? 'OK' : 'FALHOU'}, Frequência: ${frequencyMatch ? 'OK' : 'FALHOU'}`);
 
     if (Object.keys(data).length < 3) return null;
     return data;
@@ -61,10 +63,10 @@ const server = net.createServer((socket) => {
   socket.buffer = '';
 
   socket.on('data', async (data) => {
-    const cleanedData = data.toString();
-    if (!cleanedData) return;
+    const rawText = data.toString('latin1');
+    if (!rawText) return;
 
-    socket.buffer += cleanedData;
+    socket.buffer += rawText;
 
     try {
       switch (socket.state) {
