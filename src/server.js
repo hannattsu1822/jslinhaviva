@@ -3,7 +3,6 @@ const http = require("http");
 const { WebSocketServer } = require("ws");
 const { app } = require("./init");
 const { iniciarClienteMQTT } = require("./mqtt_handler");
-const { iniciarServidorTCP } = require("./tcp_server_handler");
 
 const server = http.createServer(app);
 
@@ -29,3 +28,4 @@ const port = process.env.SERVER_PORT || 3000;
 server.listen(port, () => {
   console.log(`Servidor HTTP e WebSocket rodando em http://localhost:${port}`);
 });
+
