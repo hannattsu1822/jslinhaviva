@@ -7,7 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 15000;
+const pollInterval = 60000;
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -70,7 +70,7 @@ const server = net.createServer((socket) => {
       switch (socket.state) {
         
         case 'AWAITING_LOGIN':
-          console.log(`[TCP Service] [${socket.deviceId}] Conexão estabelecida. Enviando usuário 'ACC'.`);
+          console.log(`[TCP Service] [${socket.deviceId}] Iniciando sequência de login.`);
           socket.state = 'AWAITING_ACC_RESPONSE';
           socket.write("ACC\r\n");
           break;
@@ -82,19 +82,21 @@ const server = net.createServer((socket) => {
             socket.state = 'AWAITING_LOGIN_CONFIRMATION';
             socket.write("OTTER\r\n");
           } else if (socket.buffer.includes('=>')) {
-            console.log(`[TCP Service] [${socket.deviceId}] Login direto detectado (sem senha). Login bem-sucedido.`);
+            console.log(`[TCP Service] [${socket.deviceId}] Login direto detectado. Enviando MET.`);
             socket.buffer = '';
-            socket.state = 'LOGGED_IN_IDLE';
+            socket.state = 'LOGGED_IN_WAITING_RESPONSE';
             releClients.set(socket.deviceId, socket);
+            socket.write("MET\r\n");
           }
           break;
 
         case 'AWAITING_LOGIN_CONFIRMATION':
           if (socket.buffer.includes('=>')) {
-            console.log(`[TCP Service] [${socket.deviceId}] Login com senha bem-sucedido.`);
+            console.log(`[TCP Service] [${socket.deviceId}] Login com senha bem-sucedido. Enviando MET.`);
             socket.buffer = '';
-            socket.state = 'LOGGED_IN_IDLE';
+            socket.state = 'LOGGED_IN_WAITING_RESPONSE';
             releClients.set(socket.deviceId, socket);
+            socket.write("MET\r\n");
           }
           break;
         
@@ -120,6 +122,7 @@ const server = net.createServer((socket) => {
                 }
                 
                 socket.state = 'LOGGED_IN_IDLE';
+                console.log(`[TCP Service] [${socket.deviceId}] Ciclo de coleta concluído. Aguardando próximo intervalo.`);
             }
             break;
       }
@@ -150,7 +153,7 @@ const server = net.createServer((socket) => {
       if (rows.length > 0) {
         socket.deviceId = rows[0].local_tag;
         socket.rele_id_db = rows[0].id;
-        console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
+        console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando ciclo de coleta.`);
         socket.state = 'AWAITING_LOGIN';
         socket.emit('data', '');
       } else {
@@ -171,9 +174,9 @@ server.listen(port, () => {
 setInterval(() => {
   for (const socket of releClients.values()) {
     if (socket.state === 'LOGGED_IN_IDLE' && socket.writable) {
-      console.log(`[Polling Loop] [${socket.deviceId}] Socket está IDLE. Enviando comando 'MET'.`);
-      socket.state = 'LOGGED_IN_WAITING_RESPONSE';
-      socket.write("MET\r\n");
+      console.log(`[Polling Loop] [${socket.deviceId}] Disparando novo ciclo de login e coleta.`);
+      socket.state = 'AWAITING_LOGIN';
+      socket.emit('data', '');
     }
   }
 }, pollInterval);
