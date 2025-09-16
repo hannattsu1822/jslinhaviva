@@ -19,7 +19,6 @@ wss.on("connection", (ws) => {
 
 iniciarClienteMQTT(app);
 
-iniciarServidorTCP(app);
 
 const aggregatorRoutes = require("./routes");
 app.use("/", aggregatorRoutes);
@@ -28,4 +27,5 @@ const port = process.env.SERVER_PORT || 3000;
 server.listen(port, () => {
   console.log(`Servidor HTTP e WebSocket rodando em http://localhost:${port}`);
 });
+
 
