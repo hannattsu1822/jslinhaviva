@@ -119,6 +119,7 @@ const server = net.createServer((socket) => {
                     console.log(`[TCP Service] [${socket.deviceId}] Dados publicados no MQTT.`);
                 } else {
                     console.warn(`[TCP Service] [${socket.deviceId}] Parser falhou ao extrair dados da resposta.`);
+                    console.log(`[Debug Parser] O texto que causou a falha foi: "${responseStr}"`);
                 }
                 
                 socket.state = 'LOGGED_IN_IDLE';
