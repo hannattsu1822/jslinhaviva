@@ -1,7 +1,7 @@
 const path = require('path');
 require("dotenv").config({ path: path.resolve(__dirname, '../../.env') });
 
-const Telnet = require('telnet-client');
+const { Telnet } = require('telnet-client');
 const mqtt = require("mqtt");
 const mysql = require("mysql2/promise");
 
