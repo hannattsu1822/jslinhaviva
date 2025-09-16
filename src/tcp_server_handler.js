@@ -67,7 +67,7 @@ async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
     const sqlInsert = `INSERT INTO leituras_reles (rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     await promisePool.query(sqlInsert, [releId, timestampLeitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, rawPayload]);
     
-    console.log(`[TCP Server] Leitura do dispositivo ${deviceId} (ID: ${releId}) salva no banco.`);
+    console.log(`[TCP Server] SUCESSO: Leitura do dispositivo ${deviceId} (ID: ${releId}) salva no banco.`);
 
     const sqlUpdate = "UPDATE dispositivos_reles SET ultima_leitura = NOW(), status_json = ? WHERE id = ?";
     await promisePool.query(sqlUpdate, [JSON.stringify({ connection_status: "online", ...parsedData }), releId]);
@@ -149,10 +149,17 @@ function iniciarServidorTCP(app) {
           break;
 
         case 'LOGGED_IN_WAITING_RESPONSE':
+          // --- INÍCIO DOS LOGS DE DEPURAÇÃO ---
+          console.log(`[TCP Server] [${socket.deviceId}] Tentando analisar a resposta do comando MET...`);
           const parsedData = parseSelData(responseStr);
+          console.log(`[TCP Server] [${socket.deviceId}] Resultado do parser:`, parsedData);
+          // --- FIM DOS LOGS DE DEPURAÇÃO ---
+
           if (parsedData) {
             const wss = app.get("wss");
             salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
+          } else {
+            console.warn(`[TCP Server] [${socket.deviceId}] Parser não conseguiu extrair dados da resposta.`);
           }
           socket.state = 'LOGGED_IN_IDLE';
           break;
