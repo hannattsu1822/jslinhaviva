@@ -65,20 +65,19 @@ async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
 }
 
 function iniciarServidorTCP(app) {
+  // --- MUDANÇA: Ajustes para o teste ---
   const port = process.env.TCP_SERVER_PORT || 4000;
-  const pollInterval = parseInt(process.env.TELNET_POLL_INTERVAL_SECONDS, 10) * 1000 || 10000;
+  const pollInterval = 60000; // 60 segundos
   
-  // Comandos de login e polling
   const LOGIN_USER = "ACC\r\n";
   const LOGIN_PASS = "OTTER\r\n";
-  const COMMANDS_TO_POLL = ["METG1\r\n", "MET RTD\r\n"]; // Adicione outros comandos aqui
-  let commandIndex = 0;
+  const COMMAND_TO_POLL = "THE\r\n"; // Apenas um comando
+  // --- FIM DA MUDANÇA ---
 
   const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Server] Nova conexão recebida de ${remoteAddress}. Aguardando identificação...`);
 
-    // Máquina de estados para cada socket
     socket.state = 'AWAITING_REGISTRATION';
     socket.deviceId = null;
 
@@ -95,7 +94,8 @@ function iniciarServidorTCP(app) {
           if (rows.length > 0) {
             socket.deviceId = deviceId;
             releClients.set(deviceId, socket);
-            console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado. Iniciando login...`);
+            console.log(`[TCP Server] Dispositivo ${deviceId} (${remoteAddress}) registrado.`);
+            console.log(`[TCP Server] [${socket.deviceId}] ENVIANDO usuário: ACC`);
             socket.state = 'AWAITING_USER_PROMPT';
             socket.write(LOGIN_USER);
           } else {
@@ -109,23 +109,28 @@ function iniciarServidorTCP(app) {
         return;
       }
 
-      // Lógica da máquina de estados de login
       switch (socket.state) {
         case 'AWAITING_USER_PROMPT':
-          // O relé respondeu ao comando ACC, agora enviamos a senha
-          console.log(`[TCP Server] [${socket.deviceId}] Resposta ao usuário recebida. Enviando senha...`);
+          // --- MUDANÇA: Log detalhado ---
+          console.log(`[TCP Server] [${socket.deviceId}] RESPOSTA recebida do relé: "${responseStr}"`);
+          console.log(`[TCP Server] [${socket.deviceId}] ENVIANDO senha: OTTER`);
+          // --- FIM DA MUDANÇA ---
           socket.state = 'AWAITING_PASS_PROMPT';
           socket.write(LOGIN_PASS);
           break;
         
         case 'AWAITING_PASS_PROMPT':
-          // O relé respondeu ao comando OTTER, o login está completo
-          console.log(`[TCP Server] [${socket.deviceId}] Login concluído. Monitoramento iniciado.`);
+          // --- MUDANÇA: Log detalhado ---
+          console.log(`[TCP Server] [${socket.deviceId}] RESPOSTA recebida do relé: "${responseStr}"`);
+          console.log(`[TCP Server] [${socket.deviceId}] Login concluído com sucesso. Monitoramento iniciado.`);
+          // --- FIM DA MUDANÇA ---
           socket.state = 'LOGGED_IN';
           break;
 
         case 'LOGGED_IN':
-          // Recebemos dados em resposta a um comando de polling
+          // --- MUDANÇA: Log detalhado ---
+          console.log(`[TCP Server] [${socket.deviceId}] RESPOSTA recebida do relé: "${responseStr}"`);
+          // --- FIM DA MUDANÇA ---
           const parsedData = parseSelData(responseStr);
           if (parsedData) {
             const wss = app.get("wss");
@@ -153,20 +158,20 @@ function iniciarServidorTCP(app) {
     console.log(`[TCP Server] Servidor TCP ouvindo na porta ${port}`);
   });
 
-  // Lógica de polling que envia os comandos em sequência
   setInterval(() => {
     if (releClients.size > 0) {
-      const commandToSend = COMMANDS_TO_POLL[commandIndex];
-      console.log(`[TCP Server] Enviando comando "${commandToSend.trim()}" para ${releClients.size} relé(s) conectado(s)...`);
+      const loggedInClients = Array.from(releClients.values()).filter(socket => socket.state === 'LOGGED_IN');
       
-      for (const socket of releClients.values()) {
-        if (socket.state === 'LOGGED_IN' && socket.writable) {
-          socket.write(commandToSend);
+      if (loggedInClients.length > 0) {
+        // --- MUDANÇA: Log detalhado ---
+        console.log(`[TCP Server] ENVIANDO comando "${COMMAND_TO_POLL.trim()}" para ${loggedInClients.length} relé(s) logado(s)...`);
+        // --- FIM DA MUDANÇA ---
+        for (const socket of loggedInClients) {
+          if (socket.writable) {
+            socket.write(COMMAND_TO_POLL);
+          }
         }
       }
-      
-      // Avança para o próximo comando da lista para a próxima rodada de polling
-      commandIndex = (commandIndex + 1) % COMMANDS_TO_POLL.length;
     }
   }, pollInterval);
 }
