@@ -56,76 +56,71 @@ const server = net.createServer((socket) => {
   const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
   console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
 
-  socket.state = 'AWAITING_REGISTRATION';
+  socket.state = 'AWAITING_ID';
   socket.deviceId = null;
   socket.buffer = '';
 
-  // Listener ÚNICO e PERSISTENTE para todos os dados
   socket.on('data', async (data) => {
-    socket.buffer += data.toString();
+    const cleanedData = data.toString().replace(/[\x00-\x1F\x7F-\x9F]+/g, "");
+    if (!cleanedData) return;
 
-    // Lógica de Registro
-    if (socket.state === 'AWAITING_REGISTRATION') {
-      const deviceId = data.toString('hex').toUpperCase();
-      socket.buffer = ''; // Limpa o buffer após o registro
-      try {
-        const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
-        if (rows.length > 0) {
-          socket.deviceId = deviceId;
-          socket.rele_id_db = rows[0].id;
-          releClients.set(deviceId, socket);
-          console.log(`[TCP Service] [${deviceId}] Registrado. Enviando 'ACC'.`);
-          socket.state = 'AWAITING_USER_PROMPT';
-          socket.write("ACC\r\n");
-        } else {
-          console.warn(`[TCP Service] MAC "${deviceId}" não encontrado. Fechando.`);
-          socket.end();
-        }
-      } catch (err) {
-        console.error("[TCP Service] Erro de DB no registro:", err);
-        socket.end();
-      }
-      return;
-    }
+    socket.buffer += cleanedData;
+    console.log(`[TCP Service] [${socket.deviceId || remoteAddress}] Buffer limpo recebido: "${socket.buffer}"`);
 
-    // Lógica de Conversa (Login e Polling)
-    // Processa o buffer apenas quando a mensagem estiver completa
-    if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
-      const responseStr = socket.buffer.trim();
-      socket.buffer = ''; // Limpa o buffer para a próxima mensagem
-      console.log(`[TCP Service] [${socket.deviceId}] Mensagem completa recebida.`);
-
+    try {
       switch (socket.state) {
-        case 'AWAITING_USER_PROMPT':
-          console.log(`[TCP Service] [${socket.deviceId}] Enviando 'OTTER'.`);
-          socket.state = 'AWAITING_PASS_PROMPT';
-          socket.write("OTTER\r\n");
+        
+        case 'AWAITING_LOGIN':
+          console.log(`[TCP Service] [${socket.deviceId}] Conexão estabelecida. Enviando usuário 'ACC'.`);
+          socket.state = 'AWAITING_PASSWORD_PROMPT';
+          socket.write("ACC\r\n");
+          break;
+
+        case 'AWAITING_PASSWORD_PROMPT':
+          if (socket.buffer.includes('Password:')) {
+            console.log(`[TCP Service] [${socket.deviceId}] Prompt de senha recebido. Enviando senha.`);
+            socket.buffer = '';
+            socket.state = 'AWAITING_LOGIN_CONFIRMATION';
+            socket.write("OTTER\r\n");
+          }
+          break;
+
+        case 'AWAITING_LOGIN_CONFIRMATION':
+          if (socket.buffer.includes('=>')) {
+            console.log(`[TCP Service] [${socket.deviceId}] Login bem-sucedido! Prompt '=>' recebido.`);
+            socket.buffer = '';
+            socket.state = 'LOGGED_IN_IDLE';
+            releClients.set(socket.deviceId, socket);
+          }
           break;
         
-        case 'AWAITING_PASS_PROMPT':
-          console.log(`[TCP Service] [${socket.deviceId}] Login concluído.`);
-          socket.state = 'LOGGED_IN_IDLE';
-          break;
-
         case 'LOGGED_IN_WAITING_RESPONSE':
-          const parsedData = parseSelData(responseStr);
-          if (parsedData) {
-            const topic = `sel/reles/${socket.rele_id_db}/status`;
-            const payload = JSON.stringify({
-              rele_id: socket.rele_id_db,
-              local_tag: socket.deviceId,
-              ...parsedData,
-              timestamp_leitura: new Date().toISOString(),
-              payload_completo: responseStr
-            });
-            mqttClient.publish(topic, payload);
-            console.log(`[TCP Service] [${socket.deviceId}] Dados publicados no MQTT.`);
-          } else {
-            console.warn(`[TCP Service] [${socket.deviceId}] Parser falhou.`);
-          }
-          socket.state = 'LOGGED_IN_IDLE';
-          break;
+            if (socket.buffer.includes('=>')) {
+                const responseStr = socket.buffer;
+                socket.buffer = '';
+
+                const parsedData = parseSelData(responseStr);
+                if (parsedData) {
+                    const topic = `sel/reles/${socket.rele_id_db}/status`;
+                    const payload = JSON.stringify({
+                    rele_id: socket.rele_id_db,
+                    local_tag: socket.deviceId,
+                    ...parsedData,
+                    timestamp_leitura: new Date().toISOString(),
+                    payload_completo: responseStr
+                    });
+                    mqttClient.publish(topic, payload);
+                    console.log(`[TCP Service] [${socket.deviceId}] Dados publicados no MQTT.`);
+                } else {
+                    console.warn(`[TCP Service] [${socket.deviceId}] Parser falhou ao extrair dados da resposta.`);
+                }
+                socket.state = 'LOGGED_IN_IDLE';
+            }
+            break;
       }
+    } catch(err) {
+        console.error(`[TCP Service] [${socket.deviceId || remoteAddress}] Erro na máquina de estados:`, err);
+        socket.end();
     }
   });
 
@@ -133,9 +128,35 @@ const server = net.createServer((socket) => {
     if (socket.deviceId) releClients.delete(socket.deviceId);
     console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
   });
+
   socket.on("error", (err) => {
     console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
   });
+
+  (async () => {
+    try {
+      const clientIp = socket.remoteAddress.includes('::') 
+          ? socket.remoteAddress.split(':').pop() 
+          : socket.remoteAddress;
+
+      console.log(`[TCP Service] Tentando identificar dispositivo pelo IP: ${clientIp}`);
+      const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE ip_address = ? AND ativo = 1", [clientIp]);
+
+      if (rows.length > 0) {
+        socket.deviceId = rows[0].local_tag;
+        socket.rele_id_db = rows[0].id;
+        console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
+        socket.state = 'AWAITING_LOGIN';
+        socket.emit('data', '');
+      } else {
+        console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o IP "${clientIp}". Fechando conexão.`);
+        socket.end();
+      }
+    } catch (err) {
+      console.error("[TCP Service] Erro de DB ao identificar por IP:", err);
+      socket.end();
+    }
+  })();
 });
 
 server.listen(port, () => {
