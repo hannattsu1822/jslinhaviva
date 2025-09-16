@@ -14,15 +14,11 @@ function parseSelData(rawString) {
     lines.forEach(line => {
       line = line.trim();
 
-      if (line.includes('Current Magnitude (A)')) {
-        currentSection = 'CURRENT';
-      } else if (line.includes('Voltage Magnitude (V)')) {
-        currentSection = 'VOLTAGE';
-      } else if (line.includes('Frequency (Hz)')) {
-        currentSection = 'FREQUENCY';
-      }
+      if (line.includes('Current Magnitude (A)')) currentSection = 'CURRENT';
+      else if (line.includes('Voltage Magnitude (V)')) currentSection = 'VOLTAGE';
+      else if (line.includes('Frequency (Hz)')) currentSection = 'FREQUENCY';
 
-      if (currentSection === 'CURRENT' && !isNaN(parseFloat(line.split(/\s+/)[0]))) {
+      if (currentSection === 'CURRENT' && /^\d/.test(line)) {
           const values = line.split(/\s+/).map(parseFloat);
           if (values.length >= 3) {
               data.corrente_a = values[0];
@@ -30,7 +26,7 @@ function parseSelData(rawString) {
               data.corrente_c = values[2];
               currentSection = '';
           }
-      } else if (currentSection === 'VOLTAGE' && !isNaN(parseFloat(line.split(/\s+/)[0]))) {
+      } else if (currentSection === 'VOLTAGE' && /^\d/.test(line)) {
           const values = line.split(/\s+/).map(parseFloat);
           if (values.length >= 3) {
               data.tensao_a = values[0];
@@ -40,10 +36,8 @@ function parseSelData(rawString) {
           }
       } else if (currentSection === 'FREQUENCY' && line.includes('=')) {
           const value = parseFloat(line.split('=')[1].trim());
-          if (!isNaN(value)) {
-              data.frequencia = value;
-              currentSection = '';
-          }
+          if (!isNaN(value)) data.frequencia = value;
+          currentSection = '';
       }
     });
 
@@ -98,81 +92,69 @@ function iniciarServidorTCP(app) {
 
   const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-    console.log(`[TCP Server] Nova conexão de ${remoteAddress}. Aguardando registro.`);
+    console.log(`[TCP Server] Nova conexão de ${remoteAddress}.`);
 
     socket.state = 'AWAITING_REGISTRATION';
     socket.deviceId = null;
-    let accumulatedData = '';
+    socket.buffer = '';
 
     socket.on('data', async (data) => {
-      accumulatedData += data.toString();
-      
-      if (!accumulatedData.includes('=>') && !accumulatedData.includes('\n') && socket.state !== 'AWAITING_REGISTRATION') {
+      socket.buffer += data.toString();
+
+      if (socket.state === 'AWAITING_REGISTRATION') {
+        const deviceId = data.toString('hex').toUpperCase();
+        socket.buffer = ''; // Limpa o buffer após o registro
+        try {
+          const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
+          if (rows.length > 0) {
+            socket.deviceId = deviceId;
+            releClients.set(deviceId, socket);
+            console.log(`[TCP Server] [${deviceId}] Registrado. Enviando 'ACC'.`);
+            socket.state = 'AWAITING_USER_PROMPT';
+            socket.write(LOGIN_USER);
+          } else {
+            socket.end();
+          }
+        } catch (err) {
+          socket.end();
+        }
         return;
       }
 
-      const responseStr = accumulatedData.trim();
-      accumulatedData = '';
-      
-      console.log(`[TCP Server] [${socket.deviceId || 'N/A'}] DADOS RECEBIDOS: "${responseStr}" | ESTADO ATUAL: ${socket.state}`);
+      if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
+        const responseStr = socket.buffer.trim();
+        socket.buffer = ''; // Limpa o buffer para a próxima mensagem
+        console.log(`[TCP Server] [${socket.deviceId}] DADOS COMPLETOS RECEBIDOS: "${responseStr}"`);
 
-      switch (socket.state) {
-        case 'AWAITING_REGISTRATION':
-          const deviceId = data.toString('hex').toUpperCase();
-          try {
-            const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
-            if (rows.length > 0) {
-              socket.deviceId = deviceId;
-              releClients.set(deviceId, socket);
-              console.log(`[TCP Server] [${deviceId}] Registrado. Enviando usuário 'ACC'.`);
-              socket.state = 'AWAITING_USER_PROMPT';
-              socket.write(LOGIN_USER);
+        switch (socket.state) {
+          case 'AWAITING_USER_PROMPT':
+            console.log(`[TCP Server] [${socket.deviceId}] Enviando 'OTTER'.`);
+            socket.state = 'AWAITING_PASS_PROMPT';
+            socket.write(LOGIN_PASS);
+            break;
+          
+          case 'AWAITING_PASS_PROMPT':
+            console.log(`[TCP Server] [${socket.deviceId}] Login concluído.`);
+            socket.state = 'LOGGED_IN_IDLE';
+            break;
+
+          case 'LOGGED_IN_WAITING_RESPONSE':
+            const parsedData = parseSelData(responseStr);
+            if (parsedData) {
+              const wss = app.get("wss");
+              salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
             } else {
-              console.warn(`[TCP Server] MAC "${deviceId}" não encontrado. Fechando.`);
-              socket.end();
+              console.warn(`[TCP Server] [${socket.deviceId}] Parser falhou.`);
             }
-          } catch (err) {
-            console.error("[TCP Server] Erro de DB no registro:", err);
-            socket.end();
-          }
-          break;
-
-        case 'AWAITING_USER_PROMPT':
-          console.log(`[TCP Server] [${socket.deviceId}] Resposta ao usuário recebida. Enviando senha 'OTTER'.`);
-          socket.state = 'AWAITING_PASS_PROMPT';
-          socket.write(LOGIN_PASS);
-          break;
-        
-        case 'AWAITING_PASS_PROMPT':
-          console.log(`[TCP Server] [${socket.deviceId}] Resposta à senha recebida. Login concluído.`);
-          socket.state = 'LOGGED_IN_IDLE';
-          break;
-
-        case 'LOGGED_IN_WAITING_RESPONSE':
-          // --- INÍCIO DOS LOGS DE DEPURAÇÃO ---
-          console.log(`[TCP Server] [${socket.deviceId}] Tentando analisar a resposta do comando MET...`);
-          const parsedData = parseSelData(responseStr);
-          console.log(`[TCP Server] [${socket.deviceId}] Resultado do parser:`, parsedData);
-          // --- FIM DOS LOGS DE DEPURAÇÃO ---
-
-          if (parsedData) {
-            const wss = app.get("wss");
-            salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
-          } else {
-            console.warn(`[TCP Server] [${socket.deviceId}] Parser não conseguiu extrair dados da resposta.`);
-          }
-          socket.state = 'LOGGED_IN_IDLE';
-          break;
+            socket.state = 'LOGGED_IN_IDLE';
+            break;
+        }
       }
     });
 
     socket.on("close", () => {
-      if (socket.deviceId) {
-        releClients.delete(socket.deviceId);
-        console.log(`[TCP Server] Conexão com ${socket.deviceId} fechada.`);
-      } else {
-        console.log(`[TCP Server] Conexão com ${remoteAddress} fechada.`);
-      }
+      if (socket.deviceId) releClients.delete(socket.deviceId);
+      console.log(`[TCP Server] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
 
     socket.on("error", (err) => {
@@ -187,7 +169,7 @@ function iniciarServidorTCP(app) {
   setInterval(() => {
     for (const socket of releClients.values()) {
       if (socket.state === 'LOGGED_IN_IDLE' && socket.writable) {
-        console.log(`[TCP Server] [${socket.deviceId}] Enviando comando de polling 'MET'.`);
+        console.log(`[TCP Server] [${socket.deviceId}] Enviando comando 'MET'.`);
         socket.state = 'LOGGED_IN_WAITING_RESPONSE';
         socket.write(COMMAND_TO_POLL);
       }
