@@ -66,7 +66,7 @@ async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
 
 function iniciarServidorTCP(app) {
   const port = process.env.TCP_SERVER_PORT || 4000;
-  const pollInterval = 15000; // Aumentado para 15s para dar tempo de resposta
+  const pollInterval = 15000;
   
   const LOGIN_USER = "ACC\r\n";
   const LOGIN_PASS = "OTTER\r\n";
@@ -76,72 +76,65 @@ function iniciarServidorTCP(app) {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Server] Nova conexão de ${remoteAddress}. Aguardando registro.`);
 
-    socket.state = 'AWAITING_REGISTRATION';
+    socket.isRegistered = false;
+    socket.isLoggedIn = false;
     socket.deviceId = null;
-    let accumulatedData = '';
 
-    socket.on('data', async (data) => {
-      accumulatedData += data.toString();
-      
-      // Processa os dados apenas quando recebe o prompt '=>' ou uma nova linha
-      if (!accumulatedData.includes('=>') && !accumulatedData.includes('\n')) {
-        return; // Aguarda mais dados
+    // Lógica de Registro (espera pelo Heartbeat)
+    socket.once('data', async (data) => {
+      const deviceId = data.toString().trim(); // O Heartbeat é texto
+      console.log(`[TCP Server] Pacote de registro (Heartbeat) recebido: "${deviceId}"`);
+
+      try {
+        const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
+        if (rows.length > 0) {
+          socket.deviceId = deviceId;
+          socket.isRegistered = true;
+          releClients.set(deviceId, socket);
+          console.log(`[TCP Server] [${deviceId}] Registrado. Iniciando login...`);
+          
+          // Inicia o processo de login
+          socket.write(LOGIN_USER);
+          
+          // Aguarda a resposta da senha e depois considera logado
+          setTimeout(() => {
+            socket.write(LOGIN_PASS);
+            setTimeout(() => {
+              console.log(`[TCP Server] [${deviceId}] Login concluído. Monitoramento iniciado.`);
+              socket.isLoggedIn = true;
+            }, 2000); // Espera 2s após enviar a senha
+          }, 2000); // Espera 2s após enviar o usuário
+
+        } else {
+          console.warn(`[TCP Server] MAC "${deviceId}" não encontrado. Fechando.`);
+          socket.end();
+        }
+      } catch (err) {
+        console.error("[TCP Server] Erro de DB no registro:", err);
+        socket.end();
       }
+    });
 
-      const responseStr = accumulatedData.trim();
-      accumulatedData = ''; // Limpa o buffer
-      
-      console.log(`[TCP Server] [${socket.deviceId || 'N/A'}] DADOS RECEBIDOS: "${responseStr}" | ESTADO ATUAL: ${socket.state}`);
+    // Lógica para receber as respostas dos comandos de polling
+    socket.on('data', (data) => {
+        if (!socket.isLoggedIn) return; // Ignora dados antes do login completo
 
-      switch (socket.state) {
-        case 'AWAITING_REGISTRATION':
-          const deviceId = data.toString('hex').toUpperCase();
-          try {
-            const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
-            if (rows.length > 0) {
-              socket.deviceId = deviceId;
-              releClients.set(deviceId, socket);
-              console.log(`[TCP Server] [${deviceId}] Registrado. Enviando usuário 'ACC'.`);
-              socket.state = 'AWAITING_USER_PROMPT';
-              socket.write(LOGIN_USER);
-            } else {
-              console.warn(`[TCP Server] MAC "${deviceId}" não encontrado. Fechando.`);
-              socket.end();
-            }
-          } catch (err) {
-            console.error("[TCP Server] Erro de DB no registro:", err);
-            socket.end();
-          }
-          break;
+        const responseStr = data.toString().trim();
+        // Ignora os pacotes de heartbeat que continuam chegando
+        if (responseStr === socket.deviceId) return; 
 
-        case 'AWAITING_USER_PROMPT':
-          console.log(`[TCP Server] [${socket.deviceId}] Resposta ao usuário recebida. Enviando senha 'OTTER'.`);
-          socket.state = 'AWAITING_PASS_PROMPT';
-          socket.write(LOGIN_PASS);
-          break;
-        
-        case 'AWAITING_PASS_PROMPT':
-          console.log(`[TCP Server] [${socket.deviceId}] Resposta à senha recebida. Login concluído.`);
-          socket.state = 'LOGGED_IN_IDLE';
-          break;
-
-        case 'LOGGED_IN_WAITING_RESPONSE':
-          const parsedData = parseSelData(responseStr);
-          if (parsedData) {
+        console.log(`[TCP Server] [${socket.deviceId}] DADOS RECEBIDOS: "${responseStr}"`);
+        const parsedData = parseSelData(responseStr);
+        if (parsedData) {
             const wss = app.get("wss");
             salvarLeituraRele(socket.deviceId, parsedData, responseStr, wss);
-          }
-          socket.state = 'LOGGED_IN_IDLE'; // Volta ao estado de espera
-          break;
-      }
+        }
     });
 
     socket.on("close", () => {
       if (socket.deviceId) {
         releClients.delete(socket.deviceId);
         console.log(`[TCP Server] Conexão com ${socket.deviceId} fechada.`);
-      } else {
-        console.log(`[TCP Server] Conexão com ${remoteAddress} fechada.`);
       }
     });
 
@@ -154,11 +147,11 @@ function iniciarServidorTCP(app) {
     console.log(`[TCP Server] Servidor TCP ouvindo na porta ${port}`);
   });
 
+  // Lógica de Polling
   setInterval(() => {
     for (const socket of releClients.values()) {
-      if (socket.state === 'LOGGED_IN_IDLE' && socket.writable) {
+      if (socket.isLoggedIn && socket.writable) {
         console.log(`[TCP Server] [${socket.deviceId}] Enviando comando de polling 'MET1'.`);
-        socket.state = 'LOGGED_IN_WAITING_RESPONSE';
         socket.write(COMMAND_TO_POLL);
       }
     }
