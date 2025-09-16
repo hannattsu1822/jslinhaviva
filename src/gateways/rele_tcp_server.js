@@ -23,30 +23,27 @@ const releClients = new Map();
 function parseSelData(rawString) {
   const data = {};
   try {
-    const lines = rawString.split('\n');
-    lines.forEach(line => {
-      const cleanedLine = line.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").trim();
-      if (cleanedLine.includes('Current Magnitude (A)')) {
-        const numbersString = cleanedLine.replace('Current Magnitude (A)', '').trim();
-        const values = numbersString.split(/\s+/).map(parseFloat);
-        if (values.length >= 3) {
-          data.corrente_a = values[0];
-          data.corrente_b = values[1];
-          data.corrente_c = values[2];
-        }
-      } else if (cleanedLine.includes('Voltage Magnitude (V)')) {
-        const numbersString = cleanedLine.replace('Voltage Magnitude (V)', '').trim();
-        const values = numbersString.split(/\s+/).map(parseFloat);
-        if (values.length >= 3) {
-          data.tensao_a = values[0];
-          data.tensao_b = values[1];
-          data.tensao_c = values[2];
-        }
-      } else if (cleanedLine.includes('Frequency (Hz)')) {
-        const value = parseFloat(cleanedLine.split('=')[1].trim());
-        if (!isNaN(value)) data.frequencia = value;
-      }
-    });
+    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").trim();
+    
+    const currentMatch = cleanedString.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+    if (currentMatch) {
+      data.corrente_a = parseFloat(currentMatch[1]);
+      data.corrente_b = parseFloat(currentMatch[2]);
+      data.corrente_c = parseFloat(currentMatch[3]);
+    }
+
+    const voltageMatch = cleanedString.match(/Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+    if (voltageMatch) {
+      data.tensao_a = parseFloat(voltageMatch[1]);
+      data.tensao_b = parseFloat(voltageMatch[2]);
+      data.tensao_c = parseFloat(voltageMatch[3]);
+    }
+
+    const frequencyMatch = cleanedString.match(/Frequency \(Hz\)\s*=\s*([\d.-]+)/);
+    if (frequencyMatch) {
+      data.frequencia = parseFloat(frequencyMatch[1]);
+    }
+
     if (Object.keys(data).length === 0) return null;
     return data;
   } catch (error) {
@@ -57,39 +54,47 @@ function parseSelData(rawString) {
 
 const server = net.createServer((socket) => {
   const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-  console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
+  console.log(`[TCP Service] Nova conexão de ${remoteAddress}. Aguardando registro.`);
 
   socket.state = 'AWAITING_REGISTRATION';
   socket.deviceId = null;
   socket.buffer = '';
 
-  socket.on('data', async (data) => {
-    socket.buffer += data.toString();
-
-    if (socket.state === 'AWAITING_REGISTRATION') {
-      const deviceId = data.toString('hex').toUpperCase();
-      socket.buffer = '';
-      try {
-        const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
-        if (rows.length > 0) {
-          socket.deviceId = deviceId;
-          socket.rele_id_db = rows[0].id;
-          releClients.set(deviceId, socket);
-          console.log(`[TCP Service] [${deviceId}] Registrado. Enviando 'ACC'.`);
-          socket.state = 'AWAITING_USER_PROMPT';
-          socket.write("ACC\r\n");
-        } else {
-          socket.end();
-        }
-      } catch (err) {
+  // FASE 1: Cuidar apenas do registro.
+  socket.once('data', async (data) => {
+    const deviceId = data.toString('hex').toUpperCase();
+    try {
+      const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
+      if (rows.length > 0) {
+        socket.deviceId = deviceId;
+        socket.rele_id_db = rows[0].id;
+        releClients.set(deviceId, socket);
+        console.log(`[TCP Service] [${deviceId}] Registrado. Iniciando login...`);
+        
+        // FASE 2: Agora que está registrado, ativamos o handler principal da conversa.
+        socket.on('data', sessionHandler);
+        
+        // Inicia o login
+        socket.state = 'AWAITING_USER_PROMPT';
+        socket.write("ACC\r\n");
+      } else {
+        console.warn(`[TCP Service] MAC "${deviceId}" não encontrado. Fechando.`);
         socket.end();
       }
-      return;
+    } catch (err) {
+      console.error("[TCP Service] Erro de DB no registro:", err);
+      socket.end();
     }
+  });
+
+  // Handler principal da conversa (login e polling)
+  const sessionHandler = (data) => {
+    socket.buffer += data.toString();
 
     if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
       const responseStr = socket.buffer.trim();
       socket.buffer = '';
+      console.log(`[TCP Service] [${socket.deviceId}] Mensagem completa recebida.`);
 
       switch (socket.state) {
         case 'AWAITING_USER_PROMPT':
@@ -123,10 +128,11 @@ const server = net.createServer((socket) => {
           break;
       }
     }
-  });
+  };
 
   socket.on("close", () => {
     if (socket.deviceId) releClients.delete(socket.deviceId);
+    console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
   });
   socket.on("error", (err) => {
     console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
