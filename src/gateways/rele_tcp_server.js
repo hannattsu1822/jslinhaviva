@@ -3,7 +3,7 @@ require("dotenv").config({ path: path.resolve(__dirname, '../../.env') });
 
 const net = require("net");
 const mysql = require("mysql2/promise");
-const mqtt = require("mqtt");
+const mqtt =require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
