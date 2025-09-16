@@ -292,6 +292,34 @@ async function salvarStatusConexao(data, wss) {
   }
 }
 
+async function salvarLeituraRele(data, wss) {
+  try {
+    const { rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo, local_tag } = data;
+
+    const sqlInsert = `INSERT INTO leituras_reles (rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    await promisePool.query(sqlInsert, [rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo]);
+
+    const sqlUpdate = "UPDATE dispositivos_reles SET ultima_leitura = ?, status_json = ? WHERE id = ?";
+    await promisePool.query(sqlUpdate, [timestamp_leitura, JSON.stringify({ connection_status: "online", ...data }), rele_id]);
+
+    console.log(`[MQTT Handler] Leitura do relé '${local_tag}' (ID: ${rele_id}) salva no banco.`);
+
+    if (wss) {
+      const payloadWebSocket = {
+        type: "nova_leitura_rele",
+        dados: data
+      };
+      wss.clients.forEach((client) => {
+        if (client.readyState === client.OPEN) {
+          client.send(JSON.stringify(payloadWebSocket));
+        }
+      });
+    }
+  } catch (err) {
+    console.error("[MQTT Handler] Erro ao salvar leitura do relé:", err);
+  }
+}
+
 function iniciarClienteMQTT(app) {
   const options = {
     host: "localhost",
@@ -305,7 +333,7 @@ function iniciarClienteMQTT(app) {
     console.log(
       "[MQTT Handler] Conectado ao broker Mosquitto local com sucesso!"
     );
-    const topicos = ["novus/+/status/channels", "novus/neighbor"];
+    const topicos = ["novus/+/status/channels", "novus/neighbor", "sel/reles/+/status"];
     client.subscribe(topicos, (err) => {
       if (!err) {
         console.log(
@@ -333,6 +361,9 @@ function iniciarClienteMQTT(app) {
       } else if (topic === "novus/neighbor") {
         console.log(`[MQTT Router] Mensagem de CONEXÃO recebida.`);
         salvarStatusConexao(dados, wss);
+      } else if (topic.startsWith("sel/reles/")) {
+        console.log(`[MQTT Router] Mensagem de RELÉ recebida do tópico: ${topic}`);
+        salvarLeituraRele(dados, wss);
       }
     } catch (e) {
       console.error(
