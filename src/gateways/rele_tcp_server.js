@@ -23,10 +23,8 @@ const releClients = new Map();
 function parseSelData(rawString) {
   const data = {};
   try {
-    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, "").trim();
+    let cleanedString = rawString.replace(/[^\x20-\x7E]+/g, "").trim();
     
-    console.log(`[Debug Parser] String Limpa para Análise: "${cleanedString}"`);
-
     const currentMatch = cleanedString.match(/Current\s*Magnitu\s*de\s*\(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
     if (currentMatch) {
       data.corrente_a = parseFloat(currentMatch[1]);
@@ -63,7 +61,7 @@ const server = net.createServer((socket) => {
   socket.buffer = '';
 
   socket.on('data', async (data) => {
-    const cleanedData = data.toString().replace(/[\x00-\x1F\x7F-\x9F]+/g, "");
+    const cleanedData = data.toString();
     if (!cleanedData) return;
 
     socket.buffer += cleanedData;
