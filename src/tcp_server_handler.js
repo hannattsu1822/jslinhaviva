@@ -4,6 +4,12 @@ const { promisePool } = require("./init");
 const releClients = new Map();
 
 function parseSelData(rawString) {
+  // --- LOG DE DEPURAÇÃO ---
+  console.log("--- INÍCIO DO PAYLOAD PARA O PARSER ---");
+  console.log(rawString);
+  console.log("--- FIM DO PAYLOAD ---");
+  // --- FIM DO LOG DE DEPURAÇÃO ---
+
   const data = {};
   try {
     const cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, "").trim();
@@ -49,6 +55,7 @@ function parseSelData(rawString) {
   }
 }
 
+// O resto do arquivo continua exatamente igual...
 async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
   try {
     const timestampLeitura = new Date();
@@ -103,7 +110,7 @@ function iniciarServidorTCP(app) {
 
       if (socket.state === 'AWAITING_REGISTRATION') {
         const deviceId = data.toString('hex').toUpperCase();
-        socket.buffer = ''; // Limpa o buffer após o registro
+        socket.buffer = '';
         try {
           const [rows] = await promisePool.query("SELECT id FROM dispositivos_reles WHERE local_tag = ? AND ativo = 1", [deviceId]);
           if (rows.length > 0) {
@@ -123,7 +130,7 @@ function iniciarServidorTCP(app) {
 
       if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
         const responseStr = socket.buffer.trim();
-        socket.buffer = ''; // Limpa o buffer para a próxima mensagem
+        socket.buffer = '';
         console.log(`[TCP Server] [${socket.deviceId}] DADOS COMPLETOS RECEBIDOS: "${responseStr}"`);
 
         switch (socket.state) {
