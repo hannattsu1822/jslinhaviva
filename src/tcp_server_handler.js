@@ -3,49 +3,36 @@ const { promisePool } = require("./init");
 
 const releClients = new Map();
 
+// --- INÍCIO DA NOVA FUNÇÃO PARSER ---
 function parseSelData(rawString) {
-  // --- LOG DE DEPURAÇÃO ---
-  console.log("--- INÍCIO DO PAYLOAD PARA O PARSER ---");
-  console.log(rawString);
-  console.log("--- FIM DO PAYLOAD ---");
-  // --- FIM DO LOG DE DEPURAÇÃO ---
-
   const data = {};
   try {
-    const cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, "").trim();
-    const lines = cleanedString.split('\n');
+    // 1. Limpeza agressiva: remove todos os caracteres não imprimíveis e o lixo do heartbeat
+    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, " ").trim();
     
-    let currentSection = '';
+    // 2. Extração com expressões regulares (muito mais robusto)
+    const currentMatch = cleanedString.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+    if (currentMatch && currentMatch.length >= 4) {
+      data.corrente_a = parseFloat(currentMatch[1]);
+      data.corrente_b = parseFloat(currentMatch[2]);
+      data.corrente_c = parseFloat(currentMatch[3]);
+    }
 
-    lines.forEach(line => {
-      line = line.trim();
+    const voltageMatch = cleanedString.match(/Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+    if (voltageMatch && voltageMatch.length >= 4) {
+      data.tensao_a = parseFloat(voltageMatch[1]);
+      data.tensao_b = parseFloat(voltageMatch[2]);
+      data.tensao_c = parseFloat(voltageMatch[3]);
+    }
 
-      if (line.includes('Current Magnitude (A)')) currentSection = 'CURRENT';
-      else if (line.includes('Voltage Magnitude (V)')) currentSection = 'VOLTAGE';
-      else if (line.includes('Frequency (Hz)')) currentSection = 'FREQUENCY';
+    const frequencyMatch = cleanedString.match(/Frequency \(Hz\)\s*=\s*([\d.-]+)/);
+    if (frequencyMatch && frequencyMatch.length >= 2) {
+      data.frequencia = parseFloat(frequencyMatch[1]);
+    }
 
-      if (currentSection === 'CURRENT' && /^\d/.test(line)) {
-          const values = line.split(/\s+/).map(parseFloat);
-          if (values.length >= 3) {
-              data.corrente_a = values[0];
-              data.corrente_b = values[1];
-              data.corrente_c = values[2];
-              currentSection = '';
-          }
-      } else if (currentSection === 'VOLTAGE' && /^\d/.test(line)) {
-          const values = line.split(/\s+/).map(parseFloat);
-          if (values.length >= 3) {
-              data.tensao_a = values[0];
-              data.tensao_b = values[1];
-              data.tensao_c = values[2];
-              currentSection = '';
-          }
-      } else if (currentSection === 'FREQUENCY' && line.includes('=')) {
-          const value = parseFloat(line.split('=')[1].trim());
-          if (!isNaN(value)) data.frequencia = value;
-          currentSection = '';
-      }
-    });
+    console.log("--- DADOS EXTRAÍDOS PELO PARSER ---");
+    console.log(data);
+    console.log("------------------------------------");
 
     if (Object.keys(data).length === 0) return null;
     return data;
@@ -54,6 +41,8 @@ function parseSelData(rawString) {
     return null;
   }
 }
+// --- FIM DA NOVA FUNÇÃO PARSER ---
+
 
 // O resto do arquivo continua exatamente igual...
 async function salvarLeituraRele(deviceId, parsedData, rawPayload, wss) {
@@ -131,7 +120,7 @@ function iniciarServidorTCP(app) {
       if (socket.buffer.includes('=>') || socket.buffer.includes('User>') || socket.buffer.includes('Password>')) {
         const responseStr = socket.buffer.trim();
         socket.buffer = '';
-        console.log(`[TCP Server] [${socket.deviceId}] DADOS COMPLETOS RECEBIDOS: "${responseStr}"`);
+        console.log(`[TCP Server] [${socket.deviceId}] DADOS COMPLETOS RECEBIDOS.`);
 
         switch (socket.state) {
           case 'AWAITING_USER_PROMPT':
