@@ -19,7 +19,8 @@ const rotasSubestacoesChecklist = require("./routes/rotas_subestacoes_checklist"
 const rotasPaginasDirect = require("./routes/rotas_paginas_direct");
 const rotasGerenciamentoUsuarios = require("./routes/rotas_gerenciamento_usuarios");
 const rotasLogbox = require("./routes/rotas_logbox");
-const rotasPrv = require("./routes/rotas_prv"); // NOVO
+const rotasPrv = require("./routes/rotas_prv"); 
+const rotasReles = require("./routes/rotas_reles");
 
 const router = express.Router();
 
@@ -40,7 +41,8 @@ router.use("/", rotasSubestacoesChecklist);
 router.use("/", rotasPaginasDirect);
 router.use("/", rotasGerenciamentoUsuarios);
 router.use("/", rotasLogbox);
-router.use("/", rotasPrv); // NOVO
+router.use("/", rotasPrv); 
+router.use("/", rotasReles); 
 
 router.get("/", (req, res) => {
   if (req.session && req.session.user) {
@@ -59,3 +61,4 @@ router.get("/dashboard", autenticar, (req, res) => {
 });
 
 module.exports = router;
+
