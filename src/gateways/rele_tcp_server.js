@@ -23,30 +23,31 @@ const releClients = new Map();
 function parseSelData(rawString) {
   const data = {};
   try {
-    let cleanedString = rawString.replace(/[^\x20-\x7E]+/g, "").trim();
+    let cleanedString = rawString.replace(/[\x00-\x1F\x7F-\x9F]+/g, "").trim();
     
-    const currentMatch = cleanedString.match(/Current\s*Magnitu\s*de\s*\(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
+    const currentMatch = cleanedString.match(/Current.*?\(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
     if (currentMatch) {
       data.corrente_a = parseFloat(currentMatch[1]);
       data.corrente_b = parseFloat(currentMatch[2]);
       data.corrente_c = parseFloat(currentMatch[3]);
     }
 
-    const voltageMatch = cleanedString.match(/Volta\s*ge\s*Magnitude\s*\(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)\s+[\d.-]+/);
+    const voltageMatch = cleanedString.match(/Voltage.*?\(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
     if (voltageMatch) {
       data.tensao_a = parseFloat(voltageMatch[1]);
       data.tensao_b = parseFloat(voltageMatch[2]);
       data.tensao_c = parseFloat(voltageMatch[3]);
     }
 
-    const frequencyMatch = cleanedString.match(/Frequ\s*ency\s*\(Hz\)\s*=\s*([\d.-]+)/);
+    const frequencyMatch = cleanedString.match(/Frequency.*?\(Hz\)\s*=\s*([\d.-]+)/);
     if (frequencyMatch) {
       data.frequencia = parseFloat(frequencyMatch[1]);
     }
-    
-    console.log(`[Debug Parser Interno] Corrente: ${currentMatch ? 'OK' : 'FALHOU'}, Tensão: ${voltageMatch ? 'OK' : 'FALHOU'}, Frequência: ${frequencyMatch ? 'OK' : 'FALHOU'}`);
 
-    if (Object.keys(data).length < 3) return null;
+    if (Object.keys(data).length < 3) {
+        console.log(`[Debug Parser Interno] Corrente: ${currentMatch ? 'OK' : 'FALHOU'}, Tensão: ${voltageMatch ? 'OK' : 'FALHOU'}, Frequência: ${frequencyMatch ? 'OK' : 'FALHOU'}`);
+        return null;
+    }
     return data;
   } catch (error) {
     console.error("[TCP Service] Erro ao fazer parse:", error);
