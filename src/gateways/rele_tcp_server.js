@@ -2,7 +2,7 @@ const path = require('path');
 require("dotenv").config({ path: path.resolve(__dirname, '../../.env') });
 
 const net = require("net");
-const mysql = require("mysql2/promise"); // Corrigido para o nome correto
+const mysql = require("mysql2/promise");
 const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
@@ -20,9 +20,11 @@ const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 const releClients = new Map();
 
+// --- FUNÇÃO DE LIMPEZA APRIMORADA ---
 function cleanString(rawString) {
+    // Remove caracteres de controle, o padrão estranho ¥%êX e outros não imprimíveis.
     // eslint-disable-next-line no-control-regex
-    return rawString.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+    return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
 }
 
 function parseData(metResponse, staResponse, tempResponse) {
@@ -31,33 +33,26 @@ function parseData(metResponse, staResponse, tempResponse) {
     const cleanedSta = cleanString(staResponse);
     const cleanedTemp = cleanString(tempResponse);
 
-    // --- LOGS DE DEPURAÇÃO ---
-    console.log("--- INICIANDO PARSING ---");
-    console.log("Resposta MET (limpa):");
-    console.log(cleanedMet);
-    console.log("-------------------------");
-    // --- FIM DOS LOGS ---
-
     try {
-        // --- Parsing do MET (Medições Elétricas) ---
-        const currentMatch = cleanedMet.match(/Current[\s\S]*?\(A\)[\s\S]*?([\d.-]+)[\s\S]*?([\d.-]+)[\s\S]*?([\d.-]+)/);
+        // --- Parsing do MET com REGEX MAIS FLEXÍVEIS ---
+        const currentMatch = cleanedMet.match(/Current.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
             data.corrente_b = parseFloat(currentMatch[2]);
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        const voltageMatch = cleanedMet.match(/Voltage[\s\S]*?\(V\)[\s\S]*?([\d.-]+)[\s\S]*?([\d.-]+)[\s\S]*?([\d.-]+)/);
+        const voltageMatch = cleanedMet.match(/Voltage.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/);
         if (voltageMatch) {
             data.tensao_a = parseFloat(voltageMatch[1]);
             data.tensao_b = parseFloat(voltageMatch[2]);
             data.tensao_c = parseFloat(voltageMatch[3]);
         }
 
-        const frequencyMatch = cleanedMet.match(/Frequency[\s\S]*?\(Hz\)[\s\S]*?=\s*([\d.-]+)/);
+        const frequencyMatch = cleanedMet.match(/Frequency.*?\(Hz\)\s*=\s*([\d.-]+)/);
         if (frequencyMatch) data.frequencia = parseFloat(frequencyMatch[1]);
 
-        // --- Parsing do STA (Status) ---
+        // --- Parsing do STA ---
         const targetMatch = cleanedSta.match(/TARGET\s+=\s+([A-Z]+)/);
         if (targetMatch) data.target_status = targetMatch[1];
 
@@ -67,7 +62,7 @@ function parseData(metResponse, staResponse, tempResponse) {
         const alarmMatch = cleanedSta.match(/ALARM\s+=\s+([A-Z\s]+)/);
         if (alarmMatch) data.alarm_status = alarmMatch[1].trim();
 
-        // --- Parsing da Temperatura (Comando THE) ---
+        // --- Parsing da Temperatura ---
         const temps = cleanedTemp.matchAll(/([\d.-]+)\s*C/g);
         const tempValues = Array.from(temps, m => parseFloat(m[1]));
         
@@ -79,7 +74,7 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.temperatura_dispositivo = tempValues[0];
         }
 
-        // --- Validação Final e Completa ---
+        // --- Validação Final ---
         const requiredKeys = [
             'corrente_a', 'corrente_b', 'corrente_c', 
             'tensao_a', 'tensao_b', 'tensao_c', 'frequencia',
