@@ -4,16 +4,6 @@ const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
-
-router.get("/gerenciar-reles", autenticar, verificarNivel(2), (req, res) => {
-  const pageData = {
-    pageTitle: "Gerenciamento de Relés",
-    user: req.user,
-  };
-  res.render("pages/reles/gerenciar_reles.html", pageData);
-});
-
-
 router.get("/api/reles", autenticar, verificarNivel(1), async (req, res) => {
   try {
     const [rows] = await promisePool.query(
@@ -122,6 +112,15 @@ router.delete("/api/reles/:id", autenticar, verificarNivel(2), async (req, res) 
     console.error("Erro ao deletar relé:", err);
     res.status(500).json({ message: "Erro interno no servidor" });
   }
+});
+
+router.get("/gerenciar-reles", autenticar, verificarNivel(2), (req, res) => {
+  const pageData = {
+    pageTitle: "Gerenciamento de Relés",
+    user: req.user,
+  };
+  // CORREÇÃO APLICADA AQUI: de 'reles' para 'rele'
+  res.render("pages/rele/gerenciar_reles.html", pageData);
 });
 
 module.exports = router;
