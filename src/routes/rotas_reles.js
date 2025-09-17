@@ -121,4 +121,14 @@ router.get("/gerenciar-reles", autenticar, verificarNivel(2), (req, res) => {
   };
   res.render("pages/rele/gerenciar_reles.html", pageData); 
 });
+
+
+router.get("/visualizar-reles", autenticar, verificarNivel(1), (req, res) => {
+  const pageData = {
+    pageTitle: "Monitoramento de Relés em Tempo Real",
+    user: req.user,
+  };
+  res.render("pages/rele/visualizar_reles.html", pageData);
+});
+
 module.exports = router;
