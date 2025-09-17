@@ -1,0 +1,94 @@
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    margin-top: 2rem;
+}
+
+.rele-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    border-left: 5px solid #9E9E9E; /* Cinza - Offline/Padrão */
+    transition: all 0.3s ease;
+}
+
+.rele-card.status-online {
+    border-left-color: #4CAF50; /* Verde */
+}
+
+.rele-card.status-offline {
+    border-left-color: #f44336; /* Vermelho */
+    opacity: 0.8;
+}
+
+.rele-card.just-updated {
+    animation: pulse 0.7s ease;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 12px;
+    color: #fff;
+}
+
+.status-indicator.online { background-color: #4CAF50; }
+.status-indicator.offline { background-color: #f44336; }
+.status-indicator.no-data { background-color: #9E9E9E; }
+
+.card-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.data-point {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.data-point .label {
+    font-size: 0.8rem;
+    color: #666;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.data-point .value {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #1a237e;
+}
+
+.card-footer {
+    margin-top: 15px;
+    font-size: 0.8rem;
+    color: #777;
+    text-align: right;
+}
