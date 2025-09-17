@@ -292,18 +292,61 @@ async function salvarStatusConexao(data, wss) {
   }
 }
 
+// --- FUNÇÃO PRINCIPAL ATUALIZADA ---
 async function salvarLeituraRele(data, wss) {
   try {
-    const { rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo, local_tag } = data;
+    // Desestrutura todos os campos do payload, usando 'null' como padrão para os que podem não existir
+    const {
+      rele_id,
+      timestamp_leitura,
+      tensao_a = null,
+      tensao_b = null,
+      tensao_c = null,
+      corrente_a = null,
+      corrente_b = null,
+      corrente_c = null,
+      frequencia = null,
+      target_status = null,
+      self_test_status = null,
+      alarm_status = null,
+      temperatura_ambiente = null,
+      temperatura_enrolamento = null,
+      temperatura_dispositivo = null,
+      payload_completo,
+      local_tag
+    } = data;
 
-    const sqlInsert = `INSERT INTO leituras_reles (rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    await promisePool.query(sqlInsert, [rele_id, timestamp_leitura, tensao_a, tensao_b, tensao_c, corrente_a, corrente_b, corrente_c, frequencia, payload_completo]);
+    // Query SQL atualizada para incluir todas as novas colunas
+    const sqlInsert = `
+      INSERT INTO leituras_reles (
+        rele_id, timestamp_leitura, 
+        tensao_a, tensao_b, tensao_c, 
+        corrente_a, corrente_b, corrente_c, 
+        frequencia, 
+        target_status, self_test_status, alarm_status,
+        temperatura_ambiente, temperatura_enrolamento, temperatura_dispositivo,
+        payload_completo
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    await promisePool.query(sqlInsert, [
+      rele_id, timestamp_leitura,
+      tensao_a, tensao_b, tensao_c,
+      corrente_a, corrente_b, corrente_c,
+      frequencia,
+      target_status, self_test_status, alarm_status,
+      temperatura_ambiente, temperatura_enrolamento, temperatura_dispositivo,
+      payload_completo
+    ]);
 
+    // Atualiza o status do dispositivo com a última leitura
     const sqlUpdate = "UPDATE dispositivos_reles SET ultima_leitura = ?, status_json = ? WHERE id = ?";
-    await promisePool.query(sqlUpdate, [timestamp_leitura, JSON.stringify({ connection_status: "online", ...data }), rele_id]);
+    const statusJson = JSON.stringify({ connection_status: "online", ...data });
+    await promisePool.query(sqlUpdate, [timestamp_leitura, statusJson, rele_id]);
 
-    console.log(`[MQTT Handler] Leitura do relé '${local_tag}' (ID: ${rele_id}) salva no banco.`);
+    console.log(`[MQTT Handler] Leitura completa do relé '${local_tag}' (ID: ${rele_id}) salva no banco.`);
 
+    // Envia a notificação via WebSocket para o frontend
     if (wss) {
       const payloadWebSocket = {
         type: "nova_leitura_rele",
