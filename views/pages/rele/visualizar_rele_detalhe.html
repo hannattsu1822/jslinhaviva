@@ -28,32 +28,40 @@
             <h3>Última Leitura Recebida</h3>
             <div class="live-grid">
                 <div class="live-data-point">
-                    <span class="label">Tensão A (V)</span>
-                    <span class="value" id="live-tensao-a">-</span>
+                    <span class="label">Tensão (A/B/C)</span>
+                    <span class="value" id="live-tensao">-</span>
                 </div>
                 <div class="live-data-point">
-                    <span class="label">Tensão B (V)</span>
-                    <span class="value" id="live-tensao-b">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Tensão C (V)</span>
-                    <span class="value" id="live-tensao-c">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Corrente A (A)</span>
-                    <span class="value" id="live-corrente-a">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Corrente B (A)</span>
-                    <span class="value" id="live-corrente-b">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Corrente C (A)</span>
-                    <span class="value" id="live-corrente-c">-</span>
+                    <span class="label">Corrente (A/B/C)</span>
+                    <span class="value" id="live-corrente">-</span>
                 </div>
                 <div class="live-data-point">
                     <span class="label">Frequência (Hz)</span>
                     <span class="value" id="live-frequencia">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Temp. Dispositivo (°C)</span>
+                    <span class="value" id="live-temp-disp">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Temp. Ambiente (°C)</span>
+                    <span class="value" id="live-temp-amb">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Temp. Enrolamento (°C)</span>
+                    <span class="value" id="live-temp-enrol">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Status Alvo</span>
+                    <span class="value status-text" id="live-target">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Autoteste</span>
+                    <span class="value status-text" id="live-selftest">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Alarmes</span>
+                    <span class="value status-text" id="live-alarm">-</span>
                 </div>
             </div>
             <p class="timestamp" id="live-timestamp">Nenhuma leitura recebida ainda.</p>
@@ -66,20 +74,21 @@
                     <thead>
                         <tr>
                             <th>Data/Hora</th>
-                            <th>Tensão (A/B/C)</th>
-                            <th>Corrente (A/B/C)</th>
-                            <th>Frequência</th>
+                            <th>Tensão (V)</th>
+                            <th>Corrente (A)</th>
+                            <th>Freq (Hz)</th>
+                            <th>Status</th>
+                            <th>Temp (°C)</th>
                         </tr>
                     </thead>
                     <tbody id="history-table-body">
-                        <tr><td colspan="4">Carregando histórico...</td></tr>
+                        <tr><td colspan="6">Carregando histórico...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
     <script>
-        // Passa o ID do relé do backend (EJS) para o JavaScript
         const RELE_ID = <%= releId %>;
     </script>
     <script src="/scripts/reles/visualizar_rele_detalhe.js"></script>
