@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // O RELE_ID é passado do HTML
     if (typeof RELE_ID === 'undefined') {
         console.error('ID do Relé não definido!');
         return;
@@ -7,17 +6,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let updateTimeout;
 
-    // --- Funções de Atualização da UI ---
     const formatValue = (value, dec, unit = '') => (typeof value === 'number' ? `${value.toFixed(dec)}${unit}` : '-');
     
     function updateLivePanel(data) {
-        document.getElementById('live-tensao-a').textContent = formatValue(data.tensao_a, 1);
-        document.getElementById('live-tensao-b').textContent = formatValue(data.tensao_b, 1);
-        document.getElementById('live-tensao-c').textContent = formatValue(data.tensao_c, 1);
-        document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 2);
-        document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 2);
-        document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 2);
+        // Medições Elétricas
+        document.getElementById('live-tensao').textContent = `${formatValue(data.tensao_a, 1)} / ${formatValue(data.tensao_b, 1)} / ${formatValue(data.tensao_c, 1)}`;
+        document.getElementById('live-corrente').textContent = `${formatValue(data.corrente_a, 2)} / ${formatValue(data.corrente_b, 2)} / ${formatValue(data.corrente_c, 2)}`;
         document.getElementById('live-frequencia').textContent = formatValue(data.frequencia, 2);
+
+        // Temperaturas
+        document.getElementById('live-temp-disp').textContent = formatValue(data.temperatura_dispositivo, 1);
+        document.getElementById('live-temp-amb').textContent = formatValue(data.temperatura_ambiente, 1);
+        document.getElementById('live-temp-enrol').textContent = formatValue(data.temperatura_enrolamento, 1);
+
+        // Status
+        const targetEl = document.getElementById('live-target');
+        const selfTestEl = document.getElementById('live-selftest');
+        const alarmEl = document.getElementById('live-alarm');
+
+        targetEl.textContent = data.target_status || '-';
+        selfTestEl.textContent = data.self_test_status || '-';
+        alarmEl.textContent = data.alarm_status || '-';
+
+        selfTestEl.className = `value status-text ${data.self_test_status === 'OK' ? 'ok' : 'fail'}`;
+        alarmEl.className = `value status-text ${data.alarm_status === 'NO ALARM' ? 'ok' : 'alarm'}`;
+
+        // Timestamp
         const timestamp = new Date(data.timestamp_leitura);
         document.getElementById('live-timestamp').textContent = `Recebido em: ${timestamp.toLocaleString('pt-BR')}`;
     }
@@ -26,14 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const tableBody = document.getElementById('history-table-body');
         const newRow = document.createElement('tr');
         const timestamp = new Date(data.timestamp_leitura);
+
+        const tensaoStr = `${formatValue(data.tensao_a,1)}/${formatValue(data.tensao_b,1)}/${formatValue(data.tensao_c,1)}`;
+        const correnteStr = `${formatValue(data.corrente_a,2)}/${formatValue(data.corrente_b,2)}/${formatValue(data.corrente_c,2)}`;
+        const statusStr = `${data.target_status || '-'}/${data.self_test_status || '-'}/${data.alarm_status || '-'}`;
+        const tempStr = `${formatValue(data.temperatura_dispositivo,1)}/${formatValue(data.temperatura_ambiente,1)}/${formatValue(data.temperatura_enrolamento,1)}`;
+
         newRow.innerHTML = `
             <td>${timestamp.toLocaleString('pt-BR')}</td>
-            <td>${formatValue(data.tensao_a,1)} / ${formatValue(data.tensao_b,1)} / ${formatValue(data.tensao_c,1)}</td>
-            <td>${formatValue(data.corrente_a,2)} / ${formatValue(data.corrente_b,2)} / ${formatValue(data.corrente_c,2)}</td>
+            <td>${tensaoStr}</td>
+            <td>${correnteStr}</td>
             <td>${formatValue(data.frequencia, 2)}</td>
+            <td>${statusStr}</td>
+            <td>${tempStr}</td>
         `;
         tableBody.insertBefore(newRow, tableBody.firstChild);
-        // Limita o histórico na tela para 100 linhas
         if (tableBody.rows.length > 100) {
             tableBody.deleteRow(100);
         }
@@ -50,10 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
             statusText.textContent = 'Offline';
         }
         clearTimeout(updateTimeout);
-        updateTimeout = setTimeout(() => setStatus(false), 180000); // 3 minutos
+        updateTimeout = setTimeout(() => setStatus(false), 180000);
     }
 
-    // --- Carregamento Inicial ---
     async function loadInitialData() {
         try {
             const [releInfoRes, leiturasRes] = await Promise.all([
@@ -65,18 +85,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const releInfo = await releInfoRes.json();
             const leituras = await leiturasRes.json();
 
-            // Popula informações estáticas
             document.getElementById('info-tag').textContent = releInfo.local_tag || 'N/A';
             document.getElementById('info-ip').textContent = `${releInfo.ip_address}:${releInfo.port}`;
 
-            // Popula painel de última leitura e histórico
             const tableBody = document.getElementById('history-table-body');
             tableBody.innerHTML = '';
             if (leituras.length > 0) {
                 updateLivePanel(leituras[0]);
                 leituras.forEach(addRowToHistory);
             } else {
-                tableBody.innerHTML = '<tr><td colspan="4">Nenhum histórico de leitura encontrado.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="6">Nenhum histórico de leitura encontrado.</td></tr>';
             }
         } catch (error) {
             console.error('Erro ao carregar dados iniciais:', error);
@@ -84,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Conexão WebSocket ---
     function connectWebSocket() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
@@ -96,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ws.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
-                // Só atualiza se a mensagem for para ESTE relé
                 if (message.type === 'nova_leitura_rele' && message.dados.rele_id == RELE_ID) {
                     updateLivePanel(message.dados);
                     addRowToHistory(message.dados);
@@ -108,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- Iniciar ---
     loadInitialData();
     connectWebSocket();
 });
