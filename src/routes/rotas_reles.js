@@ -119,8 +119,6 @@ router.get("/gerenciar-reles", autenticar, verificarNivel(2), (req, res) => {
     pageTitle: "Gerenciamento de Relés",
     user: req.user,
   };
-  // CORREÇÃO APLICADA AQUI: de 'reles' para 'rele'
-  res.render("pages/rele/gerenciar_reles.html", pageData);
+  res.render("pages/rele/gerenciar_reles.html", pageData); 
 });
-
 module.exports = router;
