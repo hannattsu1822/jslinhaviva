@@ -43,7 +43,6 @@ function parseSelData(rawString) {
     }
 
     if (Object.keys(data).length < 3) {
-        console.log(`[Debug Parser Interno] Corrente: ${currentMatch ? 'OK' : 'FALHOU'}, Tensão: ${voltageMatch ? 'OK' : 'FALHOU'}, Frequência: ${frequencyMatch ? 'OK' : 'FALHOU'}`);
         return null;
     }
     return data;
@@ -109,11 +108,15 @@ const server = net.createServer((socket) => {
                 const parsedData = parseSelData(responseStr);
                 if (parsedData) {
                     const topic = `sel/reles/${socket.rele_id_db}/status`;
+                    
+                    const now = new Date();
+                    const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
+
                     const payload = JSON.stringify({
                     rele_id: socket.rele_id_db,
                     local_tag: socket.deviceId,
                     ...parsedData,
-                    timestamp_leitura: new Date().toISOString(),
+                    timestamp_leitura: timestampMySQL,
                     payload_completo: responseStr
                     });
                     mqttClient.publish(topic, payload);
