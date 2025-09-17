@@ -4,6 +4,16 @@ const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
+
+router.get("/gerenciar-reles", autenticar, verificarNivel(2), (req, res) => {
+  const pageData = {
+    pageTitle: "Gerenciamento de Relés",
+    user: req.user,
+  };
+  res.render("pages/reles/gerenciar_reles.html", pageData);
+});
+
+
 router.get("/api/reles", autenticar, verificarNivel(1), async (req, res) => {
   try {
     const [rows] = await promisePool.query(
