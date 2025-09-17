@@ -2,7 +2,7 @@ const path = require('path');
 require("dotenv").config({ path: path.resolve(__dirname, '../../.env') });
 
 const net = require("net");
-const mysql = require("mysql2/promise");
+const mysql =require("mysql2/promise");
 const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
@@ -31,8 +31,15 @@ function parseData(metResponse, staResponse, tempResponse) {
     const cleanedSta = cleanString(staResponse);
     const cleanedTemp = cleanString(tempResponse);
 
+    // --- LOGS DE DEPURAÇÃO ---
+    console.log("--- INICIANDO PARSING ---");
+    console.log("Resposta MET (limpa):");
+    console.log(cleanedMet);
+    console.log("-------------------------");
+    // --- FIM DOS LOGS ---
+
     try {
-        // --- Parsing do MET ---
+        // --- Parsing do MET (Medições Elétricas) ---
         const currentMatch = cleanedMet.match(/Current[\s\S]*?\(A\)[\s\S]*?([\d.-]+)[\s\S]*?([\d.-]+)[\s\S]*?([\d.-]+)/);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
@@ -50,7 +57,7 @@ function parseData(metResponse, staResponse, tempResponse) {
         const frequencyMatch = cleanedMet.match(/Frequency[\s\S]*?\(Hz\)[\s\S]*?=\s*([\d.-]+)/);
         if (frequencyMatch) data.frequencia = parseFloat(frequencyMatch[1]);
 
-        // --- Parsing do STA ---
+        // --- Parsing do STA (Status) ---
         const targetMatch = cleanedSta.match(/TARGET\s+=\s+([A-Z]+)/);
         if (targetMatch) data.target_status = targetMatch[1];
 
@@ -72,7 +79,7 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.temperatura_dispositivo = tempValues[0];
         }
 
-        // --- Validação Final ---
+        // --- Validação Final e Completa ---
         const requiredKeys = [
             'corrente_a', 'corrente_b', 'corrente_c', 
             'tensao_a', 'tensao_b', 'tensao_c', 'frequencia',
@@ -173,7 +180,6 @@ const server = net.createServer((socket) => {
                 case 'SENDING_TEMP':
                     console.log(`[TCP Service] [${socket.deviceId}] Enviando comando THE.`);
                     socket.buffer = '';
-                    // --- COMANDO CORRIGIDO AQUI ---
                     socket.write("THE\r\n");
                     socket.state = 'WAITING_TEMP_RESPONSE';
                     break;
@@ -203,56 +209,4 @@ const server = net.createServer((socket) => {
                         }
                         
                         socket.state = 'IDLE';
-                        console.log(`[TCP Service] [${socket.deviceId}] Ciclo concluído.`);
-                    }
-                    break;
-            }
-        } catch(err) {
-            console.error(`[TCP Service] [${socket.deviceId || remoteAddress}] Erro na máquina de estados:`, err);
-            socket.end();
-        }
-    });
-
-    socket.on("close", () => {
-        if (socket.deviceId) releClients.delete(socket.deviceId);
-        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
-    });
-
-    socket.on("error", (err) => {
-        console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
-    });
-
-    (async () => {
-        try {
-            const clientIp = socket.remoteAddress.includes('::') ? socket.remoteAddress.split(':').pop() : socket.remoteAddress;
-            const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE ip_address = ? AND ativo = 1", [clientIp]);
-            if (rows.length > 0) {
-                socket.deviceId = rows[0].local_tag;
-                socket.rele_id_db = rows[0].id;
-                console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}).`);
-                socket.state = 'AWAITING_LOGIN';
-                socket.emit('data', '');
-            } else {
-                console.warn(`[TCP Service] Nenhum dispositivo ativo para o IP "${clientIp}".`);
-                socket.end();
-            }
-        } catch (err) {
-            console.error("[TCP Service] Erro de DB ao identificar por IP:", err);
-            socket.end();
-        }
-    })();
-});
-
-server.listen(port, () => {
-    console.log(`[TCP Service] Servidor TCP ouvindo na porta ${port}`);
-});
-
-setInterval(() => {
-    for (const [deviceId, socket] of releClients.entries()) {
-        if (socket.state === 'IDLE' && socket.writable) {
-            console.log(`[Polling Loop] [${deviceId}] Disparando novo ciclo de coleta.`);
-            socket.state = 'SENDING_MET';
-            socket.emit('data', '');
-        }
-    }
-}, pollInterval);
+                        c
