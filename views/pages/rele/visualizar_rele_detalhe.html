@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= pageTitle %></title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/logbox/style.css">
+    <link rel="stylesheet" href="/static/css/reles/visualizar_rele_detalhe.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1 id="rele-name-header"><%= releNome %></h1>
+            <div id="status-indicator" class="status-box status-no-data">
+                <span class="status-dot"></span>
+                <span class="status-text">Aguardando Dados</span>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>Informações do Dispositivo</h3>
+            <p><strong>Local Tag:</strong> <span id="info-tag">-</span></p>
+            <p><strong>Endereço IP:</strong> <span id="info-ip">-</span></p>
+        </div>
+
+        <div class="live-data-panel">
+            <h3>Última Leitura Recebida</h3>
+            <div class="live-grid">
+                <div class="live-data-point">
+                    <span class="label">Tensão A (V)</span>
+                    <span class="value" id="live-tensao-a">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Tensão B (V)</span>
+                    <span class="value" id="live-tensao-b">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Tensão C (V)</span>
+                    <span class="value" id="live-tensao-c">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Corrente A (A)</span>
+                    <span class="value" id="live-corrente-a">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Corrente B (A)</span>
+                    <span class="value" id="live-corrente-b">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Corrente C (A)</span>
+                    <span class="value" id="live-corrente-c">-</span>
+                </div>
+                <div class="live-data-point">
+                    <span class="label">Frequência (Hz)</span>
+                    <span class="value" id="live-frequencia">-</span>
+                </div>
+            </div>
+            <p class="timestamp" id="live-timestamp">Nenhuma leitura recebida ainda.</p>
+        </div>
+
+        <div class="history-panel">
+            <h3>Histórico de Leituras (Últimas 100)</h3>
+            <div class="table-container">
+                <table id="history-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Tensão (A/B/C)</th>
+                            <th>Corrente (A/B/C)</th>
+                            <th>Frequência</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                        <tr><td colspan="4">Carregando histórico...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Passa o ID do relé do backend (EJS) para o JavaScript
+        const RELE_ID = <%= releId %>;
+    </script>
+    <script src="/scripts/reles/visualizar_rele_detalhe.js"></script>
+</body>
+</html>
