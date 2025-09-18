@@ -20,37 +20,41 @@ const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 const releClients = new Map();
 
-// --- FUNÇÃO DE LIMPEZA APRIMORADA ---
 function cleanString(rawString) {
-    // Remove caracteres de controle, o padrão estranho ¥%êX e outros não imprimíveis.
     // eslint-disable-next-line no-control-regex
     return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
 }
 
 function parseData(metResponse, staResponse, tempResponse) {
     const data = {};
-    const cleanedMet = cleanString(metResponse);
+    // Usamos a resposta original, sem limpeza, para a regex mais robusta
+    const rawMet = metResponse; 
     const cleanedSta = cleanString(staResponse);
     const cleanedTemp = cleanString(tempResponse);
 
     try {
-        // --- Parsing do MET com REGEX MAIS FLEXÍVEIS ---
-        const currentMatch = cleanedMet.match(/Current.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/);
+        // --- REGEX ATUALIZADAS E MAIS ROBUSTAS ---
+        // Elas ignoram qualquer caractere não-alfanumérico entre as letras das palavras-chave.
+        const currentMatch = rawMet.match(/C[^A-Za-z]*u[^A-Za-z]*r[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*t.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
             data.corrente_b = parseFloat(currentMatch[2]);
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        const voltageMatch = cleanedMet.match(/Voltage.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/);
+        const voltageMatch = rawMet.match(/V[^A-Za-z]*o[^A-Za-z]*l[^A-Za-z]*t[^A-Za-z]*a[^A-Za-z]*g[^A-Za-z]*e.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (voltageMatch) {
             data.tensao_a = parseFloat(voltageMatch[1]);
             data.tensao_b = parseFloat(voltageMatch[2]);
             data.tensao_c = parseFloat(voltageMatch[3]);
         }
 
-        const frequencyMatch = cleanedMet.match(/Frequency.*?\(Hz\)\s*=\s*([\d.-]+)/);
-        if (frequencyMatch) data.frequencia = parseFloat(frequencyMatch[1]);
+        const frequencyMatch = rawMet.match(/F[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*q[^A-Za-z]*u[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*c[^A-Za-z]*y.*?\(Hz\)\s*=\s*([\d.-]+)/s);
+        if (frequencyMatch) {
+            // Limpa o número capturado de qualquer lixo remanescente
+            const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
+            data.frequencia = parseFloat(cleanNumber);
+        }
 
         // --- Parsing do STA ---
         const targetMatch = cleanedSta.match(/TARGET\s+=\s+([A-Z]+)/);
