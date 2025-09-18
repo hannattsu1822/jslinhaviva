@@ -18,7 +18,6 @@ const dbConfig = {
 
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
-const connectedClients = new Map(); // Rastreia clientes conectados pelo IP
 
 function parseData(metResponse, tempResponse) {
     const data = {};
@@ -69,118 +68,110 @@ function parseData(metResponse, tempResponse) {
 }
 
 const server = net.createServer((socket) => {
-    const remoteAddress = socket.remoteAddress.includes('::') ? socket.remoteAddress.split(':').pop() : socket.remoteAddress;
-    const connectionId = `${remoteAddress}:${socket.remotePort}`;
-    console.log(`[TCP Service] Nova conexão de ${connectionId}.`);
+    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
+    console.log(`[TCP Service] Nova conexão de ${remoteAddress}. Aguardando pacote de identidade customizado.`);
 
-    let deviceId = null;
-    let rele_id_db = null;
-    let buffer = '';
-    let metData = '';
-    let tempData = '';
-    let pollTimer = null;
+    socket.state = 'AWAITING_IDENTITY';
+    socket.deviceId = null;
+    socket.rele_id_db = null;
+    socket.buffer = '';
+    socket.metData = '';
+    socket.tempData = '';
+    socket.pollTimer = null;
 
     const startPolling = () => {
-        if (pollTimer) clearInterval(pollTimer);
+        if (socket.pollTimer) clearInterval(socket.pollTimer);
         const poll = () => {
             if (!socket.writable) {
-                console.warn(`[Polling] Socket para ${deviceId} não está gravável. Encerrando.`);
+                console.warn(`[Polling] Socket para ${socket.deviceId} não está gravável. Encerrando.`);
                 socket.end();
                 return;
             }
-            console.log(`[Polling] [${deviceId}] Iniciando ciclo de coleta.`);
-            buffer = '';
-            metData = '';
-            tempData = '';
+            console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
+            socket.buffer = '';
+            socket.metData = '';
+            socket.tempData = '';
             setTimeout(() => {
-                console.log(`[Polling] [${deviceId}] Enviando MET.`);
+                console.log(`[Polling] [${socket.deviceId}] Enviando MET.`);
                 socket.write("MET\r\n");
             }, 500);
             setTimeout(() => {
-                metData = buffer;
-                buffer = '';
-                console.log(`[Polling] [${deviceId}] Enviando THE.`);
+                socket.metData = socket.buffer;
+                socket.buffer = '';
+                console.log(`[Polling] [${socket.deviceId}] Enviando THE.`);
                 socket.write("THE\r\n");
             }, 2500);
             setTimeout(() => {
-                tempData = buffer;
-                buffer = '';
-                const parsedData = parseData(metData, tempData);
+                socket.tempData = socket.buffer;
+                socket.buffer = '';
+                const parsedData = parseData(socket.metData, socket.tempData);
                 if (parsedData) {
-                    const topic = `sel/reles/${rele_id_db}/status`;
+                    const topic = `sel/reles/${socket.rele_id_db}/status`;
                     const now = new Date();
                     const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
                     const payload = JSON.stringify({
-                        rele_id: rele_id_db,
-                        local_tag: deviceId,
+                        rele_id: socket.rele_id_db,
+                        local_tag: socket.deviceId,
                         ...parsedData,
                         timestamp_leitura: timestampMySQL,
-                        payload_completo: `MET:\n${metData}\nTEMP:\n${tempData}`
+                        payload_completo: `MET:\n${socket.metData}\nTEMP:\n${socket.tempData}`
                     });
                     mqttClient.publish(topic, payload);
-                    console.log(`[Polling] [${deviceId}] Dados VÁLIDOS publicados.`);
+                    console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
                 } else {
-                    console.warn(`[Polling] [${deviceId}] Parser falhou.`);
+                    console.warn(`[Polling] [${socket.deviceId}] Parser falhou.`);
                 }
             }, 4500);
         };
         poll();
-        pollTimer = setInterval(poll, pollInterval);
+        socket.pollTimer = setInterval(poll, pollInterval);
     };
 
-    socket.on('data', (data) => {
-        buffer += data.toString('latin1');
+    socket.on('data', async (data) => {
+        if (socket.state === 'AWAITING_IDENTITY') {
+            const customId = data.toString().trim();
+            
+            if (!customId) return; // Ignora pacotes vazios
+
+            console.log(`[TCP Service] ID Customizado recebido de ${remoteAddress}: ${customId}`);
+
+            try {
+                const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
+                if (rows.length > 0) {
+                    socket.deviceId = rows[0].local_tag;
+                    socket.rele_id_db = rows[0].id;
+                    console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
+                    socket.state = 'LOGGING_IN';
+                    
+                    setTimeout(() => socket.write("ACC\r\n"), 500);
+                    setTimeout(() => socket.write("OTTER\r\n"), 1500);
+                    setTimeout(() => {
+                        console.log(`[TCP Service] Login para ${socket.deviceId} concluído. Iniciando polling.`);
+                        socket.buffer = '';
+                        startPolling();
+                    }, 2500);
+
+                } else {
+                    console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
+                    socket.end();
+                }
+            } catch (err) {
+                console.error("[TCP Service] Erro de DB ao identificar por ID Customizado:", err);
+                socket.end();
+            }
+        } else {
+            socket.buffer += data.toString('latin1');
+        }
     });
 
     socket.on("close", () => {
-        if (pollTimer) clearInterval(pollTimer);
-        if (deviceId) connectedClients.delete(deviceId); // Libera o dispositivo para reconectar
-        console.log(`[TCP Service] Conexão com ${deviceId || connectionId} fechada.`);
+        if (socket.pollTimer) clearInterval(socket.pollTimer);
+        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
 
     socket.on("error", (err) => {
-        console.error(`[TCP Service] Erro no socket de ${connectionId}:`, err.message);
+        console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
     });
-
-    (async () => {
-        try {
-            if (connectedClients.has(remoteAddress)) {
-                console.warn(`[TCP Service] Conexão duplicada do IP ${remoteAddress} rejeitada.`);
-                socket.end();
-                return;
-            }
-
-            const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE ip_address = ? AND ativo = 1", [remoteAddress]);
-            if (rows.length > 0) {
-                deviceId = rows[0].local_tag;
-                rele_id_db = rows[0].id;
-                
-                if (connectedClients.has(deviceId)) {
-                    console.warn(`[TCP Service] Dispositivo '${deviceId}' já está conectado. Rejeitando nova conexão.`);
-                    socket.end();
-                    return;
-                }
-                
-                connectedClients.set(deviceId, socket);
-                console.log(`[TCP Service] Dispositivo identificado como '${deviceId}' (ID: ${rele_id_db}). Iniciando login.`);
-                
-                setTimeout(() => socket.write("ACC\r\n"), 500);
-                setTimeout(() => socket.write("OTTER\r\n"), 1500);
-                setTimeout(() => {
-                    console.log(`[TCP Service] Login para ${deviceId} concluído. Iniciando polling.`);
-                    buffer = '';
-                    startPolling();
-                }, 2500);
-
-            } else {
-                console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o IP "${remoteAddress}".`);
-                socket.end();
-            }
-        } catch (err) {
-            console.error("[TCP Service] Erro de DB ao identificar por IP:", err);
-            socket.end();
-        }
-    })();
 });
 
 server.listen(port, () => {
