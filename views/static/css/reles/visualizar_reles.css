@@ -27,3 +27,36 @@ h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-
 }
 .status-text.ok { color: #2e7d32; }
 .status-text.fail, .status-text.alarm { color: #c62828; }
+
+
+/* Adicione estas regras ao final do seu arquivo CSS */
+.charts-panel {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-top: 2rem;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    gap: 30px;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px; /* Altura fixa para os gráficos */
+    width: 100%;
+}
+
+/* Em telas maiores, mostrar 2 gráficos por linha */
+@media (min-width: 1200px) {
+    .charts-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    /* Faz o terceiro gráfico ocupar a linha inteira */
+    .charts-grid .chart-container:last-child {
+        grid-column: 1 / -1;
+    }
+}
