@@ -46,9 +46,9 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.tensao_c = parseFloat(voltageMatch[3]);
         }
 
-        // --- REGEX CORRIGIDA AQUI ---
-        // Corresponde a "Frequ...ency" para acomodar o erro de digitação do firmware.
-        const frequencyMatch = rawMet.match(/F[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*q[^A-Za-z]*u[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*c[^A-Za-z]*y.*?\(Hz\)\s*=\s*([\d.-]+)/s);
+        // --- REGEX DEFINITIVA ---
+        // Aceita "Frequency" (com e) e "Frequncy" (sem e)
+        const frequencyMatch = rawMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
             data.frequencia = parseFloat(cleanNumber);
@@ -93,6 +93,7 @@ function parseData(metResponse, staResponse, tempResponse) {
     }
 }
 
+// ... O resto do arquivo (createServer, setInterval, etc.) continua exatamente o mesmo ...
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
