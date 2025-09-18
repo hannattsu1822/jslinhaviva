@@ -27,6 +27,9 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
+// ====================================================================
+// FUNÇÃO PARSEDATA COM LÓGICA ROBUSTA E DEFINITIVA
+// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const metStartIndex = metResponse.indexOf('SEL-2414');
@@ -38,37 +41,36 @@ function parseData(metResponse, tempResponse) {
     const cleanMet = metResponse.substring(metStartIndex);
     const cleanTemp = tempResponse.substring(tempStartIndex);
     try {
-        const currentMatch = cleanMet.match(/Current.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
+        // Regex robusta para Corrente (ignora a 4ª coluna IGX)
+        const currentMatch = cleanMet.match(/IAX\s+IBX\s+ICX[\s\S]*?Current.*?\(A\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
             data.corrente_b = parseFloat(currentMatch[2]);
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        const voltageRegex = /Voltage Magnitude \(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/g;
-        const voltageMatches = [...cleanMet.matchAll(voltageRegex)];
-
-        if (voltageMatches.length > 0) {
-            data.tensao_va = parseFloat(voltageMatches[0][1]);
-            data.tensao_vb = parseFloat(voltageMatches[0][2]);
-            data.tensao_vc = parseFloat(voltageMatches[0][3]);
-        }
-        if (voltageMatches.length > 1) {
-            data.tensao_vab = parseFloat(voltageMatches[1][1]);
-            data.tensao_vbc = parseFloat(voltageMatches[1][2]);
-            data.tensao_vca = parseFloat(voltageMatches[1][3]);
+        // Regex robusta para Tensão de Fase (ignora a 4ª coluna VG)
+        const voltagePhaseMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
+        if (voltagePhaseMatch) {
+            data.tensao_va = parseFloat(voltagePhaseMatch[1]);
+            data.tensao_vb = parseFloat(voltagePhaseMatch[2]);
+            data.tensao_vc = parseFloat(voltagePhaseMatch[3]);
         }
 
-        // ====================================================================
-        // LINHA CORRIGIDA
-        // ====================================================================
+        // Regex robusta para Tensão de Linha
+        const voltageLineMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
+        if (voltageLineMatch) {
+            data.tensao_vab = parseFloat(voltageLineMatch[1]);
+            data.tensao_vbc = parseFloat(voltageLineMatch[2]);
+            data.tensao_vca = parseFloat(voltageLineMatch[3]);
+        }
+
         const frequencyMatch = cleanMet.match(/ncy.*?\(Hz\)\s*=\s*([\d.-]+)/);
-        // ====================================================================
-
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
             data.frequencia = parseFloat(cleanNumber);
         }
+
         const tempAmbMatch = cleanTemp.match(/AMBT \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempAmbMatch) data.temperatura_ambiente = parseFloat(tempAmbMatch[1]);
         const tempHotSpotMatch = cleanTemp.match(/HS \(deg\. C\)\s*:\s*([\d.-]+)/);
@@ -89,6 +91,10 @@ function parseData(metResponse, tempResponse) {
         return null;
     }
 }
+// ====================================================================
+// FIM DA FUNÇÃO ATUALIZADA
+// ====================================================================
+
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
