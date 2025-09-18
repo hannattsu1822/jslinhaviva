@@ -1,10 +1,10 @@
-/* Estilos para a página de gerenciamento de relés */
+/* Arquivo: gerenciar_reles.css */
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem; /* Ajuste de margem */
 }
 
 .header h1 {
@@ -14,6 +14,37 @@
     font-size: 2rem;
     color: #333;
 }
+
+/* --- NOVOS ESTILOS PARA A BARRA DE BUSCA --- */
+.toolbar {
+    margin-bottom: 2rem;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 5px 10px;
+    max-width: 400px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.search-container .material-icons {
+    color: #888;
+}
+
+#search-input {
+    border: none;
+    outline: none;
+    padding: 8px;
+    font-size: 1rem;
+    flex-grow: 1;
+    background-color: transparent;
+}
+/* --- FIM DOS NOVOS ESTILOS --- */
+
 
 .table-container {
     background-color: #fff;
@@ -32,17 +63,17 @@
 #reles-table th, #reles-table td {
     padding: 12px 15px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #eee; /* Linha mais suave */
 }
 
 #reles-table th {
-    background-color: #f4f6f8;
+    background-color: #f8f9fa; /* Cor de fundo mais clara */
     font-weight: 600;
     color: #333;
 }
 
 #reles-table tbody tr:hover {
-    background-color: #f9f9f9;
+    background-color: #f1f3f5;
 }
 
 .status-badge {
@@ -62,6 +93,11 @@
     background-color: #f44336; /* Vermelho */
 }
 
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
 .action-buttons .btn-icon {
     background: none;
     border: none;
@@ -77,6 +113,7 @@
 
 .action-buttons .material-icons {
     font-size: 20px;
+    display: block;
 }
 
 .btn-edit .material-icons {
@@ -87,7 +124,7 @@
     color: #D32F2F; /* Vermelho */
 }
 
-/* Estilos do Modal */
+/* Estilos do Modal (sem alterações) */
 .modal {
     display: none;
     position: fixed;
