@@ -21,20 +21,12 @@ const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
 function extractDeviceIdFromBinary(data) {
   const buffer = Buffer.from(data);
+  const hexId = buffer.toString('hex');
+  
   console.log(`[BINARY DEBUG] Dados recebidos em hex: ${buffer.toString('hex')}`);
+  console.log(`[BINARY DEBUG] ID extraído como string HEX: '${hexId}'`);
   
-  // Padrão observado nos logs: bytes com valor 0x40 0x41 correspondem a "@A" em ASCII
-  // Vamos procurar por sequências ASCII válidas no meio dos dados binários
-  let asciiPart = '';
-  for (let i = 0; i < buffer.length; i++) {
-    // Caracteres ASCII imprimíveis (de 0x20 a 0x7E)
-    if (buffer[i] >= 0x20 && buffer[i] <= 0x7E) {
-      asciiPart += String.fromCharCode(buffer[i]);
-    }
-  }
-  
-  console.log(`[BINARY DEBUG] Parte ASCII extraída: '${asciiPart}'`);
-  return asciiPart;
+  return hexId;
 }
 
 function parseData(metResponse, tempResponse) {
@@ -187,6 +179,8 @@ const server = net.createServer((socket) => {
         if (socket.pollTimer) clearInterval(socket.pollTimer);
         console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
+
+
 
     socket.on("error", (err) => {
         console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
