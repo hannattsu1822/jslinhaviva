@@ -18,45 +18,55 @@ const dbConfig = {
 
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
-const releClients = new Map();
-
-function cleanString(rawString) {
-    return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
-}
 
 function parseData(metResponse, tempResponse) {
     const data = {};
-    const rawMet = metResponse; 
-    const cleanedTemp = cleanString(tempResponse);
+    
+    // LÓGICA ANTI-ECO: Encontra o início da resposta real do relé
+    const metStartIndex = metResponse.indexOf('SEL-2414');
+    const tempStartIndex = tempResponse.indexOf('SEL-2414');
+
+    if (metStartIndex === -1) {
+        console.warn("[TCP Parser] Padrão 'SEL-2414' não encontrado na resposta MET. Descartando.");
+        return null;
+    }
+    if (tempStartIndex === -1) {
+        console.warn("[TCP Parser] Padrão 'SEL-2414' não encontrado na resposta THE. Descartando.");
+        return null;
+    }
+
+    // Corta a string para remover o lixo do eco que vem antes
+    const cleanMet = metResponse.substring(metStartIndex);
+    const cleanTemp = tempResponse.substring(tempStartIndex);
 
     try {
-        const currentMatch = rawMet.match(/Current.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
+        const currentMatch = cleanMet.match(/Current.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
             data.corrente_b = parseFloat(currentMatch[2]);
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        const voltageMatch = rawMet.match(/Voltage.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
+        const voltageMatch = cleanMet.match(/Voltage.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (voltageMatch) {
             data.tensao_a = parseFloat(voltageMatch[1]);
             data.tensao_b = parseFloat(voltageMatch[2]);
             data.tensao_c = parseFloat(voltageMatch[3]);
         }
 
-        const frequencyMatch = rawMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
+        const frequencyMatch = cleanMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
             data.frequencia = parseFloat(cleanNumber);
         }
 
-        const tempAmbMatch = cleanedTemp.match(/AMBT \(deg\. C\)\s*:\s*([\d.-]+)/);
+        const tempAmbMatch = cleanTemp.match(/AMBT \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempAmbMatch) data.temperatura_ambiente = parseFloat(tempAmbMatch[1]);
 
-        const tempHotSpotMatch = cleanedTemp.match(/HS \(deg\. C\)\s*:\s*([\d.-]+)/);
+        const tempHotSpotMatch = cleanTemp.match(/HS \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempHotSpotMatch) data.temperatura_enrolamento = parseFloat(tempHotSpotMatch[1]);
         
-        const tempDeviceMatch = cleanedTemp.match(/TOILC \(deg\. C\)\s*:\s*([\d.-]+)/);
+        const tempDeviceMatch = cleanTemp.match(/TOILC \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempDeviceMatch) data.temperatura_dispositivo = parseFloat(tempDeviceMatch[1]);
 
         const requiredKeys = [
@@ -82,102 +92,76 @@ const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
 
-    socket.state = 'AWAITING_ID';
-    socket.deviceId = null;
-    socket.buffer = '';
-    socket.metData = '';
-    socket.tempData = '';
+    let deviceId = null;
+    let rele_id_db = null;
+    let buffer = '';
+    let metData = '';
+    let tempData = '';
+    let pollTimer = null;
 
-    const sendNextCommand = () => {
-        try {
-            switch (socket.state) {
-                case 'AWAITING_LOGIN':
-                    socket.write("ACC\r\n");
-                    socket.state = 'WAITING_LOGIN_CONFIRM';
-                    break;
-                
-                case 'SENDING_MET':
-                    console.log(`[TCP Service] [${socket.deviceId}] Enviando comando MET.`);
-                    socket.write("MET\r\n");
-                    socket.state = 'WAITING_MET_RESPONSE';
-                    break;
-                
-                case 'SENDING_TEMP':
-                    console.log(`[TCP Service] [${socket.deviceId}] Enviando comando THE.`);
-                    socket.write("THE\r\n");
-                    socket.state = 'WAITING_TEMP_RESPONSE';
-                    break;
+    const startPolling = () => {
+        if (pollTimer) clearInterval(pollTimer);
+
+        const poll = () => {
+            if (!socket.writable) {
+                console.warn(`[Polling] Socket para ${deviceId} não está gravável. Encerrando polling.`);
+                socket.end();
+                return;
             }
-        } catch (err) {
-            console.error(`[TCP Service] [${socket.deviceId}] Erro ao enviar comando:`, err);
-            socket.end();
-        }
-    };
 
-    const handleResponse = (response) => {
-        try {
-            switch (socket.state) {
-                case 'WAITING_LOGIN_CONFIRM':
-                    releClients.set(socket.deviceId, socket);
-                    socket.state = 'SENDING_MET';
-                    sendNextCommand();
-                    break;
+            console.log(`[Polling] [${deviceId}] Iniciando ciclo de coleta.`);
+            buffer = '';
+            metData = '';
+            tempData = '';
+
+            setTimeout(() => {
+                console.log(`[Polling] [${deviceId}] Enviando MET.`);
+                socket.write("MET\r\n");
+            }, 500);
+
+            setTimeout(() => {
+                metData = buffer;
+                buffer = '';
+                console.log(`[Polling] [${deviceId}] Enviando THE.`);
+                socket.write("THE\r\n");
+            }, 2500);
+
+            setTimeout(() => {
+                tempData = buffer;
+                buffer = '';
                 
-                case 'WAITING_MET_RESPONSE':
-                    socket.metData = response;
-                    socket.state = 'SENDING_TEMP';
-                    sendNextCommand();
-                    break;
+                const parsedData = parseData(metData, tempData);
+                if (parsedData) {
+                    const topic = `sel/reles/${rele_id_db}/status`;
+                    const now = new Date();
+                    const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
 
-                case 'WAITING_TEMP_RESPONSE':
-                    socket.tempData = response;
-                    
-                    const parsedData = parseData(socket.metData, socket.tempData);
-                    if (parsedData) {
-                        const topic = `sel/reles/${socket.rele_id_db}/status`;
-                        const now = new Date();
-                        const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
+                    const payload = JSON.stringify({
+                        rele_id: rele_id_db,
+                        local_tag: deviceId,
+                        ...parsedData,
+                        timestamp_leitura: timestampMySQL,
+                        payload_completo: `MET:\n${metData}\nTEMP:\n${tempData}`
+                    });
+                    mqttClient.publish(topic, payload);
+                    console.log(`[Polling] [${deviceId}] Dados VÁLIDOS publicados.`);
+                } else {
+                    console.warn(`[Polling] [${deviceId}] Parser falhou.`);
+                }
+            }, 4500);
+        };
 
-                        const payload = JSON.stringify({
-                            rele_id: socket.rele_id_db,
-                            local_tag: socket.deviceId,
-                            ...parsedData,
-                            timestamp_leitura: timestampMySQL,
-                            payload_completo: `MET:\n${socket.metData}\nTEMP:\n${socket.tempData}`
-                        });
-                        mqttClient.publish(topic, payload);
-                        console.log(`[TCP Service] [${socket.deviceId}] Dados VÁLIDOS (MET+THE) publicados.`);
-                    } else {
-                        console.warn(`[TCP Service] [${socket.deviceId}] Parser falhou. Descartando leitura.`);
-                    }
-                    
-                    socket.state = 'IDLE';
-                    console.log(`[TCP Service] [${socket.deviceId}] Ciclo concluído.`);
-                    break;
-            }
-        } catch (err) {
-            console.error(`[TCP Service] [${socket.deviceId}] Erro ao manusear resposta:`, err);
-            socket.end();
-        }
+        poll();
+        pollTimer = setInterval(poll, pollInterval);
     };
 
-    const processBuffer = () => {
-        let delimiterIndex;
-        while ((delimiterIndex = socket.buffer.indexOf('=>')) !== -1) {
-            const completeResponse = socket.buffer.substring(0, delimiterIndex + 2);
-            socket.buffer = socket.buffer.substring(delimiterIndex + 2);
-            handleResponse(completeResponse);
-        }
-    };
-
-    socket.on('data', async (data) => {
-        socket.buffer += data.toString('latin1');
-        processBuffer();
+    socket.on('data', (data) => {
+        buffer += data.toString('latin1');
     });
 
     socket.on("close", () => {
-        if (socket.deviceId) releClients.delete(socket.deviceId);
-        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
+        if (pollTimer) clearInterval(pollTimer);
+        console.log(`[TCP Service] Conexão com ${deviceId || remoteAddress} fechada.`);
     });
 
     socket.on("error", (err) => {
@@ -189,11 +173,18 @@ const server = net.createServer((socket) => {
             const clientIp = socket.remoteAddress.includes('::') ? socket.remoteAddress.split(':').pop() : socket.remoteAddress;
             const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE ip_address = ? AND ativo = 1", [clientIp]);
             if (rows.length > 0) {
-                socket.deviceId = rows[0].local_tag;
-                socket.rele_id_db = rows[0].id;
-                console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}).`);
-                socket.state = 'AWAITING_LOGIN';
-                sendNextCommand();
+                deviceId = rows[0].local_tag;
+                rele_id_db = rows[0].id;
+                console.log(`[TCP Service] Dispositivo identificado como '${deviceId}' (ID: ${rele_id_db}). Iniciando login.`);
+                
+                setTimeout(() => socket.write("ACC\r\n"), 500);
+                setTimeout(() => socket.write("OTTER\r\n"), 1500);
+                setTimeout(() => {
+                    console.log(`[TCP Service] Login para ${deviceId} concluído. Iniciando polling.`);
+                    buffer = '';
+                    startPolling();
+                }, 2500);
+
             } else {
                 console.warn(`[TCP Service] Nenhum dispositivo ativo para o IP "${clientIp}".`);
                 socket.end();
@@ -203,22 +194,8 @@ const server = net.createServer((socket) => {
             socket.end();
         }
     })();
-
-    // Adiciona a função ao objeto socket para que o setInterval possa acessá-la
-    socket.sendNextCommand = sendNextCommand;
 });
 
 server.listen(port, () => {
     console.log(`[TCP Service] Servidor TCP ouvindo na porta ${port}`);
 });
-
-setInterval(() => {
-    for (const [deviceId, socket] of releClients.entries()) {
-        if (socket.state === 'IDLE' && socket.writable) {
-            console.log(`[Polling Loop] [${deviceId}] Disparando novo ciclo de coleta.`);
-            socket.state = 'SENDING_MET';
-            // Chama a função a partir do objeto socket
-            socket.sendNextCommand();
-        }
-    }
-}, pollInterval);
