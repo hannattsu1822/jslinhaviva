@@ -88,13 +88,29 @@ const server = net.createServer((socket) => {
     socket.metData = '';
     socket.tempData = '';
 
-    const processBuffer = () => {
-        if (socket.buffer.includes('=>')) {
-            const parts = socket.buffer.split('=>');
-            const completeResponse = parts.shift() + '=>'; // Pega a primeira resposta completa
-            socket.buffer = parts.join('=>'); // Guarda o resto no buffer
-
-            handleResponse(completeResponse);
+    const sendNextCommand = () => {
+        try {
+            switch (socket.state) {
+                case 'AWAITING_LOGIN':
+                    socket.write("ACC\r\n");
+                    socket.state = 'WAITING_LOGIN_CONFIRM';
+                    break;
+                
+                case 'SENDING_MET':
+                    console.log(`[TCP Service] [${socket.deviceId}] Enviando comando MET.`);
+                    socket.write("MET\r\n");
+                    socket.state = 'WAITING_MET_RESPONSE';
+                    break;
+                
+                case 'SENDING_TEMP':
+                    console.log(`[TCP Service] [${socket.deviceId}] Enviando comando THE.`);
+                    socket.write("THE\r\n");
+                    socket.state = 'WAITING_TEMP_RESPONSE';
+                    break;
+            }
+        } catch (err) {
+            console.error(`[TCP Service] [${socket.deviceId}] Erro ao enviar comando:`, err);
+            socket.end();
         }
     };
 
@@ -145,29 +161,12 @@ const server = net.createServer((socket) => {
         }
     };
 
-    const sendNextCommand = () => {
-        try {
-            switch (socket.state) {
-                case 'AWAITING_LOGIN':
-                    socket.write("ACC\r\n");
-                    socket.state = 'WAITING_LOGIN_CONFIRM';
-                    break;
-                
-                case 'SENDING_MET':
-                    console.log(`[TCP Service] [${socket.deviceId}] Enviando comando MET.`);
-                    socket.write("MET\r\n");
-                    socket.state = 'WAITING_MET_RESPONSE';
-                    break;
-                
-                case 'SENDING_TEMP':
-                    console.log(`[TCP Service] [${socket.deviceId}] Enviando comando THE.`);
-                    socket.write("THE\r\n");
-                    socket.state = 'WAITING_TEMP_RESPONSE';
-                    break;
-            }
-        } catch (err) {
-            console.error(`[TCP Service] [${socket.deviceId}] Erro ao enviar comando:`, err);
-            socket.end();
+    const processBuffer = () => {
+        let delimiterIndex;
+        while ((delimiterIndex = socket.buffer.indexOf('=>')) !== -1) {
+            const completeResponse = socket.buffer.substring(0, delimiterIndex + 2);
+            socket.buffer = socket.buffer.substring(delimiterIndex + 2);
+            handleResponse(completeResponse);
         }
     };
 
@@ -204,6 +203,9 @@ const server = net.createServer((socket) => {
             socket.end();
         }
     })();
+
+    // Adiciona a função ao objeto socket para que o setInterval possa acessá-la
+    socket.sendNextCommand = sendNextCommand;
 });
 
 server.listen(port, () => {
@@ -215,7 +217,8 @@ setInterval(() => {
         if (socket.state === 'IDLE' && socket.writable) {
             console.log(`[Polling Loop] [${deviceId}] Disparando novo ciclo de coleta.`);
             socket.state = 'SENDING_MET';
-            sendNextCommand();
+            // Chama a função a partir do objeto socket
+            socket.sendNextCommand();
         }
     }
 }, pollInterval);
