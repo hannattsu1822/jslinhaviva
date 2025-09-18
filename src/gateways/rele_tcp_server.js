@@ -27,9 +27,6 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
-// ====================================================================
-// FUNÇÃO PARSEDATA ATUALIZADA PARA SER MAIS ROBUSTA
-// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const metStartIndex = metResponse.indexOf('SEL-2414');
@@ -48,27 +45,26 @@ function parseData(metResponse, tempResponse) {
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        // --- LÓGICA DE TENSÃO ATUALIZADA ---
         const voltageRegex = /Voltage Magnitude \(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/g;
         const voltageMatches = [...cleanMet.matchAll(voltageRegex)];
 
-        // O primeiro resultado é a Tensão de Fase
         if (voltageMatches.length > 0) {
             data.tensao_va = parseFloat(voltageMatches[0][1]);
             data.tensao_vb = parseFloat(voltageMatches[0][2]);
             data.tensao_vc = parseFloat(voltageMatches[0][3]);
         }
-
-        // O segundo resultado é a Tensão de Linha
         if (voltageMatches.length > 1) {
             data.tensao_vab = parseFloat(voltageMatches[1][1]);
             data.tensao_vbc = parseFloat(voltageMatches[1][2]);
             data.tensao_vca = parseFloat(voltageMatches[1][3]);
         }
-        // --- FIM DA LÓGICA ATUALIZADA ---
 
+        // ====================================================================
+        // LINHA CORRIGIDA
+        // ====================================================================
+        const frequencyMatch = cleanMet.match(/ncy.*?\(Hz\)\s*=\s*([\d.-]+)/);
+        // ====================================================================
 
-        const frequencyMatch = cleanMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
             data.frequencia = parseFloat(cleanNumber);
@@ -93,10 +89,6 @@ function parseData(metResponse, tempResponse) {
         return null;
     }
 }
-// ====================================================================
-// FIM DA FUNÇÃO ATUALIZADA
-// ====================================================================
-
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
