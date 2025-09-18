@@ -19,6 +19,43 @@ const dbConfig = {
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
+function parseTelnetData(data) {
+  const buffer = Buffer.from(data);
+  let output = '';
+  let i = 0;
+  
+  while (i < buffer.length) {
+    if (buffer[i] === 0xFF) {
+      if (i + 2 >= buffer.length) break;
+      
+      const command = buffer[i + 1];
+      const option = buffer[i + 2];
+      
+      if (command === 0xFB || command === 0xFC || command === 0xFD || command === 0xFE) {
+        i += 3;
+        continue;
+      }
+      
+      if (command === 0xFA) {
+        let j = i + 3;
+        while (j < buffer.length && buffer[j] !== 0xF0) {
+          j++;
+        }
+        i = j + 1;
+      } else {
+        i += 3;
+      }
+    } else {
+      if (buffer[i] >= 32 && buffer[i] <= 126) {
+        output += String.fromCharCode(buffer[i]);
+      }
+      i++;
+    }
+  }
+  
+  return output;
+}
+
 function parseData(metResponse, tempResponse) {
     const data = {};
     const metStartIndex = metResponse.indexOf('SEL-2414');
@@ -129,11 +166,17 @@ const server = net.createServer((socket) => {
 
     socket.on('data', async (data) => {
         if (socket.state === 'AWAITING_IDENTITY') {
-            const customId = data.toString().trim();
+            console.log(`[TELNET DEBUG] Recebido ${data.length} bytes: ${data.toString('hex')}`);
             
-            if (!customId) return; // Ignora pacotes vazios
-
-            console.log(`[TCP Service] ID Customizado recebido de ${remoteAddress}: ${customId}`);
+            const cleanData = parseTelnetData(data);
+            const customId = cleanData.trim();
+            
+            console.log(`[TELNET DEBUG] Após filtro: '${customId}' (${customId.length} chars)`);
+            
+            if (!customId || customId.length < 1) {
+                console.warn(`[TCP Service] ID vazio ou inválido após filtro Telnet`);
+                return;
+            }
 
             try {
                 const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
@@ -160,7 +203,8 @@ const server = net.createServer((socket) => {
                 socket.end();
             }
         } else {
-            socket.buffer += data.toString('latin1');
+            const filteredData = parseTelnetData(data);
+            socket.buffer += filteredData;
         }
     });
 
