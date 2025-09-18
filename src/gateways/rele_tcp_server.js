@@ -1,3 +1,5 @@
+// Arquivo: rele_tcp_server.js (versão corrigida)
+
 const path = require('path');
 require("dotenv").config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -22,10 +24,8 @@ const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 function extractDeviceIdFromBinary(data) {
   const buffer = Buffer.from(data);
   const hexId = buffer.toString('hex');
-  
   console.log(`[BINARY DEBUG] Dados recebidos em hex: ${buffer.toString('hex')}`);
   console.log(`[BINARY DEBUG] ID extraído como string HEX: '${hexId}'`);
-  
   return hexId;
 }
 
@@ -46,12 +46,23 @@ function parseData(metResponse, tempResponse) {
             data.corrente_b = parseFloat(currentMatch[2]);
             data.corrente_c = parseFloat(currentMatch[3]);
         }
-        const voltageMatch = cleanMet.match(/Voltage.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
-        if (voltageMatch) {
-            data.tensao_a = parseFloat(voltageMatch[1]);
-            data.tensao_b = parseFloat(voltageMatch[2]);
-            data.tensao_c = parseFloat(voltageMatch[3]);
+
+        // *** ALTERAÇÃO AQUI: Captura Tensão de Fase (VA, VB, VC) ***
+        const voltagePhaseMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
+        if (voltagePhaseMatch) {
+            data.tensao_va = parseFloat(voltagePhaseMatch[1]);
+            data.tensao_vb = parseFloat(voltagePhaseMatch[2]);
+            data.tensao_vc = parseFloat(voltagePhaseMatch[3]);
         }
+
+        // *** ALTERAÇÃO AQUI: Captura Tensão de Linha (VAB, VBC, VCA) ***
+        const voltageLineMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
+        if (voltageLineMatch) {
+            data.tensao_vab = parseFloat(voltageLineMatch[1]);
+            data.tensao_vbc = parseFloat(voltageLineMatch[2]);
+            data.tensao_vca = parseFloat(voltageLineMatch[3]);
+        }
+
         const frequencyMatch = cleanMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
@@ -63,7 +74,8 @@ function parseData(metResponse, tempResponse) {
         if (tempHotSpotMatch) data.temperatura_enrolamento = parseFloat(tempHotSpotMatch[1]);
         const tempDeviceMatch = cleanTemp.match(/TOILC \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempDeviceMatch) data.temperatura_dispositivo = parseFloat(tempDeviceMatch[1]);
-        const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_a', 'tensao_b', 'tensao_c', 'frequencia'];
+        
+        const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
                 console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'.`);
@@ -77,6 +89,7 @@ function parseData(metResponse, tempResponse) {
     }
 }
 
+// O restante do arquivo continua igual...
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}. Aguardando pacote de identidade customizado.`);
@@ -115,7 +128,6 @@ const server = net.createServer((socket) => {
                 socket.tempData = socket.buffer;
                 socket.buffer = '';
 
-                // *** LINHAS ADICIONADAS PARA CORRIGIR O PROBLEMA ***
                 const cleanedMetData = socket.metData.replace(/[^\x20-\x7E\r\n]/g, '');
                 const cleanedTempData = socket.tempData.replace(/[^\x20-\x7E\r\n]/g, '');
 
