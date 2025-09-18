@@ -19,41 +19,22 @@ const dbConfig = {
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
-function parseTelnetData(data) {
+function extractDeviceIdFromBinary(data) {
   const buffer = Buffer.from(data);
-  let output = '';
-  let i = 0;
+  console.log(`[BINARY DEBUG] Dados recebidos em hex: ${buffer.toString('hex')}`);
   
-  while (i < buffer.length) {
-    if (buffer[i] === 0xFF) {
-      if (i + 2 >= buffer.length) break;
-      
-      const command = buffer[i + 1];
-      const option = buffer[i + 2];
-      
-      if (command === 0xFB || command === 0xFC || command === 0xFD || command === 0xFE) {
-        i += 3;
-        continue;
-      }
-      
-      if (command === 0xFA) {
-        let j = i + 3;
-        while (j < buffer.length && buffer[j] !== 0xF0) {
-          j++;
-        }
-        i = j + 1;
-      } else {
-        i += 3;
-      }
-    } else {
-      if (buffer[i] >= 32 && buffer[i] <= 126) {
-        output += String.fromCharCode(buffer[i]);
-      }
-      i++;
+  // Padrão observado nos logs: bytes com valor 0x40 0x41 correspondem a "@A" em ASCII
+  // Vamos procurar por sequências ASCII válidas no meio dos dados binários
+  let asciiPart = '';
+  for (let i = 0; i < buffer.length; i++) {
+    // Caracteres ASCII imprimíveis (de 0x20 a 0x7E)
+    if (buffer[i] >= 0x20 && buffer[i] <= 0x7E) {
+      asciiPart += String.fromCharCode(buffer[i]);
     }
   }
   
-  return output;
+  console.log(`[BINARY DEBUG] Parte ASCII extraída: '${asciiPart}'`);
+  return asciiPart;
 }
 
 function parseData(metResponse, tempResponse) {
@@ -166,15 +147,10 @@ const server = net.createServer((socket) => {
 
     socket.on('data', async (data) => {
         if (socket.state === 'AWAITING_IDENTITY') {
-            console.log(`[TELNET DEBUG] Recebido ${data.length} bytes: ${data.toString('hex')}`);
-            
-            const cleanData = parseTelnetData(data);
-            const customId = cleanData.trim();
-            
-            console.log(`[TELNET DEBUG] Após filtro: '${customId}' (${customId.length} chars)`);
+            const customId = extractDeviceIdFromBinary(data);
             
             if (!customId || customId.length < 1) {
-                console.warn(`[TCP Service] ID vazio ou inválido após filtro Telnet`);
+                console.warn(`[TCP Service] ID vazio ou inválido após extração binária`);
                 return;
             }
 
@@ -203,8 +179,7 @@ const server = net.createServer((socket) => {
                 socket.end();
             }
         } else {
-            const filteredData = parseTelnetData(data);
-            socket.buffer += filteredData;
+            socket.buffer += data.toString('latin1');
         }
     });
 
