@@ -5,28 +5,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let updateTimeout;
-    const MAX_CHART_POINTS = 60; // Aumentado para mais dados
+    const MAX_CHART_POINTS = 60;
     let tensaoChart, correnteChart, temperaturaChart;
 
     const formatValue = (value, dec) => (typeof value === 'number' ? value.toFixed(dec) : '-');
     
+    // ====================================================================
+    // FUNÇÃO ATUALIZADA COM AS CASAS DECIMAIS CORRIGIDAS
+    // ====================================================================
     function updateLiveCards(data) {
-        // Tensão de Fase
-        document.getElementById('live-tensao-va').textContent = formatValue(data.tensao_va, 1);
-        document.getElementById('live-tensao-vb').textContent = formatValue(data.tensao_vb, 1);
-        document.getElementById('live-tensao-vc').textContent = formatValue(data.tensao_vc, 1);
+        // Tensão de Fase (agora com 0 casas decimais)
+        document.getElementById('live-tensao-va').textContent = formatValue(data.tensao_va, 0);
+        document.getElementById('live-tensao-vb').textContent = formatValue(data.tensao_vb, 0);
+        document.getElementById('live-tensao-vc').textContent = formatValue(data.tensao_vc, 0);
 
-        // Tensão de Linha (NOVO)
-        document.getElementById('live-tensao-vab').textContent = formatValue(data.tensao_vab, 1);
-        document.getElementById('live-tensao-vbc').textContent = formatValue(data.tensao_vbc, 1);
-        document.getElementById('live-tensao-vca').textContent = formatValue(data.tensao_vca, 1);
+        // Tensão de Linha (agora com 0 casas decimais)
+        document.getElementById('live-tensao-vab').textContent = formatValue(data.tensao_vab, 0);
+        document.getElementById('live-tensao-vbc').textContent = formatValue(data.tensao_vbc, 0);
+        document.getElementById('live-tensao-vca').textContent = formatValue(data.tensao_vca, 0);
 
-        // Corrente
-        document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 2);
-        document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 2);
-        document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 2);
+        // Corrente (agora com 1 casa decimal)
+        document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 1);
+        document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 1);
+        document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 1);
 
-        // Temperatura
+        // Temperatura (mantém 1 casa decimal)
         document.getElementById('live-temp-disp').textContent = formatValue(data.temperatura_dispositivo, 1);
         document.getElementById('live-temp-amb').textContent = formatValue(data.temperatura_ambiente, 1);
         document.getElementById('live-temp-enrol').textContent = formatValue(data.temperatura_enrolamento, 1);
@@ -100,23 +103,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeCharts(leituras) {
         const reversedLeituras = leituras.slice(0, MAX_CHART_POINTS).reverse();
         
-        // --- Gráfico de Tensão (agora com 6 linhas) ---
         const tensaoCtx = document.getElementById('tensaoChart');
         tensaoChart = createProfessionalChart(tensaoCtx, 'Tensão (Fase e Linha)', 'Tensão (V)');
         reversedLeituras.forEach(d => {
             const time = new Date(d.timestamp_leitura).getTime();
-            // Fase
             addDataToChart(tensaoChart, 'Fase VA', { x: time, y: d.tensao_va }, '#FF6384');
             addDataToChart(tensaoChart, 'Fase VB', { x: time, y: d.tensao_vb }, '#36A2EB');
             addDataToChart(tensaoChart, 'Fase VC', { x: time, y: d.tensao_vc }, '#FFCE56');
-            // Linha
             addDataToChart(tensaoChart, 'Linha VAB', { x: time, y: d.tensao_vab }, '#e83e5c');
             addDataToChart(tensaoChart, 'Linha VBC', { x: time, y: d.tensao_vbc }, '#2aa0e0');
             addDataToChart(tensaoChart, 'Linha VCA', { x: time, y: d.tensao_vca }, '#e6bc4c');
         });
         tensaoChart.update();
 
-        // --- Gráfico de Corrente ---
         const correnteCtx = document.getElementById('correnteChart');
         correnteChart = createProfessionalChart(correnteCtx, 'Corrente por Fase', 'Corrente (A)');
         reversedLeituras.forEach(d => {
@@ -127,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         correnteChart.update();
 
-        // --- Gráfico de Temperatura ---
         const tempCtx = document.getElementById('temperaturaChart');
         temperaturaChart = createProfessionalChart(tempCtx, 'Temperaturas', 'Graus (°C)');
         reversedLeituras.forEach(d => {
@@ -174,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateLiveCards(data);
                     setStatus(true);
 
-                    // Atualiza gráfico de tensão (fase e linha)
                     addDataToChart(tensaoChart, 'Fase VA', { x: time, y: data.tensao_va }, '#FF6384');
                     addDataToChart(tensaoChart, 'Fase VB', { x: time, y: data.tensao_vb }, '#36A2EB');
                     addDataToChart(tensaoChart, 'Fase VC', { x: time, y: data.tensao_vc }, '#FFCE56');
@@ -183,13 +180,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     addDataToChart(tensaoChart, 'Linha VCA', { x: time, y: data.tensao_vca }, '#e6bc4c');
                     tensaoChart.update('none');
 
-                    // Atualiza gráfico de corrente
                     addDataToChart(correnteChart, 'Corrente A', { x: time, y: data.corrente_a }, '#FF6384');
                     addDataToChart(correnteChart, 'Corrente B', { x: time, y: data.corrente_b }, '#36A2EB');
                     addDataToChart(correnteChart, 'Corrente C', { x: time, y: data.corrente_c }, '#FFCE56');
                     correnteChart.update('none');
 
-                    // Atualiza gráfico de temperatura
                     addDataToChart(temperaturaChart, 'Dispositivo', { x: time, y: data.temperatura_dispositivo }, '#4BC0C0');
                     addDataToChart(temperaturaChart, 'Ambiente', { x: time, y: data.temperatura_ambiente }, '#9966FF');
                     addDataToChart(temperaturaChart, 'Enrolamento', { x: time, y: data.temperatura_enrolamento }, '#FF9F40');
