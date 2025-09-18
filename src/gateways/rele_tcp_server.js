@@ -32,7 +32,6 @@ function parseData(metResponse, staResponse, tempResponse) {
     const cleanedTemp = cleanString(tempResponse);
 
     try {
-        // --- Parsing do MET ---
         const currentMatch = rawMet.match(/C[^A-Za-z]*u[^A-Za-z]*r[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*t.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
@@ -53,8 +52,6 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.frequencia = parseFloat(cleanNumber);
         }
 
-        // --- Parsing do STA (Opcional) ---
-        // Tentamos encontrar, mas não falhamos se não encontrar.
         const targetMatch = cleanedSta.match(/TARGET\s+=\s+([A-Z]+)/);
         if (targetMatch) data.target_status = targetMatch[1];
 
@@ -64,7 +61,6 @@ function parseData(metResponse, staResponse, tempResponse) {
         const alarmMatch = cleanedSta.match(/ALARM\s+=\s+([A-Z\s]+)/);
         if (alarmMatch) data.alarm_status = alarmMatch[1].trim();
 
-        // --- Parsing da Temperatura ---
         const temps = cleanedTemp.matchAll(/([\d.-]+)\s*C/g);
         const tempValues = Array.from(temps, m => parseFloat(m[1]));
         
@@ -76,8 +72,6 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.temperatura_dispositivo = tempValues[0];
         }
 
-        // --- VALIDAÇÃO SIMPLIFICADA ---
-        // Agora só exigimos os dados de MET. STA e THE são bônus.
         const requiredKeys = [
             'corrente_a', 'corrente_b', 'corrente_c', 
             'tensao_a', 'tensao_b', 'tensao_c', 'frequencia'
