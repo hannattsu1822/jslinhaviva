@@ -114,7 +114,13 @@ const server = net.createServer((socket) => {
             setTimeout(() => {
                 socket.tempData = socket.buffer;
                 socket.buffer = '';
-                const parsedData = parseData(socket.metData, socket.tempData);
+
+                // *** LINHAS ADICIONADAS PARA CORRIGIR O PROBLEMA ***
+                const cleanedMetData = socket.metData.replace(/[^\x20-\x7E\r\n]/g, '');
+                const cleanedTempData = socket.tempData.replace(/[^\x20-\x7E\r\n]/g, '');
+
+                const parsedData = parseData(cleanedMetData, cleanedTempData);
+                
                 if (parsedData) {
                     const topic = `sel/reles/${socket.rele_id_db}/status`;
                     const now = new Date();
@@ -179,8 +185,6 @@ const server = net.createServer((socket) => {
         if (socket.pollTimer) clearInterval(socket.pollTimer);
         console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
-
-
 
     socket.on("error", (err) => {
         console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
