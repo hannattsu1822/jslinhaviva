@@ -10,6 +10,7 @@
 </head>
 <body>
     <div class="dashboard-container">
+        <!-- ... (Header e Info Panel continuam os mesmos) ... -->
         <div class="header">
             <h1 id="rele-name-header"><%= releNome %></h1>
             <div id="status-indicator" class="status-box status-no-data">
@@ -17,13 +18,13 @@
                 <span class="status-text">Aguardando Dados</span>
             </div>
         </div>
-
         <div class="info-panel">
             <h3>Informações do Dispositivo</h3>
             <p><strong>Local Tag:</strong> <span id="info-tag">-</span></p>
             <p><strong>Endereço IP:</strong> <span id="info-ip">-</span></p>
         </div>
 
+        <!-- Live Data Panel continua o mesmo -->
         <div class="live-data-panel">
             <h3>Última Leitura Recebida</h3>
             <div class="live-grid">
@@ -51,22 +52,27 @@
                     <span class="label">Temp. Enrolamento (°C)</span>
                     <span class="value" id="live-temp-enrol">-</span>
                 </div>
-                <div class="live-data-point">
-                    <span class="label">Status Alvo</span>
-                    <span class="value status-text" id="live-target">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Autoteste</span>
-                    <span class="value status-text" id="live-selftest">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Alarmes</span>
-                    <span class="value status-text" id="live-alarm">-</span>
-                </div>
             </div>
             <p class="timestamp" id="live-timestamp">Nenhuma leitura recebida ainda.</p>
         </div>
 
+        <!-- NOVA SEÇÃO DE GRÁFICOS -->
+        <div class="charts-panel">
+            <h3>Monitoramento em Tempo Real</h3>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <canvas id="tensaoChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="correnteChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="temperaturaChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Panel continua o mesmo -->
         <div class="history-panel">
             <h3>Histórico de Leituras (Últimas 100)</h3>
             <div class="table-container">
@@ -88,6 +94,11 @@
             </div>
         </div>
     </div>
+    
+    <!-- Adicionando Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
     <script>
         const RELE_ID = <%= releId %>;
     </script>
