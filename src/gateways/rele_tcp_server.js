@@ -27,9 +27,6 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
-// ====================================================================
-// FUNÇÃO PARSEDATA COM LÓGICA ROBUSTA E DEFINITIVA
-// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const metStartIndex = metResponse.indexOf('SEL-2414');
@@ -41,15 +38,16 @@ function parseData(metResponse, tempResponse) {
     const cleanMet = metResponse.substring(metStartIndex);
     const cleanTemp = tempResponse.substring(tempStartIndex);
     try {
-        // Regex robusta para Corrente (ignora a 4ª coluna IGX)
-        const currentMatch = cleanMet.match(/IAX\s+IBX\s+ICX[\s\S]*?Current.*?\(A\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
+        // ====================================================================
+        // REGEX FINAL E ROBUSTA PARA CORRENTE
+        // ====================================================================
+        const currentMatch = cleanMet.match(/Current Magnitude \(A\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
             data.corrente_b = parseFloat(currentMatch[2]);
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        // Regex robusta para Tensão de Fase (ignora a 4ª coluna VG)
         const voltagePhaseMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
         if (voltagePhaseMatch) {
             data.tensao_va = parseFloat(voltagePhaseMatch[1]);
@@ -57,7 +55,6 @@ function parseData(metResponse, tempResponse) {
             data.tensao_vc = parseFloat(voltagePhaseMatch[3]);
         }
 
-        // Regex robusta para Tensão de Linha
         const voltageLineMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
         if (voltageLineMatch) {
             data.tensao_vab = parseFloat(voltageLineMatch[1]);
@@ -91,10 +88,6 @@ function parseData(metResponse, tempResponse) {
         return null;
     }
 }
-// ====================================================================
-// FIM DA FUNÇÃO ATUALIZADA
-// ====================================================================
-
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
