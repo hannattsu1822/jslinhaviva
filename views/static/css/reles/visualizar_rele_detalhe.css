@@ -1,5 +1,6 @@
-.header { display: flex; justify-content: space-between; align-items: center; }
-.status-box { display: flex; align-items: center; padding: 8px 15px; border-radius: 20px; font-weight: 500; }
+/* --- GERAL --- */
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.status-box { display: flex; align-items: center; padding: 8px 15px; border-radius: 20px; font-weight: 500; transition: all 0.3s ease; }
 .status-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
 .status-box.status-online { background-color: #e8f5e9; color: #2e7d32; }
 .status-box.status-online .status-dot { background-color: #4caf50; }
@@ -7,14 +8,79 @@
 .status-box.status-offline .status-dot { background-color: #f44336; }
 .status-box.status-no-data { background-color: #f5f5f5; color: #616161; }
 .status-box.status-no-data .status-dot { background-color: #9e9e9e; }
-.info-panel, .live-data-panel, .history-panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 2rem; }
-h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-.live-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; }
-.live-data-point .label { font-size: 0.9rem; color: #666; }
-.live-data-point .value { font-size: 1.8rem; font-weight: 500; color: #1a237e; }
-.timestamp { text-align: right; color: #888; font-size: 0.8rem; margin-top: 20px; }
-.table-container { max-height: 400px; overflow-y: auto; }
-#history-table { width: 100%; border-collapse: collapse; }
-#history-table th, #history-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-#history-table th { background-color: #f9f9f9; }
-#history-table tbody tr:first-child { background-color: #e3f2fd; }
+.timestamp { text-align: right; color: #888; font-size: 0.8rem; margin-top: -1rem; margin-bottom: 2rem; }
+
+/* --- NOVOS CARDS DE LEITURA --- */
+.live-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 2rem;
+}
+.live-card {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+.card-icon .material-icons { font-size: 32px; }
+.card-icon.tension { background: linear-gradient(135deg, #FFC107, #FF8F00); }
+.card-icon.current { background: linear-gradient(135deg, #2196F3, #0D47A1); }
+.card-icon.temp { background: linear-gradient(135deg, #F44336, #B71C1C); }
+
+.card-content { flex-grow: 1; }
+.card-label {
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 8px;
+    display: block;
+}
+.card-value-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.card-value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* --- PAINEL E GRÁFICOS PROFISSIONAIS --- */
+.charts-panel {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+.chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+}
+.chart-container.full-width {
+    grid-column: 1 / -1; /* Ocupa a largura total se estiver em grid */
+}
+
+@media (min-width: 1024px) {
+    .charts-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
