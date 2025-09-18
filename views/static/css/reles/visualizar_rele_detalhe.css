@@ -1,3 +1,5 @@
+/* Arquivo: visualizar_rele_detalhe.css */
+
 /* --- GERAL --- */
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .status-box { display: flex; align-items: center; padding: 8px 15px; border-radius: 20px; font-weight: 500; transition: all 0.3s ease; }
@@ -25,7 +27,21 @@
     display: flex;
     align-items: center;
     gap: 20px;
+    border: 1px solid #eee;
+    transition: box-shadow 0.3s ease;
 }
+
+/* Efeito de atualização quando chega um dado novo */
+@keyframes flash {
+    0% { box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+    50% { box-shadow: 0 4px 25px rgba(50, 150, 255, 0.3); }
+    100% { box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+}
+.live-card.just-updated {
+    animation: flash 0.7s ease-out;
+}
+
+
 .card-icon {
     width: 60px;
     height: 60px;
@@ -34,11 +50,16 @@
     align-items: center;
     justify-content: center;
     color: #fff;
+    flex-shrink: 0;
 }
 .card-icon .material-icons { font-size: 32px; }
-.card-icon.tension { background: linear-gradient(135deg, #FFC107, #FF8F00); }
+
+/* --- NOVOS ESTILOS PARA ÍCONES ESPECÍFICOS --- */
+.card-icon.tension-phase { background: linear-gradient(135deg, #FFC107, #FF8F00); }
+.card-icon.tension-line { background: linear-gradient(135deg, #ff7e5f, #feb47b); }
 .card-icon.current { background: linear-gradient(135deg, #2196F3, #0D47A1); }
 .card-icon.temp { background: linear-gradient(135deg, #F44336, #B71C1C); }
+
 
 .card-content { flex-grow: 1; }
 .card-label {
@@ -49,11 +70,27 @@
 }
 .card-value-group {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around; /* Distribui melhor o espaço */
     align-items: baseline;
+    gap: 15px;
 }
+
+/* --- NOVOS ESTILOS PARA VALORES COM LABELS --- */
+.card-value-group.labeled > div {
+    text-align: center;
+}
+.sub-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #999;
+    text-transform: uppercase;
+    display: block;
+}
+/* --- FIM DOS NOVOS ESTILOS PARA VALORES --- */
+
+
 .card-value {
-    font-size: 1.8rem;
+    font-size: 1.6rem; /* Levemente menor para caber melhor */
     font-weight: 600;
     color: #333;
 }
@@ -76,10 +113,10 @@
     width: 100%;
 }
 .chart-container.full-width {
-    grid-column: 1 / -1; /* Ocupa a largura total se estiver em grid */
+    grid-column: 1 / -1;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1200px) { /* Ponto de quebra para telas maiores */
     .charts-grid {
         grid-template-columns: 1fr 1fr;
     }
