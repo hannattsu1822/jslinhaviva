@@ -5,6 +5,7 @@ const net = require("net");
 const mysql = require("mysql2/promise");
 const mqtt = require("mqtt");
 
+// ... (configurações de DB, MQTT, etc. - sem alterações) ...
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
 const pollInterval = 60000;
@@ -20,18 +21,23 @@ const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 const releClients = new Map();
 
-function cleanString(rawString) {
-    // eslint-disable-next-line no-control-regex
-    return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
-}
 
 function parseData(metResponse, staResponse, tempResponse) {
     const data = {};
+    
+    // --- LOGS DE DEPURAÇÃO REINTRODUZIDOS ---
+    console.log("\n--- INICIANDO PARSING DE DADOS BRUTOS ---");
+    console.log("--- Resposta MET ---");
+    console.log(metResponse);
+    console.log("--- Fim Resposta MET ---\n");
+    // --- FIM DOS LOGS ---
+
     const rawMet = metResponse; 
     const cleanedSta = cleanString(staResponse);
     const cleanedTemp = cleanString(tempResponse);
 
     try {
+        // ... (resto da função parseData - sem alterações) ...
         const currentMatch = rawMet.match(/C[^A-Za-z]*u[^A-Za-z]*r[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*t.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
@@ -91,6 +97,11 @@ function parseData(metResponse, staResponse, tempResponse) {
     }
 }
 
+// ... (resto do arquivo rele_tcp_server.js - sem alterações) ...
+function cleanString(rawString) {
+    // eslint-disable-next-line no-control-regex
+    return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
+}
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
