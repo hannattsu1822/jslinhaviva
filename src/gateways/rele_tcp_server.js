@@ -30,6 +30,13 @@ function parseData(metResponse, staResponse, tempResponse) {
     const cleanedSta = cleanString(staResponse);
     const cleanedTemp = cleanString(tempResponse);
 
+    // --- LOG DE DEPURAÇÃO REINTRODUZIDO ---
+    console.log("\n--- INICIANDO PARSING DE DADOS BRUTOS ---");
+    console.log("--- Resposta MET (Original) ---");
+    console.log(rawMet);
+    console.log("--- Fim Resposta MET ---\n");
+    // --- FIM DO LOG ---
+
     try {
         const currentMatch = rawMet.match(/C[^A-Za-z]*u[^A-Za-z]*r[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*t.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (currentMatch) {
@@ -45,7 +52,9 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.tensao_c = parseFloat(voltageMatch[3]);
         }
 
-        const frequencyMatch = rawMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
+        // --- REGEX "À PROVA DE BALAS" ---
+        // Ignora maiúsculas/minúsculas e não depende de formatação exata.
+        const frequencyMatch = rawMet.match(/frequency.*?hz.*?=\s*([\d.-]+)/is);
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
             data.frequencia = parseFloat(cleanNumber);
@@ -60,14 +69,12 @@ function parseData(metResponse, staResponse, tempResponse) {
         const alarmMatch = cleanedSta.match(/ALARM\s+=\s+([A-Z\s]+)/);
         if (alarmMatch) data.alarm_status = alarmMatch[1].trim();
 
-        // --- PARSER DE TEMPERATURA CORRIGIDO E ESPECÍFICO ---
         const tempAmbMatch = cleanedTemp.match(/AMBT \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempAmbMatch) data.temperatura_ambiente = parseFloat(tempAmbMatch[1]);
 
         const tempHotSpotMatch = cleanedTemp.match(/HS \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempHotSpotMatch) data.temperatura_enrolamento = parseFloat(tempHotSpotMatch[1]);
         
-        // Para a temperatura do dispositivo, vamos usar a TOILC (Temperatura do Óleo Calculada) como uma aproximação
         const tempDeviceMatch = cleanedTemp.match(/TOILC \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempDeviceMatch) data.temperatura_dispositivo = parseFloat(tempDeviceMatch[1]);
 
