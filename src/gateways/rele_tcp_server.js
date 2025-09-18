@@ -20,8 +20,8 @@ const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 const releClients = new Map();
 
-// As funções de parse e clean permanecem as mesmas da tentativa anterior
 function cleanString(rawString) {
+    // eslint-disable-next-line no-control-regex
     return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
 }
 
@@ -32,6 +32,7 @@ function parseData(metResponse, staResponse, tempResponse) {
     const cleanedTemp = cleanString(tempResponse);
 
     try {
+        // --- Parsing do MET ---
         const currentMatch = rawMet.match(/C[^A-Za-z]*u[^A-Za-z]*r[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*t.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
@@ -52,6 +53,8 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.frequencia = parseFloat(cleanNumber);
         }
 
+        // --- Parsing do STA (Opcional) ---
+        // Tentamos encontrar, mas não falhamos se não encontrar.
         const targetMatch = cleanedSta.match(/TARGET\s+=\s+([A-Z]+)/);
         if (targetMatch) data.target_status = targetMatch[1];
 
@@ -61,6 +64,7 @@ function parseData(metResponse, staResponse, tempResponse) {
         const alarmMatch = cleanedSta.match(/ALARM\s+=\s+([A-Z\s]+)/);
         if (alarmMatch) data.alarm_status = alarmMatch[1].trim();
 
+        // --- Parsing da Temperatura ---
         const temps = cleanedTemp.matchAll(/([\d.-]+)\s*C/g);
         const tempValues = Array.from(temps, m => parseFloat(m[1]));
         
@@ -72,10 +76,11 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.temperatura_dispositivo = tempValues[0];
         }
 
+        // --- VALIDAÇÃO SIMPLIFICADA ---
+        // Agora só exigimos os dados de MET. STA e THE são bônus.
         const requiredKeys = [
             'corrente_a', 'corrente_b', 'corrente_c', 
-            'tensao_a', 'tensao_b', 'tensao_c', 'frequencia',
-            'target_status', 'self_test_status', 'alarm_status'
+            'tensao_a', 'tensao_b', 'tensao_c', 'frequencia'
         ];
         
         for (const key of requiredKeys) {
@@ -104,13 +109,6 @@ const server = net.createServer((socket) => {
     socket.tempData = '';
 
     socket.on('data', async (data) => {
-        // --- LOG DE DEPURAÇÃO AVANÇADA ---
-        console.log(`\n--- DADOS BRUTOS RECEBIDOS (Estado: ${socket.state}) ---`);
-        console.log("Como String:", data.toString('latin1'));
-        console.log("Como Hex:", data.toString('hex'));
-        console.log("---------------------------------------------------\n");
-        // --- FIM DO LOG ---
-
         const rawText = data.toString('latin1');
         if (!rawText) return;
         socket.buffer += rawText;
