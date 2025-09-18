@@ -5,21 +5,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let updateTimeout;
-    const MAX_CHART_POINTS = 40;
+    const MAX_CHART_POINTS = 60; // Aumentado para mais dados
     let tensaoChart, correnteChart, temperaturaChart;
 
     const formatValue = (value, dec) => (typeof value === 'number' ? value.toFixed(dec) : '-');
     
     function updateLiveCards(data) {
-        document.getElementById('live-tensao-a').textContent = formatValue(data.tensao_a, 1);
-        document.getElementById('live-tensao-b').textContent = formatValue(data.tensao_b, 1);
-        document.getElementById('live-tensao-c').textContent = formatValue(data.tensao_c, 1);
+        // Tensão de Fase
+        document.getElementById('live-tensao-va').textContent = formatValue(data.tensao_va, 1);
+        document.getElementById('live-tensao-vb').textContent = formatValue(data.tensao_vb, 1);
+        document.getElementById('live-tensao-vc').textContent = formatValue(data.tensao_vc, 1);
+
+        // Tensão de Linha (NOVO)
+        document.getElementById('live-tensao-vab').textContent = formatValue(data.tensao_vab, 1);
+        document.getElementById('live-tensao-vbc').textContent = formatValue(data.tensao_vbc, 1);
+        document.getElementById('live-tensao-vca').textContent = formatValue(data.tensao_vca, 1);
+
+        // Corrente
         document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 2);
         document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 2);
         document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 2);
+
+        // Temperatura
         document.getElementById('live-temp-disp').textContent = formatValue(data.temperatura_dispositivo, 1);
         document.getElementById('live-temp-amb').textContent = formatValue(data.temperatura_ambiente, 1);
         document.getElementById('live-temp-enrol').textContent = formatValue(data.temperatura_enrolamento, 1);
+        
         const timestamp = new Date(data.timestamp_leitura);
         document.getElementById('live-timestamp').textContent = `Última leitura: ${timestamp.toLocaleString('pt-BR')}`;
     }
@@ -35,10 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
             statusText.textContent = 'Offline';
         }
         clearTimeout(updateTimeout);
-        updateTimeout = setTimeout(() => setStatus(false), 180000);
+        if (online) {
+            updateTimeout = setTimeout(() => setStatus(false), 180000); // 3 minutos
+        }
     }
 
-    // --- LÓGICA DOS GRÁFICOS PROFISSIONAIS ---
     function createProfessionalChart(ctx, label, yAxisLabel) {
         return new Chart(ctx, {
             type: 'line',
@@ -48,28 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: {
-                        type: 'time',
-                        time: { unit: 'minute', tooltipFormat: 'dd/MM/yyyy HH:mm:ss', displayFormats: { minute: 'HH:mm' } },
-                        grid: { display: false }
-                    },
-                    y: {
-                        title: { display: true, text: yAxisLabel },
-                        grid: { color: '#f0f0f0' }
-                    }
+                    x: { type: 'time', time: { unit: 'minute', tooltipFormat: 'dd/MM/yyyy HH:mm:ss', displayFormats: { minute: 'HH:mm' } }, grid: { display: false } },
+                    y: { title: { display: true, text: yAxisLabel }, grid: { color: '#f0f0f0' } }
                 },
                 plugins: {
                     title: { display: true, text: label, font: { size: 18, weight: 'bold' }, padding: { bottom: 20 } },
                     legend: { position: 'bottom' },
-                    tooltip: {
-                        backgroundColor: '#fff',
-                        titleColor: '#333',
-                        bodyColor: '#666',
-                        borderColor: '#ddd',
-                        borderWidth: 1,
-                        padding: 10,
-                        displayColors: true
-                    }
+                    tooltip: { backgroundColor: '#fff', titleColor: '#333', bodyColor: '#666', borderColor: '#ddd', borderWidth: 1, padding: 10, displayColors: true }
                 }
             }
         });
@@ -79,15 +76,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let dataset = chart.data.datasets.find(ds => ds.label === label);
         if (!dataset) {
             const gradient = chart.ctx.createLinearGradient(0, 0, 0, chart.height);
-            gradient.addColorStop(0, color + '66'); // 40% de opacidade
-            gradient.addColorStop(1, color + '00'); // 0% de opacidade
+            gradient.addColorStop(0, color + '66');
+            gradient.addColorStop(1, color + '00');
 
             dataset = {
                 label: label,
                 data: [],
                 borderColor: color,
                 backgroundColor: gradient,
-                tension: 0.4, // Linhas suavizadas
+                tension: 0.4,
                 fill: true,
                 pointRadius: 0,
                 pointHoverRadius: 5
@@ -103,26 +100,34 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeCharts(leituras) {
         const reversedLeituras = leituras.slice(0, MAX_CHART_POINTS).reverse();
         
+        // --- Gráfico de Tensão (agora com 6 linhas) ---
         const tensaoCtx = document.getElementById('tensaoChart');
-        tensaoChart = createProfessionalChart(tensaoCtx, 'Tensão por Fase', 'Tensão (V)');
+        tensaoChart = createProfessionalChart(tensaoCtx, 'Tensão (Fase e Linha)', 'Tensão (V)');
         reversedLeituras.forEach(d => {
             const time = new Date(d.timestamp_leitura).getTime();
-            addDataToChart(tensaoChart, 'Fase A', { x: time, y: d.tensao_a }, '#FF6384');
-            addDataToChart(tensaoChart, 'Fase B', { x: time, y: d.tensao_b }, '#36A2EB');
-            addDataToChart(tensaoChart, 'Fase C', { x: time, y: d.tensao_c }, '#FFCE56');
+            // Fase
+            addDataToChart(tensaoChart, 'Fase VA', { x: time, y: d.tensao_va }, '#FF6384');
+            addDataToChart(tensaoChart, 'Fase VB', { x: time, y: d.tensao_vb }, '#36A2EB');
+            addDataToChart(tensaoChart, 'Fase VC', { x: time, y: d.tensao_vc }, '#FFCE56');
+            // Linha
+            addDataToChart(tensaoChart, 'Linha VAB', { x: time, y: d.tensao_vab }, '#e83e5c');
+            addDataToChart(tensaoChart, 'Linha VBC', { x: time, y: d.tensao_vbc }, '#2aa0e0');
+            addDataToChart(tensaoChart, 'Linha VCA', { x: time, y: d.tensao_vca }, '#e6bc4c');
         });
         tensaoChart.update();
 
+        // --- Gráfico de Corrente ---
         const correnteCtx = document.getElementById('correnteChart');
         correnteChart = createProfessionalChart(correnteCtx, 'Corrente por Fase', 'Corrente (A)');
         reversedLeituras.forEach(d => {
             const time = new Date(d.timestamp_leitura).getTime();
-            addDataToChart(correnteChart, 'Fase A', { x: time, y: d.corrente_a }, '#FF6384');
-            addDataToChart(correnteChart, 'Fase B', { x: time, y: d.corrente_b }, '#36A2EB');
-            addDataToChart(correnteChart, 'Fase C', { x: time, y: d.corrente_c }, '#FFCE56');
+            addDataToChart(correnteChart, 'Corrente A', { x: time, y: d.corrente_a }, '#FF6384');
+            addDataToChart(correnteChart, 'Corrente B', { x: time, y: d.corrente_b }, '#36A2EB');
+            addDataToChart(correnteChart, 'Corrente C', { x: time, y: d.corrente_c }, '#FFCE56');
         });
         correnteChart.update();
 
+        // --- Gráfico de Temperatura ---
         const tempCtx = document.getElementById('temperaturaChart');
         temperaturaChart = createProfessionalChart(tempCtx, 'Temperaturas', 'Graus (°C)');
         reversedLeituras.forEach(d => {
@@ -142,9 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (leituras.length > 0) {
                 updateLiveCards(leituras[0]);
+                setStatus( (new Date() - new Date(leituras[0].timestamp_leitura)) < 180000 );
                 initializeCharts(leituras);
             } else {
                 initializeCharts([]);
+                setStatus(false);
             }
         } catch (error) {
             console.error('Erro ao carregar dados iniciais:', error);
@@ -167,16 +174,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateLiveCards(data);
                     setStatus(true);
 
-                    addDataToChart(tensaoChart, 'Fase A', { x: time, y: data.tensao_a }, '#FF6384');
-                    addDataToChart(tensaoChart, 'Fase B', { x: time, y: data.tensao_b }, '#36A2EB');
-                    addDataToChart(tensaoChart, 'Fase C', { x: time, y: data.tensao_c }, '#FFCE56');
-                    tensaoChart.update('none'); // 'none' para uma atualização mais suave
+                    // Atualiza gráfico de tensão (fase e linha)
+                    addDataToChart(tensaoChart, 'Fase VA', { x: time, y: data.tensao_va }, '#FF6384');
+                    addDataToChart(tensaoChart, 'Fase VB', { x: time, y: data.tensao_vb }, '#36A2EB');
+                    addDataToChart(tensaoChart, 'Fase VC', { x: time, y: data.tensao_vc }, '#FFCE56');
+                    addDataToChart(tensaoChart, 'Linha VAB', { x: time, y: data.tensao_vab }, '#e83e5c');
+                    addDataToChart(tensaoChart, 'Linha VBC', { x: time, y: data.tensao_vbc }, '#2aa0e0');
+                    addDataToChart(tensaoChart, 'Linha VCA', { x: time, y: data.tensao_vca }, '#e6bc4c');
+                    tensaoChart.update('none');
 
-                    addDataToChart(correnteChart, 'Fase A', { x: time, y: data.corrente_a }, '#FF6384');
-                    addDataToChart(correnteChart, 'Fase B', { x: time, y: data.corrente_b }, '#36A2EB');
-                    addDataToChart(correnteChart, 'Fase C', { x: time, y: data.corrente_c }, '#FFCE56');
+                    // Atualiza gráfico de corrente
+                    addDataToChart(correnteChart, 'Corrente A', { x: time, y: data.corrente_a }, '#FF6384');
+                    addDataToChart(correnteChart, 'Corrente B', { x: time, y: data.corrente_b }, '#36A2EB');
+                    addDataToChart(correnteChart, 'Corrente C', { x: time, y: data.corrente_c }, '#FFCE56');
                     correnteChart.update('none');
 
+                    // Atualiza gráfico de temperatura
                     addDataToChart(temperaturaChart, 'Dispositivo', { x: time, y: data.temperatura_dispositivo }, '#4BC0C0');
                     addDataToChart(temperaturaChart, 'Ambiente', { x: time, y: data.temperatura_ambiente }, '#9966FF');
                     addDataToChart(temperaturaChart, 'Enrolamento', { x: time, y: data.temperatura_enrolamento }, '#FF9F40');
