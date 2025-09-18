@@ -90,11 +90,9 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
     const tDateTime = data.timestamp;
 
     if (data.value_channels !== undefined) {
-      console.log(`[MQTT Handler] Payload formato 'value_channels' detectado para SN: ${serialNumber}`);
       temperatura = data.value_channels[2];
       alarmeAtivo = data.alarms && data.alarms[1] === 1;
     } else if (data.ch_analog_1 !== undefined) {
-      console.log(`[MQTT Handler] Payload formato 'ch_analog_1' detectado para SN: ${serialNumber}`);
       temperatura = data.ch_analog_1;
       alarmeAtivo = data.alarm_01 === 1;
     } else {
@@ -103,17 +101,13 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
     }
 
     if (temperatura === undefined) {
-      console.error(
-        "[MQTT Handler] Valor de temperatura não pôde ser extraído do payload:",
-        data
-      );
+      console.error("[MQTT Handler] Valor de temperatura não pôde ser extraído do payload:", data);
       return;
     }
 
     const epochOffset = 25569;
     const jsTimestamp = (tDateTime - epochOffset) * 86400 * 1000;
     const timestampLeitura = new Date(jsTimestamp);
-
     const fonteAlimentacao = "Verificar Status";
 
     const sql = `
@@ -128,12 +122,8 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
       JSON.stringify(data),
       fonteAlimentacao,
     ]);
-    console.log(
-      `[MQTT Handler] Payload de canais salvo para SN: ${serialNumber}`
-    );
-
+    console.log(`[MQTT Handler] Payload de canais salvo para SN: ${serialNumber}`);
     await salvarInfoDispositivo(serialNumber, data, wss);
-
     await verificarVentilacaoPorAlarme(serialNumber, alarmeAtivo, timestampLeitura);
 
     if (wss) {
@@ -141,9 +131,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
         "SELECT local_tag FROM dispositivos_logbox WHERE serial_number = ?",
         [serialNumber]
       );
-      const localTag =
-        deviceRows.length > 0 ? deviceRows[0].local_tag : serialNumber;
-
+      const localTag = deviceRows.length > 0 ? deviceRows[0].local_tag : serialNumber;
       const payloadWebSocket = {
         type: "nova_leitura",
         dados: {
@@ -162,11 +150,7 @@ async function salvarLeituraLogBox(serialNumber, data, wss) {
       });
     }
   } catch (err) {
-    console.error(
-      "[MQTT Handler] Erro ao salvar payload de canais no banco de dados:",
-      err
-    );
-    console.error("Payload que causou o erro:", data);
+    console.error("[MQTT Handler] Erro ao salvar payload de canais no banco de dados:", err);
   }
 }
 
@@ -178,9 +162,7 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
     );
 
     if (rows.length === 0) {
-      console.log(
-        `[Device Info Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`
-      );
+      console.log(`[Device Info Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`);
       return;
     }
 
@@ -193,25 +175,18 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
     }
     
     const novoStatus = Object.assign(statusAtual, data);
-    
     novoStatus.connection_status = "online";
 
     await promisePool.query(
       "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
       [JSON.stringify(novoStatus), serialNumber]
     );
-
-    console.log(
-      `[Device Info Handler] Status atualizado para SN: ${serialNumber} com dados de canais.`
-    );
+    console.log(`[Device Info Handler] Status atualizado para SN: ${serialNumber} com dados de canais.`);
 
     if (wss) {
       const payloadWebSocket = {
         type: "atualizacao_status",
-        dados: {
-          serial_number: serialNumber,
-          status: novoStatus,
-        },
+        dados: { serial_number: serialNumber, status: novoStatus },
       };
       wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
@@ -220,20 +195,14 @@ async function salvarInfoDispositivo(serialNumber, data, wss) {
       });
     }
   } catch (err) {
-    console.error(
-      "[Device Info Handler] Erro ao salvar status do dispositivo:",
-      err
-    );
-    console.error("Payload que causou o erro:", data);
+    console.error("[Device Info Handler] Erro ao salvar status do dispositivo:", err);
   }
 }
 
 async function salvarStatusConexao(data, wss) {
   const serialNumber = data.serial;
   if (!serialNumber) {
-    console.error(
-      "[Connection Status Handler] Serial number não encontrado no payload de 'neighbor'."
-    );
+    console.error("[Connection Status Handler] Serial number não encontrado no payload de 'neighbor'.");
     return;
   }
 
@@ -244,9 +213,7 @@ async function salvarStatusConexao(data, wss) {
     );
 
     if (rows.length === 0) {
-      console.log(
-        `[Connection Status Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`
-      );
+      console.log(`[Connection Status Handler] Dispositivo com SN ${serialNumber} não encontrado no DB.`);
       return;
     }
 
@@ -264,18 +231,12 @@ async function salvarStatusConexao(data, wss) {
       "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
       [JSON.stringify(novoStatus), serialNumber]
     );
-
-    console.log(
-      `[Connection Status Handler] Status de conexão atualizado para SN: ${serialNumber}.`
-    );
+    console.log(`[Connection Status Handler] Status de conexão atualizado para SN: ${serialNumber}.`);
 
     if (wss) {
       const payloadWebSocket = {
         type: "atualizacao_status",
-        dados: {
-          serial_number: serialNumber,
-          status: novoStatus,
-        },
+        dados: { serial_number: serialNumber, status: novoStatus },
       };
       wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
@@ -284,31 +245,30 @@ async function salvarStatusConexao(data, wss) {
       });
     }
   } catch (err) {
-    console.error(
-      "[Connection Status Handler] Erro ao salvar status de conexão:",
-      err
-    );
-    console.error("Payload que causou o erro:", data);
+    console.error("[Connection Status Handler] Erro ao salvar status de conexão:", err);
   }
 }
 
-// --- FUNÇÃO PRINCIPAL ATUALIZADA ---
+
+// ====================================================================
+// FUNÇÃO PRINCIPAL ATUALIZADA
+// ====================================================================
 async function salvarLeituraRele(data, wss) {
   try {
-    // Desestrutura todos os campos do payload, usando 'null' como padrão para os que podem não existir
+    // Desestrutura todos os campos do payload, usando os nomes de colunas corretos
     const {
       rele_id,
       timestamp_leitura,
-      tensao_a = null,
-      tensao_b = null,
-      tensao_c = null,
+      tensao_va = null,
+      tensao_vb = null,
+      tensao_vc = null,
+      tensao_vab = null,
+      tensao_vbc = null,
+      tensao_vca = null,
       corrente_a = null,
       corrente_b = null,
       corrente_c = null,
       frequencia = null,
-      target_status = null,
-      self_test_status = null,
-      alarm_status = null,
       temperatura_ambiente = null,
       temperatura_enrolamento = null,
       temperatura_dispositivo = null,
@@ -316,25 +276,26 @@ async function salvarLeituraRele(data, wss) {
       local_tag
     } = data;
 
-    // Query SQL atualizada para incluir todas as novas colunas
+    // Query SQL atualizada para usar os nomes de colunas corretos
     const sqlInsert = `
       INSERT INTO leituras_reles (
         rele_id, timestamp_leitura, 
-        tensao_a, tensao_b, tensao_c, 
+        tensao_va, tensao_vb, tensao_vc, 
+        tensao_vab, tensao_vbc, tensao_vca,
         corrente_a, corrente_b, corrente_c, 
-        frequencia, 
-        target_status, self_test_status, alarm_status,
+        frequencia,
         temperatura_ambiente, temperatura_enrolamento, temperatura_dispositivo,
         payload_completo
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
+    // Array de parâmetros atualizado para corresponder à query
     await promisePool.query(sqlInsert, [
       rele_id, timestamp_leitura,
-      tensao_a, tensao_b, tensao_c,
+      tensao_va, tensao_vb, tensao_vc,
+      tensao_vab, tensao_vbc, tensao_vca,
       corrente_a, corrente_b, corrente_c,
       frequencia,
-      target_status, self_test_status, alarm_status,
       temperatura_ambiente, temperatura_enrolamento, temperatura_dispositivo,
       payload_completo
     ]);
@@ -362,6 +323,10 @@ async function salvarLeituraRele(data, wss) {
     console.error("[MQTT Handler] Erro ao salvar leitura do relé:", err);
   }
 }
+// ====================================================================
+// FIM DA FUNÇÃO ATUALIZADA
+// ====================================================================
+
 
 function iniciarClienteMQTT(app) {
   const options = {
@@ -373,17 +338,11 @@ function iniciarClienteMQTT(app) {
   const client = mqtt.connect(options);
 
   client.on("connect", () => {
-    console.log(
-      "[MQTT Handler] Conectado ao broker Mosquitto local com sucesso!"
-    );
+    console.log("[MQTT Handler] Conectado ao broker Mosquitto local com sucesso!");
     const topicos = ["novus/+/status/channels", "novus/neighbor", "sel/reles/+/status"];
     client.subscribe(topicos, (err) => {
       if (!err) {
-        console.log(
-          `[MQTT Handler] Inscrito com sucesso nos tópicos: "${topicos.join(
-            ", "
-          )}"`
-        );
+        console.log(`[MQTT Handler] Inscrito com sucesso nos tópicos: "${topicos.join(", ")}"`);
       } else {
         console.error(`[MQTT Handler] Falha ao se inscrever nos tópicos:`, err);
       }
@@ -397,23 +356,14 @@ function iniciarClienteMQTT(app) {
 
       if (topic.includes("status/channels")) {
         const serialNumber = topic.split("/")[1];
-        console.log(
-          `[MQTT Router] Mensagem de CANAIS recebida para SN: ${serialNumber}`
-        );
         salvarLeituraLogBox(serialNumber, dados, wss);
       } else if (topic === "novus/neighbor") {
-        console.log(`[MQTT Router] Mensagem de CONEXÃO recebida.`);
         salvarStatusConexao(dados, wss);
       } else if (topic.startsWith("sel/reles/")) {
-        console.log(`[MQTT Router] Mensagem de RELÉ recebida do tópico: ${topic}`);
         salvarLeituraRele(dados, wss);
       }
     } catch (e) {
-      console.error(
-        "[MQTT Handler] Erro ao processar mensagem:",
-        message.toString(),
-        e
-      );
+      console.error("[MQTT Handler] Erro ao processar mensagem:", e);
     }
   });
 
