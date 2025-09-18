@@ -1,5 +1,3 @@
-// Arquivo: rele_tcp_server.js (versão corrigida)
-
 const path = require('path');
 require("dotenv").config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -29,6 +27,9 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
+// ====================================================================
+// FUNÇÃO PARSEDATA ATUALIZADA PARA SER MAIS ROBUSTA
+// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const metStartIndex = metResponse.indexOf('SEL-2414');
@@ -47,21 +48,25 @@ function parseData(metResponse, tempResponse) {
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        // *** ALTERAÇÃO AQUI: Captura Tensão de Fase (VA, VB, VC) ***
-        const voltagePhaseMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
-        if (voltagePhaseMatch) {
-            data.tensao_va = parseFloat(voltagePhaseMatch[1]);
-            data.tensao_vb = parseFloat(voltagePhaseMatch[2]);
-            data.tensao_vc = parseFloat(voltagePhaseMatch[3]);
+        // --- LÓGICA DE TENSÃO ATUALIZADA ---
+        const voltageRegex = /Voltage Magnitude \(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/g;
+        const voltageMatches = [...cleanMet.matchAll(voltageRegex)];
+
+        // O primeiro resultado é a Tensão de Fase
+        if (voltageMatches.length > 0) {
+            data.tensao_va = parseFloat(voltageMatches[0][1]);
+            data.tensao_vb = parseFloat(voltageMatches[0][2]);
+            data.tensao_vc = parseFloat(voltageMatches[0][3]);
         }
 
-        // *** ALTERAÇÃO AQUI: Captura Tensão de Linha (VAB, VBC, VCA) ***
-        const voltageLineMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
-        if (voltageLineMatch) {
-            data.tensao_vab = parseFloat(voltageLineMatch[1]);
-            data.tensao_vbc = parseFloat(voltageLineMatch[2]);
-            data.tensao_vca = parseFloat(voltageLineMatch[3]);
+        // O segundo resultado é a Tensão de Linha
+        if (voltageMatches.length > 1) {
+            data.tensao_vab = parseFloat(voltageMatches[1][1]);
+            data.tensao_vbc = parseFloat(voltageMatches[1][2]);
+            data.tensao_vca = parseFloat(voltageMatches[1][3]);
         }
+        // --- FIM DA LÓGICA ATUALIZADA ---
+
 
         const frequencyMatch = cleanMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
         if (frequencyMatch) {
@@ -78,7 +83,7 @@ function parseData(metResponse, tempResponse) {
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
-                console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'.`);
+                console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. A leitura será descartada.`);
                 return null;
             }
         }
@@ -88,8 +93,11 @@ function parseData(metResponse, tempResponse) {
         return null;
     }
 }
+// ====================================================================
+// FIM DA FUNÇÃO ATUALIZADA
+// ====================================================================
 
-// O restante do arquivo continua igual...
+
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}. Aguardando pacote de identidade customizado.`);
@@ -147,7 +155,7 @@ const server = net.createServer((socket) => {
                     mqttClient.publish(topic, payload);
                     console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
                 } else {
-                    console.warn(`[Polling] [${socket.deviceId}] Parser falhou.`);
+                    console.warn(`[Polling] [${socket.deviceId}] Parser falhou. Nenhuma leitura será publicada.`);
                 }
             }, 4500);
         };
