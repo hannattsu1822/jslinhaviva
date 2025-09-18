@@ -1,3 +1,5 @@
+/* Arquivo: listar_reles.css */
+
 .reles-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -10,7 +12,20 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     overflow: hidden;
+    position: relative; /* Necessário para o posicionamento do status */
+    border-left: 4px solid transparent; /* Borda para indicar status */
 }
+
+/* --- NOVOS ESTILOS DE STATUS --- */
+.rele-select-card.online {
+    border-left-color: #4caf50; /* Verde */
+}
+.rele-select-card.offline {
+    border-left-color: #f44336; /* Vermelho */
+}
+/* --- FIM DOS NOVOS ESTILOS --- */
+
+
 .rele-select-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
