@@ -21,7 +21,6 @@ const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 const releClients = new Map();
 
 function cleanString(rawString) {
-    // eslint-disable-next-line no-control-regex
     return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
 }
 
@@ -30,6 +29,11 @@ function parseData(metResponse, staResponse, tempResponse) {
     const rawMet = metResponse; 
     const cleanedSta = cleanString(staResponse);
     const cleanedTemp = cleanString(tempResponse);
+
+    console.log("\n--- INICIANDO PARSING DE TEMPERATURA ---");
+    console.log("--- Resposta THE (Limpa) ---");
+    console.log(cleanedTemp);
+    console.log("--- Fim Resposta THE ---\n");
 
     try {
         const currentMatch = rawMet.match(/C[^A-Za-z]*u[^A-Za-z]*r[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*t.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
@@ -46,8 +50,6 @@ function parseData(metResponse, staResponse, tempResponse) {
             data.tensao_c = parseFloat(voltageMatch[3]);
         }
 
-        // --- REGEX DEFINITIVA ---
-        // Aceita "Frequency" (com e) e "Frequncy" (sem e)
         const frequencyMatch = rawMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
@@ -93,7 +95,6 @@ function parseData(metResponse, staResponse, tempResponse) {
     }
 }
 
-// ... O resto do arquivo (createServer, setInterval, etc.) continua exatamente o mesmo ...
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
