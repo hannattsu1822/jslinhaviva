@@ -10,7 +10,6 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- ... (Header e Info Panel continuam os mesmos) ... -->
         <div class="header">
             <h1 id="rele-name-header"><%= releNome %></h1>
             <div id="status-indicator" class="status-box status-no-data">
@@ -18,47 +17,50 @@
                 <span class="status-text">Aguardando Dados</span>
             </div>
         </div>
-        <div class="info-panel">
-            <h3>Informações do Dispositivo</h3>
-            <p><strong>Local Tag:</strong> <span id="info-tag">-</span></p>
-            <p><strong>Endereço IP:</strong> <span id="info-ip">-</span></p>
-        </div>
 
-        <!-- Live Data Panel continua o mesmo -->
-        <div class="live-data-panel">
-            <h3>Última Leitura Recebida</h3>
-            <div class="live-grid">
-                <div class="live-data-point">
-                    <span class="label">Tensão (A/B/C)</span>
-                    <span class="value" id="live-tensao">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Corrente (A/B/C)</span>
-                    <span class="value" id="live-corrente">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Frequência (Hz)</span>
-                    <span class="value" id="live-frequencia">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Temp. Dispositivo (°C)</span>
-                    <span class="value" id="live-temp-disp">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Temp. Ambiente (°C)</span>
-                    <span class="value" id="live-temp-amb">-</span>
-                </div>
-                <div class="live-data-point">
-                    <span class="label">Temp. Enrolamento (°C)</span>
-                    <span class="value" id="live-temp-enrol">-</span>
+        <!-- PAINEL DE ÚLTIMAS LEITURAS COM CARDS -->
+        <div class="live-cards-grid">
+            <!-- Tensão -->
+            <div class="live-card">
+                <div class="card-icon tension"><span class="material-icons">flash_on</span></div>
+                <div class="card-content">
+                    <span class="card-label">Tensão (V)</span>
+                    <div class="card-value-group">
+                        <span class="card-value" id="live-tensao-a">-</span>
+                        <span class="card-value" id="live-tensao-b">-</span>
+                        <span class="card-value" id="live-tensao-c">-</span>
+                    </div>
                 </div>
             </div>
-            <p class="timestamp" id="live-timestamp">Nenhuma leitura recebida ainda.</p>
+            <!-- Corrente -->
+            <div class="live-card">
+                <div class="card-icon current"><span class="material-icons">sync_alt</span></div>
+                <div class="card-content">
+                    <span class="card-label">Corrente (A)</span>
+                    <div class="card-value-group">
+                        <span class="card-value" id="live-corrente-a">-</span>
+                        <span class="card-value" id="live-corrente-b">-</span>
+                        <span class="card-value" id="live-corrente-c">-</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Temperatura -->
+            <div class="live-card">
+                <div class="card-icon temp"><span class="material-icons">thermostat</span></div>
+                <div class="card-content">
+                    <span class="card-label">Temperatura (°C)</span>
+                    <div class="card-value-group">
+                        <span class="card-value" id="live-temp-disp">-</span>
+                        <span class="card-value" id="live-temp-amb">-</span>
+                        <span class="card-value" id="live-temp-enrol">-</span>
+                    </div>
+                </div>
+            </div>
         </div>
+        <p class="timestamp" id="live-timestamp">Nenhuma leitura recebida ainda.</p>
 
-        <!-- NOVA SEÇÃO DE GRÁFICOS -->
+        <!-- PAINEL DE GRÁFICOS -->
         <div class="charts-panel">
-            <h3>Monitoramento em Tempo Real</h3>
             <div class="charts-grid">
                 <div class="chart-container">
                     <canvas id="tensaoChart"></canvas>
@@ -66,36 +68,13 @@
                 <div class="chart-container">
                     <canvas id="correnteChart"></canvas>
                 </div>
-                <div class="chart-container">
+                <div class="chart-container full-width">
                     <canvas id="temperaturaChart"></canvas>
                 </div>
             </div>
         </div>
-
-        <!-- History Panel continua o mesmo -->
-        <div class="history-panel">
-            <h3>Histórico de Leituras (Últimas 100)</h3>
-            <div class="table-container">
-                <table id="history-table">
-                    <thead>
-                        <tr>
-                            <th>Data/Hora</th>
-                            <th>Tensão (V)</th>
-                            <th>Corrente (A)</th>
-                            <th>Freq (Hz)</th>
-                            <th>Status</th>
-                            <th>Temp (°C)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-table-body">
-                        <tr><td colspan="6">Carregando histórico...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
     
-    <!-- Adicionando Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
