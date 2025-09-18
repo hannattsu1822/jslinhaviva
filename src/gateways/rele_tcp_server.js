@@ -24,50 +24,31 @@ function cleanString(rawString) {
     return rawString.replace(/[\x00-\x1F\x7F-\x9F]|¥%êX/g, '').trim();
 }
 
-function parseData(metResponse, staResponse, tempResponse) {
+function parseData(metResponse, tempResponse) {
     const data = {};
     const rawMet = metResponse; 
-    const cleanedSta = cleanString(staResponse);
     const cleanedTemp = cleanString(tempResponse);
 
-    // --- LOG DE DEPURAÇÃO REINTRODUZIDO ---
-    console.log("\n--- INICIANDO PARSING DE DADOS BRUTOS ---");
-    console.log("--- Resposta MET (Original) ---");
-    console.log(rawMet);
-    console.log("--- Fim Resposta MET ---\n");
-    // --- FIM DO LOG ---
-
     try {
-        const currentMatch = rawMet.match(/C[^A-Za-z]*u[^A-Za-z]*r[^A-Za-z]*r[^A-Za-z]*e[^A-Za-z]*n[^A-Za-z]*t.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
+        const currentMatch = rawMet.match(/Current.*?\(A\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (currentMatch) {
             data.corrente_a = parseFloat(currentMatch[1]);
             data.corrente_b = parseFloat(currentMatch[2]);
             data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        const voltageMatch = rawMet.match(/V[^A-Za-z]*o[^A-Za-z]*l[^A-Za-z]*t[^A-Za-z]*a[^A-Za-z]*g[^A-Za-z]*e.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
+        const voltageMatch = rawMet.match(/Voltage.*?\(V\).*?([\d.-]+).*?([\d.-]+).*?([\d.-]+)/s);
         if (voltageMatch) {
             data.tensao_a = parseFloat(voltageMatch[1]);
             data.tensao_b = parseFloat(voltageMatch[2]);
             data.tensao_c = parseFloat(voltageMatch[3]);
         }
 
-        // --- REGEX "À PROVA DE BALAS" ---
-        // Ignora maiúsculas/minúsculas e não depende de formatação exata.
-        const frequencyMatch = rawMet.match(/frequency.*?hz.*?=\s*([\d.-]+)/is);
+        const frequencyMatch = rawMet.match(/Freque?ncy.*?\(Hz\)\s*=\s*([\d.-]+)/s);
         if (frequencyMatch) {
             const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
             data.frequencia = parseFloat(cleanNumber);
         }
-
-        const targetMatch = cleanedSta.match(/TARGET\s+=\s+([A-Z]+)/);
-        if (targetMatch) data.target_status = targetMatch[1];
-
-        const selfTestMatch = cleanedSta.match(/SELF-TEST\s+=\s+([A-Z]+)/);
-        if (selfTestMatch) data.self_test_status = selfTestMatch[1];
-
-        const alarmMatch = cleanedSta.match(/ALARM\s+=\s+([A-Z\s]+)/);
-        if (alarmMatch) data.alarm_status = alarmMatch[1].trim();
 
         const tempAmbMatch = cleanedTemp.match(/AMBT \(deg\. C\)\s*:\s*([\d.-]+)/);
         if (tempAmbMatch) data.temperatura_ambiente = parseFloat(tempAmbMatch[1]);
@@ -86,6 +67,10 @@ function parseData(metResponse, staResponse, tempResponse) {
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
                 console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'.`);
+                // Adicionando log para ver qual resposta MET falhou
+                console.log("--- Resposta MET com falha ---");
+                console.log(rawMet);
+                console.log("----------------------------");
                 return null;
             }
         }
@@ -105,7 +90,6 @@ const server = net.createServer((socket) => {
     socket.deviceId = null;
     socket.buffer = '';
     socket.metData = '';
-    socket.staData = '';
     socket.tempData = '';
 
     socket.on('data', async (data) => {
@@ -153,23 +137,7 @@ const server = net.createServer((socket) => {
                     if (socket.buffer.includes('=>')) {
                         socket.metData = socket.buffer;
                         socket.buffer = '';
-                        socket.state = 'SENDING_STA';
-                        socket.emit('data', '');
-                    }
-                    break;
-
-                case 'SENDING_STA':
-                    console.log(`[TCP Service] [${socket.deviceId}] Enviando comando STA.`);
-                    socket.buffer = '';
-                    socket.write("STA\r\n");
-                    socket.state = 'WAITING_STA_RESPONSE';
-                    break;
-
-                case 'WAITING_STA_RESPONSE':
-                    if (socket.buffer.includes('=>')) {
-                        socket.staData = socket.buffer;
-                        socket.buffer = '';
-                        socket.state = 'SENDING_TEMP';
+                        socket.state = 'SENDING_TEMP'; // Pula direto para a temperatura
                         socket.emit('data', '');
                     }
                     break;
@@ -186,7 +154,7 @@ const server = net.createServer((socket) => {
                         socket.tempData = socket.buffer;
                         socket.buffer = '';
                         
-                        const parsedData = parseData(socket.metData, socket.staData, socket.tempData);
+                        const parsedData = parseData(socket.metData, socket.tempData);
                         if (parsedData) {
                             const topic = `sel/reles/${socket.rele_id_db}/status`;
                             const now = new Date();
@@ -197,10 +165,10 @@ const server = net.createServer((socket) => {
                                 local_tag: socket.deviceId,
                                 ...parsedData,
                                 timestamp_leitura: timestampMySQL,
-                                payload_completo: `MET:\n${socket.metData}\nSTA:\n${socket.staData}\nTEMP:\n${socket.tempData}`
+                                payload_completo: `MET:\n${socket.metData}\nTEMP:\n${socket.tempData}`
                             });
                             mqttClient.publish(topic, payload);
-                            console.log(`[TCP Service] [${socket.deviceId}] Dados VÁLIDOS (MET+STA+THE) publicados.`);
+                            console.log(`[TCP Service] [${socket.deviceId}] Dados VÁLIDOS (MET+THE) publicados.`);
                         } else {
                             console.warn(`[TCP Service] [${socket.deviceId}] Parser falhou. Descartando leitura.`);
                         }
