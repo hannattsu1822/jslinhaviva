@@ -5,7 +5,6 @@ const net = require("net");
 const mysql = require("mysql2/promise");
 const mqtt = require("mqtt");
 
-// ... (Configurações e função parseData permanecem as mesmas) ...
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
 const pollInterval = 60000;
@@ -68,12 +67,11 @@ function parseData(metResponse, tempResponse) {
     }
 }
 
-
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}. Aguardando pacote de identidade.`);
 
-    socket.state = 'AWAITING_IDENTITY'; // Novo estado inicial
+    socket.state = 'AWAITING_IDENTITY';
     socket.deviceId = null;
     socket.rele_id_db = null;
     socket.buffer = '';
@@ -83,7 +81,6 @@ const server = net.createServer((socket) => {
 
     const startPolling = () => {
         if (socket.pollTimer) clearInterval(socket.pollTimer);
-
         const poll = () => {
             if (!socket.writable) {
                 console.warn(`[Polling] Socket para ${socket.deviceId} não está gravável. Encerrando.`);
@@ -131,19 +128,31 @@ const server = net.createServer((socket) => {
     };
 
     socket.on('data', async (data) => {
+        const receivedData = data.toString('latin1');
+
         if (socket.state === 'AWAITING_IDENTITY') {
-            const identityPacket = data.toString().trim();
-            // A regex extrai um MAC Address no formato XX:XX:XX:XX:XX:XX ou XXXXXXXXXXXX
-            const macMatch = identityPacket.match(/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9A-Fa-f]{12})/);
+            // A regex procura pelo padrão MAC em qualquer lugar da string recebida
+            const macMatch = receivedData.match(/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9A-Fa-f]{12})/);
             
             if (!macMatch) {
-                console.warn(`[TCP Service] Pacote de identidade inválido recebido de ${remoteAddress}: ${identityPacket}`);
-                socket.end();
+                console.warn(`[TCP Service] Padrão MAC não encontrado no pacote inicial de ${remoteAddress}. Pacote:`, receivedData);
+                // Não fechamos a conexão imediatamente, pode chegar em outro pacote.
+                // Adicionamos um timeout para fechar se a identificação não ocorrer.
+                if (!socket.identityTimeout) {
+                    socket.identityTimeout = setTimeout(() => {
+                        if (socket.state === 'AWAITING_IDENTITY') {
+                            console.error(`[TCP Service] Timeout: Identificação falhou para ${remoteAddress}. Fechando conexão.`);
+                            socket.end();
+                        }
+                    }, 5000); // 5 segundos de timeout
+                }
                 return;
             }
 
+            if (socket.identityTimeout) clearTimeout(socket.identityTimeout);
+
             const macAddress = macMatch[0].replace(/-/g, ':').toUpperCase();
-            console.log(`[TCP Service] Pacote de identidade recebido de ${remoteAddress}. MAC: ${macAddress}`);
+            console.log(`[TCP Service] MAC Address ${macAddress} extraído do pacote de ${remoteAddress}.`);
 
             try {
                 const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE mac_address = ? AND ativo = 1", [macAddress]);
@@ -170,12 +179,13 @@ const server = net.createServer((socket) => {
                 socket.end();
             }
         } else {
-            socket.buffer += data.toString('latin1');
+            socket.buffer += receivedData;
         }
     });
 
     socket.on("close", () => {
         if (socket.pollTimer) clearInterval(socket.pollTimer);
+        if (socket.identityTimeout) clearTimeout(socket.identityTimeout);
         console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
 
