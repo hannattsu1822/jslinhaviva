@@ -85,6 +85,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
         const RELE_ID = <%= releId %>;
+        const DADOS_INICIAIS = <%- JSON.stringify(ultimaLeitura || null) %>;
     </script>
     <script src="/scripts/reles/visualizar_rele_detalhe.js"></script>
 </body>
