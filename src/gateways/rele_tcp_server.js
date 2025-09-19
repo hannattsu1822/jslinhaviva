@@ -28,63 +28,60 @@ function extractDeviceIdFromBinary(data) {
 }
 
 // ====================================================================
-// PARSER COM MEMÓRIA DE CONTEXTO - VERSÃO MAIS ROBUSTA
+// PARSER FINAL - LÓGICA DE TENSÃO INDEPENDENTE E ROBUSTA
 // ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
-    const metLines = cleanMet.split('\n');
-    const tempLines = cleanTemp.split('\n');
-
+    
     const findNumbers = (str) => {
         const matches = str.match(/-?\d[\d.,]*/g);
         return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
     };
 
     try {
-        let voltageContext = null; // Variável de "memória" para o contexto da tensão
-
-        // Processa o relatório MET linha por linha
-        for (const line of metLines) {
-            // Primeiro, verifica se a linha define um novo contexto de tensão
-            if (line.includes('VA') && line.includes('VB') && line.includes('VC')) {
-                voltageContext = 'PHASE'; // Memoriza que estamos na seção de Tensão de Fase
-            } else if (line.includes('VAB') && line.includes('VBC') && line.includes('VCA')) {
-                voltageContext = 'LINE'; // Memoriza que estamos na seção de Tensão de Linha
-            }
-
-            // Agora, processa a linha em busca de valores
-            if (line.includes('Current Magnitude (A)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length >= 3) {
-                    data.corrente_a = numbers[0];
-                    data.corrente_b = numbers[1];
-                    data.corrente_c = numbers[2];
-                }
-            } else if (line.includes('Voltage Magnitude (V)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length >= 3) {
-                    // Usa a "memória" para decidir onde salvar os valores
-                    if (voltageContext === 'PHASE') {
-                        data.tensao_va = numbers[0];
-                        data.tensao_vb = numbers[1];
-                        data.tensao_vc = numbers[2];
-                    } else if (voltageContext === 'LINE') {
-                        data.tensao_vab = numbers[0];
-                        data.tensao_vbc = numbers[1];
-                        data.tensao_vca = numbers[2];
-                    }
-                }
-            } else if (line.includes('ncy (Hz)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length > 0) {
-                    data.frequencia = numbers[0];
-                }
+        // --- Extração de Corrente ---
+        const currentMatch = cleanMet.match(/Current Magnitude \(A\)\s*([\s\S]*?)(?=Current Angle|3I2X)/);
+        if (currentMatch) {
+            const numbers = findNumbers(currentMatch[1]);
+            if (numbers.length >= 3) {
+                data.corrente_a = numbers[0];
+                data.corrente_b = numbers[1];
+                data.corrente_c = numbers[2];
             }
         }
-        
-        // Processa o relatório TEMP linha por linha
+
+        // --- Extração de Tensão de Fase (Independente) ---
+        const phaseVoltageBlockMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)\s*([\s\S]*?)(?=Voltage Angle)/);
+        if (phaseVoltageBlockMatch) {
+            const numbers = findNumbers(phaseVoltageBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.tensao_va = numbers[0];
+                data.tensao_vb = numbers[1];
+                data.tensao_vc = numbers[2];
+            }
+        }
+
+        // --- Extração de Tensão de Linha (Independente) ---
+        const lineVoltageBlockMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)\s*([\s\S]*?)(?=Voltage Angle)/);
+        if (lineVoltageBlockMatch) {
+            const numbers = findNumbers(lineVoltageBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.tensao_vab = numbers[0];
+                data.tensao_vbc = numbers[1];
+                data.tensao_vca = numbers[2];
+            }
+        }
+
+        // --- Extração de Frequência ---
+        const frequencyMatch = cleanMet.match(/ncy \(Hz\)\s*=\s*([\d.-]+)/);
+        if (frequencyMatch) {
+            data.frequencia = parseFloat(frequencyMatch[1]);
+        }
+
+        // --- Extração de Temperaturas ---
+        const tempLines = cleanTemp.split('\n');
         for (const line of tempLines) {
             if (line.includes('AMBT (deg. C)')) {
                 const numbers = findNumbers(line);
@@ -98,6 +95,7 @@ function parseData(metResponse, tempResponse) {
             }
         }
         
+        // --- Verificação Final ---
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
@@ -116,6 +114,7 @@ function parseData(metResponse, tempResponse) {
 // ====================================================================
 // FIM DO PARSER
 // ====================================================================
+
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
