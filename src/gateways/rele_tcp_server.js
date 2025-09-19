@@ -27,9 +27,6 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
-// ====================================================================
-// PARSER FINAL - LÓGICA DE BUSCA INDEPENDENTE
-// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
@@ -106,9 +103,6 @@ function parseData(metResponse, tempResponse) {
         return null;
     }
 }
-// ====================================================================
-// FIM DO PARSER
-// ====================================================================
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
@@ -140,14 +134,14 @@ const server = net.createServer((socket) => {
             }, 500);
 
             // ====================================================================
-            // TEMPO DE ESPERA AUMENTADO PARA 8 SEGUNDOS
+            // TEMPO DE ESPERA AUMENTADO PARA 15 SEGUNDOS
             // ====================================================================
             setTimeout(() => {
                 socket.metData = socket.buffer;
                 socket.buffer = '';
                 console.log(`[Polling] [${socket.deviceId}] Enviando THE.`);
                 socket.write("THE\r\n");
-            }, 8000); // 8 segundos de espera pela resposta do MET
+            }, 15000); // ANTES: 8000. AGORA: 15 segundos de espera pela resposta do MET
 
             setTimeout(() => {
                 socket.tempData = socket.buffer;
@@ -170,7 +164,7 @@ const server = net.createServer((socket) => {
                 } else {
                     console.warn(`[Polling] [${socket.deviceId}] Parser falhou. Nenhuma leitura será publicada.`);
                 }
-            }, 12000); // Mais 4 segundos para a resposta do THE
+            }, 19000); // ANTES: 12000. Agora espera mais 4 segundos pela resposta do THE
             // ====================================================================
         };
         poll();
