@@ -11,28 +11,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatValue = (value, dec) => (typeof value === 'number' ? value.toFixed(dec) : '-');
     
     // ====================================================================
-    // FUNÇÃO ATUALIZADA COM AS CASAS DECIMAIS CORRIGIDAS
+    // FUNÇÃO ATUALIZADA COM DUAS CASAS DECIMAIS PARA TODOS
     // ====================================================================
     function updateLiveCards(data) {
-        // Tensão de Fase (agora com 0 casas decimais)
-        document.getElementById('live-tensao-va').textContent = formatValue(data.tensao_va, 0);
-        document.getElementById('live-tensao-vb').textContent = formatValue(data.tensao_vb, 0);
-        document.getElementById('live-tensao-vc').textContent = formatValue(data.tensao_vc, 0);
+        // Tensão de Fase (2 casas decimais)
+        document.getElementById('live-tensao-va').textContent = formatValue(data.tensao_va, 2);
+        document.getElementById('live-tensao-vb').textContent = formatValue(data.tensao_vb, 2);
+        document.getElementById('live-tensao-vc').textContent = formatValue(data.tensao_vc, 2);
 
-        // Tensão de Linha (agora com 0 casas decimais)
-        document.getElementById('live-tensao-vab').textContent = formatValue(data.tensao_vab, 0);
-        document.getElementById('live-tensao-vbc').textContent = formatValue(data.tensao_vbc, 0);
-        document.getElementById('live-tensao-vca').textContent = formatValue(data.tensao_vca, 0);
+        // Tensão de Linha (2 casas decimais)
+        document.getElementById('live-tensao-vab').textContent = formatValue(data.tensao_vab, 2);
+        document.getElementById('live-tensao-vbc').textContent = formatValue(data.tensao_vbc, 2);
+        document.getElementById('live-tensao-vca').textContent = formatValue(data.tensao_vca, 2);
 
-        // Corrente (agora com 1 casa decimal)
-        document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 1);
-        document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 1);
-        document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 1);
+        // Corrente (2 casas decimais)
+        document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 2);
+        document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 2);
+        document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 2);
 
-        // Temperatura (mantém 1 casa decimal)
-        document.getElementById('live-temp-disp').textContent = formatValue(data.temperatura_dispositivo, 1);
-        document.getElementById('live-temp-amb').textContent = formatValue(data.temperatura_ambiente, 1);
-        document.getElementById('live-temp-enrol').textContent = formatValue(data.temperatura_enrolamento, 1);
+        // Temperatura (2 casas decimais)
+        document.getElementById('live-temp-disp').textContent = formatValue(data.temperatura_dispositivo, 2);
+        document.getElementById('live-temp-amb').textContent = formatValue(data.temperatura_ambiente, 2);
+        document.getElementById('live-temp-enrol').textContent = formatValue(data.temperatura_enrolamento, 2);
         
         const timestamp = new Date(data.timestamp_leitura);
         document.getElementById('live-timestamp').textContent = `Última leitura: ${timestamp.toLocaleString('pt-BR')}`;
