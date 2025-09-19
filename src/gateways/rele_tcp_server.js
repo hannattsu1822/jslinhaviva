@@ -6,24 +6,39 @@ const mysql = require("mysql2/promise");
 const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
-const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 60000;
+const TCP_SERVER_PORT = process.env.TCP_SERVER_PORT || 4000;
+const POLL_INTERVAL_MS = 60000;
+const CONNECTION_TIMEOUT_MS = 120000;
 
 const dbConfig = {
   host: '127.0.0.1',
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  connectionLimit: 5,
 };
 
-const promisePool = mysql.createPool(dbConfig);
+let promisePool;
+try {
+  promisePool = mysql.createPool(dbConfig);
+} catch (err) {
+  console.error("[DB] Falha ao criar o pool de conexões com o banco de dados:", err);
+  process.exit(1);
+}
+
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
+
+mqttClient.on('connect', () => {
+  console.log(`[MQTT] Conectado ao broker em ${MQTT_BROKER_URL}`);
+});
+
+mqttClient.on('error', (err) => {
+  console.error("[MQTT] Erro de conexão com o broker:", err);
+});
 
 function extractDeviceIdFromBinary(data) {
     const buffer = Buffer.from(data);
-    const hexId = buffer.toString('hex');
-    console.log(`[BINARY DEBUG] Dados recebidos em hex: ${hexId}`);
-    return hexId;
+    return buffer.toString('hex');
 }
 
 function parseData(metResponse, tempResponse) {
@@ -90,7 +105,7 @@ function parseData(metResponse, tempResponse) {
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
-                console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. Leitura descartada.`);
+                console.warn(`[Parser] Falha ao extrair o valor obrigatório de '${key}'. Leitura descartada.`);
                 return null;
             }
         }
@@ -105,28 +120,28 @@ function parseData(metResponse, tempResponse) {
             if (data.tensao_vab < lowerBound || data.tensao_vab > upperBound ||
                 data.tensao_vbc < lowerBound || data.tensao_vbc > upperBound ||
                 data.tensao_vca < lowerBound || data.tensao_vca > upperBound) {
-                console.warn(`[TCP Parser] VERIFICAÇÃO DE SANIDADE FALHOU. Tensão de linha (${data.tensao_vab}, ${data.tensao_vbc}, ${data.tensao_vca}) inconsistente com a tensão de fase esperada (~${expectedLineVoltage.toFixed(0)}). Leitura descartada.`);
+                console.warn(`[Parser] Verificação de sanidade falhou. Tensão de linha inconsistente com a tensão de fase. Leitura descartada.`);
                 return null;
             }
         }
         
-        console.log('[TCP Parser] Sucesso! Leitura extraída e validada.', data);
         return data;
     } catch (error) {
-        console.error("[TCP Parser] Erro crítico ao fazer parse:", error);
+        console.error("[Parser] Erro crítico ao fazer parse dos dados:", error);
         return null;
     }
 }
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-    console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
+    console.log(`[TCP Server] Nova conexão de ${remoteAddress}.`);
 
     socket.state = 'AWAITING_IDENTITY';
     socket.buffer = '';
     socket.metData = '';
     socket.tempData = '';
     socket.pollTimer = null;
+    socket.setTimeout(CONNECTION_TIMEOUT_MS);
 
     const processAndPublish = () => {
         const parsedData = parseData(socket.metData, socket.tempData);
@@ -142,9 +157,9 @@ const server = net.createServer((socket) => {
                 payload_completo: `MET:\n${socket.metData}\nTEMP:\n${socket.tempData}`
             });
             mqttClient.publish(topic, payload);
-            console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
+            console.log(`[Socket ${socket.deviceId}] Dados válidos publicados via MQTT.`);
         } else {
-            console.warn(`[Polling] [${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura será publicada.`);
+            console.warn(`[Socket ${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura foi publicada.`);
         }
     };
 
@@ -153,7 +168,7 @@ const server = net.createServer((socket) => {
             socket.end();
             return;
         }
-        console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
+        console.log(`[Socket ${socket.deviceId}] Iniciando ciclo de coleta de dados.`);
         socket.state = 'AWAITING_MET';
         socket.buffer = '';
         socket.write("MET\r\n");
@@ -161,14 +176,17 @@ const server = net.createServer((socket) => {
 
     const scheduleNextPoll = () => {
         if (socket.pollTimer) clearTimeout(socket.pollTimer);
-        socket.pollTimer = setTimeout(startPollingCycle, pollInterval);
+        socket.pollTimer = setTimeout(startPollingCycle, POLL_INTERVAL_MS);
     };
 
     socket.on('data', async (data) => {
+        socket.buffer += data.toString('latin1');
+
         if (socket.state === 'AWAITING_IDENTITY') {
-            const customId = extractDeviceIdFromBinary(data);
+            const customId = extractDeviceIdFromBinary(socket.buffer);
+            socket.buffer = '';
             if (!customId || customId.length < 1 || customId === '0000000201') {
-                if (customId === '0000000201') console.log('[TCP Service] Pacote de heartbeat/fantasma ignorado.');
+                if (customId === '0000000201') console.log(`[Socket ${remoteAddress}] Pacote de heartbeat ignorado.`);
                 return;
             }
             try {
@@ -176,45 +194,46 @@ const server = net.createServer((socket) => {
                 if (rows.length > 0) {
                     socket.deviceId = rows[0].local_tag;
                     socket.rele_id_db = rows[0].id;
-                    console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
-                    socket.state = 'LOGGING_IN';
-                    socket.buffer = '';
-                    setTimeout(() => socket.write("ACC\r\n"), 500);
-                    setTimeout(() => socket.write("OTTER\r\n"), 1500);
+                    console.log(`[Socket ${remoteAddress}] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
+                    socket.state = 'LOGGING_IN_ACC';
+                    socket.write("ACC\r\n");
                 } else {
-                    console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
+                    console.warn(`[Socket ${remoteAddress}] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}". Encerrando conexão.`);
                     socket.end();
                 }
             } catch (err) {
-                console.error("[TCP Service] Erro de DB ao identificar por ID Customizado:", err);
+                console.error(`[Socket ${remoteAddress}] Erro de DB ao identificar dispositivo:`, err);
                 socket.end();
             }
             return;
         }
         
-        socket.buffer += data.toString('latin1');
-        
-        if (socket.buffer.includes('=>')) {
+        while (socket.buffer.includes('=>')) {
             const completeMessage = socket.buffer.substring(0, socket.buffer.indexOf('=>') + 2);
             socket.buffer = socket.buffer.substring(socket.buffer.indexOf('=>') + 2);
             
             switch (socket.state) {
-                case 'LOGGING_IN':
-                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
+                case 'LOGGING_IN_ACC':
+                    console.log(`[Socket ${socket.deviceId}] Login (ACC) bem-sucedido. Enviando OTTER.`);
+                    socket.state = 'LOGGING_IN_OTTER';
+                    socket.write("OTTER\r\n");
+                    break;
+
+                case 'LOGGING_IN_OTTER':
+                    console.log(`[Socket ${socket.deviceId}] Login (OTTER) bem-sucedido. Autenticação completa.`);
                     startPollingCycle();
                     break;
 
                 case 'AWAITING_MET':
                     socket.metData = completeMessage;
-                    console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
+                    console.log(`[Socket ${socket.deviceId}] Resposta MET recebida. Solicitando THE.`);
                     socket.state = 'AWAITING_THE';
-                    socket.buffer = '';
                     socket.write("THE\r\n");
                     break;
 
                 case 'AWAITING_THE':
                     socket.tempData = completeMessage;
-                    console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
+                    console.log(`[Socket ${socket.deviceId}] Resposta THE recebida. Processando dados.`);
                     processAndPublish();
                     socket.state = 'IDLE';
                     scheduleNextPoll();
@@ -225,14 +244,28 @@ const server = net.createServer((socket) => {
 
     socket.on("close", () => {
         if (socket.pollTimer) clearTimeout(socket.pollTimer);
-        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
+        console.log(`[TCP Server] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
 
     socket.on("error", (err) => {
-        console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
+        console.error(`[TCP Server] Erro no socket de ${socket.deviceId || remoteAddress}:`, err.message);
+    });
+
+    socket.on('timeout', () => {
+        console.warn(`[TCP Server] Conexão com ${socket.deviceId || remoteAddress} atingiu o timeout. Encerrando.`);
+        socket.end();
     });
 });
 
-server.listen(port, () => {
-    console.log(`[TCP Service] Servidor TCP ouvindo na porta ${port}`);
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`[TCP Server] Erro fatal: A porta ${TCP_SERVER_PORT} já está em uso.`);
+    } else {
+        console.error('[TCP Server] Ocorreu um erro no servidor:', err);
+    }
+    process.exit(1);
+});
+
+server.listen(TCP_SERVER_PORT, () => {
+    console.log(`[TCP Server] Servidor TCP ouvindo na porta ${TCP_SERVER_PORT}`);
 });
