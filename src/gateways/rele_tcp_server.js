@@ -7,7 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 60000;
+const pollInterval = 300000; // ANTES: 60000 (1 min) | AGORA: 300000 (5 min)
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -94,7 +94,7 @@ function parseData(metResponse, tempResponse) {
                 return null;
             }
         }
-
+        
         if (data.tensao_vab !== undefined) {
             const avgPhaseVoltage = (data.tensao_va + data.tensao_vb + data.tensao_vc) / 3;
             const expectedLineVoltage = avgPhaseVoltage * Math.sqrt(3);
@@ -105,7 +105,7 @@ function parseData(metResponse, tempResponse) {
             if (data.tensao_vab < lowerBound || data.tensao_vab > upperBound ||
                 data.tensao_vbc < lowerBound || data.tensao_vbc > upperBound ||
                 data.tensao_vca < lowerBound || data.tensao_vca > upperBound) {
-                console.warn(`[TCP Parser] VERIFICAÇÃO DE SANIDADE FALHOU. Tensão de linha (${data.tensao_vab}, ${data.tensao_vbc}, ${data.tensao_vca}) inconsistente com a tensão de fase esperada (~${expectedLineVoltage.toFixed(0)}). Leitura descartada.`);
+                console.warn(`[TCP Parser] VERIFICAÇÃO DE SANIDADE FALHOU. Tensão de linha inconsistente com a tensão de fase. Leitura descartada.`);
                 return null;
             }
         }
