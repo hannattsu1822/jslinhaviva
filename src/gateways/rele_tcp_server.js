@@ -1,195 +1,253 @@
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof RELE_ID === 'undefined') {
-        console.error('ID do Relé não definido!');
-        return;
-    }
+const path = require('path');
+require("dotenv").config({ path: path.resolve(__dirname, '../../.env') });
 
-    let updateTimeout;
-    const MAX_CHART_POINTS = 60;
-    const OFFLINE_THRESHOLD_MS = 330000;
-    let tensaoChart, correnteChart, temperaturaChart;
+const net = require("net");
+const mysql = require("mysql2/promise");
+const mqtt = require("mqtt");
 
-    const formatValue = (value, dec) => (typeof value === 'number' ? value.toFixed(dec) : '-');
-    
-    function updateLiveCards(data) {
-        document.getElementById('live-tensao-va').textContent = formatValue(data.tensao_va, 2);
-        document.getElementById('live-tensao-vb').textContent = formatValue(data.tensao_vb, 2);
-        document.getElementById('live-tensao-vc').textContent = formatValue(data.tensao_vc, 2);
-        document.getElementById('live-tensao-vab').textContent = formatValue(data.tensao_vab, 2);
-        document.getElementById('live-tensao-vbc').textContent = formatValue(data.tensao_vbc, 2);
-        document.getElementById('live-tensao-vca').textContent = formatValue(data.tensao_vca, 2);
-        document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 2);
-        document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 2);
-        document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 2);
-        document.getElementById('live-temp-disp').textContent = formatValue(data.temperatura_dispositivo, 2);
-        document.getElementById('live-temp-amb').textContent = formatValue(data.temperatura_ambiente, 2);
-        document.getElementById('live-temp-enrol').textContent = formatValue(data.temperatura_enrolamento, 2);
-        
-        const timestamp = new Date(data.timestamp_leitura);
-        document.getElementById('live-timestamp').textContent = `Última leitura: ${timestamp.toLocaleString('pt-BR')}`;
-    }
+const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
+const port = process.env.TCP_SERVER_PORT || 4000;
+const pollInterval = 300000;
+const keepaliveInterval = 120000;
 
-    function setStatus(online) {
-        const statusIndicator = document.getElementById('status-indicator');
-        const statusText = statusIndicator.querySelector('.status-text');
-        if (online) {
-            statusIndicator.className = 'status-box status-online';
-            statusText.textContent = 'Online';
-        } else {
-            statusIndicator.className = 'status-box status-offline';
-            statusText.textContent = 'Offline';
-        }
-        clearTimeout(updateTimeout);
-        if (online) {
-            updateTimeout = setTimeout(() => setStatus(false), OFFLINE_THRESHOLD_MS);
-        }
-    }
+const dbConfig = {
+  host: '127.0.0.1',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+};
 
-    function createProfessionalChart(ctx, label, yAxisLabel) {
-        return new Chart(ctx, {
-            type: 'line',
-            data: { datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                scales: {
-                    x: { type: 'time', time: { unit: 'minute', tooltipFormat: 'dd/MM/yyyy HH:mm:ss', displayFormats: { minute: 'HH:mm' } }, grid: { display: false } },
-                    y: { title: { display: true, text: yAxisLabel }, grid: { color: '#f0f0f0' } }
-                },
-                plugins: {
-                    title: { display: true, text: label, font: { size: 18, weight: 'bold' }, padding: { bottom: 20 } },
-                    legend: { position: 'bottom' },
-                    tooltip: { backgroundColor: '#fff', titleColor: '#333', bodyColor: '#666', borderColor: '#ddd', borderWidth: 1, padding: 10, displayColors: true }
-                }
-            }
-        });
-    }
+const promisePool = mysql.createPool(dbConfig);
+const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
-    function addDataToChart(chart, label, data, color) {
-        let dataset = chart.data.datasets.find(ds => ds.label === label);
-        if (!dataset) {
-            const gradient = chart.ctx.createLinearGradient(0, 0, 0, chart.height);
-            gradient.addColorStop(0, color + '66');
-            gradient.addColorStop(1, color + '00');
+function extractDeviceIdFromBinary(data) {
+    const buffer = Buffer.from(data);
+    const hexId = buffer.toString('hex');
+    console.log(`[BINARY DEBUG] Dados recebidos em hex: ${hexId}`);
+    return hexId;
+}
 
-            dataset = {
-                label: label,
-                data: [],
-                borderColor: color,
-                backgroundColor: gradient,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 0,
-                pointHoverRadius: 5
-            };
-            chart.data.datasets.push(dataset);
-        }
-        dataset.data.push(data);
-        if (dataset.data.length > MAX_CHART_POINTS) {
-            dataset.data.shift();
-        }
-    }
+function parseData(metResponse, tempResponse) {
+    const data = {};
+    const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
+    const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
 
-    function initializeCharts(leituras) {
-        const reversedLeituras = leituras.slice(0, MAX_CHART_POINTS).reverse();
-        
-        const tensaoCtx = document.getElementById('tensaoChart');
-        tensaoChart = createProfessionalChart(tensaoCtx, 'Tensão (Fase e Linha)', 'Tensão (V)');
-        reversedLeituras.forEach(d => {
-            const time = new Date(d.timestamp_leitura).getTime();
-            addDataToChart(tensaoChart, 'Fase VA', { x: time, y: d.tensao_va }, '#FF6384');
-            addDataToChart(tensaoChart, 'Fase VB', { x: time, y: d.tensao_vb }, '#36A2EB');
-            addDataToChart(tensaoChart, 'Fase VC', { x: time, y: d.tensao_vc }, '#FFCE56');
-            addDataToChart(tensaoChart, 'Linha VAB', { x: time, y: d.tensao_vab }, '#e83e5c');
-            addDataToChart(tensaoChart, 'Linha VBC', { x: time, y: d.tensao_vbc }, '#2aa0e0');
-            addDataToChart(tensaoChart, 'Linha VCA', { x: time, y: d.tensao_vca }, '#e6bc4c');
-        });
-        tensaoChart.update();
-
-        const correnteCtx = document.getElementById('correnteChart');
-        correnteChart = createProfessionalChart(correnteCtx, 'Corrente por Fase', 'Corrente (A)');
-        reversedLeituras.forEach(d => {
-            const time = new Date(d.timestamp_leitura).getTime();
-            addDataToChart(correnteChart, 'Corrente A', { x: time, y: d.corrente_a }, '#FF6384');
-            addDataToChart(correnteChart, 'Corrente B', { x: time, y: d.corrente_b }, '#36A2EB');
-            addDataToChart(correnteChart, 'Corrente C', { x: time, y: d.corrente_c }, '#FFCE56');
-        });
-        correnteChart.update();
-
-        const tempCtx = document.getElementById('temperaturaChart');
-        temperaturaChart = createProfessionalChart(tempCtx, 'Temperaturas', 'Graus (°C)');
-        reversedLeituras.forEach(d => {
-            const time = new Date(d.timestamp_leitura).getTime();
-            addDataToChart(temperaturaChart, 'Dispositivo', { x: time, y: d.temperatura_dispositivo }, '#4BC0C0');
-            addDataToChart(temperaturaChart, 'Ambiente', { x: time, y: d.temperatura_ambiente }, '#9966FF');
-            addDataToChart(temperaturaChart, 'Enrolamento', { x: time, y: d.temperatura_enrolamento }, '#FF9F40');
-        });
-        temperaturaChart.update();
-    }
-
-    async function loadInitialData() {
-        try {
-            const leiturasRes = await fetch(`/api/reles/${RELE_ID}/leituras`);
-            if (!leiturasRes.ok) throw new Error('Falha ao buscar dados iniciais.');
-            const leituras = await leiturasRes.json();
-
-            if (leituras.length > 0) {
-                updateLiveCards(leituras[0]);
-                
-                const lastTimestamp = new Date(leituras[0].timestamp_leitura).getTime();
-                const isOnline = (Date.now() - lastTimestamp) < OFFLINE_THRESHOLD_MS;
-                setStatus(isOnline);
-
-                initializeCharts(leituras);
-            } else {
-                initializeCharts([]);
-                setStatus(false);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar dados iniciais:', error);
-            alert('Não foi possível carregar os dados do relé.');
-        }
-    }
-
-    function connectWebSocket() {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
-        ws.onopen = () => console.log('WebSocket conectado.');
-        ws.onerror = (error) => console.error('Erro no WebSocket:', error);
-        ws.onclose = () => setTimeout(connectWebSocket, 5000);
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (message.type === 'nova_leitura_rele' && message.dados.rele_id == RELE_ID) {
-                    const data = message.dados;
-                    const time = new Date(data.timestamp_leitura).getTime();
-                    
-                    updateLiveCards(data);
-                    setStatus(true);
-
-                    addDataToChart(tensaoChart, 'Fase VA', { x: time, y: data.tensao_va }, '#FF6384');
-                    addDataToChart(tensaoChart, 'Fase VB', { x: time, y: data.tensao_vb }, '#36A2EB');
-                    addDataToChart(tensaoChart, 'Fase VC', { x: time, y: data.tensao_vc }, '#FFCE56');
-                    addDataToChart(tensaoChart, 'Linha VAB', { x: time, y: data.tensao_vab }, '#e83e5c');
-                    addDataToChart(tensaoChart, 'Linha VBC', { x: time, y: data.tensao_vbc }, '#2aa0e0');
-                    addDataToChart(tensaoChart, 'Linha VCA', { x: time, y: data.tensao_vca }, '#e6bc4c');
-                    tensaoChart.update('none');
-
-                    addDataToChart(correnteChart, 'Corrente A', { x: time, y: data.corrente_a }, '#FF6384');
-                    addDataToChart(correnteChart, 'Corrente B', { x: time, y: data.corrente_b }, '#36A2EB');
-                    addDataToChart(correnteChart, 'Corrente C', { x: time, y: data.corrente_c }, '#FFCE56');
-                    correnteChart.update('none');
-
-                    addDataToChart(temperaturaChart, 'Dispositivo', { x: time, y: data.temperatura_dispositivo }, '#4BC0C0');
-                    addDataToChart(temperaturaChart, 'Ambiente', { x: time, y: data.temperatura_ambiente }, '#9966FF');
-                    addDataToChart(temperaturaChart, 'Enrolamento', { x: time, y: data.temperatura_enrolamento }, '#FF9F40');
-                    temperaturaChart.update('none');
-                }
-            } catch (e) { console.error('Erro ao processar mensagem:', e); }
+    try {
+        const findNumbers = (str) => {
+            if (!str) return [];
+            const matches = str.match(/-?\d[\d.,]*/g);
+            return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
         };
-    }
 
-    loadInitialData();
-    connectWebSocket();
+        const currentBlockMatch = cleanMet.match(/Current Magnitude \(A\)([\s\S]*?)(?=Current Angle|3I2X)/);
+        if (currentBlockMatch) {
+            const numbers = findNumbers(currentBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.corrente_a = numbers[0];
+                data.corrente_b = numbers[1];
+                data.corrente_c = numbers[2];
+            }
+        }
+
+        const phaseVoltageBlockMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)([\s\S]*?)(?=Voltage Angle)/);
+        if (phaseVoltageBlockMatch) {
+            const numbers = findNumbers(phaseVoltageBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.tensao_va = numbers[0];
+                data.tensao_vb = numbers[1];
+                data.tensao_vc = numbers[2];
+            }
+        }
+
+        const lineVoltageBlockMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)([\s\S]*?)(?=Voltage Angle)/);
+        if (lineVoltageBlockMatch) {
+            const numbers = findNumbers(lineVoltageBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.tensao_vab = numbers[0];
+                data.tensao_vbc = numbers[1];
+                data.tensao_vca = numbers[2];
+            }
+        }
+
+        const frequencyMatch = cleanMet.match(/ncy \(Hz\)\s*=\s*([\d.-]+)/);
+        if (frequencyMatch) {
+            data.frequencia = parseFloat(frequencyMatch[1]);
+        }
+
+        const tempLines = cleanTemp.split('\n');
+        for (const line of tempLines) {
+            if (line.includes('AMBT (deg. C)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) data.temperatura_ambiente = numbers[0];
+            } else if (line.includes('HS (deg. C)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) data.temperatura_enrolamento = numbers[0];
+            } else if (line.includes('TOILC (deg. C)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) data.temperatura_dispositivo = numbers[0];
+            }
+        }
+        
+        const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
+        for (const key of requiredKeys) {
+            if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
+                console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. Leitura descartada.`);
+                return null;
+            }
+        }
+        
+        if (data.tensao_vab !== undefined) {
+            const avgPhaseVoltage = (data.tensao_va + data.tensao_vb + data.tensao_vc) / 3;
+            const expectedLineVoltage = avgPhaseVoltage * Math.sqrt(3);
+            const tolerance = 0.20;
+            const lowerBound = expectedLineVoltage * (1 - tolerance);
+            const upperBound = expectedLineVoltage * (1 + tolerance);
+            
+            if (data.tensao_vab < lowerBound || data.tensao_vab > upperBound ||
+                data.tensao_vbc < lowerBound || data.tensao_vbc > upperBound ||
+                data.tensao_vca < lowerBound || data.tensao_vca > upperBound) {
+                console.warn(`[TCP Parser] VERIFICAÇÃO DE SANIDADE FALHOU. Tensão de linha inconsistente com a tensão de fase. Leitura descartada.`);
+                return null;
+            }
+        }
+        
+        console.log('[TCP Parser] Sucesso! Leitura extraída e validada.', data);
+        return data;
+    } catch (error) {
+        console.error("[TCP Parser] Erro crítico ao fazer parse:", error);
+        return null;
+    }
+}
+
+const server = net.createServer((socket) => {
+    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
+    console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
+
+    socket.state = 'AWAITING_IDENTITY';
+    socket.buffer = '';
+    socket.metData = '';
+    socket.tempData = '';
+    socket.pollTimer = null;
+    socket.keepaliveTimer = null;
+
+    const processAndPublish = () => {
+        const parsedData = parseData(socket.metData, socket.tempData);
+        if (parsedData) {
+            const topic = `sel/reles/${socket.rele_id_db}/status`;
+            const now = new Date();
+            const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
+            const payload = JSON.stringify({
+                rele_id: socket.rele_id_db,
+                local_tag: socket.deviceId,
+                ...parsedData,
+                timestamp_leitura: timestampMySQL,
+                payload_completo: `MET:\n${socket.metData}\nTEMP:\n${socket.tempData}`
+            });
+            mqttClient.publish(topic, payload);
+            console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
+        } else {
+            console.warn(`[Polling] [${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura será publicada.`);
+        }
+    };
+
+    const startPollingCycle = () => {
+        if (!socket.writable) {
+            socket.end();
+            return;
+        }
+        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
+        console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
+        socket.state = 'AWAITING_MET';
+        socket.buffer = '';
+        socket.write("MET\r\n");
+    };
+    
+    const startKeepalive = () => {
+        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
+        socket.keepaliveTimer = setInterval(() => {
+            if (socket.writable) {
+                console.log(`[Keepalive] [${socket.deviceId}] Enviando sinal para manter conexão ativa.`);
+                socket.write('\r\n');
+            } else {
+                socket.end();
+            }
+        }, keepaliveInterval);
+    };
+
+    socket.on('data', async (data) => {
+        const hexData = data.toString('hex');
+        if (hexData === '0000000201') {
+            console.log(`[TCP Service] Pacote de heartbeat ignorado.`);
+            return;
+        }
+
+        if (socket.state === 'AWAITING_IDENTITY') {
+            const customId = extractDeviceIdFromBinary(data);
+            try {
+                const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
+                if (rows.length > 0) {
+                    socket.deviceId = rows[0].local_tag;
+                    socket.rele_id_db = rows[0].id;
+                    console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
+                    socket.state = 'LOGGING_IN_ACC';
+                    socket.buffer = '';
+                    socket.write("ACC\r\n");
+                } else {
+                    console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
+                    socket.end();
+                }
+            } catch (err) {
+                console.error("[TCP Service] Erro de DB ao identificar por ID Customizado:", err);
+                socket.end();
+            }
+            return;
+        }
+        
+        socket.buffer += data.toString('latin1');
+        
+        if (socket.buffer.includes('=>')) {
+            const completeMessage = socket.buffer.substring(0, socket.buffer.indexOf('=>') + 2);
+            socket.buffer = socket.buffer.substring(socket.buffer.indexOf('=>') + 2);
+            
+            switch (socket.state) {
+                case 'LOGGING_IN_ACC':
+                    socket.state = 'LOGGING_IN_OTTER';
+                    socket.write("OTTER\r\n");
+                    break;
+                case 'LOGGING_IN_OTTER':
+                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
+                    startPollingCycle();
+                    socket.pollTimer = setInterval(startPollingCycle, pollInterval);
+                    startKeepalive();
+                    break;
+                case 'AWAITING_MET':
+                    socket.metData = completeMessage;
+                    console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
+                    socket.state = 'AWAITING_THE';
+                    socket.write("THE\r\n");
+                    break;
+                case 'AWAITING_THE':
+                    socket.tempData = completeMessage;
+                    console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
+                    processAndPublish();
+                    socket.state = 'IDLE';
+                    startKeepalive();
+                    break;
+            }
+        }
+    });
+
+    socket.on("close", () => {
+        if (socket.pollTimer) clearTimeout(socket.pollTimer);
+        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
+        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
+    });
+
+    socket.on("error", (err) => {
+        console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
+    });
+});
+
+server.listen(port, () => {
+    console.log(`[TCP Service] Servidor TCP ouvindo na porta ${port}`);
 });
