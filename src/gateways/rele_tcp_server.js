@@ -27,54 +27,80 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
+// ====================================================================
+// PARSER ROBUSTO - VERSÃO FINAL
+// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
-    const metStartIndex = metResponse.indexOf('SEL-2414');
-    const tempStartIndex = tempResponse.indexOf('SEL-2414');
-    if (metStartIndex === -1 || tempStartIndex === -1) {
-        console.warn("[TCP Parser] Padrão 'SEL-2414' não encontrado. Descartando.");
-        return null;
-    }
-    const cleanMet = metResponse.substring(metStartIndex);
-    const cleanTemp = tempResponse.substring(tempStartIndex);
+
+    // 1. Limpa os caracteres inválidos e divide o texto em um array de linhas
+    const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
+    const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
+    const metLines = cleanMet.split('\n');
+    const tempLines = cleanTemp.split('\n');
+
+    // 2. Função auxiliar para encontrar todos os números em uma string
+    const findNumbers = (str) => {
+        const matches = str.match(/-?\d[\d.,]*/g);
+        return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
+    };
+
     try {
-        // ====================================================================
-        // REGEX FINAL E ROBUSTA PARA CORRENTE
-        // ====================================================================
-        const currentMatch = cleanMet.match(/Current Magnitude \(A\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
-        if (currentMatch) {
-            data.corrente_a = parseFloat(currentMatch[1]);
-            data.corrente_b = parseFloat(currentMatch[2]);
-            data.corrente_c = parseFloat(currentMatch[3]);
-        }
+        // 3. Processa o relatório MET linha por linha
+        for (let i = 0; i < metLines.length; i++) {
+            const line = metLines[i];
 
-        const voltagePhaseMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
-        if (voltagePhaseMatch) {
-            data.tensao_va = parseFloat(voltagePhaseMatch[1]);
-            data.tensao_vb = parseFloat(voltagePhaseMatch[2]);
-            data.tensao_vc = parseFloat(voltagePhaseMatch[3]);
+            // Procura pela pista 'Current Magnitude (A)'
+            if (line.includes('Current Magnitude (A)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length >= 3) {
+                    data.corrente_a = numbers[0];
+                    data.corrente_b = numbers[1];
+                    data.corrente_c = numbers[2];
+                }
+            }
+            // Procura pela pista 'Voltage Magnitude (V)'
+            else if (line.includes('Voltage Magnitude (V)')) {
+                const prevLine = metLines[i - 1] || ''; // Pega a linha anterior para dar contexto
+                const numbers = findNumbers(line);
+                
+                // Se a linha anterior tiver o contexto de FASE, salva como Tensão de Fase
+                if (prevLine.includes('VA') && prevLine.includes('VB') && numbers.length >= 3) {
+                    data.tensao_va = numbers[0];
+                    data.tensao_vb = numbers[1];
+                    data.tensao_vc = numbers[2];
+                } 
+                // Se a linha anterior tiver o contexto de LINHA, salva como Tensão de Linha
+                else if (prevLine.includes('VAB') && prevLine.includes('VBC') && numbers.length >= 3) {
+                    data.tensao_vab = numbers[0];
+                    data.tensao_vbc = numbers[1];
+                    data.tensao_vca = numbers[2];
+                }
+            }
+            // Procura pela pista 'Frequency (Hz)'
+            else if (line.includes('ncy (Hz)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) {
+                    data.frequencia = numbers[0];
+                }
+            }
         }
-
-        const voltageLineMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage.*?\(V\)\s*?([\d.-]+)\s*?([\d.-]+)\s*?([\d.-]+)/);
-        if (voltageLineMatch) {
-            data.tensao_vab = parseFloat(voltageLineMatch[1]);
-            data.tensao_vbc = parseFloat(voltageLineMatch[2]);
-            data.tensao_vca = parseFloat(voltageLineMatch[3]);
-        }
-
-        const frequencyMatch = cleanMet.match(/ncy.*?\(Hz\)\s*=\s*([\d.-]+)/);
-        if (frequencyMatch) {
-            const cleanNumber = frequencyMatch[1].replace(/[^\d.-]/g, '');
-            data.frequencia = parseFloat(cleanNumber);
-        }
-
-        const tempAmbMatch = cleanTemp.match(/AMBT \(deg\. C\)\s*:\s*([\d.-]+)/);
-        if (tempAmbMatch) data.temperatura_ambiente = parseFloat(tempAmbMatch[1]);
-        const tempHotSpotMatch = cleanTemp.match(/HS \(deg\. C\)\s*:\s*([\d.-]+)/);
-        if (tempHotSpotMatch) data.temperatura_enrolamento = parseFloat(tempHotSpotMatch[1]);
-        const tempDeviceMatch = cleanTemp.match(/TOILC \(deg\. C\)\s*:\s*([\d.-]+)/);
-        if (tempDeviceMatch) data.temperatura_dispositivo = parseFloat(tempDeviceMatch[1]);
         
+        // 4. Processa o relatório TEMP linha por linha
+        for (const line of tempLines) {
+            if (line.includes('AMBT (deg. C)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) data.temperatura_ambiente = numbers[0];
+            } else if (line.includes('HS (deg. C)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) data.temperatura_enrolamento = numbers[0];
+            } else if (line.includes('TOILC (deg. C)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) data.temperatura_dispositivo = numbers[0];
+            }
+        }
+        
+        // 5. Verifica se todos os dados obrigatórios foram encontrados
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
@@ -82,12 +108,17 @@ function parseData(metResponse, tempResponse) {
                 return null;
             }
         }
+        
+        console.log('[TCP Parser] Sucesso! Todos os valores extraídos.', data);
         return data;
     } catch (error) {
         console.error("[TCP Parser] Erro crítico ao fazer parse:", error);
         return null;
     }
 }
+// ====================================================================
+// FIM DO PARSER ROBUSTO
+// ====================================================================
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
@@ -127,10 +158,7 @@ const server = net.createServer((socket) => {
                 socket.tempData = socket.buffer;
                 socket.buffer = '';
 
-                const cleanedMetData = socket.metData.replace(/[^\x20-\x7E\r\n]/g, '');
-                const cleanedTempData = socket.tempData.replace(/[^\x20-\x7E\r\n]/g, '');
-
-                const parsedData = parseData(cleanedMetData, cleanedTempData);
+                const parsedData = parseData(socket.metData, socket.tempData);
                 
                 if (parsedData) {
                     const topic = `sel/reles/${socket.rele_id_db}/status`;
