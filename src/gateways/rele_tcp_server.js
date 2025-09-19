@@ -7,7 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const COOLDOWN_PERIOD_MS = 90 * 1000; // 90 segundos
+const pollInterval = 300000;
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -18,7 +18,6 @@ const dbConfig = {
 
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
-const lastPollTimestamps = new Map();
 
 function extractDeviceIdFromBinary(data) {
     const buffer = Buffer.from(data);
@@ -127,28 +126,56 @@ const server = net.createServer((socket) => {
     socket.buffer = '';
     socket.metData = '';
     socket.tempData = '';
+    socket.pollTimer = null;
+
+    const processAndPublish = () => {
+        const parsedData = parseData(socket.metData, socket.tempData);
+        if (parsedData) {
+            const topic = `sel/reles/${socket.rele_id_db}/status`;
+            const now = new Date();
+            const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
+            const payload = JSON.stringify({
+                rele_id: socket.rele_id_db,
+                local_tag: socket.deviceId,
+                ...parsedData,
+                timestamp_leitura: timestampMySQL,
+                payload_completo: `MET:\n${socket.metData}\nTEMP:\n${socket.tempData}`
+            });
+            mqttClient.publish(topic, payload);
+            console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
+        } else {
+            console.warn(`[Polling] [${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura será publicada.`);
+        }
+    };
+
+    const startPollingCycle = () => {
+        if (!socket.writable) {
+            socket.end();
+            return;
+        }
+        console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
+        socket.state = 'AWAITING_MET';
+        socket.buffer = '';
+        socket.write("MET\r\n");
+    };
 
     socket.on('data', async (data) => {
+        const hexData = data.toString('hex');
+        if (hexData === '0000000201') {
+            console.log(`[TCP Service] Pacote de heartbeat ignorado.`);
+            return;
+        }
+
         if (socket.state === 'AWAITING_IDENTITY') {
             const customId = extractDeviceIdFromBinary(data);
             try {
                 const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
                 if (rows.length > 0) {
-                    const rele = rows[0];
-                    const now = Date.now();
-                    const lastPoll = lastPollTimestamps.get(rele.id) || 0;
-
-                    if (now - lastPoll < COOLDOWN_PERIOD_MS) {
-                        const timeLeft = ((COOLDOWN_PERIOD_MS - (now - lastPoll)) / 1000).toFixed(0);
-                        console.log(`[TCP Service] Relé '${rele.local_tag}' (ID: ${rele.id}) tentou conectar muito cedo. Aguardando ${timeLeft}s. Desconectando.`);
-                        socket.end();
-                        return;
-                    }
-
-                    socket.deviceId = rele.local_tag;
-                    socket.rele_id_db = rele.id;
+                    socket.deviceId = rows[0].local_tag;
+                    socket.rele_id_db = rows[0].id;
                     console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
                     socket.state = 'LOGGING_IN_ACC';
+                    socket.buffer = '';
                     socket.write("ACC\r\n");
                 } else {
                     console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
@@ -160,62 +187,41 @@ const server = net.createServer((socket) => {
             }
             return;
         }
-
+        
         socket.buffer += data.toString('latin1');
-
+        
         if (socket.buffer.includes('=>')) {
             const completeMessage = socket.buffer.substring(0, socket.buffer.indexOf('=>') + 2);
             socket.buffer = socket.buffer.substring(socket.buffer.indexOf('=>') + 2);
-
+            
             switch (socket.state) {
                 case 'LOGGING_IN_ACC':
-                    console.log(`[TCP Service] ACC recebido. Enviando OTTER.`);
                     socket.state = 'LOGGING_IN_OTTER';
                     socket.write("OTTER\r\n");
                     break;
-                
                 case 'LOGGING_IN_OTTER':
-                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído. Iniciando coleta.`);
-                    socket.state = 'AWAITING_MET';
-                    socket.write("MET\r\n");
+                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
+                    startPollingCycle();
+                    socket.pollTimer = setInterval(startPollingCycle, pollInterval);
                     break;
-
                 case 'AWAITING_MET':
                     socket.metData = completeMessage;
                     console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
                     socket.state = 'AWAITING_THE';
                     socket.write("THE\r\n");
                     break;
-
                 case 'AWAITING_THE':
                     socket.tempData = completeMessage;
                     console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
-                    
-                    const parsedData = parseData(socket.metData, socket.tempData);
-                    if (parsedData) {
-                        const topic = `sel/reles/${socket.rele_id_db}/status`;
-                        const now = new Date();
-                        const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
-                        const payload = JSON.stringify({
-                            rele_id: socket.rele_id_db,
-                            local_tag: socket.deviceId,
-                            ...parsedData,
-                            timestamp_leitura: timestampMySQL
-                        });
-                        mqttClient.publish(topic, payload);
-                        console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
-                        lastPollTimestamps.set(socket.rele_id_db, Date.now());
-                    } else {
-                        console.warn(`[Polling] [${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura será publicada.`);
-                    }
-                    console.log(`[TCP Service] Ciclo concluído. Desconectando ${socket.deviceId}.`);
-                    socket.end();
+                    processAndPublish();
+                    socket.state = 'IDLE';
                     break;
             }
         }
     });
 
     socket.on("close", () => {
+        if (socket.pollTimer) clearTimeout(socket.pollTimer);
         console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
 
