@@ -7,6 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
+const COOLDOWN_PERIOD_MS = 90 * 1000; // 90 segundos
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -17,6 +18,7 @@ const dbConfig = {
 
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
+const lastPollTimestamps = new Map();
 
 function extractDeviceIdFromBinary(data) {
     const buffer = Buffer.from(data);
@@ -132,8 +134,19 @@ const server = net.createServer((socket) => {
             try {
                 const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
                 if (rows.length > 0) {
-                    socket.deviceId = rows[0].local_tag;
-                    socket.rele_id_db = rows[0].id;
+                    const rele = rows[0];
+                    const now = Date.now();
+                    const lastPoll = lastPollTimestamps.get(rele.id) || 0;
+
+                    if (now - lastPoll < COOLDOWN_PERIOD_MS) {
+                        const timeLeft = ((COOLDOWN_PERIOD_MS - (now - lastPoll)) / 1000).toFixed(0);
+                        console.log(`[TCP Service] Relé '${rele.local_tag}' (ID: ${rele.id}) tentou conectar muito cedo. Aguardando ${timeLeft}s. Desconectando.`);
+                        socket.end();
+                        return;
+                    }
+
+                    socket.deviceId = rele.local_tag;
+                    socket.rele_id_db = rele.id;
                     console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
                     socket.state = 'LOGGING_IN_ACC';
                     socket.write("ACC\r\n");
@@ -191,6 +204,7 @@ const server = net.createServer((socket) => {
                         });
                         mqttClient.publish(topic, payload);
                         console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
+                        lastPollTimestamps.set(socket.rele_id_db, Date.now());
                     } else {
                         console.warn(`[Polling] [${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura será publicada.`);
                     }
