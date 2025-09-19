@@ -3,7 +3,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 
 const net = require("net");
 const mqtt = require("mqtt");
-const mysql = require("mysql2/promise");
+const mysql = require("mysql2/promise"); // Corretamente importado
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const POLLING_INTERVAL_MS = 10000;
@@ -20,7 +20,9 @@ const dbConfig = {
 };
 
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
-const promisePool = mysql.createPool(dbConfig).promise();
+
+// AQUI ESTÁ A CORREÇÃO: .promise() foi removido
+const promisePool = mysql.createPool(dbConfig);
 
 mqttClient.on("connect", () => {
   console.log("[Gateway Rele] Conectado ao broker MQTT com sucesso.");
@@ -38,29 +40,14 @@ function parseSelResponse(rawData) {
       .filter((line) => line.length > 0 && !line.startsWith("=>"));
     const data = {};
     const mapping = {
-      "Va": "tensao_A",
-      "Vb": "tensao_B",
-      "Vc": "tensao_C",
-      "Vab": "tensao_AB",
-      "Vbc": "tensao_BC",
-      "Vca": "tensao_CA",
-      "Ia": "corrente_A",
-      "Ib": "corrente_B",
-      "Ic": "corrente_C",
-      "P": "potencia_ativa_total",
-      "Q": "potencia_reativa_total",
-      "S": "potencia_aparente_total",
-      "PF": "fator_potencia_total",
-      "FREQ": "frequencia",
-      "PA": "potencia_ativa_A",
-      "PB": "potencia_ativa_B",
-      "PC": "potencia_ativa_C",
-      "QA": "potencia_reativa_A",
-      "QB": "potencia_reativa_B",
-      "QC": "potencia_reativa_C",
-      "PFA": "fator_potencia_A",
-      "PFB": "fator_potencia_B",
-      "PFC": "fator_potencia_C",
+      "Va": "tensao_A", "Vb": "tensao_B", "Vc": "tensao_C",
+      "Vab": "tensao_AB", "Vbc": "tensao_BC", "Vca": "tensao_CA",
+      "Ia": "corrente_A", "Ib": "corrente_B", "Ic": "corrente_C",
+      "P": "potencia_ativa_total", "Q": "potencia_reativa_total", "S": "potencia_aparente_total",
+      "PF": "fator_potencia_total", "FREQ": "frequencia",
+      "PA": "potencia_ativa_A", "PB": "potencia_ativa_B", "PC": "potencia_ativa_C",
+      "QA": "potencia_reativa_A", "QB": "potencia_reativa_B", "QC": "potencia_reativa_C",
+      "PFA": "fator_potencia_A", "PFB": "fator_potencia_B", "PFC": "fator_potencia_C",
     };
 
     lines.forEach((line) => {
@@ -217,7 +204,7 @@ async function pollAllReles() {
 
 async function startService() {
   console.log("[Gateway Rele] Iniciando serviço de monitoramento de relés...");
-  pollAllReles(); 
+  pollAllReles();
   setInterval(pollAllReles, POLLING_INTERVAL_MS);
 }
 
