@@ -28,29 +28,33 @@ function extractDeviceIdFromBinary(data) {
 }
 
 // ====================================================================
-// PARSER ROBUSTO - VERSÃO FINAL
+// PARSER COM MEMÓRIA DE CONTEXTO - VERSÃO MAIS ROBUSTA
 // ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
-
-    // 1. Limpa os caracteres inválidos e divide o texto em um array de linhas
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const metLines = cleanMet.split('\n');
     const tempLines = cleanTemp.split('\n');
 
-    // 2. Função auxiliar para encontrar todos os números em uma string
     const findNumbers = (str) => {
         const matches = str.match(/-?\d[\d.,]*/g);
         return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
     };
 
     try {
-        // 3. Processa o relatório MET linha por linha
-        for (let i = 0; i < metLines.length; i++) {
-            const line = metLines[i];
+        let voltageContext = null; // Variável de "memória" para o contexto da tensão
 
-            // Procura pela pista 'Current Magnitude (A)'
+        // Processa o relatório MET linha por linha
+        for (const line of metLines) {
+            // Primeiro, verifica se a linha define um novo contexto de tensão
+            if (line.includes('VA') && line.includes('VB') && line.includes('VC')) {
+                voltageContext = 'PHASE'; // Memoriza que estamos na seção de Tensão de Fase
+            } else if (line.includes('VAB') && line.includes('VBC') && line.includes('VCA')) {
+                voltageContext = 'LINE'; // Memoriza que estamos na seção de Tensão de Linha
+            }
+
+            // Agora, processa a linha em busca de valores
             if (line.includes('Current Magnitude (A)')) {
                 const numbers = findNumbers(line);
                 if (numbers.length >= 3) {
@@ -58,27 +62,21 @@ function parseData(metResponse, tempResponse) {
                     data.corrente_b = numbers[1];
                     data.corrente_c = numbers[2];
                 }
-            }
-            // Procura pela pista 'Voltage Magnitude (V)'
-            else if (line.includes('Voltage Magnitude (V)')) {
-                const prevLine = metLines[i - 1] || ''; // Pega a linha anterior para dar contexto
+            } else if (line.includes('Voltage Magnitude (V)')) {
                 const numbers = findNumbers(line);
-                
-                // Se a linha anterior tiver o contexto de FASE, salva como Tensão de Fase
-                if (prevLine.includes('VA') && prevLine.includes('VB') && numbers.length >= 3) {
-                    data.tensao_va = numbers[0];
-                    data.tensao_vb = numbers[1];
-                    data.tensao_vc = numbers[2];
-                } 
-                // Se a linha anterior tiver o contexto de LINHA, salva como Tensão de Linha
-                else if (prevLine.includes('VAB') && prevLine.includes('VBC') && numbers.length >= 3) {
-                    data.tensao_vab = numbers[0];
-                    data.tensao_vbc = numbers[1];
-                    data.tensao_vca = numbers[2];
+                if (numbers.length >= 3) {
+                    // Usa a "memória" para decidir onde salvar os valores
+                    if (voltageContext === 'PHASE') {
+                        data.tensao_va = numbers[0];
+                        data.tensao_vb = numbers[1];
+                        data.tensao_vc = numbers[2];
+                    } else if (voltageContext === 'LINE') {
+                        data.tensao_vab = numbers[0];
+                        data.tensao_vbc = numbers[1];
+                        data.tensao_vca = numbers[2];
+                    }
                 }
-            }
-            // Procura pela pista 'Frequency (Hz)'
-            else if (line.includes('ncy (Hz)')) {
+            } else if (line.includes('ncy (Hz)')) {
                 const numbers = findNumbers(line);
                 if (numbers.length > 0) {
                     data.frequencia = numbers[0];
@@ -86,7 +84,7 @@ function parseData(metResponse, tempResponse) {
             }
         }
         
-        // 4. Processa o relatório TEMP linha por linha
+        // Processa o relatório TEMP linha por linha
         for (const line of tempLines) {
             if (line.includes('AMBT (deg. C)')) {
                 const numbers = findNumbers(line);
@@ -100,7 +98,6 @@ function parseData(metResponse, tempResponse) {
             }
         }
         
-        // 5. Verifica se todos os dados obrigatórios foram encontrados
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
@@ -117,7 +114,7 @@ function parseData(metResponse, tempResponse) {
     }
 }
 // ====================================================================
-// FIM DO PARSER ROBUSTO
+// FIM DO PARSER
 // ====================================================================
 
 const server = net.createServer((socket) => {
