@@ -27,53 +27,51 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
+// ====================================================================
+// PARSER FINAL - LÓGICA DE BUSCA PRECISA E INDEPENDENTE
+// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
 
-    const findNumbers = (str) => {
-        if (!str) return [];
-        const matches = str.match(/-?\d[\d.,]*/g);
-        return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
-    };
-
     try {
-        const currentMatch = cleanMet.match(/Current Magnitude \(A\)\s*([\s\S]*?)(?=Current Angle|3I2X)/);
+        // --- Extração de Corrente ---
+        const currentMatch = cleanMet.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
         if (currentMatch) {
-            const numbers = findNumbers(currentMatch[1]);
-            if (numbers.length >= 3) {
-                data.corrente_a = numbers[0];
-                data.corrente_b = numbers[1];
-                data.corrente_c = numbers[2];
-            }
+            data.corrente_a = parseFloat(currentMatch[1]);
+            data.corrente_b = parseFloat(currentMatch[2]);
+            data.corrente_c = parseFloat(currentMatch[3]);
         }
 
-        const phaseVoltageBlockMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)\s*([\s\S]*?)(?=Voltage Angle)/);
-        if (phaseVoltageBlockMatch) {
-            const numbers = findNumbers(phaseVoltageBlockMatch[1]);
-            if (numbers.length >= 3) {
-                data.tensao_va = numbers[0];
-                data.tensao_vb = numbers[1];
-                data.tensao_vc = numbers[2];
-            }
+        // --- Extração de Tensão de Fase (Precisa) ---
+        const phaseVoltageMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+        if (phaseVoltageMatch) {
+            data.tensao_va = parseFloat(phaseVoltageMatch[1]);
+            data.tensao_vb = parseFloat(phaseVoltageMatch[2]);
+            data.tensao_vc = parseFloat(phaseVoltageMatch[3]);
         }
 
-        const lineVoltageBlockMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)\s*([\s\S]*?)(?=Voltage Angle)/);
-        if (lineVoltageBlockMatch) {
-            const numbers = findNumbers(lineVoltageBlockMatch[1]);
-            if (numbers.length >= 3) {
-                data.tensao_vab = numbers[0];
-                data.tensao_vbc = numbers[1];
-                data.tensao_vca = numbers[2];
-            }
+        // --- Extração de Tensão de Linha (Precisa) ---
+        const lineVoltageMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
+        if (lineVoltageMatch) {
+            data.tensao_vab = parseFloat(lineVoltageMatch[1]);
+            data.tensao_vbc = parseFloat(lineVoltageMatch[2]);
+            data.tensao_vca = parseFloat(lineVoltageMatch[3]);
         }
-
+        
+        // --- Extração de Frequência ---
         const frequencyMatch = cleanMet.match(/ncy \(Hz\)\s*=\s*([\d.-]+)/);
         if (frequencyMatch) {
             data.frequencia = parseFloat(frequencyMatch[1]);
         }
 
+        // --- Extração de Temperaturas ---
+        const findNumbers = (str) => {
+            if (!str) return [];
+            const matches = str.match(/-?\d[\d.,]*/g);
+            return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
+        };
         const tempLines = cleanTemp.split('\n');
         for (const line of tempLines) {
             if (line.includes('AMBT (deg. C)')) {
@@ -88,6 +86,7 @@ function parseData(metResponse, tempResponse) {
             }
         }
         
+        // --- Verificação Final ---
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
@@ -103,6 +102,9 @@ function parseData(metResponse, tempResponse) {
         return null;
     }
 }
+// ====================================================================
+// FIM DO PARSER
+// ====================================================================
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
@@ -133,15 +135,12 @@ const server = net.createServer((socket) => {
                 socket.write("MET\r\n");
             }, 500);
 
-            // ====================================================================
-            // TEMPO DE ESPERA AUMENTADO PARA 15 SEGUNDOS
-            // ====================================================================
             setTimeout(() => {
                 socket.metData = socket.buffer;
                 socket.buffer = '';
                 console.log(`[Polling] [${socket.deviceId}] Enviando THE.`);
                 socket.write("THE\r\n");
-            }, 15000); // ANTES: 8000. AGORA: 15 segundos de espera pela resposta do MET
+            }, 15000);
 
             setTimeout(() => {
                 socket.tempData = socket.buffer;
@@ -164,8 +163,7 @@ const server = net.createServer((socket) => {
                 } else {
                     console.warn(`[Polling] [${socket.deviceId}] Parser falhou. Nenhuma leitura será publicada.`);
                 }
-            }, 19000); // ANTES: 12000. Agora espera mais 4 segundos pela resposta do THE
-            // ====================================================================
+            }, 19000);
         };
         poll();
         socket.pollTimer = setInterval(poll, pollInterval);
