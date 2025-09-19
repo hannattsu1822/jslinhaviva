@@ -144,6 +144,33 @@ const server = net.createServer((socket) => {
     };
 
     socket.on('data', async (data) => {
+        if (socket.state === 'AWAITING_IDENTITY') {
+            const customId = extractDeviceIdFromBinary(data);
+            if (!customId || customId.length < 1) {
+                console.warn(`[TCP Service] ID vazio ou inválido.`);
+                return;
+            }
+            try {
+                const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
+                if (rows.length > 0) {
+                    socket.deviceId = rows[0].local_tag;
+                    socket.rele_id_db = rows[0].id;
+                    console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
+                    socket.state = 'LOGGING_IN';
+                    socket.buffer = '';
+                    setTimeout(() => socket.write("ACC\r\n"), 500);
+                    setTimeout(() => socket.write("OTTER\r\n"), 1500);
+                } else {
+                    console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
+                    socket.end();
+                }
+            } catch (err) {
+                console.error("[TCP Service] Erro de DB ao identificar por ID Customizado:", err);
+                socket.end();
+            }
+            return;
+        }
+        
         socket.buffer += data.toString('latin1');
         
         if (socket.buffer.includes('=>')) {
@@ -151,38 +178,9 @@ const server = net.createServer((socket) => {
             socket.buffer = socket.buffer.substring(socket.buffer.indexOf('=>') + 2);
             
             switch (socket.state) {
-                case 'AWAITING_IDENTITY':
-                    const customId = extractDeviceIdFromBinary(data);
-                    if (!customId || customId.length < 1) {
-                        console.warn(`[TCP Service] ID vazio ou inválido.`);
-                        socket.end();
-                        return;
-                    }
-                    try {
-                        const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
-                        if (rows.length > 0) {
-                            socket.deviceId = rows[0].local_tag;
-                            socket.rele_id_db = rows[0].id;
-                            console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
-                            socket.state = 'LOGGING_IN';
-                            socket.write("ACC\r\n");
-                        } else {
-                            console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
-                            socket.end();
-                        }
-                    } catch (err) {
-                        console.error("[TCP Service] Erro de DB ao identificar por ID Customizado:", err);
-                        socket.end();
-                    }
-                    break;
-                
                 case 'LOGGING_IN':
-                    if (completeMessage.includes('ACC')) {
-                        socket.write("OTTER\r\n");
-                    } else if (completeMessage.includes('OTTER')) {
-                        console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
-                        startPollingCycle();
-                    }
+                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
+                    startPollingCycle();
                     break;
 
                 case 'AWAITING_MET':
@@ -197,7 +195,7 @@ const server = net.createServer((socket) => {
                     socket.tempData = completeMessage;
                     console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
                     processAndPublish();
-                    socket.state = 'LOGGED_IN_IDLE';
+                    socket.state = 'IDLE';
                     scheduleNextPoll();
                     break;
             }
