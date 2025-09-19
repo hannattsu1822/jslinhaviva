@@ -6,8 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let updateTimeout;
     const MAX_CHART_POINTS = 60;
-    // O intervalo para considerar um relé offline (em milissegundos).
-    // 5 minutos do polling + 30s de margem = 330000ms
     const OFFLINE_THRESHOLD_MS = 330000;
     let tensaoChart, correnteChart, temperaturaChart;
 
@@ -136,18 +134,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!leiturasRes.ok) throw new Error('Falha ao buscar dados iniciais.');
             const leituras = await leiturasRes.json();
 
-            // Se existirem dados históricos, preenche a tela com o mais recente
             if (leituras.length > 0) {
                 updateLiveCards(leituras[0]);
                 
-                // Verifica se o último dado é recente para definir o status inicial
                 const lastTimestamp = new Date(leituras[0].timestamp_leitura).getTime();
                 const isOnline = (Date.now() - lastTimestamp) < OFFLINE_THRESHOLD_MS;
                 setStatus(isOnline);
 
                 initializeCharts(leituras);
             } else {
-                // Se não houver dados, inicializa os gráficos vazios e define como offline
                 initializeCharts([]);
                 setStatus(false);
             }
@@ -170,11 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = message.dados;
                     const time = new Date(data.timestamp_leitura).getTime();
                     
-                    // Atualiza os cards e define o status como Online
                     updateLiveCards(data);
                     setStatus(true);
 
-                    // Adiciona os novos dados aos gráficos
                     addDataToChart(tensaoChart, 'Fase VA', { x: time, y: data.tensao_va }, '#FF6384');
                     addDataToChart(tensaoChart, 'Fase VB', { x: time, y: data.tensao_vb }, '#36A2EB');
                     addDataToChart(tensaoChart, 'Fase VC', { x: time, y: data.tensao_vc }, '#FFCE56');
