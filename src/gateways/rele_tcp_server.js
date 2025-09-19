@@ -7,7 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 300000;
+const pollInterval = 120000;
 const keepaliveInterval = 120000;
 
 const dbConfig = {
@@ -129,6 +129,7 @@ const server = net.createServer((socket) => {
     socket.tempData = '';
     socket.pollTimer = null;
     socket.keepaliveTimer = null;
+    socket.loginTimeout = null;
 
     const processAndPublish = () => {
         const parsedData = parseData(socket.metData, socket.tempData);
@@ -192,6 +193,12 @@ const server = net.createServer((socket) => {
                     socket.state = 'LOGGING_IN_ACC';
                     socket.buffer = '';
                     socket.write("ACC\r\n");
+                    
+                    socket.loginTimeout = setTimeout(() => {
+                        console.warn(`[TCP Service] Timeout! Dispositivo ${socket.deviceId} (${remoteAddress}) não completou o login em 10s. Fechando conexão.`);
+                        socket.end();
+                    }, 10000);
+
                 } else {
                     console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
                     socket.end();
@@ -215,6 +222,7 @@ const server = net.createServer((socket) => {
                     socket.write("OTTER\r\n");
                     break;
                 case 'LOGGING_IN_OTTER':
+                    if (socket.loginTimeout) clearTimeout(socket.loginTimeout);
                     console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
                     startPollingCycle();
                     socket.pollTimer = setInterval(startPollingCycle, pollInterval);
@@ -238,9 +246,10 @@ const server = net.createServer((socket) => {
     });
 
     socket.on("close", () => {
+        if (socket.loginTimeout) clearTimeout(socket.loginTimeout);
         if (socket.pollTimer) clearTimeout(socket.pollTimer);
         if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
-        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
+        console.log(`[TCP Service] Conexão com ${socket.deviceId || 'ID_NÃO_DEFINIDO'} (${remoteAddress}) fechada.`);
     });
 
     socket.on("error", (err) => {
