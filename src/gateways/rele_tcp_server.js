@@ -7,7 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 300000; // ANTES: 60000 (1 min) | AGORA: 300000 (5 min)
+const pollInterval = 300000;
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -165,12 +165,14 @@ const server = net.createServer((socket) => {
     };
 
     socket.on('data', async (data) => {
+        const hexData = data.toString('hex');
+        if (hexData === '0000000201') {
+            console.log(`[TCP Service] Pacote de heartbeat/fantasma ignorado.`);
+            return;
+        }
+
         if (socket.state === 'AWAITING_IDENTITY') {
             const customId = extractDeviceIdFromBinary(data);
-            if (!customId || customId.length < 1 || customId === '0000000201') {
-                if (customId === '0000000201') console.log('[TCP Service] Pacote de heartbeat/fantasma ignorado.');
-                return;
-            }
             try {
                 const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
                 if (rows.length > 0) {
