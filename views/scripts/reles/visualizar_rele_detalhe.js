@@ -6,30 +6,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let updateTimeout;
     const MAX_CHART_POINTS = 60;
+    // O intervalo para considerar um relé offline (em milissegundos).
+    // 5 minutos do polling + 30s de margem = 330000ms
+    const OFFLINE_THRESHOLD_MS = 330000;
     let tensaoChart, correnteChart, temperaturaChart;
 
     const formatValue = (value, dec) => (typeof value === 'number' ? value.toFixed(dec) : '-');
     
-    // ====================================================================
-    // FUNÇÃO ATUALIZADA COM DUAS CASAS DECIMAIS PARA TODOS
-    // ====================================================================
     function updateLiveCards(data) {
-        // Tensão de Fase (2 casas decimais)
         document.getElementById('live-tensao-va').textContent = formatValue(data.tensao_va, 2);
         document.getElementById('live-tensao-vb').textContent = formatValue(data.tensao_vb, 2);
         document.getElementById('live-tensao-vc').textContent = formatValue(data.tensao_vc, 2);
-
-        // Tensão de Linha (2 casas decimais)
         document.getElementById('live-tensao-vab').textContent = formatValue(data.tensao_vab, 2);
         document.getElementById('live-tensao-vbc').textContent = formatValue(data.tensao_vbc, 2);
         document.getElementById('live-tensao-vca').textContent = formatValue(data.tensao_vca, 2);
-
-        // Corrente (2 casas decimais)
         document.getElementById('live-corrente-a').textContent = formatValue(data.corrente_a, 2);
         document.getElementById('live-corrente-b').textContent = formatValue(data.corrente_b, 2);
         document.getElementById('live-corrente-c').textContent = formatValue(data.corrente_c, 2);
-
-        // Temperatura (2 casas decimais)
         document.getElementById('live-temp-disp').textContent = formatValue(data.temperatura_dispositivo, 2);
         document.getElementById('live-temp-amb').textContent = formatValue(data.temperatura_ambiente, 2);
         document.getElementById('live-temp-enrol').textContent = formatValue(data.temperatura_enrolamento, 2);
@@ -50,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         clearTimeout(updateTimeout);
         if (online) {
-            updateTimeout = setTimeout(() => setStatus(false), 180000); // 3 minutos
+            updateTimeout = setTimeout(() => setStatus(false), OFFLINE_THRESHOLD_MS);
         }
     }
 
@@ -143,11 +136,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!leiturasRes.ok) throw new Error('Falha ao buscar dados iniciais.');
             const leituras = await leiturasRes.json();
 
+            // Se existirem dados históricos, preenche a tela com o mais recente
             if (leituras.length > 0) {
                 updateLiveCards(leituras[0]);
-                setStatus( (new Date() - new Date(leituras[0].timestamp_leitura)) < 180000 );
+                
+                // Verifica se o último dado é recente para definir o status inicial
+                const lastTimestamp = new Date(leituras[0].timestamp_leitura).getTime();
+                const isOnline = (Date.now() - lastTimestamp) < OFFLINE_THRESHOLD_MS;
+                setStatus(isOnline);
+
                 initializeCharts(leituras);
             } else {
+                // Se não houver dados, inicializa os gráficos vazios e define como offline
                 initializeCharts([]);
                 setStatus(false);
             }
@@ -169,9 +169,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (message.type === 'nova_leitura_rele' && message.dados.rele_id == RELE_ID) {
                     const data = message.dados;
                     const time = new Date(data.timestamp_leitura).getTime();
+                    
+                    // Atualiza os cards e define o status como Online
                     updateLiveCards(data);
                     setStatus(true);
 
+                    // Adiciona os novos dados aos gráficos
                     addDataToChart(tensaoChart, 'Fase VA', { x: time, y: data.tensao_va }, '#FF6384');
                     addDataToChart(tensaoChart, 'Fase VB', { x: time, y: data.tensao_vb }, '#36A2EB');
                     addDataToChart(tensaoChart, 'Fase VC', { x: time, y: data.tensao_vc }, '#FFCE56');
