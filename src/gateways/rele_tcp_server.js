@@ -30,8 +30,6 @@ function parseData(metResponse, tempResponse) {
     const data = {};
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
-    const metLines = cleanMet.split('\n');
-    const tempLines = cleanTemp.split('\n');
 
     const findNumbers = (str) => {
         if (!str) return [];
@@ -40,43 +38,42 @@ function parseData(metResponse, tempResponse) {
     };
 
     try {
-        let voltageContext = null;
-
-        for (const line of metLines) {
-            if (line.includes('VA') && line.includes('VB') && line.includes('VC')) {
-                voltageContext = 'PHASE';
-            } else if (line.includes('VAB') && line.includes('VBC') && line.includes('VCA')) {
-                voltageContext = 'LINE';
-            }
-
-            if (line.includes('Current Magnitude (A)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length >= 3) {
-                    data.corrente_a = numbers[0];
-                    data.corrente_b = numbers[1];
-                    data.corrente_c = numbers[2];
-                }
-            } else if (line.includes('Voltage Magnitude (V)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length >= 3) {
-                    if (voltageContext === 'PHASE') {
-                        data.tensao_va = numbers[0];
-                        data.tensao_vb = numbers[1];
-                        data.tensao_vc = numbers[2];
-                    } else if (voltageContext === 'LINE') {
-                        data.tensao_vab = numbers[0];
-                        data.tensao_vbc = numbers[1];
-                        data.tensao_vca = numbers[2];
-                    }
-                }
-            } else if (line.includes('ncy (Hz)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length > 0) {
-                    data.frequencia = numbers[0];
-                }
+        const currentBlockMatch = cleanMet.match(/Current Magnitude \(A\)([\s\S]*?)(?=Current Angle|3I2X)/);
+        if (currentBlockMatch) {
+            const numbers = findNumbers(currentBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.corrente_a = numbers[0];
+                data.corrente_b = numbers[1];
+                data.corrente_c = numbers[2];
             }
         }
-        
+
+        const phaseVoltageBlockMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)([\s\S]*?)(?=Voltage Angle)/);
+        if (phaseVoltageBlockMatch) {
+            const numbers = findNumbers(phaseVoltageBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.tensao_va = numbers[0];
+                data.tensao_vb = numbers[1];
+                data.tensao_vc = numbers[2];
+            }
+        }
+
+        const lineVoltageBlockMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)([\s\S]*?)(?=Voltage Angle)/);
+        if (lineVoltageBlockMatch) {
+            const numbers = findNumbers(lineVoltageBlockMatch[1]);
+            if (numbers.length >= 3) {
+                data.tensao_vab = numbers[0];
+                data.tensao_vbc = numbers[1];
+                data.tensao_vca = numbers[2];
+            }
+        }
+
+        const frequencyMatch = cleanMet.match(/ncy \(Hz\)\s*=\s*([\d.-]+)/);
+        if (frequencyMatch) {
+            data.frequencia = parseFloat(frequencyMatch[1]);
+        }
+
+        const tempLines = cleanTemp.split('\n');
         for (const line of tempLines) {
             if (line.includes('AMBT (deg. C)')) {
                 const numbers = findNumbers(line);
