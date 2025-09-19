@@ -8,6 +8,7 @@ const mqtt = require("mqtt");
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
 const pollInterval = 300000;
+const keepaliveInterval = 120000;
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -127,6 +128,7 @@ const server = net.createServer((socket) => {
     socket.metData = '';
     socket.tempData = '';
     socket.pollTimer = null;
+    socket.keepaliveTimer = null;
 
     const processAndPublish = () => {
         const parsedData = parseData(socket.metData, socket.tempData);
@@ -153,10 +155,23 @@ const server = net.createServer((socket) => {
             socket.end();
             return;
         }
+        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
         console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
         socket.state = 'AWAITING_MET';
         socket.buffer = '';
         socket.write("MET\r\n");
+    };
+    
+    const startKeepalive = () => {
+        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
+        socket.keepaliveTimer = setInterval(() => {
+            if (socket.writable) {
+                console.log(`[Keepalive] [${socket.deviceId}] Enviando sinal para manter conexão ativa.`);
+                socket.write('\r\n');
+            } else {
+                socket.end();
+            }
+        }, keepaliveInterval);
     };
 
     socket.on('data', async (data) => {
@@ -203,6 +218,7 @@ const server = net.createServer((socket) => {
                     console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
                     startPollingCycle();
                     socket.pollTimer = setInterval(startPollingCycle, pollInterval);
+                    startKeepalive();
                     break;
                 case 'AWAITING_MET':
                     socket.metData = completeMessage;
@@ -215,6 +231,7 @@ const server = net.createServer((socket) => {
                     console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
                     processAndPublish();
                     socket.state = 'IDLE';
+                    startKeepalive();
                     break;
             }
         }
@@ -222,6 +239,7 @@ const server = net.createServer((socket) => {
 
     socket.on("close", () => {
         if (socket.pollTimer) clearTimeout(socket.pollTimer);
+        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
         console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
 
