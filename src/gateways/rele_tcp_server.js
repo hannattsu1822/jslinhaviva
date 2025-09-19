@@ -30,41 +30,53 @@ function parseData(metResponse, tempResponse) {
     const data = {};
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
+    const metLines = cleanMet.split('\n');
+    const tempLines = cleanTemp.split('\n');
+
+    const findNumbers = (str) => {
+        if (!str) return [];
+        const matches = str.match(/-?\d[\d.,]*/g);
+        return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
+    };
 
     try {
-        const currentMatch = cleanMet.match(/Current Magnitude \(A\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
-        if (currentMatch) {
-            data.corrente_a = parseFloat(currentMatch[1]);
-            data.corrente_b = parseFloat(currentMatch[2]);
-            data.corrente_c = parseFloat(currentMatch[3]);
-        }
+        let voltageContext = null;
 
-        const phaseVoltageMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
-        if (phaseVoltageMatch) {
-            data.tensao_va = parseFloat(phaseVoltageMatch[1]);
-            data.tensao_vb = parseFloat(phaseVoltageMatch[2]);
-            data.tensao_vc = parseFloat(phaseVoltageMatch[3]);
-        }
+        for (const line of metLines) {
+            if (line.includes('VA') && line.includes('VB') && line.includes('VC')) {
+                voltageContext = 'PHASE';
+            } else if (line.includes('VAB') && line.includes('VBC') && line.includes('VCA')) {
+                voltageContext = 'LINE';
+            }
 
-        const lineVoltageMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)\s+([\d.-]+)\s+([\d.-]+)\s+([\d.-]+)/);
-        if (lineVoltageMatch) {
-            data.tensao_vab = parseFloat(lineVoltageMatch[1]);
-            data.tensao_vbc = parseFloat(lineVoltageMatch[2]);
-            data.tensao_vca = parseFloat(lineVoltageMatch[3]);
+            if (line.includes('Current Magnitude (A)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length >= 3) {
+                    data.corrente_a = numbers[0];
+                    data.corrente_b = numbers[1];
+                    data.corrente_c = numbers[2];
+                }
+            } else if (line.includes('Voltage Magnitude (V)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length >= 3) {
+                    if (voltageContext === 'PHASE') {
+                        data.tensao_va = numbers[0];
+                        data.tensao_vb = numbers[1];
+                        data.tensao_vc = numbers[2];
+                    } else if (voltageContext === 'LINE') {
+                        data.tensao_vab = numbers[0];
+                        data.tensao_vbc = numbers[1];
+                        data.tensao_vca = numbers[2];
+                    }
+                }
+            } else if (line.includes('ncy (Hz)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) {
+                    data.frequencia = numbers[0];
+                }
+            }
         }
         
-        const frequencyMatch = cleanMet.match(/ncy \(Hz\)\s*=\s*([\d.-]+)/);
-        if (frequencyMatch) {
-            data.frequencia = parseFloat(frequencyMatch[1]);
-        }
-
-        const findNumbers = (str) => {
-            if (!str) return [];
-            const matches = str.match(/-?\d[\d.,]*/g);
-            return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
-        };
-        
-        const tempLines = cleanTemp.split('\n');
         for (const line of tempLines) {
             if (line.includes('AMBT (deg. C)')) {
                 const numbers = findNumbers(line);
@@ -82,9 +94,6 @@ function parseData(metResponse, tempResponse) {
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
                 console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. A leitura será descartada.`);
-                console.log("--- DEBUG: DADOS MET RECEBIDOS ---");
-                console.log(metResponse);
-                console.log("------------------------------------");
                 return null;
             }
         }
@@ -147,7 +156,6 @@ const server = net.createServer((socket) => {
         if (socket.state === 'AWAITING_IDENTITY') {
             const customId = extractDeviceIdFromBinary(data);
             if (!customId || customId.length < 1) {
-                console.warn(`[TCP Service] ID vazio ou inválido.`);
                 return;
             }
             try {
