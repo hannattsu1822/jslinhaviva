@@ -195,9 +195,9 @@ const server = net.createServer((socket) => {
                     socket.write("ACC\r\n");
                     
                     socket.loginTimeout = setTimeout(() => {
-                        console.warn(`[TCP Service] Timeout! Dispositivo ${socket.deviceId} (${remoteAddress}) não completou o login em 30s. Fechando conexão.`);
+                        console.warn(`[TCP Service] Timeout! Dispositivo ${socket.deviceId} (${remoteAddress}) não completou o login em 60s. Fechando conexão.`);
                         socket.end();
-                    }, 30000);
+                    }, 60000);
 
                 } else {
                     console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
