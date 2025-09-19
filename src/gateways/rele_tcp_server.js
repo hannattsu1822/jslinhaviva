@@ -7,7 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 60000;
+const pollInterval = 60000; // O intervalo entre as coletas continua o mesmo
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -27,61 +27,56 @@ function extractDeviceIdFromBinary(data) {
   return hexId;
 }
 
-// ====================================================================
-// PARSER FINAL - LÓGICA DE TENSÃO INDEPENDENTE E ROBUSTA
-// ====================================================================
 function parseData(metResponse, tempResponse) {
     const data = {};
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
-    
+    const metLines = cleanMet.split('\n');
+    const tempLines = cleanTemp.split('\n');
+
     const findNumbers = (str) => {
         const matches = str.match(/-?\d[\d.,]*/g);
         return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
     };
 
     try {
-        // --- Extração de Corrente ---
-        const currentMatch = cleanMet.match(/Current Magnitude \(A\)\s*([\s\S]*?)(?=Current Angle|3I2X)/);
-        if (currentMatch) {
-            const numbers = findNumbers(currentMatch[1]);
-            if (numbers.length >= 3) {
-                data.corrente_a = numbers[0];
-                data.corrente_b = numbers[1];
-                data.corrente_c = numbers[2];
+        let voltageContext = null; // "Memória" para o contexto da tensão
+
+        for (const line of metLines) {
+            if (line.includes('VA') && line.includes('VB') && line.includes('VC')) {
+                voltageContext = 'PHASE';
+            } else if (line.includes('VAB') && line.includes('VBC') && line.includes('VCA')) {
+                voltageContext = 'LINE';
+            }
+
+            if (line.includes('Current Magnitude (A)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length >= 3) {
+                    data.corrente_a = numbers[0];
+                    data.corrente_b = numbers[1];
+                    data.corrente_c = numbers[2];
+                }
+            } else if (line.includes('Voltage Magnitude (V)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length >= 3) {
+                    if (voltageContext === 'PHASE') {
+                        data.tensao_va = numbers[0];
+                        data.tensao_vb = numbers[1];
+                        data.tensao_vc = numbers[2];
+                    } else if (voltageContext === 'LINE') {
+                        data.tensao_vab = numbers[0];
+                        data.tensao_vbc = numbers[1];
+                        data.tensao_vca = numbers[2];
+                    }
+                }
+            } else if (line.includes('ncy (Hz)')) {
+                const numbers = findNumbers(line);
+                if (numbers.length > 0) {
+                    data.frequencia = numbers[0];
+                }
             }
         }
-
-        // --- Extração de Tensão de Fase (Independente) ---
-        const phaseVoltageBlockMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)\s*([\s\S]*?)(?=Voltage Angle)/);
-        if (phaseVoltageBlockMatch) {
-            const numbers = findNumbers(phaseVoltageBlockMatch[1]);
-            if (numbers.length >= 3) {
-                data.tensao_va = numbers[0];
-                data.tensao_vb = numbers[1];
-                data.tensao_vc = numbers[2];
-            }
-        }
-
-        // --- Extração de Tensão de Linha (Independente) ---
-        const lineVoltageBlockMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)\s*([\s\S]*?)(?=Voltage Angle)/);
-        if (lineVoltageBlockMatch) {
-            const numbers = findNumbers(lineVoltageBlockMatch[1]);
-            if (numbers.length >= 3) {
-                data.tensao_vab = numbers[0];
-                data.tensao_vbc = numbers[1];
-                data.tensao_vca = numbers[2];
-            }
-        }
-
-        // --- Extração de Frequência ---
-        const frequencyMatch = cleanMet.match(/ncy \(Hz\)\s*=\s*([\d.-]+)/);
-        if (frequencyMatch) {
-            data.frequencia = parseFloat(frequencyMatch[1]);
-        }
-
-        // --- Extração de Temperaturas ---
-        const tempLines = cleanTemp.split('\n');
+        
         for (const line of tempLines) {
             if (line.includes('AMBT (deg. C)')) {
                 const numbers = findNumbers(line);
@@ -95,11 +90,13 @@ function parseData(metResponse, tempResponse) {
             }
         }
         
-        // --- Verificação Final ---
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
                 console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. A leitura será descartada.`);
+                console.log("--- DEBUG: DADOS MET RECEBIDOS ---");
+                console.log(metResponse);
+                console.log("------------------------------------");
                 return null;
             }
         }
@@ -111,10 +108,6 @@ function parseData(metResponse, tempResponse) {
         return null;
     }
 }
-// ====================================================================
-// FIM DO PARSER
-// ====================================================================
-
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
@@ -144,12 +137,17 @@ const server = net.createServer((socket) => {
                 console.log(`[Polling] [${socket.deviceId}] Enviando MET.`);
                 socket.write("MET\r\n");
             }, 500);
+
+            // ====================================================================
+            // TEMPOS DE ESPERA AUMENTADOS
+            // ====================================================================
             setTimeout(() => {
                 socket.metData = socket.buffer;
                 socket.buffer = '';
                 console.log(`[Polling] [${socket.deviceId}] Enviando THE.`);
                 socket.write("THE\r\n");
-            }, 2500);
+            }, 4000); // Antes: 2500. Agora espera 3.5 segundos pela resposta do MET
+
             setTimeout(() => {
                 socket.tempData = socket.buffer;
                 socket.buffer = '';
@@ -172,7 +170,8 @@ const server = net.createServer((socket) => {
                 } else {
                     console.warn(`[Polling] [${socket.deviceId}] Parser falhou. Nenhuma leitura será publicada.`);
                 }
-            }, 4500);
+            }, 7000); // Antes: 4500. Agora espera mais 3 segundos pela resposta do THE
+            // ====================================================================
         };
         poll();
         socket.pollTimer = setInterval(poll, pollInterval);
