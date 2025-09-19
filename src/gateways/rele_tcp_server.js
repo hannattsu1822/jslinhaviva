@@ -31,13 +31,13 @@ function parseData(metResponse, tempResponse) {
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
 
-    const findNumbers = (str) => {
-        if (!str) return [];
-        const matches = str.match(/-?\d[\d.,]*/g);
-        return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
-    };
-
     try {
+        const findNumbers = (str) => {
+            if (!str) return [];
+            const matches = str.match(/-?\d[\d.,]*/g);
+            return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
+        };
+
         const currentBlockMatch = cleanMet.match(/Current Magnitude \(A\)([\s\S]*?)(?=Current Angle|3I2X)/);
         if (currentBlockMatch) {
             const numbers = findNumbers(currentBlockMatch[1]);
@@ -90,12 +90,27 @@ function parseData(metResponse, tempResponse) {
         const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
         for (const key of requiredKeys) {
             if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
-                console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. A leitura será descartada.`);
+                console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. Leitura descartada.`);
+                return null;
+            }
+        }
+
+        if (data.tensao_vab !== undefined) {
+            const avgPhaseVoltage = (data.tensao_va + data.tensao_vb + data.tensao_vc) / 3;
+            const expectedLineVoltage = avgPhaseVoltage * Math.sqrt(3);
+            const tolerance = 0.20;
+            const lowerBound = expectedLineVoltage * (1 - tolerance);
+            const upperBound = expectedLineVoltage * (1 + tolerance);
+            
+            if (data.tensao_vab < lowerBound || data.tensao_vab > upperBound ||
+                data.tensao_vbc < lowerBound || data.tensao_vbc > upperBound ||
+                data.tensao_vca < lowerBound || data.tensao_vca > upperBound) {
+                console.warn(`[TCP Parser] VERIFICAÇÃO DE SANIDADE FALHOU. Tensão de linha (${data.tensao_vab}, ${data.tensao_vbc}, ${data.tensao_vca}) inconsistente com a tensão de fase esperada (~${expectedLineVoltage.toFixed(0)}). Leitura descartada.`);
                 return null;
             }
         }
         
-        console.log('[TCP Parser] Sucesso! Todos os valores extraídos.', data);
+        console.log('[TCP Parser] Sucesso! Leitura extraída e validada.', data);
         return data;
     } catch (error) {
         console.error("[TCP Parser] Erro crítico ao fazer parse:", error);
@@ -129,7 +144,7 @@ const server = net.createServer((socket) => {
             mqttClient.publish(topic, payload);
             console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
         } else {
-            console.warn(`[Polling] [${socket.deviceId}] Parser falhou. Nenhuma leitura será publicada.`);
+            console.warn(`[Polling] [${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura será publicada.`);
         }
     };
 
@@ -152,7 +167,8 @@ const server = net.createServer((socket) => {
     socket.on('data', async (data) => {
         if (socket.state === 'AWAITING_IDENTITY') {
             const customId = extractDeviceIdFromBinary(data);
-            if (!customId || customId.length < 1) {
+            if (!customId || customId.length < 1 || customId === '0000000201') {
+                if (customId === '0000000201') console.log('[TCP Service] Pacote de heartbeat/fantasma ignorado.');
                 return;
             }
             try {
