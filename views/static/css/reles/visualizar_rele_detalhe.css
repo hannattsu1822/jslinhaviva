@@ -1,5 +1,3 @@
-/* Arquivo: visualizar_rele_detalhe.css */
-
 /* --- GERAL --- */
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .status-box { display: flex; align-items: center; padding: 8px 15px; border-radius: 20px; font-weight: 500; transition: all 0.3s ease; }
@@ -12,7 +10,7 @@
 .status-box.status-no-data .status-dot { background-color: #9e9e9e; }
 .timestamp { text-align: right; color: #888; font-size: 0.8rem; margin-top: -1rem; margin-bottom: 2rem; }
 
-/* --- NOVOS CARDS DE LEITURA --- */
+/* --- CARDS DE LEITURA --- */
 .live-cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -31,7 +29,6 @@
     transition: box-shadow 0.3s ease;
 }
 
-/* Efeito de atualização quando chega um dado novo */
 @keyframes flash {
     0% { box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
     50% { box-shadow: 0 4px 25px rgba(50, 150, 255, 0.3); }
@@ -40,7 +37,6 @@
 .live-card.just-updated {
     animation: flash 0.7s ease-out;
 }
-
 
 .card-icon {
     width: 60px;
@@ -54,14 +50,15 @@
 }
 .card-icon .material-icons { font-size: 32px; }
 
-/* --- NOVOS ESTILOS PARA ÍCONES ESPECÍFICOS --- */
 .card-icon.tension-phase { background: linear-gradient(135deg, #FFC107, #FF8F00); }
 .card-icon.tension-line { background: linear-gradient(135deg, #ff7e5f, #feb47b); }
 .card-icon.current { background: linear-gradient(135deg, #2196F3, #0D47A1); }
 .card-icon.temp { background: linear-gradient(135deg, #F44336, #B71C1C); }
 
-
-.card-content { flex-grow: 1; }
+.card-content { 
+    flex-grow: 1; 
+    overflow: hidden; 
+}
 .card-label {
     font-size: 0.9rem;
     color: #777;
@@ -70,12 +67,11 @@
 }
 .card-value-group {
     display: flex;
-    justify-content: space-around; /* Distribui melhor o espaço */
+    justify-content: space-around;
     align-items: baseline;
-    gap: 15px;
+    gap: 10px; /* Reduzido o espaçamento */
 }
 
-/* --- NOVOS ESTILOS PARA VALORES COM LABELS --- */
 .card-value-group.labeled > div {
     text-align: center;
 }
@@ -86,16 +82,25 @@
     text-transform: uppercase;
     display: block;
 }
-/* --- FIM DOS NOVOS ESTILOS PARA VALORES --- */
-
 
 .card-value {
-    font-size: 1.6rem; /* Levemente menor para caber melhor */
+    font-size: 1.4rem; /* Reduzido o tamanho base da fonte */
     font-weight: 600;
     color: #333;
+    white-space: nowrap;
 }
 
-/* --- PAINEL E GRÁFICOS PROFISSIONAIS --- */
+/* Media Query para telas menores, ajustando ainda mais a fonte */
+@media (max-width: 400px) {
+    .card-value {
+        font-size: 1.2rem;
+    }
+    .card-value-group {
+        gap: 5px;
+    }
+}
+
+/* --- PAINEL E GRÁFICOS --- */
 .charts-panel {
     background-color: #fff;
     padding: 25px;
@@ -116,7 +121,7 @@
     grid-column: 1 / -1;
 }
 
-@media (min-width: 1200px) { /* Ponto de quebra para telas maiores */
+@media (min-width: 1200px) {
     .charts-grid {
         grid-template-columns: 1fr 1fr;
     }
