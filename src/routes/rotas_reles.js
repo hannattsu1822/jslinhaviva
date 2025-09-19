@@ -4,9 +4,6 @@ const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
-// --- ROTAS DA API ---
-
-// (As rotas GET, POST, PUT, DELETE /api/reles permanecem as mesmas)
 router.get("/api/reles", autenticar, verificarNivel(1), async (req, res) => {
   try {
     const [rows] = await promisePool.query(
@@ -103,25 +100,25 @@ router.delete("/api/reles/:id", autenticar, verificarNivel(2), async (req, res) 
   }
 });
 
-// NOVA ROTA DE API para buscar leituras de um relé específico
 router.get("/api/reles/:id/leituras", autenticar, verificarNivel(1), async (req, res) => {
-    const { id } = req.params;
+    const releId = req.params.id;
+    const limit = req.query.limit || 100;
+
     try {
-        const [rows] = await promisePool.query(
-            "SELECT * FROM leituras_reles WHERE rele_id = ? ORDER BY timestamp_leitura DESC LIMIT 100",
-            [id]
+        const [leituras] = await promisePool.query(
+            `SELECT * FROM leituras_reles 
+             WHERE rele_id = ? 
+             ORDER BY timestamp_leitura DESC 
+             LIMIT ?`,
+            [releId, parseInt(limit)]
         );
-        res.json(rows);
-    } catch (err) {
-        console.error(`Erro ao buscar leituras para o relé ID ${id}:`, err);
-        res.status(500).json({ message: "Erro interno no servidor" });
+        res.json(leituras.reverse()); 
+    } catch (error) {
+        console.error("Erro ao buscar leituras do relé:", error);
+        res.status(500).json({ error: "Erro ao buscar dados" });
     }
 });
 
-
-// --- ROTAS DE PÁGINAS HTML ---
-
-// Rota para a página de gerenciamento (CRUD)
 router.get("/gerenciar-reles", autenticar, verificarNivel(2), (req, res) => {
   const pageData = {
     pageTitle: "Gerenciamento de Relés",
@@ -130,31 +127,38 @@ router.get("/gerenciar-reles", autenticar, verificarNivel(2), (req, res) => {
   res.render("pages/rele/gerenciar_reles.html", pageData);
 });
 
-// ROTA MODIFICADA: Agora serve a página de SELEÇÃO de relés
 router.get("/visualizar-reles", autenticar, verificarNivel(1), (req, res) => {
   const pageData = {
     pageTitle: "Selecionar Relé para Monitoramento",
     user: req.user,
   };
-  // Vamos renomear o arquivo para 'listar_reles.html' para ficar mais claro
   res.render("pages/rele/listar_reles.html", pageData);
 });
 
-// NOVA ROTA: Serve a página de DETALHES de um relé específico
 router.get("/visualizar-reles/:id", autenticar, verificarNivel(1), async (req, res) => {
   try {
     const { id } = req.params;
-    // Verifica se o relé existe antes de renderizar a página
-    const [rele] = await promisePool.query("SELECT nome_rele FROM dispositivos_reles WHERE id = ?", [id]);
+    
+    const [rele] = await promisePool.query("SELECT nome_rele, local_tag FROM dispositivos_reles WHERE id = ?", [id]);
     if (rele.length === 0) {
       return res.status(404).send("Relé não encontrado");
     }
+
+    const [ultimaLeituraRows] = await promisePool.query(
+      `SELECT * FROM leituras_reles 
+       WHERE rele_id = ? 
+       ORDER BY timestamp_leitura DESC 
+       LIMIT 1`,
+      [id]
+    );
+    const ultimaLeitura = ultimaLeituraRows.length > 0 ? ultimaLeituraRows[0] : null;
     
     const pageData = {
-      pageTitle: `Monitorando: ${rele[0].nome_rele}`,
+      pageTitle: `Monitorando: ${rele[0].nome_rele || rele[0].local_tag}`,
       user: req.user,
       releId: id,
-      releNome: rele[0].nome_rele
+      releNome: rele[0].nome_rele || rele[0].local_tag,
+      ultimaLeitura: ultimaLeitura
     };
     res.render("pages/rele/visualizar_rele_detalhe.html", pageData);
   } catch (err) {
