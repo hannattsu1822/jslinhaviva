@@ -88,6 +88,7 @@ const server = net.createServer((socket) => {
 
     const processAndPublish = async () => {
         const parsedData = parseData(socket.metData, socket.tempData);
+        console.log(`[DADOS FINAIS] [${socket.deviceId}] Dados processados: `, JSON.stringify(parsedData, null, 2));
 
         if (Object.keys(parsedData).length > 0) {
             const topic = `sel/reles/${socket.deviceId}/status`;
@@ -105,12 +106,36 @@ const server = net.createServer((socket) => {
                     console.log(`[MQTT] [${socket.deviceId}] Dados publicados no tópico: ${topic}`);
                 }
             });
+
             try {
                 const conn = await promisePool.getConnection();
-                await conn.query(
-                    'INSERT INTO leituras_reles (rele_id, dados_json) VALUES (?, ?)',
-                    [socket.rele_id_db, payload]
-                );
+                const sqlQuery = `
+                    INSERT INTO leituras_reles (
+                        rele_id, timestamp_leitura, 
+                        tensao_vab, tensao_vbc, tensao_vca,
+                        tensao_va, tensao_vb, tensao_vc,
+                        corrente_a, corrente_b, corrente_c,
+                        frequencia, temperatura_dispositivo, payload_completo
+                    ) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                `;
+                const values = [
+                    socket.rele_id_db,
+                    parsedData.tensao_rs || null,
+                    parsedData.tensao_st || null,
+                    parsedData.tensao_tr || null,
+                    parsedData.tensao_rn || null,
+                    parsedData.tensao_sn || null,
+                    parsedData.tensao_tn || null,
+                    parsedData.corrente_r || null,
+                    parsedData.corrente_s || null,
+                    parsedData.corrente_t || null,
+                    parsedData.frequencia || null,
+                    parsedData.temperatura || null,
+                    payload
+                ];
+                
+                await conn.query(sqlQuery, values);
+                
                 await conn.query(
                     'UPDATE dispositivos_reles SET ultima_leitura = NOW() WHERE id = ?',
                     [socket.rele_id_db]
