@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCardValue(elements.correnteA, formatValue(measurements.corrente_r || measurements.corrente_a, ' A'));
         updateCardValue(elements.correnteB, formatValue(measurements.corrente_s || measurements.corrente_b, ' A'));
         updateCardValue(elements.correnteC, formatValue(measurements.corrente_t || measurements.corrente_c, ' A'));
-        updateCardValue(elements.tempDisp, formatValue(measurements.temperatura || measurements.temperatura_dispositivo, ' °C'));
+        updateCardValue(elements.tempDisp, formatValue(measurements.temperatura_dispositivo, ' °C'));
         updateCardValue(elements.tempAmb, formatValue(measurements.temperatura_ambiente, ' °C'));
         updateCardValue(elements.tempEnrol, formatValue(measurements.temperatura_enrolamento, ' °C'));
     }
@@ -186,8 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
         correnteChart.data.datasets[0].data.push(data.dados.corrente_r);
         correnteChart.data.datasets[1].data.push(data.dados.corrente_s);
         correnteChart.data.datasets[2].data.push(data.dados.corrente_t);
-
-        temperaturaChart.data.datasets[2].data.push(data.dados.temperatura);
+        
+        temperaturaChart.data.datasets[0].data.push(data.dados.temperatura_ambiente);
+        temperaturaChart.data.datasets[1].data.push(data.dados.temperatura_enrolamento);
+        temperaturaChart.data.datasets[2].data.push(data.dados.temperatura_dispositivo);
 
         charts.forEach(chart => {
             chart.data.datasets.forEach(dataset => {
