@@ -35,89 +35,37 @@ function parseData(metResponse, tempResponse) {
     try {
         const findNumbers = (str) => {
             if (!str) return [];
-            const matches = str.match(/-?\d[\d.,]*/g);
-            return matches ? matches.map(s => parseFloat(s.replace(',', '.'))) : [];
+            const matches = str.match(/-?\d+\.\d+|-?\d+/g);
+            return matches ? matches.map(Number) : [];
         };
 
-        const currentBlockMatch = cleanMet.match(/Current Magnitude \(A\)([\s\S]*?)(?=Current Angle|3I2X)/);
-        if (currentBlockMatch) {
-            const numbers = findNumbers(currentBlockMatch[1]);
-            if (numbers.length >= 3) {
-                data.corrente_a = numbers[0];
-                data.corrente_b = numbers[1];
-                data.corrente_c = numbers[2];
-            }
+        const metNumbers = findNumbers(cleanMet);
+        const tempNumbers = findNumbers(cleanTemp);
+
+        if (metNumbers.length >= 12) {
+            data.tensao_rs = metNumbers[0];
+            data.tensao_st = metNumbers[1];
+            data.tensao_tr = metNumbers[2];
+            data.tensao_rn = metNumbers[3];
+            data.tensao_sn = metNumbers[4];
+            data.tensao_tn = metNumbers[5];
+            data.corrente_r = metNumbers[6];
+            data.corrente_s = metNumbers[7];
+            data.corrente_t = metNumbers[8];
+            data.frequencia = metNumbers[11];
         }
 
-        const phaseVoltageBlockMatch = cleanMet.match(/VA\s+VB\s+VC[\s\S]*?Voltage Magnitude \(V\)([\s\S]*?)(?=Voltage Angle)/);
-        if (phaseVoltageBlockMatch) {
-            const numbers = findNumbers(phaseVoltageBlockMatch[1]);
-            if (numbers.length >= 3) {
-                data.tensao_va = numbers[0];
-                data.tensao_vb = numbers[1];
-                data.tensao_vc = numbers[2];
-            }
+        if (tempNumbers.length >= 1) {
+            data.temperatura = tempNumbers[0];
         }
 
-        const lineVoltageBlockMatch = cleanMet.match(/VAB\s+VBC\s+VCA[\s\S]*?Voltage Magnitude \(V\)([\s\S]*?)(?=Voltage Angle)/);
-        if (lineVoltageBlockMatch) {
-            const numbers = findNumbers(lineVoltageBlockMatch[1]);
-            if (numbers.length >= 3) {
-                data.tensao_vab = numbers[0];
-                data.tensao_vbc = numbers[1];
-                data.tensao_vca = numbers[2];
-            }
-        }
-
-        const frequencyMatch = cleanMet.match(/ncy \(Hz\)\s*=\s*([\d.-]+)/);
-        if (frequencyMatch) {
-            data.frequencia = parseFloat(frequencyMatch[1]);
-        }
-
-        const tempLines = cleanTemp.split('\n');
-        for (const line of tempLines) {
-            if (line.includes('AMBT (deg. C)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length > 0) data.temperatura_ambiente = numbers[0];
-            } else if (line.includes('HS (deg. C)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length > 0) data.temperatura_enrolamento = numbers[0];
-            } else if (line.includes('TOILC (deg. C)')) {
-                const numbers = findNumbers(line);
-                if (numbers.length > 0) data.temperatura_dispositivo = numbers[0];
-            }
-        }
-        
-        const requiredKeys = ['corrente_a', 'corrente_b', 'corrente_c', 'tensao_va', 'tensao_vb', 'tensao_vc', 'frequencia'];
-        for (const key of requiredKeys) {
-            if (data[key] === undefined || (typeof data[key] === 'number' && isNaN(data[key]))) {
-                console.warn(`[TCP Parser] Falha ao extrair o valor obrigatório de '${key}'. Leitura descartada.`);
-                return null;
-            }
-        }
-        
-        if (data.tensao_vab !== undefined) {
-            const avgPhaseVoltage = (data.tensao_va + data.tensao_vb + data.tensao_vc) / 3;
-            const expectedLineVoltage = avgPhaseVoltage * Math.sqrt(3);
-            const tolerance = 0.20;
-            const lowerBound = expectedLineVoltage * (1 - tolerance);
-            const upperBound = expectedLineVoltage * (1 + tolerance);
-            
-            if (data.tensao_vab < lowerBound || data.tensao_vab > upperBound ||
-                data.tensao_vbc < lowerBound || data.tensao_vbc > upperBound ||
-                data.tensao_vca < lowerBound || data.tensao_vca > upperBound) {
-                console.warn(`[TCP Parser] VERIFICAÇÃO DE SANIDADE FALHOU. Tensão de linha inconsistente com a tensão de fase. Leitura descartada.`);
-                return null;
-            }
-        }
-        
-        console.log('[TCP Parser] Sucesso! Leitura extraída e validada.', data);
-        return data;
     } catch (error) {
-        console.error("[TCP Parser] Erro crítico ao fazer parse:", error);
-        return null;
+        console.error("[Parser] Erro ao processar dados dos relés:", error);
     }
+
+    return data;
 }
+
 
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
@@ -125,79 +73,105 @@ const server = net.createServer((socket) => {
 
     socket.state = 'AWAITING_IDENTITY';
     socket.buffer = '';
-    socket.metData = '';
-    socket.tempData = '';
-    socket.pollTimer = null;
-    socket.keepaliveTimer = null;
+    socket.setEncoding('latin1');
 
-    const processAndPublish = () => {
-        const parsedData = parseData(socket.metData, socket.tempData);
-        if (parsedData) {
-            const topic = `sel/reles/${socket.rele_id_db}/status`;
-            const now = new Date();
-            const timestampMySQL = now.toISOString().slice(0, 19).replace('T', ' ');
-            const payload = JSON.stringify({
-                rele_id: socket.rele_id_db,
-                local_tag: socket.deviceId,
-                ...parsedData,
-                timestamp_leitura: timestampMySQL,
-                payload_completo: `MET:\n${socket.metData}\nTEMP:\n${socket.tempData}`
-            });
-            mqttClient.publish(topic, payload);
-            console.log(`[Polling] [${socket.deviceId}] Dados VÁLIDOS publicados.`);
-        } else {
-            console.warn(`[Polling] [${socket.deviceId}] Parser falhou ou dados inválidos. Nenhuma leitura será publicada.`);
+    const startPollingCycle = () => {
+        if (socket.state === 'IDLE' || socket.state === 'LOGGING_IN_OTTER') {
+            console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
+            socket.state = 'AWAITING_MET';
+            socket.write("MET\r\n");
+            if (socket.keepaliveTimer) {
+                clearInterval(socket.keepaliveTimer);
+                socket.keepaliveTimer = null;
+            }
         }
     };
 
-    const startPollingCycle = () => {
-        if (!socket.writable) {
-            socket.end();
-            return;
+    const processAndPublish = async () => {
+        const parsedData = parseData(socket.metData, socket.tempData);
+
+        if (Object.keys(parsedData).length > 0) {
+            const topic = `sel/reles/${socket.deviceId}/status`;
+            const payload = JSON.stringify({
+                rele_id: socket.rele_id_db,
+                device_id: socket.deviceId,
+                timestamp: new Date().toISOString(),
+                dados: parsedData,
+            });
+
+            mqttClient.publish(topic, payload, (err) => {
+                if (err) {
+                    console.error(`[MQTT] [${socket.deviceId}] Erro ao publicar dados:`, err);
+                } else {
+                    console.log(`[MQTT] [${socket.deviceId}] Dados publicados no tópico: ${topic}`);
+                }
+            });
+            try {
+                const conn = await promisePool.getConnection();
+                await conn.query(
+                    'INSERT INTO leituras_reles (rele_id, dados_json) VALUES (?, ?)',
+                    [socket.rele_id_db, payload]
+                );
+                await conn.query(
+                    'UPDATE reles SET ultima_leitura = NOW() WHERE id = ?',
+                    [socket.rele_id_db]
+                );
+                conn.release();
+            } catch (dbError) {
+                console.error(`[Database] [${socket.deviceId}] Erro ao salvar leitura no banco de dados:`, dbError);
+            }
+        } else {
+            console.log(`[Parser] [${socket.deviceId}] Nenhum dado válido para processar.`);
         }
-        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
-        console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
-        socket.state = 'AWAITING_MET';
-        socket.buffer = '';
-        socket.write("MET\r\n");
     };
     
     const startKeepalive = () => {
-        if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
+        if (socket.keepaliveTimer) {
+            clearInterval(socket.keepaliveTimer);
+        }
         socket.keepaliveTimer = setInterval(() => {
-            if (socket.writable) {
-                console.log(`[Keepalive] [${socket.deviceId}] Enviando sinal para manter conexão ativa.`);
-                socket.write('\r\n');
-            } else {
-                socket.end();
-            }
+            console.log(`[Keepalive] [${socket.deviceId}] Enviando pacote de keepalive.`);
+            socket.write(Buffer.from([0x00, 0x00, 0x00, 0x02, 0x01]));
         }, keepaliveInterval);
     };
 
     socket.on('data', async (data) => {
-        const hexData = data.toString('hex');
+        const hexData = Buffer.from(data, 'latin1').toString('hex');
         if (hexData === '0000000201') {
             console.log(`[TCP Service] Pacote de heartbeat ignorado.`);
             return;
         }
 
         if (socket.state === 'AWAITING_IDENTITY') {
-            const customId = extractDeviceIdFromBinary(data);
+            const deviceIdHex = extractDeviceIdFromBinary(data);
+            let conn;
             try {
-                const [rows] = await promisePool.query("SELECT id, local_tag FROM dispositivos_reles WHERE custom_id = ? AND ativo = 1", [customId]);
+                conn = await promisePool.getConnection();
+                const [rows] = await conn.query('SELECT id, device_id FROM reles WHERE device_id_hex = ?', [deviceIdHex]);
+                conn.release();
+
                 if (rows.length > 0) {
-                    socket.deviceId = rows[0].local_tag;
                     socket.rele_id_db = rows[0].id;
+                    socket.deviceId = rows[0].device_id;
                     console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
-                    socket.state = 'LOGGING_IN_ACC';
-                    socket.buffer = '';
+                    
+                    socket.state = 'LOGGING_IN_OTTER';
                     socket.write("ACC\r\n");
+                    
+                    console.log(`[TCP Service] Login para ${socket.deviceId} parte 1/2 enviada (ACC). Enviando parte 2/2 (OTTER).`);
+                    socket.write("OTTER\r\n");
+                    
+                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
+                    startPollingCycle();
+                    socket.pollTimer = setInterval(startPollingCycle, pollInterval);
+                    startKeepalive();
                 } else {
-                    console.warn(`[TCP Service] Nenhum dispositivo ativo encontrado para o ID Customizado "${customId}".`);
+                    console.log(`[TCP Service] Dispositivo com ID HEX '${deviceIdHex}' não encontrado no banco de dados.`);
                     socket.end();
                 }
-            } catch (err) {
-                console.error("[TCP Service] Erro de DB ao identificar por ID Customizado:", err);
+            } catch (error) {
+                console.error("[Database] Erro ao consultar o banco de dados:", error);
+                if (conn) conn.release();
                 socket.end();
             }
             return;
@@ -210,16 +184,6 @@ const server = net.createServer((socket) => {
             socket.buffer = socket.buffer.substring(socket.buffer.indexOf('=>') + 2);
             
             switch (socket.state) {
-                case 'LOGGING_IN_ACC':
-                    socket.state = 'LOGGING_IN_OTTER';
-                    socket.write("OTTER\r\n");
-                    break;
-                case 'LOGGING_IN_OTTER':
-                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
-                    startPollingCycle();
-                    socket.pollTimer = setInterval(startPollingCycle, pollInterval);
-                    startKeepalive();
-                    break;
                 case 'AWAITING_MET':
                     socket.metData = completeMessage;
                     console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
