@@ -113,7 +113,7 @@ const server = net.createServer((socket) => {
                     [socket.rele_id_db, payload]
                 );
                 await conn.query(
-                    'UPDATE reles SET ultima_leitura = NOW() WHERE id = ?',
+                    'UPDATE dispositivos_reles SET ultima_leitura = NOW() WHERE id = ?',
                     [socket.rele_id_db]
                 );
                 conn.release();
@@ -147,7 +147,7 @@ const server = net.createServer((socket) => {
             let conn;
             try {
                 conn = await promisePool.getConnection();
-                const [rows] = await conn.query('SELECT id, device_id FROM reles WHERE device_id_hex = ?', [deviceIdHex]);
+                const [rows] = await conn.query('SELECT id, nome_rele AS device_id FROM dispositivos_reles WHERE custom_id = ?', [deviceIdHex]);
                 conn.release();
 
                 if (rows.length > 0) {
