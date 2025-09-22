@@ -69,7 +69,6 @@ function parseData(metResponse, tempResponse) {
     return data;
 }
 
-
 const server = net.createServer((socket) => {
     const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
@@ -78,7 +77,7 @@ const server = net.createServer((socket) => {
     socket.buffer = '';
 
     const startPollingCycle = () => {
-        if (socket.state === 'IDLE' || socket.state === 'LOGGING_IN_OTTER') {
+        if (socket.state === 'IDLE') {
             console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
             socket.state = 'AWAITING_MET';
             socket.write("MET\r\n");
@@ -157,18 +156,14 @@ const server = net.createServer((socket) => {
             clearInterval(socket.keepaliveTimer);
         }
         socket.keepaliveTimer = setInterval(() => {
-            console.log(`[Keepalive] [${socket.deviceId}] Enviando pacote de keepalive.`);
-            socket.write(Buffer.from([0x00, 0x00, 0x00, 0x02, 0x01]));
+            if (socket.state === 'IDLE') {
+                console.log(`[Keepalive] [${socket.deviceId}] Enviando pacote de keepalive.`);
+                socket.write(Buffer.from([0x00, 0x00, 0x00, 0x02, 0x01]));
+            }
         }, keepaliveInterval);
     };
 
     socket.on('data', async (data) => {
-        const hexDataForHeartbeat = data.toString('hex');
-        if (hexDataForHeartbeat === '0000000201') {
-            console.log(`[TCP Service] Pacote de heartbeat ignorado.`);
-            return;
-        }
-
         if (socket.state === 'AWAITING_IDENTITY') {
             const deviceIdHex = extractDeviceIdFromBinary(data);
             let conn;
@@ -182,16 +177,8 @@ const server = net.createServer((socket) => {
                     socket.deviceId = rows[0].device_id;
                     console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
                     
-                    socket.state = 'LOGGING_IN_OTTER';
+                    socket.state = 'LOGGING_IN_ACC';
                     socket.write("ACC\r\n");
-                    
-                    console.log(`[TCP Service] Login para ${socket.deviceId} parte 1/2 enviada (ACC). Enviando parte 2/2 (OTTER).`);
-                    socket.write("OTTER\r\n");
-                    
-                    console.log(`[TCP Service] Login para ${socket.deviceId} concluído.`);
-                    startPollingCycle();
-                    socket.pollTimer = setInterval(startPollingCycle, pollInterval);
-                    startKeepalive();
                 } else {
                     console.log(`[TCP Service] Dispositivo com ID HEX '${deviceIdHex}' não encontrado no banco de dados.`);
                     socket.end();
@@ -203,7 +190,7 @@ const server = net.createServer((socket) => {
             }
             return;
         }
-        
+
         socket.buffer += data.toString('latin1');
         
         if (socket.buffer.includes('=>')) {
@@ -211,6 +198,18 @@ const server = net.createServer((socket) => {
             socket.buffer = socket.buffer.substring(socket.buffer.indexOf('=>') + 2);
             
             switch (socket.state) {
+                case 'LOGGING_IN_ACC':
+                    console.log(`[TCP Service] [${socket.deviceId}] Resposta do ACC recebida. Enviando OTTER.`);
+                    socket.state = 'LOGGING_IN_OTTER';
+                    socket.write("OTTER\r\n");
+                    break;
+                case 'LOGGING_IN_OTTER':
+                    console.log(`[TCP Service] [${socket.deviceId}] Login concluído com sucesso.`);
+                    socket.state = 'IDLE';
+                    startPollingCycle();
+                    socket.pollTimer = setInterval(startPollingCycle, pollInterval);
+                    startKeepalive();
+                    break;
                 case 'AWAITING_MET':
                     socket.metData = completeMessage;
                     console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
@@ -222,7 +221,6 @@ const server = net.createServer((socket) => {
                     console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
                     processAndPublish();
                     socket.state = 'IDLE';
-                    startKeepalive();
                     break;
             }
         }
