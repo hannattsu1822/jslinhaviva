@@ -29,38 +29,46 @@ function extractDeviceIdFromBinary(data) {
 
 function parseData(metResponse, tempResponse) {
     const data = {};
-    const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
-    const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
-
-    console.log(`[DEBUG PARSER] Resposta MET limpa:`, cleanMet);
-    console.log(`[DEBUG PARSER] Resposta THE limpa:`, cleanTemp);
+    console.log(`[DEBUG PARSER] Resposta MET crua:\n`, metResponse);
+    console.log(`[DEBUG PARSER] Resposta THE crua:\n`, tempResponse);
 
     try {
-        const findNumbers = (str) => {
-            if (!str) return [];
-            const matches = str.match(/-?\d+\.\d+|-?\d+/g);
-            return matches ? matches.map(Number) : [];
+        const getValue = (regex, text) => {
+            const match = text.match(regex);
+            return match ? parseFloat(match[1]) : null;
+        };
+        
+        const getValues = (regex, text) => {
+             const match = text.match(regex);
+             return match ? match.slice(1).map(parseFloat) : [];
         };
 
-        const metNumbers = findNumbers(cleanMet);
-        const tempNumbers = findNumbers(cleanTemp);
-
-        if (metNumbers.length >= 12) {
-            data.tensao_rs = metNumbers[0];
-            data.tensao_st = metNumbers[1];
-            data.tensao_tr = metNumbers[2];
-            data.tensao_rn = metNumbers[3];
-            data.tensao_sn = metNumbers[4];
-            data.tensao_tn = metNumbers[5];
-            data.corrente_r = metNumbers[6];
-            data.corrente_s = metNumbers[7];
-            data.corrente_t = metNumbers[8];
-            data.frequencia = metNumbers[11];
+        // Extraindo dados da resposta MET
+        const currents = getValues(/Current Magnitude \(A\)\s+([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)/, metResponse);
+        if (currents.length === 3) {
+            data.corrente_r = currents[0];
+            data.corrente_s = currents[1];
+            data.corrente_t = currents[2];
         }
 
-        if (tempNumbers.length >= 1) {
-            data.temperatura = tempNumbers[0];
+        const voltagesPhaseBlock = metResponse.match(/VA\s+VB\s+VC\s+VG\s*\n\s*Voltage Magnitude \(V\)\s+([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)/);
+        if (voltagesPhaseBlock) {
+            data.tensao_rn = parseFloat(voltagesPhaseBlock[1]);
+            data.tensao_sn = parseFloat(voltagesPhaseBlock[2]);
+            data.tensao_tn = parseFloat(voltagesPhaseBlock[3]);
         }
+        
+        const voltagesLineBlock = metResponse.match(/VAB\s+VBC\s+VCA\s*\n\s*Voltage Magnitude \(V\)\s+([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)/);
+        if (voltagesLineBlock) {
+            data.tensao_rs = parseFloat(voltagesLineBlock[1]);
+            data.tensao_st = parseFloat(voltagesLineBlock[2]);
+            data.tensao_tr = parseFloat(voltagesLineBlock[3]);
+        }
+
+        data.frequencia = getValue(/Frequency \(Hz\)\s*=\s*([\d\.]+)/, metResponse);
+        
+        // Extraindo dados da resposta THE
+        data.temperatura = getValue(/AMBT \(deg\. C\)\s*:\s*([\d\.]+)/, tempResponse);
 
     } catch (error) {
         console.error("[Parser] Erro ao processar dados dos relés:", error);
