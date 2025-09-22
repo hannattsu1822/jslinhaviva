@@ -32,6 +32,9 @@ function parseData(metResponse, tempResponse) {
     const cleanMet = metResponse.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleanTemp = tempResponse.replace(/[^\x20-\x7E\r\n]/g, '');
 
+    console.log(`[DEBUG PARSER] Resposta MET limpa:`, cleanMet);
+    console.log(`[DEBUG PARSER] Resposta THE limpa:`, cleanTemp);
+
     try {
         const findNumbers = (str) => {
             if (!str) return [];
