@@ -73,7 +73,6 @@ const server = net.createServer((socket) => {
 
     socket.state = 'AWAITING_IDENTITY';
     socket.buffer = '';
-    socket.setEncoding('latin1');
 
     const startPollingCycle = () => {
         if (socket.state === 'IDLE' || socket.state === 'LOGGING_IN_OTTER') {
@@ -136,8 +135,8 @@ const server = net.createServer((socket) => {
     };
 
     socket.on('data', async (data) => {
-        const hexData = Buffer.from(data, 'latin1').toString('hex');
-        if (hexData === '0000000201') {
+        const hexDataForHeartbeat = data.toString('hex');
+        if (hexDataForHeartbeat === '0000000201') {
             console.log(`[TCP Service] Pacote de heartbeat ignorado.`);
             return;
         }
