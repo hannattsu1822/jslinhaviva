@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const RELE_ID = parseInt(window.location.pathname.split('/').pop(), 10);
+
     const elements = {
         statusIndicator: document.getElementById('status-indicator'),
         statusText: document.querySelector('#status-indicator .status-text'),
@@ -27,23 +29,21 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.statusIndicator.className = 'status-box status-online';
         elements.statusText.textContent = 'Online';
 
-        const dataLeitura = new Date(data.timestamp_leitura);
+        const dataLeitura = new Date(data.timestamp);
         elements.timestamp.textContent = `Última leitura: ${dataLeitura.toLocaleString('pt-BR')}`;
 
-        const formatValue = (value) => (value !== null && value !== undefined) ? parseFloat(value).toFixed(2) : '-';
+        const formatValue = (value, unit = '') => (value !== null && value !== undefined) ? `${parseFloat(value).toFixed(2)}${unit}` : '-';
         
-        updateCardValue(elements.tensaoVA, formatValue(data.tensao_va));
-        updateCardValue(elements.tensaoVB, formatValue(data.tensao_vb));
-        updateCardValue(elements.tensaoVC, formatValue(data.tensao_vc));
-        updateCardValue(elements.tensaoVAB, formatValue(data.tensao_vab));
-        updateCardValue(elements.tensaoVBC, formatValue(data.tensao_vbc));
-        updateCardValue(elements.tensaoVCA, formatValue(data.tensao_vca));
-        updateCardValue(elements.correnteA, formatValue(data.corrente_a));
-        updateCardValue(elements.correnteB, formatValue(data.corrente_b));
-        updateCardValue(elements.correnteC, formatValue(data.corrente_c));
-        updateCardValue(elements.tempDisp, formatValue(data.temperatura_dispositivo));
-        updateCardValue(elements.tempAmb, formatValue(data.temperatura_ambiente));
-        updateCardValue(elements.tempEnrol, formatValue(data.temperatura_enrolamento));
+        updateCardValue(elements.tensaoVA, formatValue(data.dados.tensao_rn, ' V'));
+        updateCardValue(elements.tensaoVB, formatValue(data.dados.tensao_sn, ' V'));
+        updateCardValue(elements.tensaoVC, formatValue(data.dados.tensao_tn, ' V'));
+        updateCardValue(elements.tensaoVAB, formatValue(data.dados.tensao_rs / 1000, ' kV'));
+        updateCardValue(elements.tensaoVBC, formatValue(data.dados.tensao_st / 1000, ' kV'));
+        updateCardValue(elements.tensaoVCA, formatValue(data.dados.tensao_tr / 1000, ' kV'));
+        updateCardValue(elements.correnteA, formatValue(data.dados.corrente_r, ' A'));
+        updateCardValue(elements.correnteB, formatValue(data.dados.corrente_s, ' A'));
+        updateCardValue(elements.correnteC, formatValue(data.dados.corrente_t, ' A'));
+        updateCardValue(elements.tempDisp, formatValue(data.dados.temperatura, ' °C'));
     }
 
     function updateCardValue(element, value) {
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = element.closest('.live-card');
             if (card) {
                 card.classList.remove('just-updated');
-                void card.offsetWidth; 
+                void card.offsetWidth;
                 card.classList.add('just-updated');
             }
         }
@@ -62,14 +62,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
 
-        ws.onopen = () => console.log('WebSocket conectado.');
-        ws.onclose = () => console.log('WebSocket desconectado.');
-        ws.onerror = (error) => console.error('Erro no WebSocket:', error);
+        ws.onopen = () => console.log('[WebSocket] Conectado.');
+        ws.onclose = () => {
+            console.log('[WebSocket] Desconectado. Tentando reconectar em 5 segundos...');
+            setTimeout(setupWebSocket, 5000);
+        };
+        ws.onerror = (error) => console.error('[WebSocket] Erro:', error);
 
         ws.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
-                if (message.type === 'nova_leitura_rele' && message.dados.rele_id === RELE_ID) {
+                if (message.type === 'nova_leitura_rele' && message.dados && message.dados.rele_id === RELE_ID) {
+                    console.log('Recebida leitura para este relé:', message.dados);
                     updateUI(message.dados);
                     addDataToCharts(message.dados);
                 }
@@ -78,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-
+    
     async function initializeCharts() {
         try {
             const response = await fetch(`/api/reles/${RELE_ID}/leituras?limit=200`);
@@ -155,8 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addDataToCharts(data) {
+        if (!tensaoChart) return;
+        
         const charts = [tensaoChart, correnteChart, temperaturaChart];
-        const timestamp = new Date(data.timestamp_leitura);
+        const timestamp = new Date(data.timestamp);
 
         charts.forEach(chart => {
             if (chart) {
@@ -167,17 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        tensaoChart.data.datasets[0].data.push(data.tensao_va);
-        tensaoChart.data.datasets[1].data.push(data.tensao_vb);
-        tensaoChart.data.datasets[2].data.push(data.tensao_vc);
+        tensaoChart.data.datasets[0].data.push(data.dados.tensao_rn);
+        tensaoChart.data.datasets[1].data.push(data.dados.tensao_sn);
+        tensaoChart.data.datasets[2].data.push(data.dados.tensao_tn);
 
-        correnteChart.data.datasets[0].data.push(data.corrente_a);
-        correnteChart.data.datasets[1].data.push(data.corrente_b);
-        correnteChart.data.datasets[2].data.push(data.corrente_c);
+        correnteChart.data.datasets[0].data.push(data.dados.corrente_r);
+        correnteChart.data.datasets[1].data.push(data.dados.corrente_s);
+        correnteChart.data.datasets[2].data.push(data.dados.corrente_t);
 
-        temperaturaChart.data.datasets[0].data.push(data.temperatura_ambiente);
-        temperaturaChart.data.datasets[1].data.push(data.temperatura_enrolamento);
-        temperaturaChart.data.datasets[2].data.push(data.temperatura_dispositivo);
+        temperaturaChart.data.datasets[2].data.push(data.dados.temperatura);
 
         charts.forEach(chart => {
             chart.data.datasets.forEach(dataset => {
@@ -189,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    if (DADOS_INICIAIS) {
+    if (typeof DADOS_INICIAIS !== 'undefined' && DADOS_INICIAIS) {
         updateUI(DADOS_INICIAIS);
     }
 
