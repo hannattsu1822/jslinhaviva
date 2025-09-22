@@ -29,21 +29,27 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.statusIndicator.className = 'status-box status-online';
         elements.statusText.textContent = 'Online';
 
-        const dataLeitura = new Date(data.timestamp);
+        const isWebSocketData = !!data.dados;
+        const measurements = isWebSocketData ? data.dados : data;
+        const timestamp = isWebSocketData ? data.timestamp : data.timestamp_leitura;
+
+        const dataLeitura = new Date(timestamp);
         elements.timestamp.textContent = `Última leitura: ${dataLeitura.toLocaleString('pt-BR')}`;
 
         const formatValue = (value, unit = '') => (value !== null && value !== undefined) ? `${parseFloat(value).toFixed(2)}${unit}` : '-';
         
-        updateCardValue(elements.tensaoVA, formatValue(data.dados.tensao_rn, ' V'));
-        updateCardValue(elements.tensaoVB, formatValue(data.dados.tensao_sn, ' V'));
-        updateCardValue(elements.tensaoVC, formatValue(data.dados.tensao_tn, ' V'));
-        updateCardValue(elements.tensaoVAB, formatValue(data.dados.tensao_rs / 1000, ' kV'));
-        updateCardValue(elements.tensaoVBC, formatValue(data.dados.tensao_st / 1000, ' kV'));
-        updateCardValue(elements.tensaoVCA, formatValue(data.dados.tensao_tr / 1000, ' kV'));
-        updateCardValue(elements.correnteA, formatValue(data.dados.corrente_r, ' A'));
-        updateCardValue(elements.correnteB, formatValue(data.dados.corrente_s, ' A'));
-        updateCardValue(elements.correnteC, formatValue(data.dados.corrente_t, ' A'));
-        updateCardValue(elements.tempDisp, formatValue(data.dados.temperatura, ' °C'));
+        updateCardValue(elements.tensaoVA, formatValue(measurements.tensao_rn || measurements.tensao_va, ' V'));
+        updateCardValue(elements.tensaoVB, formatValue(measurements.tensao_sn || measurements.tensao_vb, ' V'));
+        updateCardValue(elements.tensaoVC, formatValue(measurements.tensao_tn || measurements.tensao_vc, ' V'));
+        updateCardValue(elements.tensaoVAB, formatValue((measurements.tensao_rs || measurements.tensao_vab) / 1000, ' kV'));
+        updateCardValue(elements.tensaoVBC, formatValue((measurements.tensao_st || measurements.tensao_vbc) / 1000, ' kV'));
+        updateCardValue(elements.tensaoVCA, formatValue((measurements.tensao_tr || measurements.tensao_vca) / 1000, ' kV'));
+        updateCardValue(elements.correnteA, formatValue(measurements.corrente_r || measurements.corrente_a, ' A'));
+        updateCardValue(elements.correnteB, formatValue(measurements.corrente_s || measurements.corrente_b, ' A'));
+        updateCardValue(elements.correnteC, formatValue(measurements.corrente_t || measurements.corrente_c, ' A'));
+        updateCardValue(elements.tempDisp, formatValue(measurements.temperatura || measurements.temperatura_dispositivo, ' °C'));
+        updateCardValue(elements.tempAmb, formatValue(measurements.temperatura_ambiente, ' °C'));
+        updateCardValue(elements.tempEnrol, formatValue(measurements.temperatura_enrolamento, ' °C'));
     }
 
     function updateCardValue(element, value) {
