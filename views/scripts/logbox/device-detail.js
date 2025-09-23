@@ -286,42 +286,54 @@ function getPowerSourceStatus(voltage) {
   return { text: "Apenas Bateria", className: "bg-status-warning" };
 }
 
+// ==================================================================
+// FUNÇÃO CORRIGIDA
+// ==================================================================
 function atualizarStatusGeral() {
   const indicator = document.getElementById("geral-status-indicator");
-  const pt100Badge = document.getElementById("diag-pt100-status");
+  const pt100Badge = document.getElementById("diag-pt100-status"); // Pode ser null
   const alarmsList = document.getElementById("active-alarms-list");
   const connectionBadge = document.getElementById("connection-status-badge");
 
-  if (
+  // Garante que os elementos essenciais existem antes de prosseguir
+  if (!indicator || !alarmsList || !connectionBadge) {
+    console.error("Elementos essenciais do painel de status não foram encontrados no DOM.");
+    return;
+  }
+
+  // Verifica se há uma condição crítica. Adiciona a verificação "pt100Badge &&"
+  const isCritical =
     connectionBadge.classList.contains("bg-danger") ||
-    pt100Badge.classList.contains("bg-status-critical") ||
-    alarmsList.querySelector(".alarm-item")
-  ) {
+    (pt100Badge && pt100Badge.classList.contains("bg-status-critical")) ||
+    alarmsList.querySelector(".alarm-item");
+
+  const diagWifi = document.getElementById("diag-wifi-rssi");
+  const diagBattery = document.getElementById("diag-battery-voltage");
+
+  // Verifica se há uma condição de aviso
+  const isWarning =
+    (diagWifi && (diagWifi.classList.contains("bg-status-warning") || diagWifi.classList.contains("bg-status-critical"))) ||
+    (diagBattery && diagBattery.classList.contains("bg-status-warning"));
+
+  if (isCritical) {
     indicator.className = "status-indicator critical";
     indicator.setAttribute(
       "title",
       "Status Crítico: Dispositivo offline, falha no sensor ou alarme ativo!"
     );
-  } else if (
-    document
-      .getElementById("diag-wifi-rssi")
-      .classList.contains("bg-status-warning") ||
-    document
-      .getElementById("diag-wifi-rssi")
-      .classList.contains("bg-status-critical") ||
-    document
-      .getElementById("diag-battery-voltage")
-      .classList.contains("bg-status-warning")
-  ) {
+  } else if (isWarning) {
     indicator.className = "status-indicator warning";
     indicator.setAttribute("title", "Aviso: Conexão fraca ou bateria baixa.");
   } else {
     indicator.className = "status-indicator ok";
     indicator.setAttribute("title", "Sistema operando normalmente.");
   }
+
+  // Atualiza o tooltip
   const tooltip = bootstrap.Tooltip.getInstance(indicator);
-  if (tooltip)
+  if (tooltip) {
     tooltip.setContent({ ".tooltip-inner": indicator.getAttribute("title") });
+  }
 }
 
 async function carregarEstatisticasDetalhes() {
