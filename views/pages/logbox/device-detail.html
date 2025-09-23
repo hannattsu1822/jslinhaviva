@@ -82,8 +82,9 @@
               Estatísticas
             </div>
             <div class="card-body">
+              <!-- BLOCO DE ESTATÍSTICAS CORRIGIDO E MELHORADO -->
               <div class="row text-center">
-                <div class="col-md-4">
+                <div class="col-md-6">
                   <h6 class="text-muted">Hoje</h6>
                   <p class="stat-value">
                     <span id="stat-today-min">--</span> /
@@ -92,7 +93,7 @@
                   </p>
                   <small>Min / Média / Max</small>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                   <h6 class="text-muted">Este Mês</h6>
                   <p class="stat-value">
                     <span id="stat-month-min">--</span> /
@@ -101,12 +102,21 @@
                   </p>
                   <small>Min / Média / Max</small>
                 </div>
-                <div class="col-md-4">
+              </div>
+              <hr class="my-3" />
+              <div class="row text-center">
+                <div class="col-md-6">
                   <h6 class="text-muted">Total de Desconexões</h6>
                   <p id="conn-total-disconnects" class="stat-value">--</p>
                   <small>Desde o início</small>
                 </div>
+                <div class="col-md-6">
+                  <h6 class="text-muted">Duração Média da Desconexão</h6>
+                  <p id="conn-avg-duration" class="stat-value">--</p>
+                  <small>Média de tempo offline</small>
+                </div>
               </div>
+              <!-- FIM DO BLOCO CORRIGIDO -->
             </div>
           </div>
         </div>
@@ -157,6 +167,21 @@
                   >--</span
                 >
               </div>
+              <!-- ELEMENTO PT100 ADICIONADO AQUI -->
+              <div
+                class="list-group-item d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <span class="material-symbols-outlined me-2 text-info"
+                    >sensors_krx</span
+                  >
+                  Status do Sensor PT100
+                </div>
+                <span id="diag-pt100-status" class="badge bg-secondary"
+                  >--</span
+                >
+              </div>
+              <!-- FIM DA ADIÇÃO -->
               <div
                 class="list-group-item d-flex justify-content-between align-items-center"
               >
