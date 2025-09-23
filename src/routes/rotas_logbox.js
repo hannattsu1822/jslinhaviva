@@ -99,7 +99,7 @@ router.get("/gerenciar-dispositivos", autenticar, async (req, res) => {
       };
     });
 
-    res.render("pages/logbox/gerenciar_dispositivos.html", {
+    res.render("pages/logbox/gerenciar-dispositivos.html", {
       pageTitle: "Gerenciar Dispositivos LogBox",
       user: req.user,
       devices: devicesComStatus,
@@ -115,7 +115,7 @@ router.get("/logbox-devices", autenticar, async (req, res) => {
     const [devices] = await promisePool.query(
       "SELECT id, local_tag, serial_number, ativo FROM dispositivos_logbox WHERE ativo = 1 ORDER BY local_tag"
     );
-    res.render("pages/logbox/device_list.html", {
+    res.render("pages/logbox/device-list.html", {
       pageTitle: "Equipamentos LogBox",
       user: req.user,
       devices,
@@ -140,7 +140,7 @@ router.get(
         return res.status(404).send("Dispositivo não encontrado");
       }
       const device = deviceRows[0];
-      res.render("pages/logbox/device_detail.html", {
+      res.render("pages/logbox/device-detail.html", {
         pageTitle: `Monitorando: ${device.local_tag}`,
         user: req.user,
         serialNumber: device.serial_number,
