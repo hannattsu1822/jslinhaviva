@@ -48,30 +48,17 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
     connection = await promisePool.getConnection();
     await connection.beginTransaction();
 
-    const [deviceRows] = await connection.query("SELECT id FROM dispositivos_logbox WHERE serial_number = ?", [serialNumber]);
-    if (deviceRows.length === 0) {
-      console.warn(`[MQTT Handler] LogBox com SN ${serialNumber} não encontrado no banco. Ignorando leitura.`);
-      await connection.rollback();
-      connection.release();
-      return;
-    }
-    const dispositivoId = deviceRows[0].id;
-
-    const temperaturaExterna = dados.ch_analog_1 !== undefined ? dados.ch_analog_1 : (dados.value_channels ? dados.value_channels[2] : null);
+    const payloadString = JSON.stringify(dados);
     
-    if (temperaturaExterna !== null) {
-      const payloadString = JSON.stringify(dados);
-      
-      await connection.query(
-        "INSERT INTO leituras_logbox (dispositivo_logbox_id, temperatura_externa, payload_completo, timestamp_leitura) VALUES (?, ?, ?, NOW())",
-        [dispositivoId, temperaturaExterna, payloadString]
-      );
-      console.log(`[MQTT Handler] Leitura histórica do LogBox ${serialNumber} salva no banco.`);
-    }
+    await connection.query(
+      "INSERT INTO leituras_logbox (serial_number, payload_json, timestamp_leitura) VALUES (?, ?, NOW())",
+      [serialNumber, payloadString]
+    );
+    console.log(`[MQTT Handler] Leitura histórica do LogBox ${serialNumber} salva no banco.`);
 
     await connection.query(
-      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE id = ?",
-      [JSON.stringify(dados), dispositivoId]
+      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
+      [payloadString, serialNumber]
     );
     console.log(`[MQTT Handler] Último status do LogBox ${serialNumber} salvo no banco.`);
     
