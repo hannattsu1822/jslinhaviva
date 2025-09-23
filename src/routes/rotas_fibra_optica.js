@@ -144,6 +144,67 @@ router.get(
   }
 );
 
+router.get(
+  "/gerenciar-pontos-fibra",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    try {
+      const sql = `
+        SELECT 
+          fm.id,
+          fm.tipo_ponto,
+          fm.tag,
+          fm.created_at,
+          u.nome as nome_coletor
+        FROM fibra_maps fm
+        LEFT JOIN users u ON fm.coletado_por_matricula = u.matricula
+        ORDER BY fm.id DESC
+      `;
+      const [pontos] = await promisePool.query(sql);
+      res.render("pages/fibra_optica/gerenciar_pontos_fibra.html", {
+        user: req.session.user,
+        pontos: pontos,
+      });
+    } catch (error) {
+      console.error(
+        "Erro ao carregar a página de gerenciamento de pontos:",
+        error
+      );
+      res
+        .status(500)
+        .send("Erro ao carregar a página de gerenciamento de pontos.");
+    }
+  }
+);
+
+router.get(
+  "/ponto-fibra/:id/editar",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [pontoRows] = await promisePool.query(
+        "SELECT * FROM fibra_maps WHERE id = ?",
+        [id]
+      );
+
+      if (pontoRows.length === 0) {
+        return res.status(404).send("Ponto não encontrado.");
+      }
+
+      res.render("pages/fibra_optica/editar_ponto_fibra.html", {
+        user: req.session.user,
+        ponto: pontoRows[0],
+      });
+    } catch (error) {
+      console.error("Erro ao carregar página de edição de ponto:", error);
+      res.status(500).send("Erro ao carregar a página de edição.");
+    }
+  }
+);
+
 router.post(
   "/registro_projeto_fibra",
   autenticar,
@@ -965,6 +1026,88 @@ router.post(
     } catch (error) {
       if (connection) await connection.rollback();
       res.status(500).json({ message: "Erro interno ao salvar os pontos." });
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+);
+
+router.post(
+  "/api/fibra/ponto-mapa/:id/editar",
+  autenticar,
+  verificarNivel(4),
+  async (req, res) => {
+    const { id } = req.params;
+    const { tipo_ponto, tag, utm_zone, easting, northing, altitude } =
+      req.body;
+    const matriculaUsuario = req.session.user.matricula;
+
+    if (
+      !tipo_ponto ||
+      !tag ||
+      !utm_zone ||
+      !easting ||
+      !northing ||
+      !altitude
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Todos os campos são obrigatórios." });
+    }
+
+    let connection;
+    try {
+      connection = await promisePool.getConnection();
+      await connection.beginTransaction();
+
+      const { latitude, longitude } = convertUtmToLatLon(
+        easting,
+        northing,
+        utm_zone
+      );
+
+      const sqlUpdate = `
+        UPDATE fibra_maps SET
+          tipo_ponto = ?,
+          tag = ?,
+          utm_zone = ?,
+          easting = ?,
+          northing = ?,
+          altitude = ?,
+          latitude = ?,
+          longitude = ?
+        WHERE id = ?
+      `;
+      const values = [
+        tipo_ponto,
+        tag,
+        utm_zone,
+        String(easting).replace(",", "."),
+        String(northing).replace(",", "."),
+        String(altitude).replace(",", "."),
+        latitude,
+        longitude,
+        id,
+      ];
+
+      await connection.query(sqlUpdate, values);
+
+      await registrarAuditoria(
+        matriculaUsuario,
+        "EDICAO_PONTO_MAPA_FIBRA",
+        `Ponto de mapa ID ${id} foi atualizado.`,
+        connection
+      );
+
+      await connection.commit();
+      res.status(200).json({ message: "Ponto atualizado com sucesso!" });
+    } catch (error) {
+      if (connection) await connection.rollback();
+      console.error("Erro ao atualizar o ponto de mapa:", error);
+      if (error.message.includes("UTM")) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Erro interno ao atualizar o ponto." });
     } finally {
       if (connection) connection.release();
     }
