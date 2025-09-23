@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerenciamento de Pontos de Fibra</title>
+    <!-- Inclua aqui seus links de CSS comuns, como Bootstrap -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <!-- Adicione outros CSS se necessário -->
+  </head>
+  <body>
+    <div class="page-wrapper">
+      <%- include('../../partials/sidebar.html') %>
+      <main class="main-content">
+        <%- include('../../partials/header.html', { user: user }) %>
+        <div class="container-fluid mt-4">
+          <div class="card">
+            <div class="card-header">
+              <h4 class="mb-0">
+                <i class="fa-solid fa-sitemap me-2"></i>Gerenciamento de Pontos
+                de Fibra
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table
+                  id="pontos-table"
+                  class="table table-striped table-hover"
+                  style="width: 100%"
+                >
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Tipo</th>
+                      <th>TAG</th>
+                      <th>Coletor</th>
+                      <th>Data da Coleta</th>
+                      <th class="text-center">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% pontos.forEach(ponto => { %>
+                    <tr data-ponto-id="<%= ponto.id %>">
+                      <td><%= ponto.id %></td>
+                      <td><%= ponto.tipo_ponto %></td>
+                      <td><%= ponto.tag %></td>
+                      <td><%= ponto.nome_coletor || 'N/A' %></td>
+                      <td>
+                        <%= new Date(ponto.created_at).toLocaleString('pt-BR')
+                        %>
+                      </td>
+                      <td class="text-center">
+                        <a
+                          href="/ponto-fibra/<%= ponto.id %>/editar"
+                          class="btn btn-warning btn-sm"
+                          title="Editar Ponto"
+                        >
+                          <i class="fa-solid fa-pencil"></i>
+                        </a>
+                        <button
+                          class="btn btn-danger btn-sm btn-excluir-ponto"
+                          data-id="<%= ponto.id %>"
+                          title="Excluir Ponto"
+                        >
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <%- include('../../partials/footer.html') %>
+      </main>
+    </div>
+
+    <!-- Modal de Confirmação (pode ser reutilizado) -->
+    <div
+      class="modal fade"
+      id="confirmation-modal"
+      tabindex="-1"
+      aria-labelledby="confirmationModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmation-title">
+              Confirmar Ação
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p id="confirmation-message">
+              Tem certeza que deseja realizar esta ação?
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-danger" id="btn-confirm-action">
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inclua aqui seus scripts JS comuns -->
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="/static/js/toasts.js"></script>
+    <!-- Script específico para esta página -->
+    <script src="/scripts/gerenciamento_pontos.js"></script>
+  </body>
+</html>
