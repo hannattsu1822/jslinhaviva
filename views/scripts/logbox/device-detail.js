@@ -206,41 +206,46 @@ function iniciarWebSocket() {
     console.log("Conexão WebSocket fechada. Tentando reconectar em 5s...");
     setTimeout(iniciarWebSocket, 5000);
   };
+  
+  socket.onerror = (error) => {
+    console.error("Erro no WebSocket:", error);
+  };
 
   socket.onmessage = function (event) {
-    const message = JSON.parse(event.data);
+    try {
+        const message = JSON.parse(event.data);
 
-    if (
-      message.type === "nova_leitura" &&
-      message.dados.serial_number === serialNumber
-    ) {
-      document.getElementById("latest-temp").textContent =
-        message.dados.temperatura.toFixed(1);
-      document.getElementById(
-        "latest-timestamp"
-      ).textContent = `Em: ${message.dados.timestamp_leitura}`;
+        if (message.dados && message.dados.serial_number !== serialNumber) {
+            return;
+        }
 
-      if (historicoChartInstance) {
-        historicoChartInstance.data.datasets[0].data.push({
-          x: Date.now(),
-          y: message.dados.temperatura,
-        });
-        historicoChartInstance.update("quiet");
-      }
+        if (message.type === "nova_leitura_logbox") {
+            console.log("Recebida nova leitura do LogBox:", message.dados);
+            const temperatura = message.dados.ch_analog_1 || (message.dados.value_channels ? message.dados.value_channels[2] : undefined);
+            if (temperatura !== undefined) {
+                document.getElementById("latest-temp").textContent = temperatura.toFixed(1);
+                if (historicoChartInstance) {
+                    historicoChartInstance.data.datasets[0].data.push({
+                      x: new Date(),
+                      y: temperatura,
+                    });
+                    historicoChartInstance.update("quiet");
+                }
+            }
+            document.getElementById("latest-timestamp").textContent = `Em: ${new Date().toLocaleString("pt-BR")}`;
+            carregarEstatisticasDetalhes();
+            carregarDadosVentilacao();
+        }
 
-      carregarEstatisticasDetalhes();
-      carregarDadosVentilacao();
-    }
-
-    if (
-      message.type === "atualizacao_status" &&
-      message.dados.serial_number === serialNumber
-    ) {
-      console.log("Atualização de status recebida:", message.dados.status);
-      atualizarPainelCompleto(message.dados.status);
-      if (message.dados.status.connection_status === 'online') {
-        carregarHistoricoConexao();
-      }
+        if (message.type === "atualizacao_status") {
+            console.log("Atualização de status recebida:", message.dados);
+            atualizarPainelCompleto(message.dados);
+            if (message.dados.connection_status === 'online') {
+                carregarHistoricoConexao();
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao processar mensagem do WebSocket:", e);
     }
   };
 }
