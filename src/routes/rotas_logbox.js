@@ -127,7 +127,7 @@ router.get("/logbox-devices", autenticar, async (req, res) => {
 });
 
 router.get(
-  "/visualizar-dispositivo/:serialNumber",
+  "/logbox-device/:serialNumber",
   autenticar,
   async (req, res) => {
     const { serialNumber } = req.params;
