@@ -35,29 +35,63 @@
             <tr>
               <th>Local / Tag</th>
               <th>Número de Série</th>
-              <th>Descrição</th>
+              <th>Última Leitura</th>
+              <th>Status</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            <% if (devices && devices.length > 0) { %> <% for(let i = 0; i <
-            devices.length; i++) { %> <% const device = devices[i]; %>
+            <% if (devices && devices.length > 0) { %> <% devices.forEach(device => { %>
             <tr data-device-id="<%= device.id %>">
               <td data-label="Local / Tag"><%= device.local_tag %></td>
               <td data-label="Número de Série"><%= device.serial_number %></td>
-              <td data-label="Descrição"><%= device.descricao || '-' %></td>
+              <td data-label="Última Leitura">
+                <% if (typeof device.temperatura_externa === 'number') { %>
+                <span class="temp-value"
+                  ><%= device.temperatura_externa.toFixed(1) %> °C</span
+                >
+                <br />
+                <span class="timestamp"
+                  ><%= new
+                  Date(device.ultima_leitura).toLocaleString('pt-BR') %></span
+                >
+                <% } else { %>
+                <span class="text-muted">Nenhuma leitura</span>
+                <% } %>
+              </td>
+              <td data-label="Status">
+                <span
+                  class="status-badge status-<%= device.connection_status === 'online' ? 'online' : 'offline' %>"
+                >
+                  <%= device.connection_status === 'online' ? 'Online' :
+                  'Offline' %>
+                </span>
+              </td>
               <td data-label="Ações">
-                <button class="btn-icon btn-edit" title="Editar">
+                <a
+                  href="/visualizar-dispositivo/<%= device.serial_number %>"
+                  class="btn btn-primary btn-sm"
+                  title="Visualizar Detalhes"
+                >
+                  <span class="material-icons">visibility</span>
+                </a>
+                <button
+                  class="btn btn-secondary btn-sm btn-edit"
+                  title="Editar"
+                >
                   <span class="material-icons">edit</span>
                 </button>
-                <button class="btn-icon btn-delete" title="Excluir">
+                <button
+                  class="btn btn-danger btn-sm btn-delete"
+                  title="Excluir"
+                >
                   <span class="material-icons">delete</span>
                 </button>
               </td>
             </tr>
-            <% } %> <% } else { %>
+            <% }); %> <% } else { %>
             <tr>
-              <td colspan="4" class="no-data">
+              <td colspan="5" class="text-center">
                 Nenhum dispositivo cadastrado.
               </td>
             </tr>
@@ -67,7 +101,7 @@
       </div>
     </div>
 
-    <div id="device-modal" class="modal-overlay" style="display: none">
+    <div id="device-modal" class="modal-overlay">
       <div class="modal-content">
         <form id="device-form">
           <h2 id="modal-title">Adicionar Novo Dispositivo</h2>
