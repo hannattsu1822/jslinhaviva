@@ -347,23 +347,11 @@ router.get(
   async (req, res) => {
     const { serialNumber } = req.params;
     try {
-      const [deviceRows] = await promisePool.query(
-        "SELECT id FROM dispositivos_logbox WHERE serial_number = ?",
+      const [history] = await promisePool.query(
+        "SELECT timestamp_inicio, timestamp_fim, duracao_segundos FROM historico_ventilacao WHERE serial_number = ? ORDER BY timestamp_inicio DESC LIMIT 50",
         [serialNumber]
       );
-
-      if (deviceRows.length === 0) {
-        return res.status(404).json({ message: "Dispositivo não encontrado" });
-      }
-      const deviceId = deviceRows[0].id;
-
-      const [history] = await promisePool.query(
-        "SELECT timestamp_inicio, timestamp_fim, duracao_segundos FROM historico_ventilacao WHERE dispositivo_id = ? ORDER BY timestamp_inicio DESC LIMIT 50",
-        [deviceId]
-      );
-      
       res.json(history);
-
     } catch (error) {
       console.error("ERRO DETALHADO ao buscar histórico de ventilação:", error);
       res.status(500).json({ message: "Erro interno ao buscar o histórico de ventilação." });
