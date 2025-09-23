@@ -45,12 +45,21 @@ async function getReportData(filters) {
   }
 
   const [readings] = await promisePool.query(
-    "SELECT * FROM leituras_logbox WHERE dispositivo_id = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
-    [deviceId, startDate, endDate]
+    "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
+    [deviceInfo.serial_number, startDate, endDate]
   );
+  
+  const processedReadings = readings.map(r => {
+      const payload = JSON.parse(r.payload_json);
+      return {
+          temperatura_externa: payload.ch_analog_1 || (payload.value_channels ? payload.value_channels[2] : null),
+          timestamp_leitura: r.timestamp_leitura
+      }
+  });
+
   const [stats] = await promisePool.query(
-    "SELECT MIN(temperatura_externa) as temp_min, AVG(temperatura_externa) as temp_avg, MAX(temperatura_externa) as temp_max FROM leituras_logbox WHERE dispositivo_id = ? AND timestamp_leitura BETWEEN ? AND ?",
-    [deviceId, startDate, endDate]
+    "SELECT MIN(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as temp_min, AVG(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as temp_avg, MAX(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as temp_max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?",
+    [deviceInfo.serial_number, startDate, endDate]
   );
   const [fanHistory] = await promisePool.query(
     "SELECT * FROM historico_ventilacao WHERE dispositivo_id = ? AND timestamp_inicio >= ? AND timestamp_inicio <= ? ORDER BY timestamp_inicio DESC",
@@ -64,7 +73,7 @@ async function getReportData(filters) {
   return {
     device: deviceInfo,
     filters: { ...filters, startDate, endDate },
-    readings,
+    readings: processedReadings,
     stats: stats[0],
     fanHistory,
     connectionHistory,
@@ -228,22 +237,19 @@ router.get(
   async (req, res) => {
     const { serialNumber } = req.params;
     try {
-      const [device] = await promisePool.query(
-        "SELECT id FROM dispositivos_logbox WHERE serial_number = ?",
-        [serialNumber]
-      );
-      if (device.length === 0) return res.status(404).send("Device not found");
-
       const [rows] = await promisePool.query(
-        "SELECT temperatura_externa, timestamp_leitura FROM leituras_logbox WHERE dispositivo_id = ? ORDER BY timestamp_leitura DESC LIMIT 200",
-        [device[0].id]
+        "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 200",
+        [serialNumber]
       );
       const reversedRows = rows.reverse();
       const data = {
         labels: reversedRows.map((r) =>
           new Date(r.timestamp_leitura).toLocaleString("pt-BR")
         ),
-        temperaturas: reversedRows.map((r) => r.temperatura_externa),
+        temperaturas: reversedRows.map((r) => {
+            const payload = JSON.parse(r.payload_json);
+            return payload.ch_analog_1 || (payload.value_channels ? payload.value_channels[2] : null);
+        }),
       };
       res.json(data);
     } catch (error) {
@@ -280,14 +286,9 @@ router.get(
   async (req, res) => {
     const { serialNumber } = req.params;
     try {
-      const [device] = await promisePool.query(
-        "SELECT id FROM dispositivos_logbox WHERE serial_number = ?",
-        [serialNumber]
-      );
-      if (device.length === 0) return res.status(404).send("Device not found");
       const [latest] = await promisePool.query(
-        "SELECT payload, timestamp_leitura FROM leituras_logbox WHERE dispositivo_id = ? ORDER BY timestamp_leitura DESC LIMIT 1",
-        [device[0].id]
+        "SELECT payload_json as payload, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 1",
+        [serialNumber]
       );
       if (latest.length === 0) return res.status(404).send("No readings found");
       res.json(latest[0]);
@@ -304,23 +305,17 @@ router.get(
   async (req, res) => {
     const { serialNumber } = req.params;
     try {
-      const [device] = await promisePool.query(
-        "SELECT id FROM dispositivos_logbox WHERE serial_number = ?",
-        [serialNumber]
-      );
-      if (device.length === 0) return res.status(404).send("Device not found");
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const month = new Date(today.getFullYear(), today.getMonth(), 1);
 
       const [[todayStats]] = await promisePool.query(
-        "SELECT MIN(temperatura_externa) as min, AVG(temperatura_externa) as avg, MAX(temperatura_externa) as max FROM leituras_logbox WHERE dispositivo_id = ? AND timestamp_leitura >= ?",
-        [device[0].id, today]
+        "SELECT MIN(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as min, AVG(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as avg, MAX(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+        [serialNumber, today]
       );
       const [[monthStats]] = await promisePool.query(
-        "SELECT MIN(temperatura_externa) as min, AVG(temperatura_externa) as avg, MAX(temperatura_externa) as max FROM leituras_logbox WHERE dispositivo_id = ? AND timestamp_leitura >= ?",
-        [device[0].id, month]
+        "SELECT MIN(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as min, AVG(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as avg, MAX(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+        [serialNumber, month]
       );
 
       const format = (stats) => ({
