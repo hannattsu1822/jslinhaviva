@@ -19,12 +19,18 @@ app.set("view engine", "html");
 
 app.set("views", path.join(projectRootDir, "views"));
 
-app.use("/static", express.static(path.join(projectRootDir, "views/static")));
-app.use("/scripts", express.static(path.join(projectRootDir, "views/scripts")));
-
 const publicDir = path.join(projectRootDir, "public");
+const viewsDir = path.join(projectRootDir, "views");
+
 app.use(express.static(publicDir));
-console.log(`Servindo arquivos estáticos da pasta 'public' em: ${publicDir}`);
+console.log(
+  `[Prioridade 1] Servindo arquivos estáticos da pasta 'public': ${publicDir}`
+);
+
+app.use(express.static(viewsDir));
+console.log(
+  `[Prioridade 2] Servindo arquivos estáticos da pasta 'views' como fallback: ${viewsDir}`
+);
 
 const uploadsSubestacoesDir = path.join(
   projectRootDir,
@@ -34,58 +40,39 @@ const uploadsSubestacoesDir = path.join(
 if (!fs.existsSync(uploadsSubestacoesDir)) {
   try {
     fs.mkdirSync(uploadsSubestacoesDir, { recursive: true });
-    console.log(
-      `Diretório de uploads de subestações criado em: ${uploadsSubestacoesDir}`
-    );
   } catch (err) {
     console.error(
       `Falha ao criar diretório de uploads de subestações em ${uploadsSubestacoesDir}:`,
       err
     );
   }
-} else {
-  console.log(
-    `Diretório de uploads de subestações já existe em: ${uploadsSubestacoesDir}`
-  );
 }
 app.use("/upload_arquivos_subestacoes", express.static(uploadsSubestacoesDir));
-console.log(
-  `Servindo arquivos de '/upload_arquivos_subestacoes' a partir de: ${uploadsSubestacoesDir}`
-);
 
 const uploadsFibraDir = path.join(projectRootDir, "upload_arquivos_fibra");
 
 if (!fs.existsSync(uploadsFibraDir)) {
   try {
     fs.mkdirSync(uploadsFibraDir, { recursive: true });
-    console.log(`Diretório de uploads de fibra criado em: ${uploadsFibraDir}`);
   } catch (err) {
     console.error(
       `Falha ao criar diretório de uploads de fibra em ${uploadsFibraDir}:`,
       err
     );
   }
-} else {
-  console.log(`Diretório de uploads de fibra já existe em: ${uploadsFibraDir}`);
 }
 app.use("/upload_arquivos_fibra", express.static(uploadsFibraDir));
-console.log(
-  `Servindo arquivos de '/upload_arquivos_fibra' a partir de: ${uploadsFibraDir}`
-);
 
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
 if (!fs.existsSync(multerTempDir)) {
   try {
     fs.mkdirSync(multerTempDir, { recursive: true });
-    console.log(`Diretório temporário do Multer criado em: ${multerTempDir}`);
   } catch (err) {
     console.error(
       `Falha ao criar diretório temporário do Multer em ${multerTempDir}:`,
       err
     );
   }
-} else {
-  console.log(`Diretório temporário do Multer já existe em: ${multerTempDir}`);
 }
 
 const storage = multer.diskStorage({
@@ -144,9 +131,6 @@ const upload = multer({
     if (isValidExt || isValidMime) {
       return cb(null, true);
     } else {
-      console.warn(
-        `Arquivo rejeitado: ${file.originalname}, mimetype: ${file.mimetype}, ext: ${ext}`
-      );
       cb(
         new Error("Tipo de arquivo não permitido. Verifique os tipos aceitos.")
       );
