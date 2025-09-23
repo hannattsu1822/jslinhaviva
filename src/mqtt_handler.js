@@ -43,12 +43,39 @@ async function salvarLeituraRele(dados, wss) {
 
 async function salvarLeituraLogBox(serialNumber, dados, wss) {
   console.log(`[MQTT Handler] Recebida leitura do LogBox SN: ${serialNumber}`);
+  let connection;
   try {
-    await promisePool.query(
-      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
-      [JSON.stringify(dados), serialNumber]
+    connection = await promisePool.getConnection();
+    await connection.beginTransaction();
+
+    const [deviceRows] = await connection.query("SELECT id FROM dispositivos_logbox WHERE serial_number = ?", [serialNumber]);
+    if (deviceRows.length === 0) {
+      console.warn(`[MQTT Handler] LogBox com SN ${serialNumber} não encontrado no banco. Ignorando leitura.`);
+      await connection.rollback();
+      connection.release();
+      return;
+    }
+    const dispositivoId = deviceRows[0].id;
+
+    const temperaturaExterna = dados.ch_analog_1 !== undefined ? dados.ch_analog_1 : (dados.value_channels ? dados.value_channels[2] : null);
+    
+    if (temperaturaExterna !== null) {
+      const payloadString = JSON.stringify(dados);
+      await connection.query(
+        "INSERT INTO leituras_logbox (dispositivo_id, temperatura_externa, payload, timestamp_leitura) VALUES (?, ?, ?, NOW())",
+        [dispositivoId, temperaturaExterna, payloadString]
+      );
+      console.log(`[MQTT Handler] Leitura histórica do LogBox ${serialNumber} salva no banco.`);
+    }
+
+    await connection.query(
+      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE id = ?",
+      [JSON.stringify(dados), dispositivoId]
     );
     console.log(`[MQTT Handler] Último status do LogBox ${serialNumber} salvo no banco.`);
+    
+    await connection.commit();
+    connection.release();
 
     if (wss && wss.clients) {
       const payloadWebSocket = {
@@ -71,6 +98,10 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
       }
     }
   } catch(error) {
+    if (connection) {
+      await connection.rollback();
+      connection.release();
+    }
     console.error(`[MQTT Handler] Erro ao processar leitura do LogBox SN ${serialNumber}:`, error);
   }
 }
