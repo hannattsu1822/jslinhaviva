@@ -243,6 +243,10 @@ function iniciarWebSocket() {
 
       if (message.type === "nova_leitura_logbox") {
         console.log("Recebida nova leitura do LogBox:", message.dados);
+        
+        // CORREÇÃO PRINCIPAL: ATUALIZA TODO O PAINEL COM OS DADOS DA NOVA LEITURA
+        atualizarPainelCompleto(message.dados);
+
         const temperatura =
           message.dados.ch_analog_1 ||
           (message.dados.value_channels
