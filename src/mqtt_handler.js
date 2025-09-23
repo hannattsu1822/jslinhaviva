@@ -14,20 +14,12 @@ async function salvarLeituraRele(dados, wss) {
 
   try {
     console.log(`[MQTT Handler] Leitura do relé '${device_id}' (ID: ${rele_id}) recebida para transmissão.`);
-
     if (wss && wss.clients) {
       const payloadWebSocket = {
         type: "nova_leitura_rele",
-        dados: {
-          rele_id,
-          device_id,
-          timestamp,
-          ...dadosMedidos,
-        },
+        dados: { rele_id, device_id, timestamp, ...dadosMedidos },
       };
-
-      console.log('[MQTT Handler] Preparando para enviar payload para clientes WebSocket:', JSON.stringify(payloadWebSocket, null, 2));
-
+      
       let clientCount = 0;
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
@@ -39,15 +31,59 @@ async function salvarLeituraRele(dados, wss) {
       if (clientCount > 0) {
         console.log(`[MQTT Handler] Dados do relé enviados para ${clientCount} cliente(s) WebSocket.`);
       } else {
-        console.warn('[MQTT Handler] Nenhum cliente WebSocket estava conectado para receber os dados.');
+        console.warn('[MQTT Handler] Nenhum cliente WebSocket estava conectado para receber os dados do relé.');
       }
-
-    } else {
-       console.error('[MQTT Handler] Erro: Servidor WebSocket (wss) não encontrado ou sem clientes.');
     }
   } catch (error) {
     console.error(`[MQTT Handler] Erro ao processar e transmitir leitura do relé:`, error);
   }
+}
+
+async function salvarLeituraLogBox(serialNumber, dados, wss) {
+  console.log(`[MQTT Handler] Recebida leitura do LogBox SN: ${serialNumber}`);
+  try {
+    if (wss && wss.clients) {
+      const payloadWebSocket = {
+        type: 'nova_leitura_logbox',
+        dados: {
+          serial_number: serialNumber,
+          ...dados
+        }
+      };
+      
+      let clientCount = 0;
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(payloadWebSocket));
+          clientCount++;
+        }
+      });
+      console.log(`[MQTT Handler] Dados do LogBox ${serialNumber} enviados para ${clientCount} cliente(s) WebSocket.`);
+    }
+  } catch(error) {
+    console.error(`[MQTT Handler] Erro ao processar leitura do LogBox SN ${serialNumber}:`, error);
+  }
+}
+
+async function salvarStatusConexao(dados, wss) {
+    console.log(`[MQTT Handler] Recebido status de conexão para LogBox SN: ${dados.serial_number}`);
+    try {
+        if (wss && wss.clients) {
+            const payloadWebSocket = {
+                type: 'atualizacao_status',
+                dados: dados
+            };
+
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(payloadWebSocket));
+                }
+            });
+            console.log(`[MQTT Handler] Status de conexão do LogBox ${dados.serial_number} enviado via WebSocket.`);
+        }
+    } catch(error) {
+        console.error(`[MQTT Handler] Erro ao processar status de conexão do LogBox SN ${dados.serial_number}:`, error);
+    }
 }
 
 function iniciarClienteMQTT(app) {
@@ -55,7 +91,6 @@ function iniciarClienteMQTT(app) {
   const options = {
     clientId: "sistema_js_" + Math.random().toString(16).substr(2, 8),
   };
-
   const client = mqtt.connect(MQTT_BROKER_URL, options);
 
   client.on("connect", () => {
@@ -76,13 +111,15 @@ function iniciarClienteMQTT(app) {
       const dados = JSON.parse(message.toString());
       const wss = app.get("wss");
 
-      if (topic.includes("status/channels")) {
-        // salvarLeituraLogBox(serialNumber, dados, wss);
-      } else if (topic === "novus/neighbor") {
-        // salvarStatusConexao(dados, wss);
-      } else if (topic.startsWith("sel/reles/")) {
+      if (topic.startsWith("sel/reles/")) {
         salvarLeituraRele(dados, wss);
+      } else if (topic.includes("status/channels")) {
+        const serialNumber = topic.split("/")[1];
+        salvarLeituraLogBox(serialNumber, dados, wss);
+      } else if (topic === "novus/neighbor") {
+        salvarStatusConexao(dados, wss);
       }
+      
     } catch (e) {
       console.error("[MQTT Handler] Erro crítico ao processar mensagem MQTT:", e);
       console.error("[MQTT Handler] Tópico:", topic);
