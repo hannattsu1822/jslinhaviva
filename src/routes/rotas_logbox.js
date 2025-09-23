@@ -48,13 +48,15 @@ async function getReportData(filters) {
     "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
     [deviceInfo.serial_number, startDate, endDate]
   );
-  
-  const processedReadings = readings.map(r => {
-      const payload = JSON.parse(r.payload_json);
-      return {
-          temperatura_externa: payload.ch_analog_1 || (payload.value_channels ? payload.value_channels[2] : null),
-          timestamp_leitura: r.timestamp_leitura
-      }
+
+  const processedReadings = readings.map((r) => {
+    const payload = JSON.parse(r.payload_json);
+    return {
+      temperatura_externa:
+        payload.ch_analog_1 ||
+        (payload.value_channels ? payload.value_channels[2] : null),
+      timestamp_leitura: r.timestamp_leitura,
+    };
   });
 
   const [stats] = await promisePool.query(
@@ -86,25 +88,33 @@ router.get("/gerenciar-dispositivos", autenticar, async (req, res) => {
       "SELECT id, local_tag, serial_number, descricao, ativo, ultima_leitura, status_json FROM dispositivos_logbox ORDER BY local_tag"
     );
 
-    const devicesComStatus = devices.map(device => {
+    const devicesComStatus = devices.map((device) => {
       let status = {};
       try {
-        if (device.status_json && typeof device.status_json === 'string') {
+        if (device.status_json && typeof device.status_json === "string") {
           status = JSON.parse(device.status_json);
         } else {
           status = device.status_json || {};
         }
       } catch (e) {
-        console.error(`Erro ao parsear status_json para SN ${device.serial_number}:`, device.status_json);
+        console.error(
+          `Erro ao parsear status_json para SN ${device.serial_number}:`,
+          device.status_json
+        );
         status = {};
       }
-      
-      const temperaturaExterna = status.ch_analog_1 !== undefined ? status.ch_analog_1 : (status.value_channels ? status.value_channels[2] : null);
-      
+
+      const temperaturaExterna =
+        status.ch_analog_1 !== undefined
+          ? status.ch_analog_1
+          : status.value_channels
+          ? status.value_channels[2]
+          : null;
+
       return {
         ...device,
         temperatura_externa: temperaturaExterna,
-        connection_status: status.connection_status || 'offline',
+        connection_status: status.connection_status || "offline",
       };
     });
 
@@ -135,32 +145,28 @@ router.get("/logbox-devices", autenticar, async (req, res) => {
   }
 });
 
-router.get(
-  "/logbox-device/:serialNumber",
-  autenticar,
-  async (req, res) => {
-    const { serialNumber } = req.params;
-    try {
-      const [deviceRows] = await promisePool.query(
-        "SELECT * FROM dispositivos_logbox WHERE serial_number = ?",
-        [serialNumber]
-      );
-      if (deviceRows.length === 0) {
-        return res.status(404).send("Dispositivo não encontrado");
-      }
-      const device = deviceRows[0];
-      res.render("pages/logbox/device-detail.html", {
-        pageTitle: `Monitorando: ${device.local_tag}`,
-        user: req.user,
-        serialNumber: device.serial_number,
-        device: device,
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).send("Erro ao carregar a página do dispositivo");
+router.get("/logbox-device/:serialNumber", autenticar, async (req, res) => {
+  const { serialNumber } = req.params;
+  try {
+    const [deviceRows] = await promisePool.query(
+      "SELECT * FROM dispositivos_logbox WHERE serial_number = ?",
+      [serialNumber]
+    );
+    if (deviceRows.length === 0) {
+      return res.status(404).send("Dispositivo não encontrado");
     }
+    const device = deviceRows[0];
+    res.render("pages/logbox/device-detail.html", {
+      pageTitle: `Monitorando: ${device.local_tag}`,
+      user: req.user,
+      serialNumber: device.serial_number,
+      device: device,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erro ao carregar a página do dispositivo");
   }
-);
+});
 
 router.get("/api/dispositivos", autenticar, async (req, res) => {
   try {
@@ -247,8 +253,11 @@ router.get(
           new Date(r.timestamp_leitura).toLocaleString("pt-BR")
         ),
         temperaturas: reversedRows.map((r) => {
-            const payload = JSON.parse(r.payload_json);
-            return payload.ch_analog_1 || (payload.value_channels ? payload.value_channels[2] : null);
+          const payload = JSON.parse(r.payload_json);
+          return (
+            payload.ch_analog_1 ||
+            (payload.value_channels ? payload.value_channels[2] : null)
+          );
         }),
       };
       res.json(data);
@@ -310,24 +319,24 @@ router.get(
       const month = new Date(today.getFullYear(), today.getMonth(), 1);
 
       const [[todayStats]] = await promisePool.query(
-        "SELECT MIN(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as min, AVG(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as avg, MAX(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+        "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
         [serialNumber, today]
       );
       const [[monthStats]] = await promisePool.query(
-        "SELECT MIN(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as min, AVG(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as avg, MAX(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+        "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
         [serialNumber, month]
       );
 
       const format = (stats) => ({
-        min: stats.min?.toFixed(1) || "N/A",
-        avg: stats.avg?.toFixed(1) || "N/A",
-        max: stats.max?.toFixed(1) || "N/A",
+        min: stats.min ? parseFloat(stats.min).toFixed(1) : "N/A",
+        avg: stats.avg ? parseFloat(stats.avg).toFixed(1) : "N/A",
+        max: stats.max ? parseFloat(stats.max).toFixed(1) : "N/A",
       });
 
       res.json({ today: format(todayStats), month: format(monthStats) });
     } catch (error) {
-      console.error(error);
-      res.status(500).send("Server error");
+      console.error("Erro ao buscar estatísticas detalhadas:", error);
+      res.status(500).json({ message: "Erro ao buscar estatísticas detalhadas" });
     }
   }
 );
@@ -342,15 +351,17 @@ router.get(
         "SELECT id FROM dispositivos_logbox WHERE serial_number = ?",
         [serialNumber]
       );
-      if (device.length === 0) return res.status(404).send("Device not found");
+      if (device.length === 0) {
+        return res.status(404).json({ message: "Dispositivo não encontrado" });
+      }
       const [history] = await promisePool.query(
         "SELECT * FROM historico_ventilacao WHERE dispositivo_id = ? ORDER BY timestamp_inicio DESC LIMIT 50",
         [device[0].id]
       );
       res.json(history);
     } catch (error) {
-      console.error(error);
-      res.status(500).send("Server error");
+      console.error("Erro ao buscar histórico de ventilação:", error);
+      res.status(500).json({ message: "Erro ao buscar histórico de ventilação" });
     }
   }
 );
@@ -397,7 +408,9 @@ router.post(
           animation: { duration: 0 },
         },
       };
-      const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+      const imageBuffer = await chartJSNodeCanvas.renderToBuffer(
+        configuration
+      );
 
       const pdfDoc = await PDFDocument.create();
       const page = pdfDoc.addPage();
@@ -425,7 +438,10 @@ router.post(
           page.addPage();
           y = height - 40;
         }
-        page.drawText(`${new Date(reading.timestamp_leitura).toLocaleString("pt-BR")}: ${reading.temperatura_externa.toFixed(1)}°C`, { x: 50, y, font, size: 10 });
+        page.drawText(
+          `${new Date(reading.timestamp_leitura).toLocaleString("pt-BR")}: ${reading.temperatura_externa.toFixed(1)}°C`,
+          { x: 50, y, font, size: 10 }
+        );
         y -= 15;
       });
 
