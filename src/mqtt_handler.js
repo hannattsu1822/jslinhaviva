@@ -61,8 +61,9 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
     
     if (temperaturaExterna !== null) {
       const payloadString = JSON.stringify(dados);
+      
       await connection.query(
-        "INSERT INTO leituras_logbox (dispositivo_id, temperatura_externa, payload, timestamp_leitura) VALUES (?, ?, ?, NOW())",
+        "INSERT INTO leituras_logbox (dispositivo_logbox_id, temperatura_externa, payload_completo, timestamp_leitura) VALUES (?, ?, ?, NOW())",
         [dispositivoId, temperaturaExterna, payloadString]
       );
       console.log(`[MQTT Handler] Leitura histórica do LogBox ${serialNumber} salva no banco.`);
