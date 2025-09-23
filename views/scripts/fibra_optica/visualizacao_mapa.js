@@ -12,7 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
 
-  const allMarkers = {};
+  const allMarkersByType = {};
+  const allMarkerObjects = {};
 
   const filterContainer = document.getElementById("map-filter-container");
   const selectAllBtn = document.getElementById("selectAllBtn");
@@ -28,8 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let visibleMarkersBounds = [];
 
-    for (const type in allMarkers) {
-      allMarkers[type].forEach((marker) => {
+    for (const type in allMarkersByType) {
+      allMarkersByType[type].forEach((marker) => {
         if (selectedTypes.has(type)) {
           marker.addTo(map);
           visibleMarkersBounds.push(marker.getLatLng());
@@ -46,21 +47,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  filterContainer.addEventListener("change", applyMapFilter);
+  if (filterContainer) {
+    filterContainer.addEventListener("change", applyMapFilter);
+  }
 
-  selectAllBtn.addEventListener("click", () => {
-    filterContainer
-      .querySelectorAll(".filter-checkbox")
-      .forEach((checkbox) => (checkbox.checked = true));
-    applyMapFilter();
-  });
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener("click", () => {
+      filterContainer
+        .querySelectorAll(".filter-checkbox")
+        .forEach((checkbox) => (checkbox.checked = true));
+      applyMapFilter();
+    });
+  }
 
-  deselectAllBtn.addEventListener("click", () => {
-    filterContainer
-      .querySelectorAll(".filter-checkbox")
-      .forEach((checkbox) => (checkbox.checked = false));
-    applyMapFilter();
-  });
+  if (deselectAllBtn) {
+    deselectAllBtn.addEventListener("click", () => {
+      filterContainer
+        .querySelectorAll(".filter-checkbox")
+        .forEach((checkbox) => (checkbox.checked = false));
+      applyMapFilter();
+    });
+  }
 
   const measureToolBtn = document.getElementById("measure-tool-btn");
   let isMeasuring = false;
@@ -89,14 +96,16 @@ document.addEventListener("DOMContentLoaded", () => {
     mapElement.style.cursor = "";
   };
 
-  measureToolBtn.addEventListener("click", () => {
-    if (isMeasuring) {
-      stopMeasureTool();
-      measurementLayer.clearLayers();
-    } else {
-      startMeasureTool();
-    }
-  });
+  if (measureToolBtn) {
+    measureToolBtn.addEventListener("click", () => {
+      if (isMeasuring) {
+        stopMeasureTool();
+        measurementLayer.clearLayers();
+      } else {
+        startMeasureTool();
+      }
+    });
+  }
 
   const routeToolBtn = document.getElementById("route-tool-btn");
   const routePanel = document.getElementById("route-panel");
@@ -113,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
     isRouting = true;
     routeWaypoints = [];
     routeLayer.clearLayers();
-    routePanel.classList.remove("d-none");
+    if (routePanel) routePanel.classList.remove("d-none");
     routeToolBtn.classList.add("active", "btn-danger");
     routeToolBtn.classList.remove("btn-success");
     routeToolBtn.innerHTML =
@@ -124,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const stopRouteTool = () => {
     isRouting = false;
-    routePanel.classList.add("d-none");
+    if (routePanel) routePanel.classList.add("d-none");
     routeToolBtn.classList.remove("active", "btn-danger");
     routeToolBtn.classList.add("btn-success");
     routeToolBtn.innerHTML = '<i class="fa-solid fa-road me-2"></i>Criar Rota';
@@ -132,6 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const updateRoutePanel = () => {
+    if (!routeInfo) return;
     let totalDistance = 0;
     for (let i = 1; i < routeWaypoints.length; i++) {
       totalDistance += routeWaypoints[i - 1].distanceTo(routeWaypoints[i]);
@@ -142,30 +152,34 @@ document.addEventListener("DOMContentLoaded", () => {
     generateMapsRouteBtn.disabled = routeWaypoints.length < 2;
   };
 
-  routeToolBtn.addEventListener("click", () => {
-    if (isRouting) {
-      stopRouteTool();
-      routeLayer.clearLayers();
-    } else {
-      startRouteTool();
-    }
-  });
+  if (routeToolBtn) {
+    routeToolBtn.addEventListener("click", () => {
+      if (isRouting) {
+        stopRouteTool();
+        routeLayer.clearLayers();
+      } else {
+        startRouteTool();
+      }
+    });
+  }
 
-  generateMapsRouteBtn.addEventListener("click", () => {
-    if (routeWaypoints.length < 2) return;
-    const origin = routeWaypoints[0];
-    const destination = routeWaypoints[routeWaypoints.length - 1];
-    const waypoints = routeWaypoints
-      .slice(1, -1)
-      .map((wp) => `${wp.lat},${wp.lng}`)
-      .join("|");
+  if (generateMapsRouteBtn) {
+    generateMapsRouteBtn.addEventListener("click", () => {
+      if (routeWaypoints.length < 2) return;
+      const origin = routeWaypoints[0];
+      const destination = routeWaypoints[routeWaypoints.length - 1];
+      const waypoints = routeWaypoints
+        .slice(1, -1)
+        .map((wp) => `${wp.lat},${wp.lng}`)
+        .join("|");
 
-    let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}`;
-    if (waypoints) {
-      mapsUrl += `&waypoints=${waypoints}`;
-    }
-    window.open(mapsUrl, "_blank");
-  });
+      let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}`;
+      if (waypoints) {
+        mapsUrl += `&waypoints=${waypoints}`;
+      }
+      window.open(mapsUrl, "_blank");
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -228,10 +242,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const customIcon = getPontoIcon(ponto.tipo_ponto);
             const marker = L.marker([lat, lon], { icon: customIcon });
 
-            if (!allMarkers[ponto.tipo_ponto]) {
-              allMarkers[ponto.tipo_ponto] = [];
+            if (!allMarkersByType[ponto.tipo_ponto]) {
+              allMarkersByType[ponto.tipo_ponto] = [];
             }
-            allMarkers[ponto.tipo_ponto].push(marker);
+            allMarkersByType[ponto.tipo_ponto].push(marker);
+            allMarkerObjects[ponto.id] = marker;
 
             marker.on("click", () => {
               const currentLatLng = L.latLng(lat, lon);
@@ -277,16 +292,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
             const popupContent = `
-              <div style="font-family: Arial, sans-serif; font-size: 14px;">
+              <div class="map-popup-content">
                 <b>Tipo:</b> ${ponto.tipo_ponto}<br>
                 <b>TAG:</b> ${ponto.tag}<br>
-                <b>Localização (Lat/Lon):</b><br>
-                <small>Lat: ${lat.toFixed(6)}</small><br>
-                <small>Lon: ${lon.toFixed(6)}</small>
-                <hr style="margin: 8px 0;">
-                <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm w-100">
-                  <i class="fa-solid fa-route me-2"></i>Criar Rota
+                <b>Coletor:</b> ${ponto.nome_coletor || "N/A"}<br>
+                <hr class="my-2">
+                <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                  <i class="fa-solid fa-route me-1"></i> Rota até aqui
                 </a>
+                <div class="d-flex justify-content-center mt-1">
+                  <a href="/ponto-fibra/${
+                    ponto.id
+                  }/editar" class="btn btn-sm btn-warning me-2" title="Editar Ponto">
+                    <i class="fa-solid fa-pencil"></i> Editar
+                  </a>
+                  <button class="btn btn-sm btn-danger btn-delete-from-map" data-id="${
+                    ponto.id
+                  }" title="Excluir Ponto">
+                    <i class="fa-solid fa-trash-can"></i> Excluir
+                  </button>
+                </div>
               </div>
             `;
 
@@ -294,15 +319,67 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
 
-        applyMapFilter();
+        if (filterContainer) {
+          applyMapFilter();
+        }
       } else {
-        showToast("Nenhum ponto de mapa encontrado para exibir.", "info");
+        if (typeof showToast === "function") {
+          showToast("Nenhum ponto de mapa encontrado para exibir.", "info");
+        }
       }
     } catch (error) {
       console.error(error);
-      showToast(error.message, "error");
+      if (typeof showToast === "function") {
+        showToast(error.message, "error");
+      }
     }
   };
+
+  map.on("popupopen", (e) => {
+    const deleteButton = e.popup
+      .getElement()
+      .querySelector(".btn-delete-from-map");
+    if (deleteButton) {
+      deleteButton.addEventListener("click", async (event) => {
+        const pontoId = event.currentTarget.dataset.id;
+        if (
+          !confirm(
+            `Tem certeza que deseja excluir o ponto de ID #${pontoId}? Esta ação não pode ser desfeita.`
+          )
+        ) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`/api/fibra/ponto-mapa/${pontoId}`, {
+            method: "DELETE",
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.message);
+
+          if (typeof showToast === "function") {
+            showToast(result.message, "success");
+          }
+
+          const markerToRemove = allMarkerObjects[pontoId];
+          if (markerToRemove) {
+            markerToRemove.removeFrom(map);
+          }
+          delete allMarkerObjects[pontoId];
+
+          for (const type in allMarkersByType) {
+            allMarkersByType[type] = allMarkersByType[type].filter(
+              (m) => m !== markerToRemove
+            );
+          }
+        } catch (error) {
+          if (typeof showToast === "function") {
+            showToast(error.message, "error");
+          }
+        }
+      });
+    }
+  });
 
   fetchAndDrawPoints();
 });
