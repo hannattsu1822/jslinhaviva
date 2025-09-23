@@ -3,8 +3,6 @@ const { promisePool } = require("./init");
 const WebSocket = require('ws');
 
 async function salvarLeituraRele(dados, wss) {
-  console.log('[MQTT Handler] Função salvarLeituraRele chamada com os dados:', JSON.stringify(dados, null, 2));
-
   if (!dados || !dados.rele_id || !dados.dados) {
     console.error('[MQTT Handler] Erro: Dados recebidos do MQTT para o relé estão incompletos ou malformados.');
     return;
@@ -13,7 +11,13 @@ async function salvarLeituraRele(dados, wss) {
   const { rele_id, device_id, timestamp, dados: dadosMedidos } = dados;
 
   try {
-    console.log(`[MQTT Handler] Leitura do relé '${device_id}' (ID: ${rele_id}) recebida para transmissão.`);
+    const statusParaSalvar = JSON.stringify(dadosMedidos);
+    await promisePool.query(
+      "UPDATE dispositivos_reles SET status_json = ? WHERE id = ?",
+      [statusParaSalvar, rele_id]
+    );
+    console.log(`[MQTT Handler] Último status do relé '${device_id}' (ID: ${rele_id}) salvo no banco.`);
+
     if (wss && wss.clients) {
       const payloadWebSocket = {
         type: "nova_leitura_rele",
@@ -30,8 +34,6 @@ async function salvarLeituraRele(dados, wss) {
       
       if (clientCount > 0) {
         console.log(`[MQTT Handler] Dados do relé enviados para ${clientCount} cliente(s) WebSocket.`);
-      } else {
-        console.warn('[MQTT Handler] Nenhum cliente WebSocket estava conectado para receber os dados do relé.');
       }
     }
   } catch (error) {
@@ -42,6 +44,12 @@ async function salvarLeituraRele(dados, wss) {
 async function salvarLeituraLogBox(serialNumber, dados, wss) {
   console.log(`[MQTT Handler] Recebida leitura do LogBox SN: ${serialNumber}`);
   try {
+    await promisePool.query(
+      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
+      [JSON.stringify(dados), serialNumber]
+    );
+    console.log(`[MQTT Handler] Último status do LogBox ${serialNumber} salvo no banco.`);
+
     if (wss && wss.clients) {
       const payloadWebSocket = {
         type: 'nova_leitura_logbox',
@@ -58,7 +66,9 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
           clientCount++;
         }
       });
-      console.log(`[MQTT Handler] Dados do LogBox ${serialNumber} enviados para ${clientCount} cliente(s) WebSocket.`);
+      if (clientCount > 0) {
+        console.log(`[MQTT Handler] Dados do LogBox ${serialNumber} enviados para ${clientCount} cliente(s) WebSocket.`);
+      }
     }
   } catch(error) {
     console.error(`[MQTT Handler] Erro ao processar leitura do LogBox SN ${serialNumber}:`, error);
@@ -68,6 +78,12 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
 async function salvarStatusConexao(dados, wss) {
     console.log(`[MQTT Handler] Recebido status de conexão para LogBox SN: ${dados.serial_number}`);
     try {
+        await promisePool.query(
+          "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
+          [JSON.stringify(dados), dados.serial_number]
+        );
+        console.log(`[MQTT Handler] Status de conexão do LogBox ${dados.serial_number} salvo no banco.`);
+
         if (wss && wss.clients) {
             const payloadWebSocket = {
                 type: 'atualizacao_status',
