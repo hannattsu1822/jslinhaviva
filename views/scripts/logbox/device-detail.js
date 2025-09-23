@@ -105,9 +105,6 @@ function atualizarPainelCompleto(status) {
     }
   }
 
-  const temperaturaExterna =
-    status.ch_analog_1 ||
-    (status.value_channels ? status.value_channels[2] : undefined);
   const tensaoFonteExterna = status.ch_analog_2;
   const tensaoBateria = status.ch_analog_3 || status.battery;
   const sinalWifi = status.lqi;
@@ -148,6 +145,40 @@ function atualizarPainelCompleto(status) {
 
   atualizarListaAlarmes(alarmes);
   atualizarStatusGeral();
+}
+
+function atualizarPainelLeitura(dados) {
+  const temperatura = dados.ch_analog_1;
+  const latestTempEl = document.getElementById("latest-temp");
+  if (latestTempEl && temperatura !== undefined) {
+    latestTempEl.textContent = temperatura.toFixed(1);
+  }
+  const latestTimestampEl = document.getElementById("latest-timestamp");
+  if (latestTimestampEl) {
+    latestTimestampEl.textContent = `Em: ${new Date().toLocaleString("pt-BR")}`;
+  }
+
+  if (historicoChartInstance) {
+    historicoChartInstance.data.datasets[0].data.push({
+      x: new Date(),
+      y: temperatura,
+    });
+    historicoChartInstance.update("quiet");
+  }
+
+  const tensaoFonteExterna = dados.ch_analog_2;
+  const tensaoBateria = dados.ch_analog_3 || dados.battery;
+  const { text: powerText, className: powerClass } =
+    getPowerSourceStatus(tensaoFonteExterna);
+  atualizarBadge("diag-power-source", powerText, powerClass);
+  atualizarBadge(
+    "diag-battery-voltage",
+    `${tensaoBateria?.toFixed(2) || "--"} V`,
+    tensaoBateria < 4.8 ? "bg-status-warning" : "bg-status-ok"
+  );
+
+  carregarEstatisticasDetalhes();
+  carregarDadosVentilacao();
 }
 
 function atualizarBadge(elementId, text, className) {
@@ -243,34 +274,7 @@ function iniciarWebSocket() {
 
       if (message.type === "nova_leitura_logbox") {
         console.log("Recebida nova leitura do LogBox:", message.dados);
-        
-        // CORREÇÃO PRINCIPAL: ATUALIZA TODO O PAINEL COM OS DADOS DA NOVA LEITURA
-        atualizarPainelCompleto(message.dados);
-
-        const temperatura =
-          message.dados.ch_analog_1 ||
-          (message.dados.value_channels
-            ? message.dados.value_channels[2]
-            : undefined);
-        const latestTempEl = document.getElementById("latest-temp");
-        if (latestTempEl && temperatura !== undefined) {
-          latestTempEl.textContent = temperatura.toFixed(1);
-          if (historicoChartInstance) {
-            historicoChartInstance.data.datasets[0].data.push({
-              x: new Date(),
-              y: temperatura,
-            });
-            historicoChartInstance.update("quiet");
-          }
-        }
-        const latestTimestampEl = document.getElementById("latest-timestamp");
-        if (latestTimestampEl) {
-          latestTimestampEl.textContent = `Em: ${new Date().toLocaleString(
-            "pt-BR"
-          )}`;
-        }
-        carregarEstatisticasDetalhes();
-        carregarDadosVentilacao();
+        atualizarPainelLeitura(message.dados);
       }
 
       if (message.type === "atualizacao_status") {
