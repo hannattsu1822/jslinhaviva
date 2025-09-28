@@ -170,7 +170,7 @@
         <div class="form-header">
           <h2><i class="fas fa-edit me-2"></i>Editar Serviço</h2>
           <a
-            href="/detalhes_servico"
+            href="#"
             class="btn btn-outline-secondary btn-back-header"
             id="btn-voltar-detalhes"
           >
@@ -180,6 +180,7 @@
 
         <form id="editarServicoForm" enctype="multipart/form-data">
           <input type="hidden" id="servicoId" name="servicoId" />
+          <input type="hidden" id="servicoTipo" name="servicoTipo" />
 
           <div class="row mb-3">
             <div class="col-md-6">
@@ -193,9 +194,6 @@
                 name="processo"
                 required
               />
-              <div class="form-text">
-                Para serviços emergenciais, este campo não pode ser alterado.
-              </div>
             </div>
             <div class="col-md-6">
               <label for="subestacao" class="form-label">Subestação *</label>
@@ -220,13 +218,13 @@
               />
             </div>
             <div class="col-md-6">
-              <label for="chaveMontante" class="form-label"
+              <label for="chave_montante" class="form-label"
                 >Chave Montante</label
               >
               <input
                 type="text"
                 class="form-control"
-                id="chaveMontante"
+                id="chave_montante"
                 name="chave_montante"
               />
             </div>
@@ -244,30 +242,30 @@
                 required
               >
                 <option value="SIM">Sim</option>
-                <option value="NAO">Não</option>
+                <option value="NÃO">Não</option>
               </select>
             </div>
             <div class="col-md-6" id="horariosContainer" style="display: none">
               <div class="row">
                 <div class="col-6">
-                  <label for="horaInicio" class="form-label"
+                  <label for="hora_inicio" class="form-label"
                     >Hora de Início *</label
                   >
                   <input
                     type="time"
                     class="form-control"
-                    id="horaInicio"
+                    id="hora_inicio"
                     name="hora_inicio"
                   />
                 </div>
                 <div class="col-6">
-                  <label for="horaFim" class="form-label"
+                  <label for="hora_fim" class="form-label"
                     >Hora de Término *</label
                   >
                   <input
                     type="time"
                     class="form-control"
-                    id="horaFim"
+                    id="hora_fim"
                     name="hora_fim"
                   />
                 </div>
@@ -276,13 +274,13 @@
           </div>
 
           <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="servico-responsavel" class="form-label"
+            <div class="col-md-6" id="responsavelContainer">
+              <label for="responsavel_matricula" class="form-label"
                 >Responsável Técnico</label
               >
               <select
                 class="form-select"
-                id="servico-responsavel"
+                id="responsavel_matricula"
                 name="responsavel_matricula"
               >
                 <option value="">Carregando/Selecione...</option>
@@ -317,23 +315,25 @@
 
           <div class="row mb-3">
             <div class="col-md-6">
-              <label for="descricao_servico" class="form-label"
+              <label for="descricao_geral" class="form-label"
                 >Descrição / Motivo do Serviço</label
               >
               <textarea
                 class="form-control"
-                id="descricao_servico"
-                name="descricao_servico"
+                id="descricao_geral"
+                name="descricao_geral"
                 rows="4"
                 placeholder="Digite a descrição ou o motivo do serviço..."
               ></textarea>
             </div>
             <div class="col-md-6">
-              <label for="observacoes" class="form-label">Observações</label>
+              <label for="observacoes_gerais" class="form-label"
+                >Observações</label
+              >
               <textarea
                 class="form-control"
-                id="observacoes"
-                name="observacoes"
+                id="observacoes_gerais"
+                name="observacoes_gerais"
                 rows="4"
                 placeholder="Digite observações adicionais, se houver..."
               ></textarea>
