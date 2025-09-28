@@ -20,6 +20,27 @@ const dbConfig = {
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
+const deviceCache = new Map();
+
+async function loadDeviceCache() {
+    try {
+        console.log('[Cache] Carregando dispositivos do banco de dados...');
+        const [rows] = await promisePool.query('SELECT id, nome_rele, custom_id FROM dispositivos_reles WHERE custom_id IS NOT NULL');
+        deviceCache.clear();
+        for (const device of rows) {
+            if (device.custom_id) {
+                deviceCache.set(device.custom_id.toLowerCase(), {
+                    rele_id_db: device.id,
+                    deviceId: device.nome_rele
+                });
+            }
+        }
+        console.log(`[Cache] ${deviceCache.size} dispositivos carregados com sucesso.`);
+    } catch (error) {
+        console.error('[Cache] Falha ao carregar dispositivos. O servidor pode não identificar os relés.', error);
+    }
+}
+
 function extractDeviceIdFromBinary(data) {
     const buffer = Buffer.from(data);
     const hexId = buffer.toString('hex');
@@ -149,36 +170,34 @@ async function handleSocketData(socket) {
     socket.processing = true;
 
     try {
-        // Loop para processar todos os dados atualmente no buffer
         while (true) {
             if (socket.state === 'AWAITING_IDENTITY') {
                 if (socket.binaryBuffer.length === 0) {
-                    break; // Não há dados binários para processar, sai do loop
+                    break;
                 }
                 
                 const deviceIdHex = extractDeviceIdFromBinary(socket.binaryBuffer);
-                socket.binaryBuffer = Buffer.alloc(0); // Consome o buffer binário
+                socket.binaryBuffer = Buffer.alloc(0);
 
-                const [rows] = await promisePool.query('SELECT id, nome_rele AS device_id FROM dispositivos_reles WHERE custom_id = ?', [deviceIdHex]);
+                const deviceInfo = deviceCache.get(deviceIdHex.toLowerCase());
 
-                if (rows.length > 0) {
-                    socket.rele_id_db = rows[0].id;
-                    socket.deviceId = rows[0].device_id;
-                    console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
+                if (deviceInfo) {
+                    socket.rele_id_db = deviceInfo.rele_id_db;
+                    socket.deviceId = deviceInfo.deviceId;
+                    console.log(`[TCP Service] Dispositivo identificado (via cache) como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
                     socket.state = 'LOGGING_IN_ACC';
                     socket.write("ACC\r\n");
                 } else {
-                    console.log(`[TCP Service] Dispositivo com ID HEX '${deviceIdHex}' não encontrado no banco de dados.`);
+                    console.log(`[TCP Service] Dispositivo com ID HEX '${deviceIdHex}' não encontrado no cache.`);
                     socket.end();
-                    return; // Encerra o processamento para este socket
+                    return;
                 }
-                // Continua o loop para verificar se já há dados de texto no buffer
                 continue;
             }
 
             const promptIndex = socket.textBuffer.indexOf('=>');
             if (promptIndex === -1) {
-                break; // Não há uma mensagem completa ('=>'), sai do loop
+                break;
             }
 
             const completeMessage = socket.textBuffer.substring(0, promptIndex + 2);
@@ -272,6 +291,12 @@ const server = net.createServer((socket) => {
     });
 });
 
-server.listen(port, () => {
-    console.log(`[TCP Service] Servidor TCP ouvindo na porta ${port}`);
-});
+async function startServer() {
+    await loadDeviceCache();
+
+    server.listen(port, () => {
+        console.log(`[TCP Service] Servidor TCP ouvindo na porta ${port}`);
+    });
+}
+
+startServer();
