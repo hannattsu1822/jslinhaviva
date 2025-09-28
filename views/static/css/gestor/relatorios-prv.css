@@ -1,5 +1,0 @@
-.ocorrencias-box {
-  white-space: pre-wrap; /* Mantém as quebras de linha do texto das ocorrências */
-  max-height: 200px;
-  overflow-y: auto;
-}
