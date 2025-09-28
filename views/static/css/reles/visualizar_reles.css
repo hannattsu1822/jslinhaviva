@@ -1,0 +1,62 @@
+.header { display: flex; justify-content: space-between; align-items: center; }
+.status-box { display: flex; align-items: center; padding: 8px 15px; border-radius: 20px; font-weight: 500; }
+.status-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+.status-box.status-online { background-color: #e8f5e9; color: #2e7d32; }
+.status-box.status-online .status-dot { background-color: #4caf50; }
+.status-box.status-offline { background-color: #ffebee; color: #c62828; }
+.status-box.status-offline .status-dot { background-color: #f44336; }
+.status-box.status-no-data { background-color: #f5f5f5; color: #616161; }
+.status-box.status-no-data .status-dot { background-color: #9e9e9e; }
+.info-panel, .live-data-panel, .history-panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 2rem; }
+h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+.live-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
+.live-data-point .label { font-size: 0.9rem; color: #666; }
+.live-data-point .value { font-size: 1.8rem; font-weight: 500; color: #1a237e; }
+.timestamp { text-align: right; color: #888; font-size: 0.8rem; margin-top: 20px; }
+.table-container { max-height: 400px; overflow-y: auto; }
+#history-table { width: 100%; border-collapse: collapse; }
+#history-table th, #history-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+#history-table th { background-color: #f9f9f9; }
+#history-table tbody tr:first-child { background-color: #e3f2fd; }
+
+/* Estilos para os campos de status de texto */
+.live-data-point .status-text {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #3f51b5;
+}
+.status-text.ok { color: #2e7d32; }
+.status-text.fail, .status-text.alarm { color: #c62828; }
+
+
+/* Adicione estas regras ao final do seu arquivo CSS */
+.charts-panel {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-top: 2rem;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    gap: 30px;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px; /* Altura fixa para os gráficos */
+    width: 100%;
+}
+
+/* Em telas maiores, mostrar 2 gráficos por linha */
+@media (min-width: 1200px) {
+    .charts-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    /* Faz o terceiro gráfico ocupar a linha inteira */
+    .charts-grid .chart-container:last-child {
+        grid-column: 1 / -1;
+    }
+}

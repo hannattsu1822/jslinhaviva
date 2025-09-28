@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Autorização de Serviço Extraordinário</title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <link
+      rel="stylesheet"
+      href="/static/css/components/bootstrap-overrides.css"
+    />
+    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link
+      rel="stylesheet"
+      href="/static/css/avulsos/autorizacao_horas_extras.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <%- include('../../partials/sidebar.html') %>
+
+      <main class="main-content">
+        <header class="main-header">
+          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-content">
+            <h1 class="page-title">
+              <i class="fa-solid fa-user-clock"></i>
+              Autorização de Serviço Extraordinário
+            </h1>
+            <a href="/avulsos-dashboard" class="btn btn-secondary">
+              <i class="fa-solid fa-arrow-left"></i>
+              Voltar
+            </a>
+          </div>
+        </header>
+
+        <div class="container-fluid">
+          <form id="formHorasExtras" novalidate>
+            <div class="card shadow-sm mb-4">
+              <div
+                class="card-header d-flex justify-content-between align-items-center"
+              >
+                <h5 class="mb-0">Identificação do Empregado</h5>
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalEmpregado"
+                >
+                  <i class="fa-solid fa-user-plus me-1"></i>
+                  Selecionar Empregado
+                </button>
+              </div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="nomeEmpregado" class="form-label"
+                      >Nome do Empregado</label
+                    >
+                    <input
+                      type="text"
+                      id="nomeEmpregado"
+                      name="nomeEmpregado"
+                      class="form-control"
+                      readonly
+                      required
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label for="matricula" class="form-label">Matrícula</label>
+                    <input
+                      type="text"
+                      id="matricula"
+                      name="matricula"
+                      class="form-control"
+                      readonly
+                      required
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label for="setor" class="form-label">Setor</label>
+                    <select
+                      id="setor"
+                      name="setor"
+                      class="form-select"
+                      required
+                    >
+                      <option value="" selected disabled>
+                        -- Selecione o Setor --
+                      </option>
+                      <option value="LINHA VIVA">Linha Viva</option>
+                      <option value="CONSTRUÇÃO">Construção</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="mesAno" class="form-label"
+                      >Mês/Ano de Referência</label
+                    >
+                    <input
+                      type="month"
+                      id="mesAno"
+                      name="mesAno"
+                      class="form-control"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">Detalhes das Horas Extras</h5>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table
+                    id="tabelaHorasExtras"
+                    class="table table-bordered align-middle text-center"
+                  >
+                    <thead class="table-light">
+                      <tr>
+                        <th rowspan="2">Dia</th>
+                        <th colspan="2">Previsão</th>
+                        <th colspan="2">Realizado</th>
+                        <th rowspan="2">Qtde Horas</th>
+                        <th rowspan="2">Motivo</th>
+                        <th rowspan="2">Autorizado (S/N)</th>
+                        <th colspan="2">Horas Extras</th>
+                        <th rowspan="2">Visto Gerente (S/N)</th>
+                        <th rowspan="2" class="no-print">Ação</th>
+                      </tr>
+                      <tr>
+                        <th>Início</th>
+                        <th>Término</th>
+                        <th>Início</th>
+                        <th>Término</th>
+                        <th>Pagar</th>
+                        <th>Compensar</th>
+                      </tr>
+                    </thead>
+                    <tbody id="corpoTabelaHorasExtras"></tbody>
+                  </table>
+                </div>
+                <button
+                  type="button"
+                  id="btnAdicionarLinha"
+                  class="btn btn-outline-secondary mt-2 no-print"
+                >
+                  <i class="fa-solid fa-plus me-1"></i>
+                  Adicionar Dia/Tarefa
+                </button>
+              </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+              <div class="card-body">
+                <h5 class="card-title">Observações Importantes</h5>
+                <ul>
+                  <li>
+                    A solicitação para realização de serviços em horário
+                    extraordinário deve ser autorizada previamente, salvo em
+                    casos emergenciais.
+                  </li>
+                  <li>
+                    As horas realizadas em atividades emergenciais devem ser
+                    apresentadas ao gerente do setor no dia seguinte à sua
+                    realização.
+                  </li>
+                  <li>
+                    Este formulário deve ser encaminhado ao RH até o 1º dia útil
+                    do mês subsequente.
+                  </li>
+                  <li>
+                    O empregado é responsável por garantir o preenchimento
+                    correto e a assinatura do gerente antes do envio ao RH.
+                  </li>
+                  <li>
+                    As horas extras devem ser registradas corretamente no ponto
+                    eletrônico.
+                  </li>
+                </ul>
+                <hr />
+                <p>
+                  Eu,
+                  <strong id="nomeEmpregadoOutput">[Nome do Empregado]</strong>,
+                  declaro que as informações fornecidas acima são verdadeiras e
+                  estou ciente das normas estabelecidas pela empresa sobre a
+                  realização de horas extras.
+                </p>
+                <div class="row mt-5 text-center">
+                  <div class="col-md-4">
+                    <label for="dataSolicitacao" class="form-label"
+                      >Data da Solicitação</label
+                    >
+                    <input
+                      type="date"
+                      id="dataSolicitacao"
+                      name="dataSolicitacao"
+                      class="form-control"
+                      required
+                    />
+                  </div>
+                  <div class="col-md-4 signature-block">
+                    <p class="mb-0">_________________________</p>
+                    <label class="form-label">Assinatura do Empregado</label>
+                  </div>
+                  <div class="col-md-4 signature-block">
+                    <p class="mb-0">_________________________</p>
+                    <label class="form-label"
+                      >Assinatura do Gerente do Setor</label
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-end mb-4 no-print">
+              <button type="button" id="btnPrint" class="btn btn-secondary">
+                <i class="fa-solid fa-print me-1"></i>
+                Gerar PDF
+              </button>
+              <button type="submit" class="btn btn-success">
+                <i class="fa-solid fa-paper-plane me-1"></i>
+                Enviar Solicitação
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <div
+      class="modal fade"
+      id="modalEmpregado"
+      tabindex="-1"
+      aria-labelledby="modalEmpregadoLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalEmpregadoLabel">
+              Selecionar Empregado
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="selectTurmaEncarregado" class="form-label"
+                >Selecione a Turma (pelo Encarregado)</label
+              >
+              <select
+                id="selectTurmaEncarregado"
+                name="selectTurmaEncarregado"
+                class="form-select"
+              >
+                <option value="">-- Carregando Turmas --</option>
+              </select>
+            </div>
+            <div>
+              <label for="selectEmpregadoDaTurma" class="form-label"
+                >Selecione o Empregado</label
+              >
+              <select
+                id="selectEmpregadoDaTurma"
+                name="selectEmpregadoDaTurma"
+                class="form-select"
+                disabled
+              >
+                <option value="">-- Selecione uma Turma Primeiro --</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              id="btnConfirmarSelecaoEmpregado"
+              class="btn btn-primary"
+              disabled
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/vfs_fonts.js"></script>
+    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/scripts/avulsos/autorizacao_horas_extras.js"></script>
+  </body>
+</html>
