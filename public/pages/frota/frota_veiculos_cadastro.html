@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestão de Veículos</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/frota_styles.css" />
+  </head>
+  <body>
+    <header class="main-header">
+      <div class="logo">Gestão de Veículos</div>
+      <nav class="main-nav">
+        <a href="/frota_controle">Voltar ao Controle</a>
+        <a href="/">Início</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Consulta e Gestão de Veículos</h1>
+        <p class="page-subtitle">
+          Filtre, consulte e gerencie os veículos da frota.
+        </p>
+      </div>
+
+      <div class="form-toggle-button">
+        <button class="btn btn-primary" id="toggleFormBtn">
+          Cadastrar Novo Veículo
+        </button>
+      </div>
+
+      <div id="formContainer" class="form-container hidden">
+        <section class="card-section">
+          <div class="card-header">Dados do Novo Veículo</div>
+          <div class="card-content">
+            <form id="vehicleForm">
+              <div class="form-grid form-grid-3-col">
+                <div class="form-group">
+                  <label for="placa">Placa *</label>
+                  <input type="text" id="placa" required maxlength="10" />
+                </div>
+                <div class="form-group">
+                  <label for="nome">Nome/Modelo *</label>
+                  <input type="text" id="nome" required maxlength="255" />
+                </div>
+                <div class="form-group">
+                  <label for="codigo">Código (Opcional)</label>
+                  <input type="text" id="codigo" maxlength="50" />
+                </div>
+                <div class="form-group">
+                  <label for="tipo_veiculo">Tipo de Veículo *</label>
+                  <select id="tipo_veiculo" required>
+                    <option value="" selected disabled>Selecione...</option>
+                    <option value="Carro">Carro</option>
+                    <option value="Caminhonete">Caminhonete</option>
+                    <option value="Caminhão">Caminhão</option>
+                    <option value="Máquina">Máquina</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="situacao">Situação *</label>
+                  <select id="situacao" required>
+                    <option value="Ativo" selected>Ativo</option>
+                    <option value="Inativo">Inativo</option>
+                    <option value="Manutenção">Manutenção</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="ano_fabricacao">Ano de Fabricação</label>
+                  <input type="text" id="ano_fabricacao" maxlength="10" />
+                </div>
+                <div class="form-group">
+                  <label for="cor">Cor</label>
+                  <input type="text" id="cor" maxlength="30" />
+                </div>
+              </div>
+              <div class="form-grid" style="margin-top: 1.5rem">
+                <div class="form-group">
+                  <label for="descricao">Descrição</label>
+                  <textarea id="descricao" rows="3"></textarea>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-success">
+                  Salvar Veículo
+                </button>
+                <button
+                  type="button"
+                  id="closeFormBtn"
+                  class="btn btn-secondary"
+                >
+                  Fechar
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+
+      <section class="card-section">
+        <div class="card-header">Filtros de Pesquisa</div>
+        <div class="card-content">
+          <form class="form-grid form-grid-3-col">
+            <div class="form-group">
+              <label for="filterId">ID</label>
+              <input
+                type="text"
+                id="filterId"
+                placeholder="Filtrar por ID..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="filterCodigo">Código</label>
+              <input
+                type="text"
+                id="filterCodigo"
+                placeholder="Filtrar por Código..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="filterPlaca">Placa</label>
+              <input
+                type="text"
+                id="filterPlaca"
+                placeholder="Filtrar por Placa..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="filterNome">Nome/Modelo</label>
+              <input
+                type="text"
+                id="filterNome"
+                placeholder="Filtrar por Nome..."
+              />
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="card-section">
+        <div class="card-header">Veículos Cadastrados</div>
+        <div class="card-content">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Código</th>
+                  <th>Placa</th>
+                  <th>Nome/Modelo</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="vehicleTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toastContainer" class="toast-container"></div>
+    <script src="/scripts/frota/frota_veiculos_cadastro.js"></script>
+  </body>
+</html>

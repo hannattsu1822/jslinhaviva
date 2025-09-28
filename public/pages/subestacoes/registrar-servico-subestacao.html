@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registrar Serviço de Subestação</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/subestacoes/registrar-servico-subestacao.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <header class="page-header">
+        <h1 id="paginaTitulo" class="page-title">
+          <span class="material-symbols-outlined">playlist_add</span>
+          Registrar Novo Serviço
+        </h1>
+      </header>
+
+      <main>
+        <form id="formServico" class="form-card">
+          <div class="card-body">
+            <h2 class="section-title">Dados Gerais do Serviço</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="servicoSubestacao">Subestação:*</label>
+                <select
+                  id="servicoSubestacao"
+                  name="subestacao_id"
+                  class="form-select"
+                  required
+                >
+                  <option value="">Carregando...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="servicoProcesso">Nº Processo/OS:*</label>
+                <input
+                  type="text"
+                  id="servicoProcesso"
+                  name="processo"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="servicoTipoOrdem">Tipo de Ordem:</label>
+                <select
+                  id="servicoTipoOrdem"
+                  name="tipo_ordem"
+                  class="form-select"
+                >
+                  <option value="" selected>Selecione...</option>
+                  <option value="ODI">ODI</option>
+                  <option value="ODD">ODD</option>
+                  <option value="ODS">ODS</option>
+                </select>
+              </div>
+              <div class="form-group form-group-full">
+                <label for="servicoMotivo">Motivo Geral do Serviço:*</label>
+                <textarea
+                  id="servicoMotivo"
+                  name="motivo"
+                  class="form-control"
+                  rows="2"
+                  required
+                  placeholder="Descrição geral ou objetivo do serviço."
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <label for="servicoResponsavel">Responsável Técnico:*</label>
+                <select
+                  id="servicoResponsavel"
+                  name="responsavel_id"
+                  class="form-select"
+                  required
+                >
+                  <option value="">Carregando...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="servicoStatus">Status do Serviço (Geral):</label>
+                <select id="servicoStatus" name="status" class="form-select">
+                  <option value="PROGRAMADO" selected>PROGRAMADO</option>
+                  <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                  <option value="PENDENTE_APROVACAO">PENDENTE APROVAÇÃO</option>
+                  <option value="CONCLUIDO">CONCLUÍDO</option>
+                  <option value="CANCELADO">CANCELADO</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="servicoPrioridade">Prioridade Geral:*</label>
+                <select
+                  id="servicoPrioridade"
+                  name="prioridade"
+                  class="form-select"
+                  required
+                >
+                  <option value="BAIXA">Baixa</option>
+                  <option value="MEDIA" selected>Média</option>
+                  <option value="ALTA">Alta</option>
+                  <option value="GRAVE">Grave</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="servicoDataPrevista">Data Prevista:*</label>
+                <input
+                  type="date"
+                  id="servicoDataPrevista"
+                  name="data_prevista"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="servicoHorarioInicio"
+                  >Horário Início Previsto:*</label
+                >
+                <input
+                  type="time"
+                  id="servicoHorarioInicio"
+                  name="horario_inicio"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="servicoHorarioFim">Horário Fim Previsto:*</label>
+                <input
+                  type="time"
+                  id="servicoHorarioFim"
+                  name="horario_fim"
+                  class="form-control"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="section-header">
+                <h2 class="section-title">Itens de Serviço / Tarefas</h2>
+                <button
+                  type="button"
+                  id="btnAbrirModalItem"
+                  class="btn btn-primary"
+                >
+                  <span class="material-symbols-outlined">add_circle</span>
+                  Criar Item Avulso
+                </button>
+              </div>
+              <div id="listaItensDeServico" class="items-display-container">
+                <p id="msgNenhumItem" class="feedback-message">
+                  Nenhum item de serviço adicionado.
+                </p>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <fieldset class="anexos-fieldset">
+                <legend>
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Anexos Gerais do Serviço
+                </legend>
+                <div class="form-group">
+                  <label>Adicionar Anexos Gerais (Opcional):</label>
+                  <div class="botoes-anexo">
+                    <button
+                      type="button"
+                      id="btnAnexarGeral"
+                      class="btn btn-secondary"
+                    >
+                      <span class="material-symbols-outlined">attach_file</span>
+                      Procurar Arquivos
+                    </button>
+                    <button
+                      type="button"
+                      id="btnFotografarGeral"
+                      class="btn btn-secondary"
+                    >
+                      <span class="material-symbols-outlined"
+                        >photo_camera</span
+                      >
+                      Tirar Foto
+                    </button>
+                  </div>
+                  <input
+                    type="file"
+                    id="anexosGeraisInput"
+                    class="visually-hidden"
+                    multiple
+                  />
+                  <input
+                    type="file"
+                    id="anexosGeraisCameraInput"
+                    class="visually-hidden"
+                    accept="image/*"
+                    capture="environment"
+                  />
+                  <div
+                    id="previewAnexosGerais"
+                    class="anexos-preview-container"
+                  ></div>
+                </div>
+              </fieldset>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button
+              type="button"
+              id="btnCancelarServico"
+              class="btn btn-secondary"
+            >
+              <span class="material-symbols-outlined">cancel</span> Cancelar
+            </button>
+            <button type="submit" id="btnSalvarServico" class="btn btn-success">
+              <span class="material-symbols-outlined">save</span> Salvar Serviço
+            </button>
+          </div>
+        </form>
+      </main>
+
+      <footer class="page-footer">
+        <a href="/pagina-servicos-subestacoes" class="btn btn-secondary">
+          <span class="material-symbols-outlined">arrow_back</span> Voltar para
+          Listagem
+        </a>
+      </footer>
+    </div>
+
+    <div id="modalPreSelecaoServico" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">source_notes</span>
+            Origem do Novo Serviço
+          </h3>
+        </div>
+        <div class="modal-body">
+          <p>Como você deseja criar este serviço?</p>
+          <div class="modal-actions-vertical">
+            <button type="button" id="btnServicoAvulso" class="btn btn-primary">
+              <span class="material-symbols-outlined">post_add</span>
+              Serviço Avulso (Manual)
+            </button>
+            <button
+              type="button"
+              id="btnServicoAPartirDeInspecao"
+              class="btn btn-info"
+            >
+              <span class="material-symbols-outlined">link</span>
+              A Partir de Inspeção Existente
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            id="btnCancelarPreSelecao"
+            class="btn btn-secondary"
+          >
+            Cancelar Registro
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalAdicionarItem" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalItemTitulo" class="modal-title">
+            <span class="material-symbols-outlined">add_task</span>
+            Adicionar Item de Serviço
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formModalItem">
+            <input type="hidden" id="modalItemTempId" />
+            <div class="form-group">
+              <label for="modalItemDefeito">Defeito (Catálogo):</label>
+              <input
+                type="text"
+                id="modalItemDefeito"
+                class="form-control"
+                placeholder="Digite para buscar o defeito..."
+              />
+              <input type="hidden" id="modalItemDefeitoId" />
+              <div
+                id="sugestoesDefeitos"
+                class="autocomplete-suggestions"
+              ></div>
+            </div>
+            <div class="form-group">
+              <label for="modalItemEquipamento"
+                >Tipo de Equipamento (Catálogo):</label
+              >
+              <input
+                type="text"
+                id="modalItemEquipamento"
+                class="form-control"
+                placeholder="Digite para buscar o tipo de equipamento..."
+              />
+              <input type="hidden" id="modalItemEquipamentoId" />
+              <div
+                id="sugestoesEquipamentos"
+                class="autocomplete-suggestions"
+              ></div>
+            </div>
+            <div class="form-group">
+              <label for="modalItemTag">TAG do Equipamento Alvo:*</label>
+              <input
+                type="text"
+                id="modalItemTag"
+                class="form-control"
+                required
+                placeholder="Ex: DJ-01-SE-AUA"
+              />
+            </div>
+            <div class="form-group">
+              <label for="modalItemDescricao">Descrição da Tarefa:*</label>
+              <textarea
+                id="modalItemDescricao"
+                class="form-control"
+                rows="3"
+                required
+                placeholder="Descreva a tarefa a ser executada"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label>Anexos do Item:</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAnexarItemModal"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Procurar Arquivos
+                </button>
+                <button
+                  type="button"
+                  id="btnFotografarItemModal"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">photo_camera</span>
+                  Tirar Foto
+                </button>
+              </div>
+              <input
+                type="file"
+                id="modalItemAnexos"
+                class="visually-hidden"
+                multiple
+              />
+              <input
+                type="file"
+                id="modalItemCamera"
+                class="visually-hidden"
+                accept="image/*"
+                capture="environment"
+              />
+              <div
+                id="modalPreviewAnexosItem"
+                class="anexos-preview-container"
+              ></div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">
+            Cancelar
+          </button>
+          <button type="button" id="btnSalvarItemModal" class="btn btn-primary">
+            <span class="material-symbols-outlined">check</span> Adicionar Item
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalSelecionarInspecao" class="modal-overlay hidden">
+      <div class="modal-content modal-xl">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">fact_check</span>
+            Selecionar Inspeções para Gerar Itens de Serviço
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="filters-container">
+            <div class="form-group">
+              <label for="filtroInspecaoSubestacao">Subestação:</label>
+              <select
+                id="filtroInspecaoSubestacao"
+                class="form-select"
+              ></select>
+            </div>
+            <div class="form-group">
+              <label for="filtroInspecaoStatus">Status:</label>
+              <select id="filtroInspecaoStatus" class="form-select">
+                <option value="">Todos</option>
+                <option value="CONCLUIDA" selected>Concluída</option>
+                <option value="EM_ANDAMENTO">Em Andamento</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              id="btnFiltrarInspecoes"
+              class="btn btn-primary"
+            >
+              <span class="material-symbols-outlined">search</span> Buscar
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="selecionarTodasInspecoes" />
+                  </th>
+                  <th>Nº Inspeção</th>
+                  <th>Subestação</th>
+                  <th>Data</th>
+                  <th>Responsável</th>
+                </tr>
+              </thead>
+              <tbody id="corpoTabelaInspecoes"></tbody>
+            </table>
+          </div>
+          <p id="nenhumaInspecaoEncontrada" class="feedback-message hidden">
+            Nenhuma inspeção encontrada.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            id="btnConfirmarSelecaoInspecoes"
+            class="btn btn-primary"
+          >
+            <span class="material-symbols-outlined">task</span> Gerar Itens a
+            Partir da Seleção
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <template id="templateAnexoPreview">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+          <span class="file-size"></span>
+        </div>
+        <button type="button" class="btn-remove" title="Remover anexo">
+          ×
+        </button>
+      </div>
+    </template>
+
+    <template id="templateItemAnormal">
+      <div class="item-card-anormal">
+        <div class="item-anormal-header">
+          <span class="origem-inspecao"></span>
+          <p class="item-anormal-descricao"></p>
+          <div class="anexos-origem-container"></div>
+        </div>
+        <div class="item-anormal-body">
+          <div class="form-group">
+            <label>Defeito (Catálogo):*</label>
+            <input
+              type="text"
+              class="form-control defeito-autocomplete"
+              placeholder="Digite para buscar o defeito..."
+            />
+            <input type="hidden" class="defeito-id" />
+            <div class="autocomplete-suggestions"></div>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Equipamento (Catálogo):*</label>
+            <input
+              type="text"
+              class="form-control equipamento-autocomplete"
+              placeholder="Digite para buscar o tipo de equipamento..."
+            />
+            <input type="hidden" class="equipamento-id" />
+            <div class="autocomplete-suggestions"></div>
+          </div>
+          <div class="form-group">
+            <label>TAG do Equipamento Alvo:*</label>
+            <input type="text" class="form-control tag-alvo" required />
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script src="/scripts/subestacoes/registrar-servico-subestacao.js"></script>
+  </body>
+</html>

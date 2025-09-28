@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Serviços de Subestações - Ativos</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/subestacoes/servicos-subestacoes-servicos.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <header class="page-header">
+        <h1 class="page-title">
+          <span class="material-symbols-outlined">engineering</span>
+          Serviços Ativos de Subestações
+        </h1>
+      </header>
+
+      <main>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="material-symbols-outlined">filter_alt</span>
+              Filtros de Pesquisa
+            </h2>
+          </div>
+          <div class="card-body">
+            <form id="formFiltrosServicos" class="filters-container">
+              <div class="form-group">
+                <label for="filtroSubestacao">Subestação:</label>
+                <select
+                  id="filtroSubestacao"
+                  name="subestacao_id"
+                  class="form-select"
+                >
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filtroStatusServico">Status Serviço:</label>
+                <select
+                  id="filtroStatusServico"
+                  name="status"
+                  class="form-select"
+                >
+                  <option value="">Todos Ativos</option>
+                  <option value="PROGRAMADO">PROGRAMADO</option>
+                  <option value="EM_ANDAMENTO">EM ANDAMENTO</option>
+                  <option value="PENDENTE_APROVACAO">PENDENTE APROVAÇÃO</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filtroDataPrevistaDe">Data Prevista (De):</label>
+                <input
+                  type="date"
+                  id="filtroDataPrevistaDe"
+                  name="data_prevista_de"
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label for="filtroDataPrevistaAte">Data Prevista (Até):</label>
+                <input
+                  type="date"
+                  id="filtroDataPrevistaAte"
+                  name="data_prevista_ate"
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label for="filtroProcesso">Nº Processo/OS:</label>
+                <input
+                  type="text"
+                  id="filtroProcesso"
+                  name="processo"
+                  class="form-control"
+                />
+              </div>
+              <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">
+                  <span class="material-symbols-outlined">search</span> Aplicar
+                </button>
+                <button
+                  type="button"
+                  id="btnLimparFiltrosServicos"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">clear_all</span>
+                  Limpar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <span class="material-symbols-outlined">list_alt</span>
+              Lista de Serviços
+            </h3>
+            <button id="btnNovoServico" type="button" class="btn btn-success">
+              <span class="material-symbols-outlined">add_circle</span>
+              Registrar Novo Serviço
+            </button>
+          </div>
+          <div class="card-body no-padding">
+            <div class="table-responsive">
+              <table id="tabelaServicos" class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Processo</th>
+                    <th>Subestação</th>
+                    <th>Prioridade</th>
+                    <th>Data Prevista</th>
+                    <th>Responsável</th>
+                    <th>Encarregado(s)</th>
+                    <th class="text-center">Progresso</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="corpoTabelaServicos"></tbody>
+              </table>
+            </div>
+            <p id="nenhumServico" class="feedback-message hidden">
+              Nenhum serviço ativo encontrado com os filtros aplicados.
+            </p>
+            <div class="pagination-container" id="paginationContainer"></div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="page-footer">
+        <a href="/subestacoes-dashboard" class="btn btn-secondary">
+          <span class="material-symbols-outlined">arrow_back</span> Voltar ao
+          Dashboard
+        </a>
+      </footer>
+    </div>
+
+    <div id="modalConcluirItem" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalConcluirItemTitulo" class="modal-title">
+            <span class="material-symbols-outlined">check_circle</span> Concluir
+            Item de Serviço
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <form id="formConcluirItem">
+          <div class="modal-body">
+            <input type="hidden" id="servicoIdParaConclusao" />
+            <p>Serviço: <strong id="servicoProcessoParaConclusao"></strong></p>
+            <div class="form-group">
+              <label for="selectItemParaConcluir"
+                >Selecione o item a concluir:*</label
+              >
+              <select
+                id="selectItemParaConcluir"
+                class="form-select"
+                required
+              ></select>
+            </div>
+            <div class="form-group">
+              <label for="statusConclusaoItem">Status da Conclusão:*</label>
+              <select
+                id="statusConclusaoItem"
+                name="status_item"
+                class="form-select"
+                required
+              >
+                <option value="CONCLUIDO">Concluído</option>
+                <option value="CONCLUIDO_COM_PENDENCIA">
+                  Concluído com Pendência
+                </option>
+                <option value="NAO_CONCLUIDO">Não Concluído</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="dataConclusaoItem">Data da Conclusão:*</label>
+              <input
+                type="date"
+                id="dataConclusaoItem"
+                name="data_conclusao"
+                class="form-control"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="horaConclusaoItem">Hora da Conclusão:</label>
+              <input
+                type="time"
+                id="horaConclusaoItem"
+                name="hora_conclusao"
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label for="observacoesConclusaoItem">Observações:</label>
+              <textarea
+                id="observacoesConclusaoItem"
+                name="observacoes_conclusao"
+                class="form-control"
+                rows="2"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label>Anexos de Evidência:</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAnexarEvidencia"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Anexar Arquivos
+                </button>
+              </div>
+              <input
+                type="file"
+                id="anexosConclusaoItemInput"
+                name="anexos_conclusao_item"
+                class="visually-hidden"
+                multiple
+              />
+              <div
+                id="previewAnexosConclusaoItem"
+                class="anexos-preview-container"
+              ></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-close-modal">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              id="btnConfirmarConclusaoItem"
+              class="btn btn-success"
+            >
+              <span class="material-symbols-outlined">check</span> Concluir Item
+              Selecionado
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="modalGerenciarItensServico" class="modal-overlay hidden">
+      <div class="modal-content modal-xl">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">manage_accounts</span>
+            Gerenciar Itens do Serviço
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="servicoIdParaGerenciarItens" />
+          <p class="modal-subtitle">
+            Serviço Processo Nº:
+            <strong id="processoServicoGerenciarItens"></strong>
+          </p>
+          <div
+            id="listaItensParaGerenciamento"
+            class="items-management-container"
+          ></div>
+          <p
+            id="nenhumItemEscopoParaGerenciarMsg"
+            class="feedback-message hidden"
+          >
+            Este serviço não possui itens de escopo detalhados.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            id="btnSalvarGerenciamentoItens"
+            class="btn btn-primary"
+          >
+            <span class="material-symbols-outlined">save</span> Salvar
+            Alterações
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <template id="templateAnexoPreviewConclusao">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+          <span class="file-size"></span>
+        </div>
+        <button type="button" class="btn-remove" title="Remover anexo">
+          ×
+        </button>
+      </div>
+    </template>
+
+    <script src="/scripts/subestacoes/servicos-subestacoes-servicos.js"></script>
+  </body>
+</html>

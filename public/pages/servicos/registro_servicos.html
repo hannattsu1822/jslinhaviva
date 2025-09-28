@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registro de Serviços</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/registro_servicos.css" />
+    <style>
+      .badge-emergencial {
+        background-color: #dc3545;
+        color: white;
+      }
+      .badge-normal {
+        background-color: #0d6efd;
+        color: white;
+      }
+      .processo-emergencial {
+        background-color: rgba(220, 53, 69, 0.1);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container registro-container">
+      <div class="header">
+        <h1><i class="fas fa-tools me-2"></i>Registro de Serviços</h1>
+        <a href="/gestao-servicos" class="btn btn-back">
+          <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+      </div>
+
+      <div
+        id="tipoServicoModal"
+        class="modal fade"
+        data-bs-backdrop="static"
+        data-bs-keyboard="false"
+        tabindex="-1"
+      >
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body text-center p-4">
+              <i
+                class="fas fa-question-circle mb-3"
+                style="font-size: 3rem; color: #2a5298"
+              ></i>
+              <h4 class="mb-3">Tipo de Serviço</h4>
+              <p class="mb-4">
+                Selecione se o serviço a ser registrado é emergencial ou normal.
+              </p>
+              <div class="d-flex justify-content-center gap-3">
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  onclick="setEmergencial(true)"
+                >
+                  <i class="fas fa-exclamation-triangle me-2"></i>Emergencial
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="setEmergencial(false)"
+                >
+                  <i class="fas fa-file-alt me-2"></i>Normal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-form" id="formContainer" style="display: none">
+        <form id="formServico" enctype="multipart/form-data">
+          <div class="row form-row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="processo" class="form-label" id="processoLabel"
+                  >Número do Processo *</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="processo"
+                  name="processo"
+                  required
+                />
+                <input
+                  type="hidden"
+                  id="tipo_processo"
+                  name="tipo_processo"
+                  value="Normal"
+                />
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="data_prevista_execucao" class="form-label"
+                  >Data Prevista *</label
+                >
+                <input
+                  type="date"
+                  class="form-control"
+                  id="data_prevista_execucao"
+                  name="data_prevista_execucao"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="desligamento" class="form-label"
+                  >Desligamento *</label
+                >
+                <select
+                  class="form-control form-select"
+                  id="desligamento"
+                  name="desligamento"
+                  required
+                  onchange="toggleHorariosDesligamento()"
+                >
+                  <option value="SIM">SIM</option>
+                  <option value="NÃO" selected>NÃO</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div
+                class="form-group"
+                id="horaInicioGroup"
+                style="display: none"
+              >
+                <label for="hora_inicio" class="form-label"
+                  >Hora de Início *</label
+                >
+                <input
+                  type="time"
+                  class="form-control"
+                  id="hora_inicio"
+                  name="hora_inicio"
+                />
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group" id="horaFimGroup" style="display: none">
+                <label for="hora_fim" class="form-label"
+                  >Hora de Término *</label
+                >
+                <input
+                  type="time"
+                  class="form-control"
+                  id="hora_fim"
+                  name="hora_fim"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="subestacao" class="form-label">Subestação *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="subestacao"
+                  name="subestacao"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="alimentador" class="form-label"
+                  >Alimentador *</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="alimentador"
+                  name="alimentador"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label for="chave_montante" class="form-label"
+                  >Chave Montante *</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="chave_montante"
+                  name="chave_montante"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label class="form-label">Responsável</label>
+                <div class="alert alert-info p-2" style="font-size: 0.85rem">
+                  O responsável será definido posteriormente na página de
+                  serviços ativos.
+                </div>
+                <input
+                  type="hidden"
+                  id="responsavel_matricula"
+                  name="responsavel_matricula"
+                  value="pendente"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="ordem_obra" class="form-label">Ordem de Obra</label>
+                <select
+                  class="form-control form-select"
+                  id="ordem_obra"
+                  name="ordem_obra"
+                >
+                  <option value="">Nenhuma</option>
+                  <option value="ODI">ODI</option>
+                  <option value="ODD">ODD</option>
+                  <option value="ODS">ODS</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="maps" class="form-label">Link do Google Maps</label>
+                <div class="input-group">
+                  <span class="input-group-text"
+                    ><i class="fas fa-map-marker-alt"></i
+                  ></span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="maps"
+                    name="maps"
+                    placeholder="Cole o link do Google Maps aqui"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="descricao_servico" class="form-label"
+                  >Descrição / Motivo do Serviço</label
+                >
+                <textarea
+                  class="form-control"
+                  id="descricao_servico"
+                  name="descricao_servico"
+                  rows="3"
+                  placeholder="Digite a descrição ou o motivo do serviço..."
+                ></textarea>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="observacoes" class="form-label">Observações</label>
+                <textarea
+                  class="form-control"
+                  id="observacoes"
+                  name="observacoes"
+                  rows="3"
+                  placeholder="Digite observações adicionais, se houver..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label"
+                  >Anexos (Máx. 5 arquivos, 10MB cada)</label
+                >
+                <div class="file-upload">
+                  <input
+                    type="file"
+                    class="form-control d-none"
+                    id="anexos"
+                    name="anexos"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.xls,.xlsx,.csv"
+                  />
+                  <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Arraste ou clique para selecionar os arquivos</p>
+                    <small>Formatos: PDF, Imagens, Excel, CSV</small>
+                  </div>
+                  <div id="arquivos-selecionados" class="mt-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
+            <div class="col-12">
+              <button type="submit" class="btn btn-submit w-100">
+                <i class="fas fa-save me-2"></i>REGISTRAR SERVIÇO
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/servicos/registro_servicos.js"></script>
+  </body>
+</html>

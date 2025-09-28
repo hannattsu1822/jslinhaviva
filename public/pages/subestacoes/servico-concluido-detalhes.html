@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalhes do Serviço Concluído</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/subestacoes/servico-detalhes-pagina.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <header class="page-header">
+        <h1 class="page-title">
+          <span class="material-symbols-outlined">archive</span>
+          Relatório Final do Serviço
+          <span id="servicoIdTitulo" class="header-id"></span>
+        </h1>
+        <div class="header-actions">
+          <button id="btnImprimirPagina" class="btn btn-info">
+            <span class="material-symbols-outlined">print</span> Imprimir
+          </button>
+        </div>
+      </header>
+
+      <main id="detalhesServicoMainContent">
+        <div id="loadingIndicator" class="feedback-message">
+          <div class="spinner"></div>
+          <p>Carregando detalhes do serviço...</p>
+        </div>
+
+        <div id="conteudoDetalhesServico" class="hidden">
+          <section class="card">
+            <div class="card-header">
+              <h2 class="card-title">
+                <span class="material-symbols-outlined">info</span>
+                Informações Gerais
+              </h2>
+            </div>
+            <div class="card-body">
+              <div class="details-grid">
+                <div class="detail-item">
+                  <strong>Nº Processo/OS:</strong>
+                  <p id="detalheProcesso"></p>
+                </div>
+                <div class="detail-item">
+                  <strong>Subestação:</strong>
+                  <p id="detalheSubestacao"></p>
+                </div>
+                <div class="detail-item">
+                  <strong>Tipo de Ordem:</strong>
+                  <p id="detalheTipoOrdem"></p>
+                </div>
+                <div class="detail-item">
+                  <strong>Status:</strong>
+                  <p id="detalheStatus"></p>
+                </div>
+                <div class="detail-item">
+                  <strong>Prioridade:</strong>
+                  <p id="detalhePrioridade"></p>
+                </div>
+                <div class="detail-item">
+                  <strong>Responsável Técnico:</strong>
+                  <p id="detalheResponsavel"></p>
+                </div>
+                <div class="detail-item detail-full">
+                  <strong>Motivo do Serviço:</strong>
+                  <p id="detalheMotivo" class="text-break"></p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="secaoItensEscopo" class="card hidden">
+            <div class="card-header">
+              <h2 class="card-title">
+                <span class="material-symbols-outlined">fact_check</span>
+                Itens de Escopo Executados
+              </h2>
+            </div>
+            <div class="card-body">
+              <div id="containerItensEscopo" class="items-container"></div>
+            </div>
+          </section>
+
+          <section id="secaoDetalhesConclusao" class="card hidden">
+            <div class="card-header">
+              <h2 class="card-title">
+                <span class="material-symbols-outlined">task_alt</span>
+                Detalhes da Conclusão Geral
+              </h2>
+            </div>
+            <div class="card-body">
+              <div class="details-grid">
+                <div class="detail-item">
+                  <strong>Data de Conclusão:</strong>
+                  <p id="detalheDataConclusao"></p>
+                </div>
+                <div class="detail-item">
+                  <strong>Horário de Conclusão:</strong>
+                  <p id="detalheHoraConclusao"></p>
+                </div>
+                <div class="detail-item detail-full">
+                  <strong>Observações da Conclusão:</strong>
+                  <p id="detalheObsConclusao" class="text-break"></p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="secaoAnexosServico" class="card hidden">
+            <div class="card-header">
+              <h2 class="card-title">
+                <span class="material-symbols-outlined">attach_file</span>
+                Anexos do Serviço
+              </h2>
+            </div>
+            <div class="card-body">
+              <div
+                id="listaAnexosServicoPagina"
+                class="anexos-preview-container"
+              ></div>
+            </div>
+          </section>
+        </div>
+        <div id="erroCarregamento" class="feedback-message error hidden"></div>
+      </main>
+
+      <footer class="page-footer">
+        <a href="/pagina-servicos-concluidos" class="btn btn-secondary">
+          <span class="material-symbols-outlined">arrow_back</span> Voltar para
+          o Histórico
+        </a>
+      </footer>
+    </div>
+
+    <div id="imageLightboxDetalhes" class="modal-overlay hidden">
+      <button class="btn-close-lightbox" aria-label="Fechar">×</button>
+      <div class="modal-content-lightbox">
+        <img src="" alt="Imagem Ampliada" id="lightboxImageDetalhesContent" />
+      </div>
+    </div>
+
+    <script src="/scripts/subestacoes/servico-concluido-detalhes.js"></script>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Controle da Frota</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/frota_styles.css" />
+  </head>
+  <body>
+    <header class="main-header">
+      <div class="logo">Sistema de Frota</div>
+      <nav class="main-nav">
+        <a href="/">Início</a>
+        <a href="/dashboard">Dashboard</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Controle da Frota</h1>
+        <p class="page-subtitle">
+          Selecione uma das áreas abaixo para gerenciar os cadastros e o
+          inventário.
+        </p>
+      </div>
+
+      <div class="action-card-grid">
+        <a href="/frota_veiculos_cadastro" class="action-card">
+          <div class="action-card-icon icon-veiculos">
+            <i class="material-icons" style="font-size: 2.5rem"
+              >directions_car</i
+            >
+          </div>
+          <h2 class="action-card-title">Veículos</h2>
+          <p class="action-card-text">
+            Cadastre, edite e consulte os veículos da frota.
+          </p>
+        </a>
+
+        <a href="/frota_motoristas_cadastro" class="action-card">
+          <div class="action-card-icon icon-motoristas">
+            <i class="material-icons" style="font-size: 2.5rem">badge</i>
+          </div>
+          <h2 class="action-card-title">Motoristas</h2>
+          <p class="action-card-text">
+            Gerencie os motoristas, matrículas e informações.
+          </p>
+        </a>
+
+        <a href="/frota_estoque_cadastro" class="action-card">
+          <div class="action-card-icon icon-estoque">
+            <i class="material-icons" style="font-size: 2.5rem">inventory_2</i>
+          </div>
+          <h2 class="action-card-title">Estoque de Peças</h2>
+          <p class="action-card-text">
+            Controle o inventário de peças e suprimentos.
+          </p>
+        </a>
+      </div>
+    </main>
+  </body>
+</html>

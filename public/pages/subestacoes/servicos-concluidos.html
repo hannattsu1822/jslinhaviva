@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Serviços Concluídos - Histórico</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/subestacoes/servicos-concluidos.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <header class="page-header">
+        <h1 class="page-title">
+          <span class="material-symbols-outlined">history</span>
+          Histórico de Serviços
+        </h1>
+      </header>
+
+      <main>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="material-symbols-outlined">filter_alt</span>
+              Filtros de Pesquisa
+            </h2>
+          </div>
+          <div class="card-body">
+            <form id="formFiltrosServicos" class="filters-container">
+              <div class="form-group">
+                <label for="filtroSubestacao">Subestação:</label>
+                <select
+                  id="filtroSubestacao"
+                  name="subestacao_id"
+                  class="form-select"
+                >
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filtroStatusServico">Status:</label>
+                <select
+                  id="filtroStatusServico"
+                  name="status"
+                  class="form-select"
+                >
+                  <option value="CONCLUIDO" selected>CONCLUÍDO (TODOS)</option>
+                  <option value="CONCLUIDO_COM_PENDENCIA">
+                    CONCLUÍDO COM PENDÊNCIA
+                  </option>
+                  <option value="CANCELADO">CANCELADO</option>
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filtroDataConclusaoDe">Data Conclusão (De):</label>
+                <input
+                  type="date"
+                  id="filtroDataConclusaoDe"
+                  name="data_conclusao_de"
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label for="filtroDataConclusaoAte"
+                  >Data Conclusão (Até):</label
+                >
+                <input
+                  type="date"
+                  id="filtroDataConclusaoAte"
+                  name="data_conclusao_ate"
+                  class="form-control"
+                />
+              </div>
+              <div class="form-group">
+                <label for="filtroProcesso">Nº Processo/OS:</label>
+                <input
+                  type="text"
+                  id="filtroProcesso"
+                  name="processo"
+                  class="form-control"
+                />
+              </div>
+              <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">
+                  <span class="material-symbols-outlined">search</span> Aplicar
+                </button>
+                <button
+                  type="button"
+                  id="btnLimparFiltrosServicos"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">clear_all</span>
+                  Limpar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <span class="material-symbols-outlined">list_alt</span>
+              Serviços Encontrados
+            </h3>
+          </div>
+          <div class="card-body no-padding">
+            <div class="table-responsive">
+              <table id="tabelaServicos" class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Processo</th>
+                    <th>Subestação</th>
+                    <th>Motivo / Origem</th>
+                    <th>Tipo Ordem</th>
+                    <th class="text-center">Data Conclusão</th>
+                    <th>Responsável</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">APR</th>
+                    <th class="text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="corpoTabelaServicos"></tbody>
+              </table>
+            </div>
+            <p id="nenhumServico" class="feedback-message hidden">
+              Nenhum serviço encontrado com os filtros aplicados.
+            </p>
+            <div class="pagination-container" id="paginationContainer"></div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="page-footer">
+        <a href="/subestacoes-dashboard" class="btn btn-secondary">
+          <span class="material-symbols-outlined">arrow_back</span> Voltar ao
+          Dashboard
+        </a>
+      </footer>
+    </div>
+
+    <div id="modalConfirmacao" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalConfirmacaoTitulo" class="modal-title"></h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p id="modalConfirmacaoMensagem"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">
+            Cancelar
+          </button>
+          <button type="button" id="btnConfirmarAcao" class="btn">
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalAnexarPosterior" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">attach_file_add</span>
+            Anexar Documento
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <form id="formAnexarPosterior">
+          <div class="modal-body">
+            <input type="hidden" id="servicoIdAnexoPosterior" />
+            <p>
+              Anexando ao serviço de Processo Nº:
+              <strong
+                id="processoServicoAnexoPosterior"
+                class="text-primary"
+              ></strong>
+            </p>
+            <div class="form-group">
+              <label>Selecionar arquivos (máx. 5):</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAdicionarAnexoPosterior"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Procurar Arquivos
+                </button>
+              </div>
+              <input
+                type="file"
+                id="arquivosAnexoPosterior"
+                name="anexosServico"
+                class="visually-hidden"
+                multiple
+              />
+              <div
+                id="previewAnexosPosterior"
+                class="anexos-preview-container"
+              ></div>
+            </div>
+            <div class="form-group">
+              <label for="descricaoAnexoPosterior"
+                >Descrição dos Anexos (Opcional):</label
+              >
+              <textarea
+                id="descricaoAnexoPosterior"
+                name="descricao_anexo"
+                class="form-control"
+                rows="2"
+                placeholder="Ex: Relatório fotográfico final..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-close-modal">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <span class="material-symbols-outlined">upload_file</span> Enviar
+              Anexos
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="modalAnexarAPR" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">upload_file</span>
+            Anexar APR(s)
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <form id="formAnexarAPR">
+          <div class="modal-body">
+            <input type="hidden" id="servicoIdAnexoAPR" />
+            <p>
+              Anexando APR(s) ao serviço de Processo Nº:
+              <strong
+                id="processoServicoAnexoAPR"
+                class="text-primary"
+              ></strong>
+            </p>
+            <div class="form-group">
+              <label>Selecionar arquivos de APR:</label>
+              <div class="botoes-anexo">
+                <button
+                  type="button"
+                  id="btnAdicionarAnexoAPR"
+                  class="btn btn-secondary"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Procurar Arquivos
+                </button>
+              </div>
+              <input
+                type="file"
+                id="arquivosAnexoAPR"
+                name="anexosAPR"
+                class="visually-hidden"
+                multiple
+              />
+              <div id="previewAnexosAPR" class="anexos-preview-container"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-close-modal">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <span class="material-symbols-outlined">upload_file</span> Enviar
+              APR(s)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="modalVerAPRs" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <span class="material-symbols-outlined">visibility</span>
+            APRs Anexadas
+          </h3>
+          <button type="button" class="btn-close" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Lista de APRs para o serviço de Processo Nº:
+            <strong id="processoServicoVerAPR" class="text-primary"></strong>
+          </p>
+          <ul id="listaAPRsAnexadas" class="lista-anexos"></ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-close-modal">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <template id="templateAnexoPreviewPosterior">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+          <span class="file-size"></span>
+        </div>
+        <button type="button" class="btn-remove" title="Remover anexo">
+          ×
+        </button>
+      </div>
+    </template>
+
+    <template id="templateAnexoPreviewAPR">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-thumbnail">
+          <img src="" alt="Preview" class="anexo-preview-img hidden" />
+          <span class="material-symbols-outlined file-icon">description</span>
+        </div>
+        <div class="file-info">
+          <span class="file-name"></span>
+          <span class="file-size"></span>
+        </div>
+        <button type="button" class="btn-remove" title="Remover anexo">
+          ×
+        </button>
+      </div>
+    </template>
+
+    <script src="/scripts/subestacoes/servicos-concluidos.js"></script>
+  </body>
+</html>

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transformadores</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/transformadores.css" />
+    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
+    <link rel="stylesheet" href="/static/css/toast.css" />
+  </head>
+  <body>
+    <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar bg-glass">
+      <!-- Seu Sidebar Padrão Aqui -->
+      <div class="sidebar-header text-center py-3">
+        <div class="user-icon mb-2"><i class="fas fa-user-circle"></i></div>
+        <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
+      </div>
+      <div class="user-info p-3 mt-2 rounded">
+        <div class="info-item mb-2">
+          <i class="fas fa-id-card me-2"></i
+          ><span id="user-matricula">Matrícula: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-briefcase me-2"></i
+          ><span id="user-cargo">Cargo: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-calendar-alt me-2"></i
+          ><span id="current-date">--/--/----</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-clock me-2"></i
+          ><span id="current-time">--:--:--</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav flex-grow-1">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('dashboard');"
+              class="nav-link"
+              ><i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('transformadores');"
+              class="nav-link active"
+              ><i class="fas fa-bolt fa-fw me-2"></i>Transformadores</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('subestacao');"
+              class="nav-link"
+              ><i class="fas fa-industry fa-fw me-2"></i>Subestação</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('frota');"
+              class="nav-link"
+              ><i class="fas fa-truck fa-fw me-2"></i>Frota</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-auditoria-link"
+            style="display: none"
+          >
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('auditoria');"
+              class="nav-link"
+              ><i class="fas fa-search fa-fw me-2"></i>Auditoria</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('gestao-servicos');"
+              class="nav-link"
+              ><i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('gestao-turmas');"
+              class="nav-link"
+              ><i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de
+              Turmas</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('fibra-optica');"
+              class="nav-link"
+              ><i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('inspecoes-redes');"
+              class="nav-link"
+              ><i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de
+              Redes</a
+            >
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <button onclick="logout()" class="btn-logout">
+          <i class="fas fa-sign-out-alt me-2"></i>Sair
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container py-4">
+        <h1 class="page-title mb-4">
+          <i class="fas fa-bolt me-3"></i>Transformadores
+        </h1>
+
+        <!-- SEÇÃO 1: Iniciar Checklist para Transformador SEM HISTÓRICO -->
+        <div class="card glass-card p-4 mb-4">
+          <h3 class="mb-3">
+            <i class="fas fa-clipboard-list me-2"></i>Iniciar Primeiro Checklist
+            (Trafos Sem Histórico)
+          </h3>
+          <div class="row">
+            <div class="col-md-8">
+              <label for="numeroSerieSelectSemHistorico" class="form-label"
+                >Selecione um transformador sem checklist prévio:</label
+              >
+              <select
+                class="form-select glass-select"
+                id="numeroSerieSelectSemHistorico"
+              >
+                <option value="">Carregando...</option>
+              </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <button
+                id="iniciarPrimeiroChecklistBtn"
+                class="btn btn-primary w-100 glass-btn"
+                disabled
+              >
+                <i class="fas fa-plus-circle me-2"></i>Iniciar Primeiro
+                Checklist
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 2: Adicionar Novo Checklist a Transformador COM HISTÓRICO (Filtrado por Remessa) -->
+        <div class="card glass-card p-4 mb-4">
+          <h3 class="mb-3">
+            <i class="fas fa-history me-2"></i>Adicionar Novo Checklist (Trafos
+            Com Histórico, por Remessa)
+          </h3>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-4">
+              <label for="filtroDataRemessaInicial" class="form-label"
+                >Data Processamento Remessa (Inicial):</label
+              >
+              <input
+                type="date"
+                class="form-control glass-input"
+                id="filtroDataRemessaInicial"
+              />
+            </div>
+            <div class="col-md-4">
+              <label for="filtroDataRemessaFinal" class="form-label"
+                >Data Processamento Remessa (Final):</label
+              >
+              <input
+                type="date"
+                class="form-control glass-input"
+                id="filtroDataRemessaFinal"
+              />
+            </div>
+            <div class="col-md-4">
+              <button
+                id="btnBuscarTrafosDaRemessa"
+                class="btn btn-secondary w-100 glass-btn"
+              >
+                <i class="fas fa-search me-2"></i>Buscar Trafos da Remessa
+              </button>
+            </div>
+          </div>
+          <div
+            id="statusBuscaRemessa"
+            class="text-muted mb-2"
+            style="font-size: 0.9em"
+          ></div>
+
+          <div class="row mt-2">
+            <div class="col-md-12">
+              <label for="numeroSerieSelectComHistorico" class="form-label"
+                >Selecione um transformador (processado na remessa e com
+                histórico):</label
+              >
+              <select
+                class="form-select glass-select"
+                id="numeroSerieSelectComHistorico"
+                disabled
+              >
+                <option value="">
+                  Aplique o filtro de data da remessa para carregar...
+                </option>
+              </select>
+            </div>
+          </div>
+          <div
+            id="infoDetalhesTrafoSelecionado"
+            class="mt-2 p-2 border rounded bg-light"
+            style="font-size: 0.9em; display: none"
+          ></div>
+          <div class="row mt-3">
+            <div class="col-md-12">
+              <button
+                id="adicionarNovoChecklistBtn"
+                class="btn btn-info w-100 glass-btn"
+                disabled
+              >
+                <i class="fas fa-redo-alt me-2"></i>Adicionar Novo Checklist
+                para Selecionado
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cards de Navegação Rápida -->
+        <div class="row g-4 mt-4">
+          <div class="col-md-6 col-lg-4">
+            <div
+              class="card glass-card h-100"
+              onclick="navigateTo('filtrar_transformadores')"
+            >
+              <div
+                class="card-body d-flex align-items-center justify-content-center"
+              >
+                <div class="text-center">
+                  <div class="icon-circle bg-success mx-auto mb-2">
+                    <i class="fas fa-filter"></i>
+                  </div>
+                  <h3 class="card-title mb-0">Filtrar Checklists</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div
+              class="card glass-card h-100"
+              onclick="navigateTo('upload_transformadores')"
+            >
+              <div
+                class="card-body d-flex align-items-center justify-content-center"
+              >
+                <div class="text-center">
+                  <div class="icon-circle bg-warning mx-auto mb-2">
+                    <i class="fas fa-file-import"></i>
+                  </div>
+                  <h3 class="card-title mb-0">Importar Planilha</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div
+              class="card glass-card h-100 card-reformados"
+              onclick="navigateTo('transformadores_reformados')"
+            >
+              <div
+                class="card-body d-flex align-items-center justify-content-center"
+              >
+                <div class="text-center">
+                  <div class="icon-circle bg-info mx-auto mb-2">
+                    <i class="fas fa-sync-alt"></i>
+                  </div>
+                  <h3 class="card-title mb-0">Transformadores Reformados</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content-overlay"></div>
+
+    <div
+      id="access-denied-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-labelledby="accessDeniedModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-exclamation-circle text-danger mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3" id="accessDeniedModalLabel">Acesso negado!</h4>
+            <p>Você não tem permissão para acessar este recurso.</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      id="development-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-labelledby="developmentModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-tools text-warning mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3" id="developmentModalLabel">Em Desenvolvimento</h4>
+            <p>Este recurso ainda não está disponível.</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/sidebar.js"></script>
+    <script>
+      let accessDeniedModalInstanceTransformadores;
+      let developmentModalInstanceTransformadores;
+
+      document.addEventListener("DOMContentLoaded", function () {
+        if (
+          typeof bootstrap !== "undefined" &&
+          typeof bootstrap.Modal !== "undefined"
+        ) {
+          const admEl = document.getElementById("access-denied-modal");
+          if (admEl)
+            accessDeniedModalInstanceTransformadores = new bootstrap.Modal(
+              admEl
+            );
+          const devmEl = document.getElementById("development-modal");
+          if (devmEl)
+            developmentModalInstanceTransformadores = new bootstrap.Modal(
+              devmEl
+            );
+        }
+
+        carregarTransformadoresSemChecklistPrevio();
+        setDefaultDatesParaFiltroRemessa();
+
+        const iniciarPrimeiroChecklistBtnEl = document.getElementById(
+          "iniciarPrimeiroChecklistBtn"
+        );
+        const numeroSerieSelectSemHistoricoEl = document.getElementById(
+          "numeroSerieSelectSemHistorico"
+        );
+
+        if (iniciarPrimeiroChecklistBtnEl) {
+          iniciarPrimeiroChecklistBtnEl.addEventListener("click", () => {
+            const numeroSerie = numeroSerieSelectSemHistoricoEl.value;
+            if (numeroSerie) {
+              window.location.href = `/formulario_transformadores?numero_serie=${encodeURIComponent(
+                numeroSerie
+              )}`;
+            }
+          });
+        }
+        if (numeroSerieSelectSemHistoricoEl && iniciarPrimeiroChecklistBtnEl) {
+          numeroSerieSelectSemHistoricoEl.addEventListener("change", () => {
+            iniciarPrimeiroChecklistBtnEl.disabled =
+              !numeroSerieSelectSemHistoricoEl.value;
+          });
+        }
+
+        const filtroDataRemessaInicialEl = document.getElementById(
+          "filtroDataRemessaInicial"
+        );
+        const filtroDataRemessaFinalEl = document.getElementById(
+          "filtroDataRemessaFinal"
+        );
+        const btnBuscarTrafosDaRemessaEl = document.getElementById(
+          "btnBuscarTrafosDaRemessa"
+        );
+        const selectComHistoricoEl = document.getElementById(
+          "numeroSerieSelectComHistorico"
+        );
+        const btnAdicionarNovoEl = document.getElementById(
+          "adicionarNovoChecklistBtn"
+        );
+        const infoDetalhesEl = document.getElementById(
+          "infoDetalhesTrafoSelecionado"
+        );
+        const statusBuscaRemessaEl =
+          document.getElementById("statusBuscaRemessa");
+
+        if (btnBuscarTrafosDaRemessaEl) {
+          btnBuscarTrafosDaRemessaEl.addEventListener("click", async () => {
+            const dataInicial = filtroDataRemessaInicialEl.value;
+            const dataFinal = filtroDataRemessaFinalEl.value;
+
+            if (!dataInicial || !dataFinal) {
+              alert(
+                "Por favor, selecione as datas da remessa inicial e final para a busca."
+              );
+              return;
+            }
+            if (new Date(dataInicial) > new Date(dataFinal)) {
+              alert(
+                "A data da remessa inicial não pode ser maior que a data final."
+              );
+              return;
+            }
+
+            selectComHistoricoEl.innerHTML =
+              '<option value="">Buscando...</option>';
+            selectComHistoricoEl.disabled = true;
+            if (btnAdicionarNovoEl) btnAdicionarNovoEl.disabled = true;
+            if (infoDetalhesEl) {
+              infoDetalhesEl.style.display = "none";
+              infoDetalhesEl.innerHTML = "";
+            }
+            if (statusBuscaRemessaEl)
+              statusBuscaRemessaEl.textContent = "Buscando...";
+
+            try {
+              const response = await fetch(
+                `/api/trafos_da_remessa_para_checklist_v2?dataRemessaInicial=${dataInicial}&dataRemessaFinal=${dataFinal}`
+              );
+              if (!response.ok) {
+                const errData = await response
+                  .json()
+                  .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
+                throw new Error(
+                  errData.message || `Falha na busca: ${response.status}`
+                );
+              }
+              const resultadosAPI = await response.json();
+              const transformadores = Array.isArray(resultadosAPI)
+                ? resultadosAPI
+                : resultadosAPI.data || [];
+
+              selectComHistoricoEl.innerHTML =
+                '<option value="">Selecione um transformador...</option>';
+              if (transformadores.length === 0) {
+                selectComHistoricoEl.innerHTML =
+                  '<option value="" disabled>Nenhum trafo com histórico processado na remessa do período</option>';
+                if (statusBuscaRemessaEl)
+                  statusBuscaRemessaEl.textContent =
+                    "Nenhum transformador encontrado para o período da remessa especificado.";
+              } else {
+                transformadores.forEach((item) => {
+                  const option = document.createElement("option");
+                  option.value = item.numero_serie;
+                  let textoOpcao = `Série: ${item.numero_serie} (Remessa de: ${item.data_processamento_remessa_formatada})`;
+                  if (item.tem_checklist_previo) {
+                    textoOpcao += ` - Últ. Checklist: ${
+                      item.data_ultimo_checklist_conhecido_formatada || "N/D"
+                    }`;
+                  } else {
+                    textoOpcao += ` - Sem Histórico de Checklist Registrado`;
+                  }
+                  option.textContent = textoOpcao;
+                  option.dataset.temChecklistPrevio = item.tem_checklist_previo;
+                  option.dataset.ultimoChecklist =
+                    item.data_ultimo_checklist_conhecido_formatada || "";
+                  option.dataset.processamentoRemessa =
+                    item.data_processamento_remessa_formatada;
+                  selectComHistoricoEl.appendChild(option);
+                });
+                if (statusBuscaRemessaEl)
+                  statusBuscaRemessaEl.textContent = `${transformadores.length} transformador(es) encontrado(s) na remessa do período.`;
+              }
+              selectComHistoricoEl.disabled = transformadores.length === 0;
+            } catch (error) {
+              console.error("Erro ao buscar trafos da remessa:", error);
+              selectComHistoricoEl.innerHTML = `<option value="">Erro: ${error.message}</option>`;
+              if (statusBuscaRemessaEl)
+                statusBuscaRemessaEl.textContent = `Erro ao buscar: ${error.message}`;
+            }
+          });
+        }
+
+        if (selectComHistoricoEl) {
+          selectComHistoricoEl.addEventListener("change", async function () {
+            if (btnAdicionarNovoEl) btnAdicionarNovoEl.disabled = !this.value;
+            if (infoDetalhesEl) {
+              infoDetalhesEl.style.display = "none";
+              infoDetalhesEl.innerHTML = "";
+            }
+
+            if (this.value) {
+              const selectedOption = this.options[this.selectedIndex];
+              const numeroSerie = this.value;
+              let detalhesHtml = `<p><strong>Série:</strong> ${numeroSerie}<br>`;
+              detalhesHtml += `<strong>Processado na Remessa de:</strong> ${selectedOption.dataset.processamentoRemessa}<br>`;
+              if (selectedOption.dataset.temChecklistPrevio === "true") {
+                detalhesHtml += `<strong>Último Checklist Conhecido:</strong> ${
+                  selectedOption.dataset.ultimoChecklist || "Não disponível"
+                }</p>`;
+              } else {
+                detalhesHtml += `<strong>Histórico de Checklist:</strong> Sem checklists anteriores registrados.</p>`;
+              }
+
+              if (infoDetalhesEl) {
+                infoDetalhesEl.innerHTML =
+                  detalhesHtml +
+                  "<p><small>Carregando histórico de remessas...</small></p>";
+                infoDetalhesEl.style.display = "block";
+              }
+
+              try {
+                const histResponse = await fetch(
+                  `/api/historico_remessas_transformador/${encodeURIComponent(
+                    numeroSerie
+                  )}`
+                );
+                let histHtml = "";
+                if (histResponse.ok) {
+                  const histData = await histResponse.json();
+                  histHtml = `<p><strong>Processado em ${histData.quantidade_remessas} remessa(s) no total.</strong></p>`;
+                  if (
+                    histData.datas_remessas_anteriores &&
+                    histData.datas_remessas_anteriores.length > 0
+                  ) {
+                    const remessasAnterioresAoSelecionado =
+                      histData.datas_remessas_anteriores.filter(
+                        (d) => d !== selectedOption.dataset.processamentoRemessa
+                      );
+                    if (remessasAnterioresAoSelecionado.length > 0) {
+                      histHtml += `<p><small>Outras datas de processamento de remessa: ${remessasAnterioresAoSelecionado
+                        .slice(0, 5)
+                        .join(", ")}${
+                        remessasAnterioresAoSelecionado.length > 5 ? "..." : ""
+                      }</small></p>`;
+                    }
+                  }
+                } else {
+                  histHtml =
+                    "<p><small>Não foi possível carregar o histórico completo de remessas.</small></p>";
+                }
+                if (infoDetalhesEl)
+                  infoDetalhesEl.innerHTML = detalhesHtml + histHtml;
+              } catch (err) {
+                console.error("Erro ao buscar histórico de remessas:", err);
+                if (infoDetalhesEl)
+                  infoDetalhesEl.innerHTML =
+                    detalhesHtml +
+                    "<p><small>Erro ao carregar histórico de remessas.</small></p>";
+              }
+            }
+          });
+        }
+
+        if (btnAdicionarNovoEl) {
+          btnAdicionarNovoEl.addEventListener("click", () => {
+            const numeroSerie = selectComHistoricoEl.value;
+            const selectedOption =
+              selectComHistoricoEl.options[selectComHistoricoEl.selectedIndex];
+            if (!numeroSerie) return;
+
+            if (selectedOption.dataset.temChecklistPrevio === "true") {
+              if (
+                confirm(
+                  `Este transformador (Série: ${numeroSerie}) já possui checklist(s), o último em ${
+                    selectedOption.dataset.ultimoChecklist ||
+                    "data desconhecida"
+                  }.\n\nDeseja realmente adicionar um NOVO checklist para o evento/remessa atual?`
+                )
+              ) {
+                window.location.href = `/formulario_transformadores?numero_serie=${encodeURIComponent(
+                  numeroSerie
+                )}`;
+              }
+            } else {
+              window.location.href = `/formulario_transformadores?numero_serie=${encodeURIComponent(
+                numeroSerie
+              )}`;
+            }
+          });
+        }
+      });
+
+      async function carregarTransformadoresSemChecklistPrevio() {
+        // ... (função como definida anteriormente) ...
+        if (!document.getElementById("numeroSerieSelectSemHistorico")) return;
+        try {
+          const response = await fetch("/api/transformadores_sem_checklist");
+          if (!response.ok)
+            throw new Error(`HTTP error! status: ${response.status}`);
+          const transformadores = await response.json();
+          const select = document.getElementById(
+            "numeroSerieSelectSemHistorico"
+          );
+          const iniciarBtn = document.getElementById(
+            "iniciarPrimeiroChecklistBtn"
+          );
+          if (!select) return;
+          select.innerHTML =
+            '<option value="">Selecione um transformador...</option>';
+          if (transformadores.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "Nenhum trafo sem histórico encontrado";
+            option.disabled = true;
+            select.appendChild(option);
+            if (iniciarBtn) iniciarBtn.disabled = true;
+          } else {
+            transformadores.forEach((transf) => {
+              const option = document.createElement("option");
+              option.value = transf.numero_serie;
+              option.textContent = transf.numero_serie;
+              select.appendChild(option);
+            });
+            if (iniciarBtn) iniciarBtn.disabled = true;
+          }
+        } catch (error) {
+          console.error(
+            "Erro ao carregar transformadores sem histórico:",
+            error
+          );
+          const select = document.getElementById(
+            "numeroSerieSelectSemHistorico"
+          );
+          if (select)
+            select.innerHTML = '<option value="">Erro ao carregar</option>';
+          const iniciarBtn = document.getElementById(
+            "iniciarPrimeiroChecklistBtn"
+          );
+          if (iniciarBtn) iniciarBtn.disabled = true;
+        }
+      }
+
+      function setDefaultDatesParaFiltroRemessa() {
+        // ... (função como definida anteriormente) ...
+        const hoje = new Date();
+        const finalDate = new Date(hoje);
+        const inicialDate = new Date(hoje);
+        inicialDate.setDate(hoje.getDate() - 7);
+
+        const filtroDataRemessaInicialEl = document.getElementById(
+          "filtroDataRemessaInicial"
+        );
+        const filtroDataRemessaFinalEl = document.getElementById(
+          "filtroDataRemessaFinal"
+        );
+
+        if (filtroDataRemessaInicialEl)
+          filtroDataRemessaInicialEl.value = inicialDate
+            .toISOString()
+            .split("T")[0];
+        if (filtroDataRemessaFinalEl)
+          filtroDataRemessaFinalEl.value = finalDate
+            .toISOString()
+            .split("T")[0];
+      }
+
+      window.navigateTo = async function (pageOrUrl) {
+        let url = pageOrUrl;
+        if (!pageOrUrl.startsWith("/")) url = `/${pageOrUrl}`;
+        if (window.location.pathname === url && url !== "/dashboard") return;
+        try {
+          const response = await fetch(url, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          });
+          if (response.ok) {
+            window.location.href = url;
+          } else if (response.status === 403) {
+            if (accessDeniedModalInstanceTransformadores)
+              accessDeniedModalInstanceTransformadores.show();
+            else alert("Acesso negado!");
+          } else {
+            if (developmentModalInstanceTransformadores)
+              developmentModalInstanceTransformadores.show();
+            else alert("Recurso não encontrado ou em desenvolvimento.");
+          }
+        } catch (error) {
+          console.error("Erro na requisição (navigateTo):", error);
+          if (developmentModalInstanceTransformadores)
+            developmentModalInstanceTransformadores.show();
+          else alert("Erro de rede ou falha na navegação.");
+        }
+      };
+      function navigateToDevelopmentPlaceholder() {
+        if (developmentModalInstanceTransformadores)
+          developmentModalInstanceTransformadores.show();
+        else
+          alert(
+            "Este recurso está em desenvolvimento e estará disponível em breve."
+          );
+      }
+    </script>
+  </body>
+</html>
