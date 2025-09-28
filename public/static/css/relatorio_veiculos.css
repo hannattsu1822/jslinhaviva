@@ -1,0 +1,181 @@
+:root {
+  --sys-font-family: "Poppins", sans-serif;
+  --sys-color-primary: #004494;
+  --sys-color-secondary: #4a5568;
+  --sys-color-accent: #3182ce;
+  --sys-color-text-primary: #2d3748;
+  --sys-color-text-secondary: #718096;
+  --sys-color-background-light: #f7fafc;
+  --sys-color-background-page: #ffffff;
+  --sys-color-border: #e2e8f0;
+  --sys-color-border-light: #edf2f7;
+  --sys-color-success: #38a169;
+  --sys-color-error: #e53e3e;
+  --sys-color-warning: #dd6b20;
+  --sys-color-info: #3182ce;
+}
+
+body.pdf-render-mode {
+  font-family: var(--sys-font-family);
+  color: var(--sys-color-text-primary);
+  background-color: var(--sys-color-background-page);
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+.relatorio-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 25px;
+  background-color: var(--sys-color-background-page);
+  border: 1px solid var(--sys-color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  font-family: var(--sys-font-family);
+}
+
+.report-header-logo {
+  text-align: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--sys-color-border-light);
+}
+
+.report-header-logo img {
+  max-width: 200px;
+  max-height: 80px;
+}
+
+.relatorio-container h1 {
+  color: var(--sys-color-primary);
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 10px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid var(--sys-color-primary);
+}
+.relatorio-container h1 .icon {
+  margin-right: 8px;
+}
+.relatorio-container h1 #inspecaoId {
+  font-weight: normal;
+  color: var(--sys-color-secondary);
+}
+
+.relatorio-container h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--sys-color-secondary);
+  margin-top: 30px;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--sys-color-border-light);
+}
+
+.divisao {
+  margin-bottom: 25px;
+}
+.divisao:last-of-type {
+  margin-bottom: 0;
+}
+
+.relatorio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.relatorio-item {
+  background-color: var(--sys-color-background-light);
+  padding: 12px 15px;
+  border-radius: 6px;
+  border-left: 4px solid var(--sys-color-accent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.relatorio-item i.fas,
+.relatorio-item i.fa-solid {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+  color: var(--sys-color-accent);
+}
+
+.relatorio-item p {
+  margin: 0;
+  flex-grow: 1;
+  color: var(--sys-color-text-secondary);
+}
+
+.relatorio-item p strong {
+  color: var(--sys-color-text-primary);
+  font-weight: 500;
+}
+
+.relatorio-item .icon-ok {
+  color: var(--sys-color-success) !important;
+}
+.relatorio-item .icon-not-ok {
+  color: var(--sys-color-error) !important;
+}
+.relatorio-item .icon-unknown {
+  color: var(--sys-color-warning) !important;
+}
+
+.observacoes-item {
+  background-color: #e9f5ff;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid var(--sys-color-info);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--sys-color-text-primary);
+}
+
+.observacoes-item p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+@media print {
+  body,
+  .pdf-render-mode,
+  .relatorio-container {
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+    font-size: 10pt;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .relatorio-container h1,
+  .relatorio-container h2 {
+    page-break-after: avoid;
+    border-color: var(--sys-color-border-light, #eee) !important;
+  }
+  .relatorio-item {
+    page-break-inside: avoid;
+  }
+  .relatorio-item i.fas,
+  .relatorio-item i.fa-solid {
+    color: var(--sys-color-accent, #3182ce) !important;
+  }
+  .relatorio-item .icon-ok {
+    color: var(--sys-color-success, #38a169) !important;
+  }
+  .relatorio-item .icon-not-ok {
+    color: var(--sys-color-error, #e53e3e) !important;
+  }
+  .relatorio-item .icon-unknown {
+    color: var(--sys-color-warning, #dd6b20) !important;
+  }
+}

@@ -1,0 +1,342 @@
+/* Estilos profissionais com esquema de cores branco, azul e preto */
+:root {
+  --primary-color: #3498db;
+  --primary-dark: #2980b9;
+  --secondary-color: #2c3e50;
+  --secondary-dark: #1a252f;
+  --text-color: #333;
+  --text-light: #7f8c8d;
+  --border-color: #e0e0e0;
+  --bg-color: #ffffff;
+  --bg-light: #f8f9fa;
+  --success-color: #27ae60;
+  --error-color: #e74c3c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-color);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+  line-height: 1.5;
+}
+
+.formulario-container {
+  background: var(--bg-color);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  width: 100%;
+  max-width: 800px;
+  border: 1px solid var(--border-color);
+  margin: 20px 0;
+}
+
+.formulario-container .header {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.formulario-container h1 {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: clamp(1.5rem, 4vw, 1.8rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary-color);
+  flex-wrap: wrap;
+}
+
+.formulario-container h1 .icon {
+  margin-right: 10px;
+  font-size: 1.5rem;
+  color: var(--primary-color);
+}
+
+.formulario-container p {
+  font-size: clamp(0.875rem, 3vw, 0.9375rem);
+  color: var(--text-light);
+  margin: 0;
+}
+
+/* Formulário de checklist */
+#checklistForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: clamp(0.8125rem, 3vw, 0.875rem);
+  color: var(--secondary-color);
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: clamp(0.8125rem, 3vw, 0.875rem);
+  transition: all 0.2s ease;
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+  border-color: var(--primary-color);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Botões de seleção */
+.button-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.button-group button {
+  padding: 0.5rem;
+  background: var(--bg-light);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--secondary-color);
+  font-size: clamp(0.75rem, 3vw, 0.8125rem);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.button-group button.selected {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+}
+
+.button-group button:hover {
+  background: var(--primary-dark);
+  color: #fff;
+  border-color: var(--primary-dark);
+}
+
+/* Estilos para os radio buttons */
+.radio-group {
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.75rem;
+  background: var(--bg-light);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: clamp(0.8125rem, 3vw, 0.875rem);
+  color: var(--secondary-color);
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.radio-group label:hover {
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.radio-group label input {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Botão de envio */
+#submitButton {
+  width: 100%;
+  padding: 0.8rem;
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: clamp(0.875rem, 3vw, 0.9375rem);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+#submitButton:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#submitButton .icon {
+  font-size: 1rem;
+}
+
+/* Botão de voltar */
+#voltarButton {
+  width: 100%;
+  padding: 0.8rem;
+  background: var(--secondary-color);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: clamp(0.875rem, 3vw, 0.9375rem);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+#voltarButton:hover {
+  background: var(--secondary-dark);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Mensagem de feedback */
+#mensagem {
+  margin-top: 1.25rem;
+  font-size: clamp(0.8125rem, 3vw, 0.875rem);
+  font-weight: 500;
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: var(--bg-light);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+#mensagem.sucesso {
+  color: var(--success-color);
+  border: 1px solid #2ecc71;
+  background-color: rgba(46, 204, 113, 0.1);
+}
+
+#mensagem.erro {
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+  background-color: rgba(231, 76, 60, 0.1);
+}
+
+/* Ajustes para campos ocultos */
+input[type="hidden"] {
+  display: none;
+}
+
+/* Melhorias na responsividade - Mobile First */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+    align-items: flex-start;
+  }
+
+  .formulario-container {
+    padding: 1.25rem;
+    margin: 10px 0;
+  }
+
+  .button-group {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .radio-group {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  #checklistForm {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .formulario-container {
+    padding: 1rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .button-group {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .button-group button {
+    white-space: normal;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.6rem;
+  }
+}
+
+/* Ajustes para telas muito pequenas (menos de 350px) */
+@media (max-width: 350px) {
+  .button-group {
+    grid-template-columns: 1fr;
+  }
+
+  .formulario-container {
+    padding: 0.75rem;
+  }
+}
+
+/* Ajustes para tablets em modo retrato */
+@media (min-width: 481px) and (max-width: 768px) {
+  .formulario-container {
+    max-width: 90%;
+  }
+}
+
+/* Ajustes para telas grandes (acima de 1200px) */
+@media (min-width: 1200px) {
+  .formulario-container {
+    max-width: 850px;
+  }
+}

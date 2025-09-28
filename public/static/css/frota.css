@@ -1,0 +1,120 @@
+/* public/static/css/frota.css */
+:root {
+  --primary-blue-frota: #2a5298; /* Mantendo para consistência se usado por cards */
+  --dark-blue-frota: #1e3c72;
+  --light-blue-frota: #e6f0ff;
+  --white-frota: #ffffff;
+  --light-gray-frota: #f8f9fa; /* Fundo da página */
+  --medium-gray-frota: #dee2e6;
+  --text-dark-frota: #212529;
+  --success-frota: #28a745;
+  --warning-frota: #ffc107;
+  --danger-frota: #dc3545;
+  --border-radius-frota: 8px;
+}
+
+/* Estilos para o conteúdo principal da página Frota */
+/* O .main-content e body já são estilizados por sidebar_styles.css e um CSS global/bootstrap */
+
+.page-title-frota {
+  /* Usar uma classe específica para evitar conflito com .page-title global */
+  font-weight: 600;
+  color: var(--text-dark-frota);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.page-title-frota i {
+  margin-right: 10px;
+  color: var(--primary-blue-frota);
+}
+
+.card.frota-action-card {
+  /* Classe específica para os cards de ação da frota */
+  border: 1px solid var(--medium-gray-frota);
+  border-radius: var(--border-radius-frota);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background-color: var(--white-frota);
+  height: 100%;
+  min-height: 180px; /* Ajuste conforme necessário para seus cards */
+  color: var(--text-dark-frota);
+  display: flex;
+  flex-direction: column;
+}
+
+.card.frota-action-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-blue-frota);
+}
+
+.card.frota-action-card .card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.card.frota-action-card .card-title {
+  font-weight: 600;
+  font-size: 1.15rem; /* Ajustado */
+  margin: 0;
+  color: var(--text-dark-frota);
+}
+
+.card.frota-action-card .icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  color: var(--white-frota);
+  margin-bottom: 1rem;
+}
+
+/* Cores de fundo para os icon-circles (podem ser mantidas se o Bootstrap não as sobrescrever) */
+.frota-action-card .bg-primary {
+  background-color: var(--primary-blue-frota) !important;
+}
+.frota-action-card .bg-success {
+  background-color: var(--success-frota) !important;
+}
+.frota-action-card .bg-warning {
+  background-color: var(--warning-frota) !important;
+}
+.frota-action-card .bg-danger {
+  background-color: var(--danger-frota) !important;
+}
+
+/* Ajustes de responsividade específicos para o conteúdo da página Frota, se necessário */
+@media (max-width: 576px) {
+  .page-title-frota {
+    flex-direction: column;
+    text-align: center;
+  }
+  .page-title-frota i {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+  .card.frota-action-card {
+    margin-bottom: 1rem;
+    min-height: 160px;
+  }
+  .card.frota-action-card .card-title {
+    font-size: 1.05rem;
+  }
+  .card.frota-action-card .icon-circle {
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+}
