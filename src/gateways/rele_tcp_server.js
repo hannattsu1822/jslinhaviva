@@ -21,9 +21,8 @@ const dbConfig = {
 const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
-function extractDeviceIdFromBinary(data) {
-    const buffer = Buffer.from(data);
-    const hexId = buffer.toString('hex');
+function extractDeviceIdFromBinary(dataBuffer) {
+    const hexId = dataBuffer.toString('hex');
     console.log(`[BINARY DEBUG] Dados recebidos em hex: ${hexId}`);
     return hexId;
 }
@@ -70,14 +69,16 @@ const server = net.createServer((socket) => {
     console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
 
     socket.state = 'AWAITING_ID';
-    socket.buffer = '';
+    socket.buffer = Buffer.alloc(0);
     socket.deviceId = null;
     socket.releId = null;
     socket.pollTimer = null;
     socket.keepaliveTimer = null;
 
     const processAndPublish = async () => {
-        const parsedData = parseData(socket.metData, socket.tempData);
+        const metString = socket.metData.toString().trim();
+        const tempString = socket.tempData.toString().trim();
+        const parsedData = parseData(metString, tempString);
         if (Object.keys(parsedData).length > 0) {
             const payload = {
                 rele_id: socket.releId,
@@ -97,16 +98,17 @@ const server = net.createServer((socket) => {
     };
 
     socket.on("data", async (data) => {
-        socket.buffer += data.toString();
+        socket.buffer = Buffer.concat([socket.buffer, data]);
+        const separator = Buffer.from('\r\n');
+        let boundary = socket.buffer.indexOf(separator);
 
-        let boundary = socket.buffer.indexOf('\r\n');
         if (boundary !== -1) {
-            let completeMessage = socket.buffer.substring(0, boundary);
-            socket.buffer = socket.buffer.substring(boundary + 2);
+            const completeMessageBuffer = socket.buffer.slice(0, boundary);
+            socket.buffer = socket.buffer.slice(boundary + separator.length);
 
             switch (socket.state) {
                 case 'AWAITING_ID':
-                    const hexId = extractDeviceIdFromBinary(completeMessage);
+                    const hexId = extractDeviceIdFromBinary(completeMessageBuffer);
                     let connection;
                     try {
                         connection = await promisePool.getConnection();
@@ -132,7 +134,7 @@ const server = net.createServer((socket) => {
                     }
                     break;
                 case 'AWAITING_LOGIN':
-                    if (completeMessage.trim() !== 'ACC') {
+                    if (completeMessageBuffer.toString().trim() !== 'ACC') {
                         socket.end();
                         return;
                     }
@@ -158,13 +160,13 @@ const server = net.createServer((socket) => {
                     startKeepalive();
                     break;
                 case 'AWAITING_MET':
-                    socket.metData = completeMessage;
+                    socket.metData = completeMessageBuffer;
                     console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
                     socket.state = 'AWAITING_THE';
                     socket.write("THE\r\n");
                     break;
                 case 'AWAITING_THE':
-                    socket.tempData = completeMessage;
+                    socket.tempData = completeMessageBuffer;
                     console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
                     processAndPublish();
                     socket.state = 'IDLE';
