@@ -12,75 +12,26 @@ function debounce(func, wait) {
 
 let servicosData = [];
 let currentServicoId = null;
-let confirmModalInstance;
-let concluirModalInstance;
-let liveToastInstance;
+let currentSistemaVersao = null;
 let modalResponsavelInstance;
-let aprUploadModalInstance;
-let accessDeniedModalInstance;
-let developmentModalInstance;
+let confirmModalInstance;
+let finalizarItensModalInstance;
+let concluirModalLegadoInstance;
 let user = null;
-
-function showToast(message, type = "success") {
-  const toastLiveEl = document.getElementById("liveToast");
-  if (!toastLiveEl) {
-    return;
-  }
-  if (
-    !liveToastInstance &&
-    typeof bootstrap !== "undefined" &&
-    bootstrap.Toast
-  ) {
-    liveToastInstance = new bootstrap.Toast(toastLiveEl);
-  }
-  const toastBody = toastLiveEl.querySelector(".toast-body");
-  if (toastBody) {
-    toastBody.textContent = message;
-  }
-  toastLiveEl.className = "toast align-items-center";
-  if (type === "success") {
-    toastLiveEl.classList.add("text-bg-success", "border-0");
-  } else if (type === "danger") {
-    toastLiveEl.classList.add("text-bg-danger", "border-0");
-  } else if (type === "warning") {
-    toastLiveEl.classList.add("text-bg-warning", "border-0");
-  } else if (type === "info") {
-    toastLiveEl.classList.add("text-bg-info", "border-0");
-  } else {
-    toastLiveEl.classList.add("text-bg-secondary", "border-0");
-  }
-  if (liveToastInstance) {
-    liveToastInstance.show();
-  }
-}
-
-function isMobileDevice() {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
-}
-
-function usarDataAtual() {
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  const localDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-    now.getDate()
-  )}`;
-  const localTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  const dataConclusaoInput = document.getElementById("dataConclusao");
-  const horaConclusaoInput = document.getElementById("horaConclusao");
-  if (dataConclusaoInput) dataConclusaoInput.value = localDate;
-  if (horaConclusaoInput) horaConclusaoInput.value = localTime;
-}
 
 async function carregarDadosIniciais() {
   try {
-    await carregarServicosAtivos();
-    const responseSubestacoes = await fetch("/api/subestacoes");
-    if (responseSubestacoes.ok) {
-      const subestacoes = await responseSubestacoes.json();
+    const [subestacoesRes, encarregadosRes] = await Promise.all([
+      fetch("/api/subestacoes"),
+      fetch("/api/encarregados"),
+    ]);
+
+    if (subestacoesRes.ok) {
+      const subestacoes = await subestacoesRes.json();
       const selectSubestacao = document.getElementById("filtroSubestacao");
       if (selectSubestacao) {
+        selectSubestacao.innerHTML =
+          '<option value="">Todas as Subestações</option>';
         subestacoes.forEach((sub) => {
           const option = document.createElement("option");
           option.value = sub.nome;
@@ -89,11 +40,13 @@ async function carregarDadosIniciais() {
         });
       }
     }
-    const responseEncarregados = await fetch("/api/encarregados");
-    if (responseEncarregados.ok) {
-      const encarregados = await responseEncarregados.json();
+
+    if (encarregadosRes.ok) {
+      const encarregados = await encarregadosRes.json();
       const selectEncarregado = document.getElementById("filtroEncarregado");
       if (selectEncarregado) {
+        selectEncarregado.innerHTML =
+          '<option value="">Todos os Responsáveis</option>';
         encarregados.forEach((enc) => {
           const option = document.createElement("option");
           option.value = enc.matricula;
@@ -104,7 +57,6 @@ async function carregarDadosIniciais() {
     }
   } catch (error) {
     console.error("Erro ao carregar dados iniciais:", error);
-    showToast("Erro ao carregar dados iniciais: " + error.message, "danger");
   }
 }
 
@@ -112,748 +64,474 @@ async function carregarServicosAtivos() {
   try {
     const response = await fetch("/api/servicos?status=ativo");
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
+      throw new Error(`Erro HTTP: ${response.status}`);
     }
     servicosData = await response.json();
-    if (!Array.isArray(servicosData)) {
-      console.error("Formato de dados de serviços inválido:", servicosData);
-      throw new Error(
-        "Formato de dados de serviços inválido recebido do servidor."
-      );
-    }
-    servicosData.sort(
-      (a, b) =>
-        new Date(b.data_prevista_execucao) - new Date(a.data_prevista_execucao)
-    );
     atualizarTabela();
   } catch (error) {
     console.error("Erro ao carregar serviços ativos:", error);
-    showToast("Erro ao carregar serviços ativos: " + error.message, "danger");
-    const tbody = document.getElementById("tabela-servicos");
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
-    }
+  }
+}
+
+function formatarData(dataString) {
+  if (!dataString) return "N/A";
+  try {
+    return new Date(dataString).toLocaleDateString("pt-BR", {
+      timeZone: "UTC",
+    });
+  } catch (e) {
+    return "Data inválida";
   }
 }
 
 function atualizarTabela() {
   const tbody = document.getElementById("tabela-servicos");
-  if (!tbody) {
-    return;
-  }
+  if (!tbody) return;
   tbody.innerHTML = "";
-  let dadosParaFiltrar = [...servicosData];
 
-  if (
-    user &&
-    user.matricula &&
-    ![
-      "Engenheiro",
-      "Técnico",
-      "ADMIN",
-      "Inspetor",
-      "Gerente",
-      "Supervisor",
-    ].includes(user.cargo)
-  ) {
-    dadosParaFiltrar = dadosParaFiltrar.filter(
-      (s) => s.responsavel_matricula === user.matricula
-    );
-  }
+  const filtroIdProcesso = document
+    .getElementById("filtroIdProcesso")
+    .value.toLowerCase();
+  const filtroSubestacao = document.getElementById("filtroSubestacao").value;
+  const filtroEncarregado = document.getElementById("filtroEncarregado").value;
+  const filtroData = document.getElementById("filtroData").value;
 
-  const filtroProcessoInput = document.getElementById("filtroProcesso");
-  const filtroSubestacaoSelect = document.getElementById("filtroSubestacao");
-  const filtroEncarregadoSelect = document.getElementById("filtroEncarregado");
-  const filtroDataInput = document.getElementById("filtroData");
+  const servicosFiltrados = servicosData.filter((servico) => {
+    const id = servico.id?.toString().toLowerCase() || "";
+    const processo = servico.processo?.toString().toLowerCase() || "";
 
-  const filtroProcesso = filtroProcessoInput
-    ? filtroProcessoInput.value.toLowerCase()
-    : "";
-  const filtroSubestacao = filtroSubestacaoSelect
-    ? filtroSubestacaoSelect.value
-    : "";
-  const filtroEncarregado = filtroEncarregadoSelect
-    ? filtroEncarregadoSelect.value
-    : "";
-  const filtroData = filtroDataInput ? filtroDataInput.value : "";
+    const idProcessoMatch =
+      !filtroIdProcesso ||
+      id.includes(filtroIdProcesso) ||
+      processo.includes(filtroIdProcesso);
+    const subestacaoMatch =
+      !filtroSubestacao || servico.subestacao === filtroSubestacao;
+    const dataMatch =
+      !filtroData ||
+      (servico.data_prevista_execucao &&
+        servico.data_prevista_execucao.startsWith(filtroData));
 
-  const servicosFiltrados = dadosParaFiltrar
-    .filter((servico) => {
-      const processoMatch =
-        filtroProcesso === "" ||
-        (servico.processo &&
-          String(servico.processo).toLowerCase().includes(filtroProcesso)) ||
-        String(servico.tipo_processo).toLowerCase() === "emergencial";
-      const subestacaoMatch =
-        filtroSubestacao === "" || servico.subestacao === filtroSubestacao;
-      const encarregadoMatch =
-        filtroEncarregado === "" ||
-        servico.responsavel_matricula === filtroEncarregado;
-      const dataMatch =
-        filtroData === "" ||
-        (servico.data_prevista_execucao &&
-          String(servico.data_prevista_execucao).includes(filtroData));
-      return processoMatch && subestacaoMatch && encarregadoMatch && dataMatch;
-    })
-    .slice(0, 15);
+    let encarregadoMatch = !filtroEncarregado;
+    if (filtroEncarregado) {
+      if (servico.sistema_versao === "legado") {
+        encarregadoMatch = servico.responsavel_matricula === filtroEncarregado;
+      } else {
+        encarregadoMatch =
+          servico.responsavel_matricula &&
+          servico.responsavel_matricula
+            .toLowerCase()
+            .includes(filtroEncarregado.toLowerCase());
+      }
+    }
+
+    return idProcessoMatch && subestacaoMatch && dataMatch && encarregadoMatch;
+  });
 
   if (servicosFiltrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4"><span class="material-symbols-outlined me-2" style="vertical-align: bottom;">info</span>Nenhum serviço ativo encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Nenhum serviço ativo encontrado com os filtros aplicados.</td></tr>`;
     return;
   }
 
   servicosFiltrados.forEach((servico) => {
     const tr = document.createElement("tr");
-    tr.className =
-      String(servico.tipo_processo).toLowerCase() === "emergencial"
-        ? "emergency-row"
-        : "glass-table-row";
-    tr.setAttribute("data-id", servico.id);
-    const processoDisplay =
-      String(servico.tipo_processo).toLowerCase() === "emergencial"
-        ? "EMERGENCIAL"
-        : servico.processo;
 
-    let aprButtonHtml = "";
-    if (servico.caminho_apr_anexo) {
-      aprButtonHtml = `
-            <div class="d-flex flex-column align-items-center">
-                <a href="${
-                  servico.caminho_apr_anexo
-                }?download=true" target="_blank" class="btn btn-sm glass-btn btn-success mb-1 w-100" title="Ver/Baixar APR: ${
-        servico.nome_original_apr_anexo || ""
-      }">
-                    <span class="material-symbols-outlined">description</span> Ver
-                </a>
-                <button class="btn btn-sm glass-btn btn-warning w-100" onclick="abrirModalUploadAPR(${
-                  servico.id
-                })" title="Substituir APR">
-                    <span class="material-symbols-outlined">upload_file</span> Subst.
-                </button>
-            </div>`;
+    const detalhesUrl =
+      servico.sistema_versao === "legado"
+        ? `/detalhes_servico?id=${servico.id}`
+        : `/detalhes_ordem_servico?id=${servico.id}`;
+
+    let responsavelDisplay;
+    if (servico.sistema_versao === "legado") {
+      responsavelDisplay =
+        servico.responsavel_matricula === "pendente"
+          ? '<span class="badge bg-warning text-dark">Pendente</span>'
+          : `${servico.responsavel_nome || ""} (${
+              servico.responsavel_matricula
+            })`;
     } else {
-      aprButtonHtml = `
-            <button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR">
-                <span class="material-symbols-outlined">attach_file</span> Anexar
-            </button>`;
+      responsavelDisplay = servico.responsavel_matricula.includes("Pendente")
+        ? `<span class="badge bg-warning text-dark" style="cursor: help;" title="Um ou mais itens estão pendentes de atribuição">${servico.responsavel_matricula}</span>`
+        : servico.responsavel_matricula;
+    }
+
+    let progressoHtml = "N/A";
+    if (servico.sistema_versao === "moderno") {
+      const concluidos = servico.progresso_concluidos;
+      const total = servico.progresso_total;
+      const percentual = total > 0 ? (concluidos / total) * 100 : 0;
+      progressoHtml = `
+                <div class="progress" style="height: 20px; font-size: 0.75rem;">
+                    <div class="progress-bar" role="progressbar" style="width: ${percentual}%;" aria-valuenow="${percentual}" aria-valuemin="0" aria-valuemax="100">
+                        ${concluidos} / ${total}
+                    </div>
+                </div>
+            `;
+    }
+
+    const atribuirBtnHtml = `<button class="btn btn-sm glass-btn btn-primary me-1" onclick="abrirModalAtribuicao(${servico.id}, '${servico.sistema_versao}')" title="Atribuir/Reatribuir Responsável"><span class="material-symbols-outlined">manage_accounts</span></button>`;
+    const concluirBtnHtml = `<button class="btn btn-sm glass-btn btn-success me-1" onclick="abrirModalFinalizacao(${servico.id}, '${servico.sistema_versao}')" title="Finalizar Tarefas"><span class="material-symbols-outlined">task_alt</span></button>`;
+
+    let excluirBtnHtml = "";
+    if (user && user.nivel >= 5) {
+      excluirBtnHtml = `<button class="btn btn-sm glass-btn btn-danger" onclick="confirmarExclusao(${servico.id}, '${servico.sistema_versao}')" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>`;
     }
 
     tr.innerHTML = `
-      <td>${servico.id}</td>
-      <td>${processoDisplay || "N/A"}</td>
-      <td>${servico.subestacao || "N/A"}</td>
-      <td>${servico.alimentador || "N/A"}</td>
-      <td>${formatarData(servico.data_prevista_execucao)}</td>
-      <td>${
-        servico.responsavel_matricula === "pendente"
-          ? '<span class="badge bg-warning text-dark">Pendente</span>'
-          : (servico.responsavel_matricula || "N/A") +
-            " - " +
-            (servico.responsavel_nome || "Não Atribuído")
-      }</td>
-      <td>${
-        servico.desligamento === "SIM"
-          ? '<span class="badge bg-danger">Sim</span>'
-          : '<span class="badge bg-success">Não</span>'
-      }</td>
-      <td class="text-center table-actions apr-actions">${aprButtonHtml}</td>
-      <td>${servico.ordem_obra || "N/A"}</td>
-      <td class="text-center table-actions">
-        <div class="btn-group" role="group">
-          <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
-            servico.id
-          }')" title="Visualizar Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-          <button class="btn btn-sm glass-btn btn-primary me-1" onclick="selecionarResponsavel(${
-            servico.id
-          })" title="Selecionar Responsável"><span class="material-symbols-outlined">manage_accounts</span></button>
-          <button class="btn btn-sm glass-btn btn-success me-1" onclick="abrirModalFinalizacao(${
-            servico.id
-          })" title="Finalizar Serviço (Concluir/Não Concluir)"><span class="material-symbols-outlined">task_alt</span></button>
-          <button class="btn btn-sm glass-btn btn-danger" onclick="confirmarExclusao(${
-            servico.id
-          })" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>
-        </div>
-      </td>`;
+            <td>${servico.id}</td>
+            <td>${servico.processo || "N/A"}</td>
+            <td>${servico.subestacao || "N/A"}</td>
+            <td>${formatarData(servico.data_prevista_execucao)}</td>
+            <td>${responsavelDisplay}</td>
+            <td>${progressoHtml}</td>
+            <td>${
+              servico.desligamento === "SIM"
+                ? '<span class="badge bg-danger">Sim</span>'
+                : '<span class="badge bg-success">Não</span>'
+            }</td>
+            <td>${servico.ordem_obra || "N/A"}</td>
+            <td class="text-center table-actions">
+                <div class="btn-group" role="group">
+                    <a href="${detalhesUrl}" class="btn btn-sm glass-btn me-1" title="Visualizar Detalhes"><span class="material-symbols-outlined">visibility</span></a>
+                    ${atribuirBtnHtml}
+                    ${concluirBtnHtml}
+                    ${excluirBtnHtml}
+                </div>
+            </td>`;
     tbody.appendChild(tr);
   });
 }
 
-window.abrirModalUploadAPR = function (servicoId) {
+window.abrirModalAtribuicao = async function (servicoId, sistemaVersao) {
   currentServicoId = servicoId;
-  const aprServicoIdInput = document.getElementById("aprServicoId");
-  const aprFileInput = document.getElementById("aprFile");
-  const aprUploadProgress = document.getElementById("aprUploadProgress");
-  const progressBar = aprUploadProgress
-    ? aprUploadProgress.querySelector(".progress-bar")
-    : null;
+  currentSistemaVersao = sistemaVersao;
+  const modalBody = document.getElementById("modalResponsavelBody");
+  modalBody.innerHTML =
+    '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div></div>';
+  if (modalResponsavelInstance) modalResponsavelInstance.show();
 
-  if (aprServicoIdInput) aprServicoIdInput.value = servicoId;
-  if (aprFileInput) aprFileInput.value = "";
-  if (aprUploadProgress) aprUploadProgress.style.display = "none";
-  if (progressBar) {
-    progressBar.style.width = "0%";
-    progressBar.textContent = "0%";
-    progressBar.classList.remove("bg-success", "bg-danger");
-  }
-
-  if (aprUploadModalInstance) {
-    aprUploadModalInstance.show();
-  }
-};
-
-async function submeterArquivoAPR() {
-  const aprFile = document.getElementById("aprFile").files[0];
-  const servicoId = document.getElementById("aprServicoId").value;
-  const aprUploadProgress = document.getElementById("aprUploadProgress");
-  const progressBar = aprUploadProgress
-    ? aprUploadProgress.querySelector(".progress-bar")
-    : null;
-  const btnConfirmarUploadAPR = document.getElementById(
-    "btnConfirmarUploadAPR"
-  );
-
-  if (!aprFile) {
-    showToast("Por favor, selecione um arquivo para a APR.", "warning");
-    return;
-  }
-  if (aprFile.size > 10 * 1024 * 1024) {
-    showToast("O arquivo excede o limite de 10MB.", "danger");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("apr_file", aprFile);
-
-  if (btnConfirmarUploadAPR) {
-    btnConfirmarUploadAPR.disabled = true;
-    btnConfirmarUploadAPR.innerHTML =
-      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando...';
-  }
-  if (aprUploadProgress) aprUploadProgress.style.display = "flex";
-  if (progressBar) {
-    progressBar.style.width = "0%";
-    progressBar.textContent = "0%";
-    progressBar.classList.remove("bg-success", "bg-danger");
-  }
-
-  let progressInterval;
   try {
-    let progress = 0;
-    if (progressBar) {
-      progressInterval = setInterval(() => {
-        progress += 20;
-        progressBar.style.width = Math.min(progress, 100) + "%";
-        progressBar.textContent = Math.min(progress, 100) + "%";
-        if (progress >= 100) clearInterval(progressInterval);
-      }, 150);
-    }
+    const encarregadosRes = await fetch("/api/encarregados");
+    if (!encarregadosRes.ok) throw new Error("Falha ao carregar encarregados.");
+    const encarregados = await encarregadosRes.json();
+    const encarregadosOptions = encarregados
+      .map(
+        (e) =>
+          `<option value="${e.matricula}">${e.nome} (${e.matricula})</option>`
+      )
+      .join("");
 
-    const response = await fetch(`/api/servicos/${servicoId}/upload-apr`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (progressInterval) clearInterval(progressInterval);
-
-    if (!response.ok) {
-      if (progressBar) progressBar.classList.add("bg-danger");
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: "Erro ao enviar APR." }));
-      throw new Error(errorData.message);
-    }
-
-    if (progressBar) {
-      progressBar.style.width = "100%";
-      progressBar.textContent = "Concluído!";
-      progressBar.classList.add("bg-success");
-    }
-
-    const result = await response.json();
-    showToast(result.message || "APR enviada com sucesso!", "success");
-
-    setTimeout(() => {
-      if (aprUploadModalInstance) aprUploadModalInstance.hide();
-      carregarServicosAtivos();
-    }, 1000);
-  } catch (error) {
-    if (progressInterval) clearInterval(progressInterval);
-    if (progressBar) {
-      progressBar.textContent = "Falha!";
-      progressBar.classList.add("bg-danger");
-    }
-    showToast("Erro ao enviar APR: " + error.message, "danger");
-    if (aprUploadProgress) aprUploadProgress.style.display = "none";
-  } finally {
-    if (btnConfirmarUploadAPR) {
-      btnConfirmarUploadAPR.disabled = false;
-      btnConfirmarUploadAPR.innerHTML = "Enviar APR";
-    }
-  }
-}
-
-window.selecionarResponsavel = async function (servicoId) {
-  currentServicoId = servicoId;
-  try {
-    const response = await fetch("/api/encarregados", {
-      credentials: "include",
-    });
-    if (!response.ok) throw new Error("Erro ao carregar responsáveis");
-    const responsaveis = await response.json();
-    const modalBody = document.getElementById("modalResponsavelBody");
-    if (modalBody) {
+    if (sistemaVersao === "legado") {
       modalBody.innerHTML = `
-            <div class="mb-3">
-                <label for="selectResponsavel" class="form-label">Selecione o Responsável:</label>
-                <select class="form-select glass-input" id="selectResponsavel">
-                    <option value="">Selecione um responsável...</option>
-                    <option value="pendente">Pendente</option>
-                    ${responsaveis
-                      .map(
-                        (r) =>
-                          `<option value="${r.matricula}">${r.nome}</option>`
-                      )
-                      .join("")}
+                <p class="mb-2">Atribuir responsável para o serviço legado ID: <strong>${servicoId}</strong></p>
+                <select class="form-select" id="selectResponsavelLegado">
+                    <option value="" disabled selected>Selecione um encarregado...</option>
+                    ${encarregadosOptions}
                 </select>
-            </div>`;
+            `;
+    } else {
+      const itensRes = await fetch(`/api/ordens-servico/${servicoId}/itens`);
+      if (!itensRes.ok) throw new Error("Falha ao carregar itens da OS.");
+      const itens = await itensRes.json();
+
+      let html = `<p class="mb-3">Atribuir/Reatribuir responsáveis para os itens da OS ID: <strong>${servicoId}</strong></p>`;
+      itens.forEach((item) => {
+        html += `
+                    <div class="mb-3 border p-3 rounded bg-light">
+                        <label class="form-label fw-bold d-block mb-2">${
+                          item.codigo
+                        } - ${item.descricao}</label>
+                        <select class="form-select item-responsavel-select" data-item-id="${
+                          item.item_id
+                        }">
+                            <option value="pendente">Pendente</option>
+                            ${encarregados
+                              .map(
+                                (e) =>
+                                  `<option value="${e.matricula}" ${
+                                    item.responsavel_matricula === e.matricula
+                                      ? "selected"
+                                      : ""
+                                  }>${e.nome} (${e.matricula})</option>`
+                              )
+                              .join("")}
+                        </select>
+                    </div>
+                `;
+      });
+      modalBody.innerHTML = html;
     }
-    if (modalResponsavelInstance) modalResponsavelInstance.show();
   } catch (error) {
-    console.error("Erro ao carregar responsáveis:", error);
-    showToast(
-      "Erro ao carregar lista de responsáveis: " + error.message,
-      "danger"
-    );
+    modalBody.innerHTML = `<div class="alert alert-danger">Erro ao carregar dados: ${error.message}</div>`;
   }
 };
 
 window.confirmarResponsavel = async function () {
-  const select = document.getElementById("selectResponsavel");
-  if (!select) return;
-  const responsavelMatricula = select.value;
-  if (!responsavelMatricula) {
-    showToast("Selecione um responsável", "warning");
-    return;
-  }
+  const btnConfirm = document.querySelector("#modalResponsavel .btn-primary");
+  btnConfirm.disabled = true;
+  btnConfirm.innerHTML =
+    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
+
   try {
-    const response = await fetch(
-      `/api/servicos/${currentServicoId}/responsavel`,
-      {
+    let response;
+    if (currentSistemaVersao === "legado") {
+      const matricula = document.getElementById(
+        "selectResponsavelLegado"
+      ).value;
+      if (!matricula) throw new Error("Selecione um responsável.");
+
+      response = await fetch(`/api/servicos/${currentServicoId}/responsavel`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ responsavel_matricula: responsavelMatricula }),
-      }
-    );
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Erro ao atualizar responsável");
+        body: JSON.stringify({ responsavel_matricula: matricula }),
+      });
+    } else {
+      const atribuicoes = [];
+      document
+        .querySelectorAll(".item-responsavel-select")
+        .forEach((select) => {
+          atribuicoes.push({
+            itemId: select.dataset.itemId,
+            responsavel_matricula: select.value,
+          });
+        });
+
+      response = await fetch(
+        `/api/ordens-servico/${currentServicoId}/atribuir`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ atribuicoes }),
+        }
+      );
     }
-    showToast("Responsável atribuído com sucesso", "success");
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Falha ao salvar as atribuições.");
+    }
+
     if (modalResponsavelInstance) modalResponsavelInstance.hide();
     await carregarServicosAtivos();
   } catch (error) {
-    console.error("Erro ao atribuir responsável:", error);
-    showToast("Erro ao atribuir responsável: " + error.message, "danger");
-  }
-};
-
-window.confirmarExclusao = function (id) {
-  currentServicoId = id;
-  if (confirmModalInstance) confirmModalInstance.show();
-};
-
-async function excluirServico() {
-  const btnDelete = document.getElementById("confirmDelete");
-  if (!btnDelete) return;
-  const originalText = btnDelete.innerHTML;
-  try {
-    btnDelete.disabled = true;
-    btnDelete.innerHTML =
-      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Excluindo...';
-    const response = await fetch(`/api/servicos/${currentServicoId}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Erro ao excluir serviço");
-    }
-    showToast("Serviço excluído com sucesso!", "success");
-    if (confirmModalInstance) confirmModalInstance.hide();
-    await carregarServicosAtivos();
-  } catch (error) {
-    console.error("Erro ao excluir serviço:", error);
-    showToast("Erro ao excluir serviço: " + error.message, "danger");
+    alert(`Erro: ${error.message}`);
   } finally {
-    if (btnDelete) {
-      btnDelete.disabled = false;
-      btnDelete.innerHTML = originalText;
-    }
-  }
-}
-
-function controlarCamposFinalizacao() {
-  const statusFinalSelect = document.getElementById("statusFinalServico");
-  const camposSomenteConcluido = document.getElementById(
-    "camposSomenteConcluido"
-  );
-  const dataConclusaoInput = document.getElementById("dataConclusao");
-  const horaConclusaoInput = document.getElementById("horaConclusao");
-  const observacoesFinalizacaoInput = document.getElementById(
-    "observacoesFinalizacao"
-  );
-
-  if (
-    !statusFinalSelect ||
-    !camposSomenteConcluido ||
-    !dataConclusaoInput ||
-    !horaConclusaoInput ||
-    !observacoesFinalizacaoInput
-  )
-    return;
-
-  camposSomenteConcluido.style.display = "block";
-  dataConclusaoInput.required = true;
-  horaConclusaoInput.required = true;
-
-  if (statusFinalSelect.value === "concluido") {
-    observacoesFinalizacaoInput.placeholder =
-      "Observações da conclusão (opcional)";
-    observacoesFinalizacaoInput.required = false;
-  } else {
-    observacoesFinalizacaoInput.placeholder =
-      "Motivo da não conclusão (obrigatório)";
-    observacoesFinalizacaoInput.required = true;
-  }
-}
-
-window.abrirModalFinalizacao = function (id) {
-  currentServicoId = id;
-  const form = document.getElementById("formConcluirServico");
-  if (form) form.reset();
-
-  const statusFinalSelect = document.getElementById("statusFinalServico");
-  if (statusFinalSelect) statusFinalSelect.value = "concluido";
-
-  controlarCamposFinalizacao();
-  usarDataAtual();
-
-  const previewContainer = document.getElementById("previewContainer");
-  if (previewContainer) previewContainer.innerHTML = "";
-
-  if (concluirModalInstance) {
-    concluirModalInstance.show();
+    btnConfirm.disabled = false;
+    btnConfirm.innerHTML = "Confirmar Atribuições";
   }
 };
 
-async function submeterFinalizacaoServico() {
-  const btnSalvarFinalizacao = document.getElementById("btnSalvarFinalizacao");
-  if (!btnSalvarFinalizacao) return;
+window.abrirModalFinalizacao = async function (servicoId, sistemaVersao) {
+  currentServicoId = servicoId;
+  currentSistemaVersao = sistemaVersao;
 
-  const originalBtnText = btnSalvarFinalizacao.innerHTML;
-  btnSalvarFinalizacao.disabled = true;
-  btnSalvarFinalizacao.innerHTML =
-    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+  if (sistemaVersao === "legado") {
+    if (concluirModalLegadoInstance) {
+      document.getElementById("formConcluirServico").reset();
+      concluirModalLegadoInstance.show();
+    }
+  } else {
+    const modalBody = document.getElementById("finalizarItensModalBody");
+    modalBody.innerHTML =
+      '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div></div>';
+    if (finalizarItensModalInstance) finalizarItensModalInstance.show();
 
-  const statusFinal = document.getElementById("statusFinalServico").value;
-  const observacoes = document.getElementById("observacoesFinalizacao").value;
-  const dataConclusao = document.getElementById("dataConclusao").value;
-  const horaConclusao = document.getElementById("horaConclusao").value;
-  const fotosInput = document.getElementById("fotosConclusao");
-  const files = fotosInput ? Array.from(fotosInput.files) : [];
+    try {
+      const isSuperUser = user && user.nivel >= 5;
+      const apiUrl = isSuperUser
+        ? `/api/ordens-servico/${servicoId}/todos-itens-pendentes`
+        : `/api/ordens-servico/${servicoId}/meus-itens`;
+
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error("Falha ao carregar tarefas pendentes.");
+      const itens = await response.json();
+
+      if (itens.length === 0) {
+        modalBody.innerHTML = `<div class="alert alert-info">Nenhuma tarefa pendente encontrada para esta Ordem de Serviço.</div>`;
+        document.getElementById("btnSalvarFinalizacaoItens").style.display =
+          "none";
+        return;
+      }
+      document.getElementById("btnSalvarFinalizacaoItens").style.display =
+        "inline-block";
+
+      let html = `<p class="mb-3">Selecione o status para cada tarefa pendente na OS ID: <strong>${servicoId}</strong></p>`;
+      itens.forEach((item) => {
+        let responsavelInfo = "";
+        if (isSuperUser) {
+          responsavelInfo = `<small class="d-block text-muted mb-2">Responsável: ${
+            item.responsavel_nome || item.responsavel_matricula
+          }</small>`;
+        }
+
+        html += `
+            <div class="mb-3 border p-3 rounded bg-light item-finalizacao-row" data-item-id="${item.item_id}">
+                <label class="form-label fw-bold d-block mb-1">${item.codigo} - ${item.descricao}</label>
+                ${responsavelInfo}
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input item-status" type="radio" name="status_${item.item_id}" value="concluido" id="concluido_${item.item_id}" checked>
+                        <label class="form-check-label" for="concluido_${item.item_id}">Concluído</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input item-status" type="radio" name="status_${item.item_id}" value="finalizacao_impossibilitada" id="nao_concluido_${item.item_id}">
+                        <label class="form-check-label" for="nao_concluido_${item.item_id}">Finalização Impossibilitada</label>
+                    </div>
+                </div>
+                <textarea class="form-control mt-2 item-observacoes" rows="2" placeholder="Observações / Motivo (obrigatório se impossibilitado)"></textarea>
+                <div class="mt-2">
+                    <label for="anexos_item_${item.item_id}" class="form-label small">Anexos de Conclusão (opcional)</label>
+                    <input class="form-control form-control-sm item-anexos" type="file" id="anexos_item_${item.item_id}" multiple>
+                </div>
+            </div>
+        `;
+      });
+      modalBody.innerHTML = html;
+    } catch (error) {
+      modalBody.innerHTML = `<div class="alert alert-danger">Erro ao carregar dados: ${error.message}</div>`;
+    }
+  }
+};
+
+async function salvarFinalizacaoItens() {
+  const btnConfirm = document.getElementById("btnSalvarFinalizacaoItens");
+  btnConfirm.disabled = true;
+  btnConfirm.innerHTML =
+    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
 
   try {
-    const infoPayload = {
-      status_final: statusFinal,
-      dataConclusao: dataConclusao,
-      horaConclusao: horaConclusao,
-      observacoes: observacoes,
-    };
-    if (statusFinal === "nao_concluido") {
-      infoPayload.motivo_nao_conclusao = observacoes;
+    const formData = new FormData();
+    const finalizacoes = [];
+    const itemRows = document.querySelectorAll(".item-finalizacao-row");
+
+    let validationError = false;
+    itemRows.forEach((row) => {
+      const itemId = row.dataset.itemId;
+      const status = row.querySelector(
+        'input[name="status_' + itemId + '"]:checked'
+      ).value;
+      const observacoes = row.querySelector(".item-observacoes").value;
+
+      if (status === "finalizacao_impossibilitada" && !observacoes.trim()) {
+        row.querySelector(".item-observacoes").classList.add("is-invalid");
+        validationError = true;
+      } else {
+        row.querySelector(".item-observacoes").classList.remove("is-invalid");
+      }
+
+      finalizacoes.push({ itemId, status, observacoes });
+
+      const anexoInput = row.querySelector(".item-anexos");
+      if (anexoInput.files.length > 0) {
+        for (const file of anexoInput.files) {
+          formData.append(`anexos_item_${itemId}`, file);
+        }
+      }
+    });
+
+    if (validationError) {
+      throw new Error(
+        "Para itens com 'Finalização Impossibilitada', as observações são obrigatórias."
+      );
     }
 
-    const infoResponse = await fetch(
-      `/api/servicos/${currentServicoId}/concluir`,
+    formData.append("finalizacoes", JSON.stringify(finalizacoes));
+
+    const response = await fetch(
+      `/api/ordens-servico/${currentServicoId}/finalizar-itens`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(infoPayload),
+        method: "PATCH",
+        body: formData,
       }
     );
 
-    const infoResult = await infoResponse.json();
-    if (!infoResponse.ok) {
-      throw new Error(
-        infoResult.message || "Erro ao salvar informações do serviço."
-      );
-    }
-    showToast(infoResult.message, "info");
-
-    if (files.length > 0) {
-      showToast(`Iniciando upload de ${files.length} arquivos...`, "info");
-      const errosUpload = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const previewItem = document.getElementById(`preview-item-${i}`);
-        const statusOverlay = previewItem
-          ? previewItem.querySelector(".upload-status-overlay")
-          : null;
-
-        if (statusOverlay) {
-          statusOverlay.classList.remove("d-none");
-          statusOverlay.innerHTML =
-            '<div class="spinner-border spinner-border-sm text-light" role="status"></div>';
-        }
-
-        const fileFormData = new FormData();
-        fileFormData.append("foto_conclusao", file);
-        fileFormData.append("status_final", statusFinal);
-
-        try {
-          const fileResponse = await fetch(
-            `/api/servicos/${currentServicoId}/upload-foto-conclusao`,
-            {
-              method: "POST",
-              body: fileFormData,
-            }
-          );
-
-          const fileResult = await fileResponse.json();
-          if (!fileResponse.ok) {
-            throw new Error(
-              fileResult.message || `Falha no upload de ${file.name}`
-            );
-          }
-
-          if (statusOverlay) {
-            statusOverlay.innerHTML =
-              '<span class="material-symbols-outlined text-success">check_circle</span>';
-          }
-        } catch (uploadError) {
-          errosUpload.push(`${file.name}: ${uploadError.message}`);
-          if (statusOverlay) {
-            statusOverlay.innerHTML =
-              '<span class="material-symbols-outlined text-danger">error</span>';
-          }
-        }
-      }
-
-      if (errosUpload.length > 0) {
-        showToast(`Concluído com ${errosUpload.length} erros.`, "warning");
-        console.error("Erros de upload:", errosUpload);
-      } else {
-        showToast("Todos os arquivos foram enviados com sucesso!", "success");
-      }
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Falha ao salvar as finalizações.");
     }
 
-    setTimeout(async () => {
-      if (concluirModalInstance) concluirModalInstance.hide();
-      await carregarServicosAtivos();
-    }, 1500);
+    if (finalizarItensModalInstance) finalizarItensModalInstance.hide();
+    await carregarServicosAtivos();
   } catch (error) {
-    console.error("Erro ao finalizar serviço:", error);
-    showToast(error.message, "danger");
+    alert(`Erro: ${error.message}`);
   } finally {
-    btnSalvarFinalizacao.disabled = false;
-    btnSalvarFinalizacao.innerHTML = originalBtnText;
+    btnConfirm.disabled = false;
+    btnConfirm.innerHTML = "Salvar Finalizações";
   }
 }
 
-function formatarData(dataString) {
-  if (!dataString) return "Não informado";
-  try {
-    const data = new Date(dataString);
-    if (isNaN(data.getTime())) return "Data inválida";
-    const dia = String(data.getUTCDate()).padStart(2, "0");
-    const mes = String(data.getUTCMonth() + 1).padStart(2, "0");
-    const ano = data.getUTCFullYear();
-    return `${dia}/${mes}/${ano}`;
-  } catch (e) {
-    console.error("Erro ao formatar data:", dataString, e);
-    return "Data inválida";
+window.confirmarExclusao = function (servicoId, sistemaVersao) {
+  currentServicoId = servicoId;
+  currentSistemaVersao = sistemaVersao;
+  if (confirmModalInstance) {
+    confirmModalInstance.show();
   }
-}
-
-window.removerFotoPreview = function (index) {
-  const input = document.getElementById("fotosConclusao");
-  if (!input) return;
-  const files = Array.from(input.files);
-  files.splice(index, 1);
-  const dataTransfer = new DataTransfer();
-  files.forEach((file) => dataTransfer.items.add(file));
-  input.files = dataTransfer.files;
-  const event = new Event("change", { bubbles: true });
-  input.dispatchEvent(event);
 };
 
-window.navigateTo = async function (pageNameOrUrl) {
-  let urlToNavigate = pageNameOrUrl;
-  if (!pageNameOrUrl.startsWith("/") && !pageNameOrUrl.startsWith("http")) {
-    urlToNavigate = `/${pageNameOrUrl}`;
-  }
-  if (
-    window.location.pathname === urlToNavigate &&
-    !urlToNavigate.includes("?")
-  )
-    return;
+async function excluirServico() {
+  if (!currentServicoId || !currentSistemaVersao) return;
+
+  const apiUrl =
+    currentSistemaVersao === "legado"
+      ? `/api/servicos/${currentServicoId}`
+      : `/api/ordens-servico/${currentServicoId}`;
 
   try {
-    const response = await fetch(urlToNavigate);
-    if (response.ok) {
-      window.location.href = urlToNavigate;
-    } else if (response.status === 403) {
-      if (accessDeniedModalInstance) accessDeniedModalInstance.show();
-      else alert("Acesso negado!");
-    } else if (response.status === 404) {
-      if (developmentModalInstance) developmentModalInstance.show();
-      else alert("Página não encontrada ou em desenvolvimento.");
-    } else {
-      const errorText = await response.text();
-      console.error("Erro ao navegar:", response.status, errorText);
-      if (developmentModalInstance) developmentModalInstance.show();
-      else alert("Erro ao tentar acessar a página.");
+    const response = await fetch(apiUrl, { method: "DELETE" });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Erro ao excluir.");
     }
+    if (confirmModalInstance) confirmModalInstance.hide();
+    await carregarServicosAtivos();
   } catch (error) {
-    console.error("Erro de rede ou falha na navegação:", error);
-    if (developmentModalInstance) developmentModalInstance.show();
-    else alert("Erro de rede ou falha na navegação.");
+    alert(`Erro ao excluir: ${error.message}`);
   }
-};
+}
 
 document.addEventListener("DOMContentLoaded", function () {
   user = JSON.parse(localStorage.getItem("user"));
 
-  if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
-    const confirmModalEl = document.getElementById("confirmModal");
-    if (confirmModalEl)
-      confirmModalInstance = new bootstrap.Modal(confirmModalEl);
-    const concluirModalEl = document.getElementById("concluirModal");
-    if (concluirModalEl)
-      concluirModalInstance = new bootstrap.Modal(concluirModalEl);
-    const toastLiveEl = document.getElementById("liveToast");
-    if (toastLiveEl) liveToastInstance = new bootstrap.Toast(toastLiveEl);
-    const modalResponsavelEl = document.getElementById("modalResponsavel");
-    if (modalResponsavelEl)
-      modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
-    const aprUploadModalEl = document.getElementById("aprUploadModal");
-    if (aprUploadModalEl)
-      aprUploadModalInstance = new bootstrap.Modal(aprUploadModalEl);
-    const admEl = document.getElementById("access-denied-modal");
-    if (admEl) accessDeniedModalInstance = new bootstrap.Modal(admEl);
-    const devmEl = document.getElementById("development-modal");
-    if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
+  const modalResponsavelEl = document.getElementById("modalResponsavel");
+  if (modalResponsavelEl) {
+    modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
+  }
+  const confirmModalEl = document.getElementById("confirmModal");
+  if (confirmModalEl) {
+    confirmModalInstance = new bootstrap.Modal(confirmModalEl);
+  }
+  const finalizarItensModalEl = document.getElementById("finalizarItensModal");
+  if (finalizarItensModalEl) {
+    finalizarItensModalInstance = new bootstrap.Modal(finalizarItensModalEl);
+  }
+  const concluirModalEl = document.getElementById("concluirModal");
+  if (concluirModalEl) {
+    concluirModalLegadoInstance = new bootstrap.Modal(concluirModalEl);
   }
 
-  const confirmDeleteBtn = document.getElementById("confirmDelete");
-  if (confirmDeleteBtn)
-    confirmDeleteBtn.addEventListener("click", excluirServico);
+  document
+    .getElementById("confirmDelete")
+    .addEventListener("click", excluirServico);
 
-  const btnSalvarFinalizacao = document.getElementById("btnSalvarFinalizacao");
-  if (btnSalvarFinalizacao) {
-    btnSalvarFinalizacao.addEventListener("click", submeterFinalizacaoServico);
-  }
-
-  const btnConfirmarUploadAPR = document.getElementById(
-    "btnConfirmarUploadAPR"
+  const btnSalvarFinalizacaoItens = document.getElementById(
+    "btnSalvarFinalizacaoItens"
   );
-  if (btnConfirmarUploadAPR)
-    btnConfirmarUploadAPR.addEventListener("click", submeterArquivoAPR);
-
-  const filtroProcessoInput = document.getElementById("filtroProcesso");
-  if (filtroProcessoInput)
-    filtroProcessoInput.addEventListener(
-      "input",
-      debounce(atualizarTabela, 300)
-    );
-  const filtroSubestacaoSelect = document.getElementById("filtroSubestacao");
-  if (filtroSubestacaoSelect)
-    filtroSubestacaoSelect.addEventListener("change", atualizarTabela);
-  const filtroEncarregadoSelect = document.getElementById("filtroEncarregado");
-  if (filtroEncarregadoSelect)
-    filtroEncarregadoSelect.addEventListener("change", atualizarTabela);
-  const filtroDataInput = document.getElementById("filtroData");
-  if (filtroDataInput)
-    filtroDataInput.addEventListener("change", atualizarTabela);
-
-  const btnTirarFoto = document.getElementById("btnTirarFoto");
-  const btnAdicionarFotos = document.getElementById("btnAdicionarFotos");
-  const fotosConclusaoInputGlobal = document.getElementById("fotosConclusao");
-  const fotoCameraInputGlobal = document.getElementById("fotoCamera");
-
-  if (btnTirarFoto && (fotosConclusaoInputGlobal || fotoCameraInputGlobal)) {
-    btnTirarFoto.addEventListener("click", function () {
-      if (isMobileDevice() && fotoCameraInputGlobal) {
-        fotoCameraInputGlobal.click();
-      } else if (fotosConclusaoInputGlobal) {
-        fotosConclusaoInputGlobal.click();
-      }
-    });
-  }
-  if (btnAdicionarFotos && fotosConclusaoInputGlobal) {
-    btnAdicionarFotos.addEventListener("click", function () {
-      fotosConclusaoInputGlobal.click();
-    });
-  }
-  if (fotoCameraInputGlobal && fotosConclusaoInputGlobal) {
-    fotoCameraInputGlobal.addEventListener("change", function (e) {
-      if (this.files.length > 0) {
-        const dataTransfer = new DataTransfer();
-        Array.from(fotosConclusaoInputGlobal.files).forEach((file) =>
-          dataTransfer.items.add(file)
-        );
-        dataTransfer.items.add(this.files[0]);
-        fotosConclusaoInputGlobal.files = dataTransfer.files;
-        fotosConclusaoInputGlobal.dispatchEvent(
-          new Event("change", { bubbles: true })
-        );
-        this.value = "";
-      }
-    });
-  }
-  if (fotosConclusaoInputGlobal) {
-    fotosConclusaoInputGlobal.addEventListener("change", function (e) {
-      const previewContainer = document.getElementById("previewContainer");
-      if (!previewContainer) return;
-      previewContainer.innerHTML = "";
-
-      if (this.files.length > 5) {
-        showToast("Máximo de 5 fotos permitidas!", "danger");
-        this.value = "";
-        return;
-      }
-
-      Array.from(this.files).forEach((file, index) => {
-        if (file.type.startsWith("image/")) {
-          const reader = new FileReader();
-          reader.onload = function (event) {
-            const col = document.createElement("div");
-            col.className = "col-6 col-md-4 col-lg-3 mb-2";
-            col.innerHTML = `
-                <div class="preview-item position-relative" id="preview-item-${index}">
-                    <img src="${event.target.result}" alt="Preview ${
-              index + 1
-            }" class="img-fluid rounded">
-                    <button type="button" class="btn-remove position-absolute top-0 end-0 btn btn-sm btn-danger m-1" onclick="removerFotoPreview(${index})" style="line-height: 1; padding: 0.1rem 0.3rem;">
-                        <span class="material-symbols-outlined" style="font-size: 0.8em;">close</span>
-                    </button>
-                    <div class="upload-status-overlay d-none">
-                        <div class="spinner-border spinner-border-sm text-light" role="status"></div>
-                    </div>
-                </div>`;
-            previewContainer.appendChild(col);
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-    });
+  if (btnSalvarFinalizacaoItens) {
+    btnSalvarFinalizacaoItens.addEventListener("click", salvarFinalizacaoItens);
   }
 
-  const statusFinalSelect = document.getElementById("statusFinalServico");
-  if (statusFinalSelect) {
-    statusFinalSelect.addEventListener("change", controlarCamposFinalizacao);
-  }
+  document
+    .getElementById("filtroIdProcesso")
+    .addEventListener("input", debounce(atualizarTabela, 300));
+  document
+    .getElementById("filtroSubestacao")
+    .addEventListener("change", atualizarTabela);
+  document
+    .getElementById("filtroEncarregado")
+    .addEventListener("change", atualizarTabela);
+  document
+    .getElementById("filtroData")
+    .addEventListener("change", atualizarTabela);
 
   carregarDadosIniciais();
+  carregarServicosAtivos();
 });

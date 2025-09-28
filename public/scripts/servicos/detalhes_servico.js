@@ -503,7 +503,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     const user = JSON.parse(localStorage.getItem("user"));
-    if (user && user.nivel <= 2) {
+    if (!user || user.nivel < 5) {
       const btnEditar = document.getElementById("btn-editar");
       const btnExcluir = document.getElementById("btn-excluir");
 
@@ -520,13 +520,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const servicoId = urlParams.get("id");
-
-  const btnEditar = document.getElementById("btn-editar");
-  if (btnEditar && servicoId) {
-    btnEditar.addEventListener("click", () => {
-      window.location.href = `/editar_servico?id=${servicoId}`;
-    });
-  }
 
   const btnExcluir = document.getElementById("btn-excluir");
   if (btnExcluir && confirmModalInstance) {
@@ -563,6 +556,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         confirmDeleteBtn.disabled = false;
         confirmDeleteBtn.innerHTML = originalBtnText;
       }
+    });
+  }
+
+  const btnEditarLegado = document.getElementById("btn-editar");
+  if (btnEditarLegado && servicoId) {
+    btnEditarLegado.addEventListener("click", () => {
+      window.location.href = `/editar_servico?id=${servicoId}&tipo=legado`;
     });
   }
 });

@@ -26,7 +26,7 @@ const elementos = {
   paginacao: null,
   contador: null,
   filtros: {
-    processo: null,
+    idProcesso: null,
     subestacao: null,
     alimentador: null,
     data: null,
@@ -47,7 +47,7 @@ function inicializarElementos() {
     elementos.tabela = document.getElementById("tabela-servicos");
     elementos.paginacao = document.getElementById("paginacao");
     elementos.contador = document.getElementById("contador-servicos");
-    elementos.filtros.processo = document.getElementById("filtroProcesso");
+    elementos.filtros.idProcesso = document.getElementById("filtroIdProcesso");
     elementos.filtros.subestacao = document.getElementById("filtroSubestacao");
     elementos.filtros.alimentador =
       document.getElementById("filtroAlimentador");
@@ -79,8 +79,8 @@ function inicializarElementos() {
 
 function configurarEventListeners() {
   try {
-    if (elementos.filtros.processo) {
-      elementos.filtros.processo.addEventListener(
+    if (elementos.filtros.idProcesso) {
+      elementos.filtros.idProcesso.addEventListener(
         "input",
         debounce(aplicarFiltrosEAtualizar, 300)
       );
@@ -128,6 +128,7 @@ function aplicarFiltrosEAtualizar() {
 function mostrarNotificacao(mensagem, tipo = "success", duracao = 3000) {
   try {
     if (!elementos.toastInstance || !elementos.toastEl) {
+      alert(mensagem);
       return;
     }
     const toastBody = elementos.toastEl.querySelector(".toast-body");
@@ -179,7 +180,8 @@ async function carregarServicosConcluidos() {
 }
 
 function obterServicosFiltrados() {
-  const filtroProcesso = elementos.filtros.processo?.value.toLowerCase() || "";
+  const filtroIdProcesso =
+    elementos.filtros.idProcesso?.value.toLowerCase() || "";
   const filtroSubestacao =
     elementos.filtros.subestacao?.value.toLowerCase() || "";
   const filtroAlimentador =
@@ -188,10 +190,15 @@ function obterServicosFiltrados() {
   const filtroStatus = elementos.filtros.status?.value || "";
 
   return servicosData.filter((servico) => {
+    const id = servico.id?.toString().toLowerCase() || "";
     const processo = servico.processo?.toString().toLowerCase() || "";
     const subestacao = servico.subestacao?.toString().toLowerCase() || "";
     const alimentador = servico.alimentador?.toString().toLowerCase() || "";
 
+    const matchesIdProcesso =
+      !filtroIdProcesso ||
+      id.includes(filtroIdProcesso) ||
+      processo.includes(filtroIdProcesso);
     const matchesStatus = !filtroStatus || servico.status === filtroStatus;
 
     let matchesData = true;
@@ -248,7 +255,7 @@ function obterServicosFiltrados() {
     }
 
     return (
-      processo.includes(filtroProcesso) &&
+      matchesIdProcesso &&
       subestacao.includes(filtroSubestacao) &&
       alimentador.includes(filtroAlimentador) &&
       matchesData &&
@@ -309,7 +316,11 @@ function atualizarTabela() {
         if (servico.status === "concluido") {
           statusHtml = '<span class="badge bg-success">Concluído</span>';
         } else if (servico.status === "nao_concluido") {
-          statusHtml = `<span class="status-nao-concluido">Não Concluído</span>`;
+          const motivo = servico.motivo || "Motivo não especificado.";
+          statusHtml = `
+            <span class="status-nao-concluido">Não Concluído</span>
+            <small class="motivo-nao-concluido" title="${motivo}">${motivo}</small>
+          `;
         } else {
           statusHtml = servico.status || "N/A";
         }
@@ -320,9 +331,14 @@ function atualizarTabela() {
         }
 
         let reativarButtonHtml = "";
-        if (user && user.nivel > 2) {
+        if (user && user.nivel >= 5) {
           reativarButtonHtml = `<button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${servico.id})" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>`;
         }
+
+        const detalhesUrl =
+          servico.sistema_versao === "legado"
+            ? `/detalhes_servico?id=${servico.id}`
+            : `/detalhes_ordem_servico?id=${servico.id}`;
 
         tr.innerHTML = `
           <td>${servico.id || "N/A"}</td>
@@ -341,9 +357,7 @@ function atualizarTabela() {
           <td>${servico.ordem_obra || "N/A"}</td>
           <td class="text-center">
             <div class="btn-group" role="group">
-              <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
-                servico.id
-              }')" title="Visualizar"><span class="material-symbols-outlined">visibility</span></button>
+              <a href="${detalhesUrl}" class="btn btn-sm glass-btn me-1" title="Visualizar"><span class="material-symbols-outlined">visibility</span></a>
               <button class="btn btn-sm glass-btn btn-success me-1" onclick="solicitarRelatorioCompleto(${
                 servico.id
               })" title="Gerar Relatório Completo (PDF)"><span class="material-symbols-outlined">picture_as_pdf</span></button>
@@ -558,19 +572,11 @@ window.reativarServico = async function (id) {
 
 window.solicitarRelatorioCompleto = function (servicoId) {
   mostrarNotificacao(
-    "Gerando relatório completo... Isso pode levar alguns segundos.",
+    "Gerando relatório completo... O download começará em breve.",
     "info",
-    8000
+    5000
   );
-  const downloadUrl = `/api/servicos/${servicoId}/consolidar-pdfs`;
-
-  const link = document.createElement("a");
-  link.href = downloadUrl;
-  link.setAttribute("download", `relatorio_servico_${servicoId}.pdf`);
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  window.location.href = `/api/servicos/${servicoId}/relatorio-completo`;
 };
 
 window.abrirModalUploadAPR = function (servicoId) {

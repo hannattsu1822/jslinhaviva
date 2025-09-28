@@ -1,44 +1,45 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const servicoId = urlParams.get("id");
+  const servicoTipo = urlParams.get("tipo");
 
-  const servicoIdInput = document.getElementById("servicoId");
-  if (servicoIdInput) servicoIdInput.value = servicoId;
-
-  if (!servicoId) {
-    alert("ID do serviço não especificado");
-    window.location.href = "/servicos_ativos";
+  if (!servicoId || !servicoTipo) {
+    alert("ID ou tipo do serviço não especificado.");
+    window.location.href = "/gestao-servicos";
     return;
   }
 
-  await carregarDadosServico(servicoId);
-  await carregarResponsaveis();
+  document.getElementById("servicoId").value = servicoId;
+  document.getElementById("servicoTipo").value = servicoTipo;
 
-  const desligamentoSelect = document.getElementById("desligamento");
-  if (desligamentoSelect) {
-    desligamentoSelect.addEventListener("change", function () {
+  await carregarDadosServico(servicoId, servicoTipo);
+
+  if (servicoTipo === "legado") {
+    await carregarResponsaveis();
+  } else {
+    const responsavelContainer = document.getElementById(
+      "responsavelContainer"
+    );
+    if (responsavelContainer) responsavelContainer.style.display = "none";
+  }
+
+  document
+    .getElementById("desligamento")
+    .addEventListener("change", function () {
       const mostrarHorarios = this.value === "SIM";
       const horariosContainer = document.getElementById("horariosContainer");
-      const horaInicioInput = document.getElementById("horaInicio");
-      const horaFimInput = document.getElementById("horaFim");
+      const horaInicioInput = document.getElementById("hora_inicio");
+      const horaFimInput = document.getElementById("hora_fim");
 
       if (horariosContainer)
         horariosContainer.style.display = mostrarHorarios ? "block" : "none";
-
-      if (mostrarHorarios) {
-        if (horaInicioInput) horaInicioInput.setAttribute("required", "");
-        if (horaFimInput) horaFimInput.setAttribute("required", "");
-      } else {
-        if (horaInicioInput) horaInicioInput.removeAttribute("required");
-        if (horaFimInput) horaFimInput.removeAttribute("required");
-      }
+      if (horaInicioInput) horaInicioInput.required = mostrarHorarios;
+      if (horaFimInput) horaFimInput.required = mostrarHorarios;
     });
-    desligamentoSelect.dispatchEvent(new Event("change"));
-  }
 
-  const novosAnexosInput = document.getElementById("novosAnexos");
-  if (novosAnexosInput) {
-    novosAnexosInput.addEventListener("change", function () {
+  document
+    .getElementById("novosAnexos")
+    .addEventListener("change", function () {
       const previewContainer = document.getElementById("previewNovosAnexos");
       if (!previewContainer) return;
       previewContainer.innerHTML = "";
@@ -51,396 +52,146 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           if (file.type.startsWith("image/")) {
             previewItem.innerHTML = `
-                            <img src="${e.target.result}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; object-fit: cover;">
-                            <div class="small text-truncate mt-1" style="max-width: 100px;">${file.name}</div>
-                        `;
+                      <img src="${e.target.result}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; object-fit: cover;">
+                      <div class="small text-truncate mt-1" style="max-width: 100px;">${file.name}</div>
+                  `;
           } else {
             previewItem.innerHTML = `
-                            <div class="text-center">
-                                <i class="fas ${getFileIcon(
-                                  file.name
-                                )} fa-2x mb-1"></i>
-                                <div class="small text-truncate" style="max-width: 100px;">${
-                                  file.name
-                                }</div>
-                            </div>
-                        `;
+                      <div class="text-center">
+                          <i class="fas fa-file fa-2x mb-1"></i>
+                          <div class="small text-truncate" style="max-width: 100px;">${file.name}</div>
+                      </div>
+                  `;
           }
           previewContainer.appendChild(previewItem);
         };
         reader.readAsDataURL(file);
       });
     });
-  }
 
-  const mapsInput = document.getElementById("maps");
-  if (mapsInput) {
-    mapsInput.addEventListener("blur", function () {
-      validarMapsCampo(this);
-    });
-  }
-
-  const editarServicoForm = document.getElementById("editarServicoForm");
-  if (editarServicoForm) {
-    editarServicoForm.addEventListener("submit", async function (e) {
+  document
+    .getElementById("editarServicoForm")
+    .addEventListener("submit", async function (e) {
       e.preventDefault();
-      await salvarAlteracoes(servicoId);
+      await salvarAlteracoes(servicoId, servicoTipo);
     });
-  }
-
-  const cancelButton = document.getElementById("btn-voltar-detalhes");
-  if (cancelButton) {
-    cancelButton.href = `/detalhes_servico?id=${servicoId}`;
-  }
 });
 
-async function carregarResponsaveis() {
-  const selectResponsavel = document.getElementById("servico-responsavel");
-  if (!selectResponsavel) return;
+async function carregarDadosServico(id, tipo) {
+  const apiUrl =
+    tipo === "legado" ? `/api/servicos/${id}` : `/api/ordens-servico/${id}`;
+  const btnVoltar = document.getElementById("btn-voltar-detalhes");
+
+  if (tipo === "legado") {
+    btnVoltar.href = `/detalhes_servico?id=${id}`;
+  } else {
+    btnVoltar.href = `/detalhes_ordem_servico?id=${id}`;
+  }
 
   try {
-    const response = await fetch("/api/encarregados");
-    if (!response.ok) {
-      throw new Error("Falha ao carregar responsáveis");
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error("Falha ao carregar dados do serviço.");
+
+    const result = await response.json();
+    if (!result.success || !result.data)
+      throw new Error(result.message || "Dados não encontrados.");
+
+    const data = result.data;
+
+    document.getElementById("processo").value = data.processo || "";
+    document.getElementById("subestacao").value = data.subestacao || "";
+    document.getElementById("alimentador").value = data.alimentador || "";
+    document.getElementById("chave_montante").value = data.chave_montante || "";
+    document.getElementById("desligamento").value = data.desligamento || "NÃO";
+    document.getElementById("ordem_obra").value = data.ordem_obra || "";
+    document.getElementById("maps").value = data.maps || "";
+
+    document.getElementById("descricao_geral").value =
+      data.descricao_geral || data.descricao_servico || "";
+    document.getElementById("observacoes_gerais").value =
+      data.observacoes_gerais || data.observacoes || "";
+
+    if (tipo === "legado") {
+      document.getElementById("responsavel_matricula").value =
+        data.responsavel_matricula || "";
     }
+
+    const desligamentoSelect = document.getElementById("desligamento");
+    if (data.desligamento === "SIM") {
+      document.getElementById("horariosContainer").style.display = "block";
+      document.getElementById("hora_inicio").value = data.hora_inicio
+        ? data.hora_inicio.substring(0, 5)
+        : "";
+      document.getElementById("hora_fim").value = data.hora_fim
+        ? data.hora_fim.substring(0, 5)
+        : "";
+    } else {
+      document.getElementById("horariosContainer").style.display = "none";
+    }
+    desligamentoSelect.dispatchEvent(new Event("change"));
+  } catch (error) {
+    alert("Erro ao carregar dados: " + error.message);
+  }
+}
+
+async function carregarResponsaveis() {
+  const selectResponsavel = document.getElementById("responsavel_matricula");
+  try {
+    const response = await fetch("/api/encarregados");
+    if (!response.ok) throw new Error("Falha ao carregar responsáveis");
     const responsaveis = await response.json();
 
     const valorAtual = selectResponsavel.value;
     selectResponsavel.innerHTML =
       '<option value="">Selecione um responsável...</option>';
-
     responsaveis.forEach((resp) => {
       const option = document.createElement("option");
       option.value = resp.matricula;
       option.textContent = `${resp.nome} (${resp.matricula})`;
       selectResponsavel.appendChild(option);
     });
-
-    if (valorAtual) {
-      if (
-        Array.from(selectResponsavel.options).some(
-          (opt) => opt.value === valorAtual
-        )
-      ) {
-        selectResponsavel.value = valorAtual;
-      } else if (valorAtual === "pendente") {
-        selectResponsavel.value = "";
-      }
-    }
+    if (valorAtual) selectResponsavel.value = valorAtual;
   } catch (error) {
     console.error("Erro ao carregar responsáveis:", error);
-    selectResponsavel.innerHTML = '<option value="">Erro ao carregar</option>';
   }
 }
 
-function validarMaps(url) {
-  if (!url || url.trim() === "") return true;
-  const patterns = [
-    /^(https?:\/\/)?(www\.)?google\.[a-z\.]{2,6}\/maps\/.+/i,
-    /^(https?:\/\/)?maps\.google\.[a-z\.]{2,6}\/.+/i,
-    /^(https?:\/\/)?goo\.gl\/maps\/.+/i,
-    /^(https?:\/\/)?maps\.app\.goo\.gl\/.+/i,
-  ];
-  return patterns.some((pattern) => pattern.test(url));
-}
-
-function validarMapsCampo(input) {
-  const url = input.value.trim();
-  const feedbackEl =
-    input.parentElement.querySelector(".invalid-feedback") ||
-    input.nextElementSibling;
-
-  if (url && !validarMaps(url)) {
-    input.classList.add("is-invalid");
-    if (feedbackEl && feedbackEl.classList.contains("invalid-feedback"))
-      feedbackEl.style.display = "block";
-    return false;
-  } else {
-    input.classList.remove("is-invalid");
-    if (feedbackEl && feedbackEl.classList.contains("invalid-feedback"))
-      feedbackEl.style.display = "none";
-    return true;
-  }
-}
-
-async function carregarDadosServico(servicoId) {
-  try {
-    const response = await fetch(`/api/servicos/${servicoId}`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Erro raw do servidor:", errorText);
-      let errorMsg = "Erro ao carregar dados do serviço";
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMsg = errorData.message || errorMsg;
-      } catch (e) {
-        errorMsg = `Erro ${response.status}: ${response.statusText}`;
-      }
-      throw new Error(errorMsg);
-    }
-
-    const result = await response.json();
-    if (!result.success || !result.data) {
-      throw new Error(result.message || "Dados do serviço não encontrados.");
-    }
-    const data = result.data;
-
-    const processoInput = document.getElementById("processo");
-    if (processoInput) {
-      processoInput.value = data.processo || "";
-      if (data.tipo === "Emergencial") {
-        processoInput.readOnly = true;
-      }
-    }
-
-    document.getElementById("subestacao").value = data.subestacao || "";
-    document.getElementById("alimentador").value = data.alimentador || "";
-    document.getElementById("chaveMontante").value = data.chave_montante || "";
-    document.getElementById("desligamento").value = data.desligamento || "NAO";
-    document.getElementById("maps").value = data.maps || "";
-    document.getElementById("ordem_obra").value = data.ordem_obra || "";
-    document.getElementById("descricao_servico").value =
-      data.descricao_servico || "";
-    document.getElementById("observacoes").value = data.observacoes || "";
-
-    const selectResponsavel = document.getElementById("servico-responsavel");
-    if (selectResponsavel) {
-      await carregarResponsaveis();
-      if (data.responsavel_matricula) {
-        selectResponsavel.value = data.responsavel_matricula;
-      } else {
-        selectResponsavel.value = "pendente";
-      }
-    }
-
-    const desligamentoSelect = document.getElementById("desligamento");
-    if (data.desligamento === "SIM") {
-      const horariosContainer = document.getElementById("horariosContainer");
-      if (horariosContainer) horariosContainer.style.display = "block";
-      document.getElementById("horaInicio").value = data.hora_inicio
-        ? data.hora_inicio.substring(0, 5)
-        : "";
-      document.getElementById("horaFim").value = data.hora_fim
-        ? data.hora_fim.substring(0, 5)
-        : "";
-    }
-    if (desligamentoSelect)
-      desligamentoSelect.dispatchEvent(new Event("change"));
-
-    preencherAnexosAtuais(data.anexos || []);
-  } catch (error) {
-    console.error("Erro em carregarDadosServico:", error);
-    alert("Erro ao carregar dados do serviço: " + error.message);
-  }
-}
-
-function preencherAnexosAtuais(anexos) {
-  const container = document.getElementById("anexosAtuais");
-  const semAnexosMsg = document.getElementById("semAnexos");
-  if (!container || !semAnexosMsg) return;
-  container.innerHTML = "";
-
-  if (anexos.length === 0) {
-    semAnexosMsg.style.display = "block";
-    return;
-  }
-
-  semAnexosMsg.style.display = "none";
-  anexos.forEach((anexo) => {
-    const anexoElement = document.createElement("div");
-    anexoElement.className = "attachment-item";
-    const nomeDoAnexo = anexo.nomeOriginal || "arquivo";
-    const caminhoDoAnexo =
-      anexo.caminho && anexo.caminho.startsWith("/")
-        ? anexo.caminho
-        : `/${anexo.caminho || "#"}`;
-
-    anexoElement.innerHTML = `
-            <button type="button" class="remove-attachment" data-anexoid="${
-              anexo.id
-            }" title="Remover este anexo">×</button>
-            <div class="text-center">
-                <i class="fas ${getFileIcon(nomeDoAnexo)} fa-2x mb-1"></i>
-                <div class="small text-truncate" title="${nomeDoAnexo}">${nomeDoAnexo}</div>
-                <a href="${caminhoDoAnexo}" target="_blank" class="btn btn-sm btn-link p-0 mt-1 ${
-      caminhoDoAnexo === "/#" || caminhoDoAnexo === "#" ? "disabled" : ""
-    }">Visualizar</a>
-            </div>
-        `;
-    container.appendChild(anexoElement);
-
-    const removeButton = anexoElement.querySelector(".remove-attachment");
-    if (removeButton) {
-      removeButton.addEventListener("click", async function (e) {
-        e.stopPropagation();
-        const anexoIdParaRemover = this.getAttribute("data-anexoid");
-        if (
-          confirm(
-            "Deseja realmente remover este anexo? Esta ação não pode ser desfeita."
-          )
-        ) {
-          const servicoId = document.getElementById("servicoId").value;
-          if (servicoId && anexoIdParaRemover) {
-            await removerAnexo(servicoId, anexoIdParaRemover);
-          } else {
-            alert(
-              "Não foi possível identificar o serviço ou o anexo para remoção."
-            );
-          }
-        }
-      });
-    }
-  });
-}
-
-function getFileIcon(filename) {
-  if (!filename) return "fa-file text-secondary";
-  const ext = filename.split(".").pop().toLowerCase();
-  const icons = {
-    pdf: "fa-file-pdf text-danger",
-    jpg: "fa-file-image text-primary",
-    jpeg: "fa-file-image text-primary",
-    png: "fa-file-image text-primary",
-    doc: "fa-file-word text-info",
-    docx: "fa-file-word text-info",
-    xls: "fa-file-excel text-success",
-    xlsx: "fa-file-excel text-success",
-  };
-  return icons[ext] || "fa-file text-secondary";
-}
-
-async function removerAnexo(servicoId, anexoId) {
+async function salvarAlteracoes(id, tipo) {
   const btnSalvar = document.getElementById("btnSalvar");
-  let originalSalvarBtnHTML = "";
-  if (btnSalvar) {
-    originalSalvarBtnHTML = btnSalvar.innerHTML;
-    btnSalvar.disabled = true;
-    btnSalvar.innerHTML =
-      '<i class="fas fa-spinner fa-spin me-1"></i> Removendo anexo...';
-  }
-  try {
-    const response = await fetch(
-      `/api/servicos/${servicoId}/anexos/${anexoId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.message || "Erro ao remover anexo do servidor.");
-    }
-    alert("Anexo removido com sucesso!");
-    await carregarDadosServico(servicoId);
-  } catch (error) {
-    console.error("Erro ao remover anexo:", error);
-    alert("Erro ao remover anexo: " + error.message);
-  } finally {
-    if (btnSalvar) {
-      btnSalvar.disabled = false;
-      btnSalvar.innerHTML =
-        originalSalvarBtnHTML ||
-        '<i class="fas fa-save me-1"></i> Salvar Alterações';
-    }
-  }
-}
-
-async function salvarAlteracoes(servicoId) {
-  const btnSalvar = document.getElementById("btnSalvar");
-  if (!btnSalvar) return;
-
-  const originalSalvarBtnHTML = btnSalvar.innerHTML;
+  const originalBtnHTML = btnSalvar.innerHTML;
   btnSalvar.disabled = true;
   btnSalvar.innerHTML =
     '<i class="fas fa-spinner fa-spin me-1"></i> Salvando...';
 
-  const mapsInput = document.getElementById("maps");
-  if (!validarMapsCampo(mapsInput)) {
-    btnSalvar.disabled = false;
-    btnSalvar.innerHTML = originalSalvarBtnHTML;
-    alert("Por favor, corrija o link do Google Maps antes de salvar.");
-    return;
-  }
+  const form = document.getElementById("editarServicoForm");
+  const formData = new FormData(form);
 
-  const formData = new FormData();
-  formData.append("processo", document.getElementById("processo").value);
-  formData.append("subestacao", document.getElementById("subestacao").value);
-  formData.append("alimentador", document.getElementById("alimentador").value);
-  formData.append(
-    "chave_montante",
-    document.getElementById("chaveMontante").value
-  );
-  formData.append(
-    "desligamento",
-    document.getElementById("desligamento").value
-  );
-  formData.append("maps", document.getElementById("maps").value.trim());
-  formData.append("ordem_obra", document.getElementById("ordem_obra").value);
-  formData.append(
-    "descricao_servico",
-    document.getElementById("descricao_servico").value
-  );
-  formData.append("observacoes", document.getElementById("observacoes").value);
-
-  const selectResponsavel = document.getElementById("servico-responsavel");
-  if (selectResponsavel && selectResponsavel.value) {
-    formData.append("responsavel_matricula", selectResponsavel.value);
-  } else {
-    formData.append("responsavel_matricula", "pendente");
-  }
-
-  if (document.getElementById("desligamento").value === "SIM") {
-    const horaInicioVal = document.getElementById("horaInicio").value;
-    const horaFimVal = document.getElementById("horaFim").value;
-    if (!horaInicioVal || !horaFimVal) {
-      alert(
-        "Para desligamento SIM, os horários de início e fim são obrigatórios."
-      );
-      btnSalvar.disabled = false;
-      btnSalvar.innerHTML = originalSalvarBtnHTML;
-      return;
-    }
-    formData.append(
-      "hora_inicio",
-      horaInicioVal.includes(":00") ? horaInicioVal : horaInicioVal + ":00"
-    );
-    formData.append(
-      "hora_fim",
-      horaFimVal.includes(":00") ? horaFimVal : horaFimVal + ":00"
-    );
-  }
-
-  const novosAnexosInput = document.getElementById("novosAnexos");
-  if (novosAnexosInput && novosAnexosInput.files.length > 0) {
-    for (let i = 0; i < novosAnexosInput.files.length; i++) {
-      if (novosAnexosInput.files[i].size > 10 * 1024 * 1024) {
-        alert(
-          `O arquivo ${novosAnexosInput.files[i].name} excede o limite de 10MB e não será enviado.`
-        );
-        continue;
-      }
-      formData.append("anexos", novosAnexosInput.files[i]);
-    }
-  }
+  const apiUrl =
+    tipo === "legado" ? `/api/servicos/${id}` : `/api/ordens-servico/${id}`;
 
   try {
-    const response = await fetch(`/api/servicos/${servicoId}`, {
+    const response = await fetch(apiUrl, {
       method: "PUT",
       body: formData,
     });
+
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(
-        result.message || "Erro ao salvar alterações do serviço."
-      );
+      throw new Error(result.message || "Erro ao salvar alterações.");
     }
+
     alert(result.message || "Alterações salvas com sucesso!");
-    window.location.href =
-      result.redirect || `/detalhes_servico?id=${servicoId}`;
+
+    const btnVoltar = document.getElementById("btn-voltar-detalhes");
+    if (btnVoltar && btnVoltar.href) {
+      window.location.href = btnVoltar.href;
+    } else {
+      window.location.href = "/gestao-servicos";
+    }
   } catch (error) {
-    console.error("Erro ao salvar alterações:", error);
-    alert("Erro ao salvar alterações: " + error.message);
+    alert("Erro: " + error.message);
   } finally {
     btnSalvar.disabled = false;
-    btnSalvar.innerHTML = originalSalvarBtnHTML;
+    btnSalvar.innerHTML = originalBtnHTML;
   }
 }
