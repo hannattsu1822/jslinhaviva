@@ -142,44 +142,48 @@ async function processAndPublish(socket) {
     }
 }
 
-async function handleSocketLogic(socket) {
-    if (socket.processing) return;
+async function handleSocketData(socket) {
+    if (socket.processing) {
+        return;
+    }
     socket.processing = true;
 
     try {
-        if (socket.state === 'AWAITING_IDENTITY' && socket.binaryBuffer.length > 0) {
-            const data = socket.binaryBuffer;
-            socket.binaryBuffer = Buffer.alloc(0);
+        // Loop para processar todos os dados atualmente no buffer
+        while (true) {
+            if (socket.state === 'AWAITING_IDENTITY') {
+                if (socket.binaryBuffer.length === 0) {
+                    break; // Não há dados binários para processar, sai do loop
+                }
+                
+                const deviceIdHex = extractDeviceIdFromBinary(socket.binaryBuffer);
+                socket.binaryBuffer = Buffer.alloc(0); // Consome o buffer binário
 
-            const deviceIdHex = extractDeviceIdFromBinary(data);
-            let conn;
-            try {
-                conn = await promisePool.getConnection();
-                const [rows] = await conn.query('SELECT id, nome_rele AS device_id FROM dispositivos_reles WHERE custom_id = ?', [deviceIdHex]);
-                conn.release();
+                const [rows] = await promisePool.query('SELECT id, nome_rele AS device_id FROM dispositivos_reles WHERE custom_id = ?', [deviceIdHex]);
 
                 if (rows.length > 0) {
                     socket.rele_id_db = rows[0].id;
                     socket.deviceId = rows[0].device_id;
                     console.log(`[TCP Service] Dispositivo identificado como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
-                    
                     socket.state = 'LOGGING_IN_ACC';
                     socket.write("ACC\r\n");
                 } else {
                     console.log(`[TCP Service] Dispositivo com ID HEX '${deviceIdHex}' não encontrado no banco de dados.`);
                     socket.end();
+                    return; // Encerra o processamento para este socket
                 }
-            } catch (error) {
-                console.error("[Database] Erro ao consultar o banco de dados:", error);
-                if (conn) conn.release();
-                socket.end();
+                // Continua o loop para verificar se já há dados de texto no buffer
+                continue;
             }
-        }
 
-        while (socket.textBuffer.includes('=>')) {
-            const completeMessage = socket.textBuffer.substring(0, socket.textBuffer.indexOf('=>') + 2);
-            socket.textBuffer = socket.textBuffer.substring(socket.textBuffer.indexOf('=>') + 2);
-            
+            const promptIndex = socket.textBuffer.indexOf('=>');
+            if (promptIndex === -1) {
+                break; // Não há uma mensagem completa ('=>'), sai do loop
+            }
+
+            const completeMessage = socket.textBuffer.substring(0, promptIndex + 2);
+            socket.textBuffer = socket.textBuffer.substring(promptIndex + 2);
+
             switch (socket.state) {
                 case 'LOGGING_IN_ACC':
                     console.log(`[TCP Service] [${socket.deviceId}] Resposta do ACC recebida. Enviando OTTER.`);
@@ -207,6 +211,9 @@ async function handleSocketLogic(socket) {
                     break;
             }
         }
+    } catch (err) {
+        console.error(`[Handler] Erro fatal no processamento do socket ${socket.deviceId || socket.remoteAddress}:`, err);
+        socket.end();
     } finally {
         socket.processing = false;
     }
@@ -251,7 +258,7 @@ const server = net.createServer((socket) => {
         } else {
             socket.textBuffer += data.toString('latin1');
         }
-        handleSocketLogic(socket);
+        handleSocketData(socket);
     });
 
     socket.on("close", () => {
