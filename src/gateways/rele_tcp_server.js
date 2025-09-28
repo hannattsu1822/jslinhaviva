@@ -170,15 +170,9 @@ async function handleSocketData(socket) {
     socket.processing = true;
 
     try {
-        if (socket.textBuffer.length > 0) {
-            console.log(`[RAW DATA DEBUG] [${socket.deviceId || 'UNKNOWN'}] Buffer de texto recebido:`, socket.textBuffer.replace(/\r/g, '\\r').replace(/\n/g, '\\n'));
-        }
-
         while (true) {
             if (socket.state === 'AWAITING_IDENTITY') {
-                if (socket.binaryBuffer.length === 0) {
-                    break;
-                }
+                if (socket.binaryBuffer.length === 0) break;
                 
                 const deviceIdHex = extractDeviceIdFromBinary(socket.binaryBuffer);
                 socket.binaryBuffer = Buffer.alloc(0);
@@ -189,17 +183,8 @@ async function handleSocketData(socket) {
                     socket.rele_id_db = deviceInfo.rele_id_db;
                     socket.deviceId = deviceInfo.deviceId;
                     console.log(`[TCP Service] Dispositivo identificado (via cache) como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
-                    socket.state = 'LOGGING_IN_ACC';
-
-                    console.log(`[DEBUG WRITE] Tentando enviar comando "ACC\\r\\n" para ${socket.deviceId}`);
-                    socket.write("ACC\r\n", (err) => {
-                        if (err) {
-                            console.error(`[ERROR WRITE] Falha ao enviar comando ACC para ${socket.deviceId}:`, err.message);
-                        } else {
-                            console.log(`[SUCCESS WRITE] Comando ACC enviado com sucesso para a camada de transporte para ${socket.deviceId}.`);
-                        }
-                    });
-
+                    socket.state = 'AWAITING_PASSWORD_PROMPT';
+                    socket.write("ACC\r\n");
                 } else {
                     console.log(`[TCP Service] Dispositivo com ID HEX '${deviceIdHex}' não encontrado no cache.`);
                     socket.end();
@@ -208,20 +193,28 @@ async function handleSocketData(socket) {
                 continue;
             }
 
-            const promptIndex = socket.textBuffer.indexOf('=>');
-            if (promptIndex === -1) {
-                break;
+            if (socket.state === 'AWAITING_PASSWORD_PROMPT') {
+                if (socket.textBuffer.includes('Password:')) {
+                    console.log(`[TCP Service] [${socket.deviceId}] Prompt de senha recebido. Enviando senha OTTER.`);
+                    const passIndex = socket.textBuffer.indexOf('Password:');
+                    socket.textBuffer = socket.textBuffer.substring(passIndex + 'Password:'.length);
+                    socket.state = 'LOGGING_IN_OTTER';
+                    socket.write("OTTER\r\n");
+                } else if (socket.textBuffer.trim().length > 0) {
+                    console.log(`[DEBUG] [${socket.deviceId}] Aguardando prompt de senha, mas recebi: ${socket.textBuffer}`);
+                }
+                 if (!socket.textBuffer.includes('=>')) {
+                    break;
+                }
             }
+
+            const promptIndex = socket.textBuffer.indexOf('=>');
+            if (promptIndex === -1) break;
 
             const completeMessage = socket.textBuffer.substring(0, promptIndex + 2);
             socket.textBuffer = socket.textBuffer.substring(promptIndex + 2);
 
             switch (socket.state) {
-                case 'LOGGING_IN_ACC':
-                    console.log(`[TCP Service] [${socket.deviceId}] Resposta do ACC recebida. Enviando OTTER.`);
-                    socket.state = 'LOGGING_IN_OTTER';
-                    socket.write("OTTER\r\n");
-                    break;
                 case 'LOGGING_IN_OTTER':
                     console.log(`[TCP Service] [${socket.deviceId}] Login concluído com sucesso.`);
                     socket.state = 'IDLE';
