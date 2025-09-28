@@ -77,104 +77,80 @@ function parseData(metResponse, tempResponse) {
     return data;
 }
 
-const server = net.createServer((socket) => {
-    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-    console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
+async function processAndPublish(socket) {
+    const parsedData = parseData(socket.metData, socket.tempData);
+    console.log(`[DADOS FINAIS] [${socket.deviceId}] Dados processados: `, JSON.stringify(parsedData, null, 2));
 
-    socket.state = 'AWAITING_IDENTITY';
-    socket.buffer = '';
+    if (Object.keys(parsedData).length > 0) {
+        const topic = `sel/reles/${socket.deviceId}/status`;
+        const payload = JSON.stringify({
+            rele_id: socket.rele_id_db,
+            device_id: socket.deviceId,
+            timestamp: new Date().toISOString(),
+            dados: parsedData,
+        });
 
-    const startPollingCycle = () => {
-        if (socket.state === 'IDLE') {
-            console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
-            socket.state = 'AWAITING_MET';
-            socket.write("MET\r\n");
-            if (socket.keepaliveTimer) {
-                clearInterval(socket.keepaliveTimer);
-                socket.keepaliveTimer = null;
+        mqttClient.publish(topic, payload, (err) => {
+            if (err) {
+                console.error(`[MQTT] [${socket.deviceId}] Erro ao publicar dados:`, err);
+            } else {
+                console.log(`[MQTT] [${socket.deviceId}] Dados publicados no tópico: ${topic}`);
             }
+        });
+
+        try {
+            const conn = await promisePool.getConnection();
+            const sqlQuery = `
+                INSERT INTO leituras_reles (
+                    rele_id, timestamp_leitura, 
+                    tensao_vab, tensao_vbc, tensao_vca,
+                    tensao_va, tensao_vb, tensao_vc,
+                    corrente_a, corrente_b, corrente_c,
+                    frequencia, temperatura_dispositivo, temperatura_ambiente, temperatura_enrolamento, payload_completo
+                ) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            `;
+            const values = [
+                socket.rele_id_db,
+                parsedData.tensao_rs || null,
+                parsedData.tensao_st || null,
+                parsedData.tensao_tr || null,
+                parsedData.tensao_rn || null,
+                parsedData.tensao_sn || null,
+                parsedData.tensao_tn || null,
+                parsedData.corrente_r || null,
+                parsedData.corrente_s || null,
+                parsedData.corrente_t || null,
+                parsedData.frequencia || null,
+                parsedData.temperatura_dispositivo || null,
+                parsedData.temperatura_ambiente || null,
+                parsedData.temperatura_enrolamento || null,
+                payload
+            ];
+            
+            await conn.query(sqlQuery, values);
+            
+            await conn.query(
+                'UPDATE dispositivos_reles SET ultima_leitura = NOW() WHERE id = ?',
+                [socket.rele_id_db]
+            );
+            conn.release();
+        } catch (dbError) {
+            console.error(`[Database] [${socket.deviceId}] Erro ao salvar leitura no banco de dados:`, dbError);
         }
-    };
+    } else {
+        console.log(`[Parser] [${socket.deviceId}] Nenhum dado válido para processar.`);
+    }
+}
 
-    const processAndPublish = async () => {
-        const parsedData = parseData(socket.metData, socket.tempData);
-        console.log(`[DADOS FINAIS] [${socket.deviceId}] Dados processados: `, JSON.stringify(parsedData, null, 2));
+async function handleSocketLogic(socket) {
+    if (socket.processing) return;
+    socket.processing = true;
 
-        if (Object.keys(parsedData).length > 0) {
-            const topic = `sel/reles/${socket.deviceId}/status`;
-            const payload = JSON.stringify({
-                rele_id: socket.rele_id_db,
-                device_id: socket.deviceId,
-                timestamp: new Date().toISOString(),
-                dados: parsedData,
-            });
+    try {
+        if (socket.state === 'AWAITING_IDENTITY' && socket.binaryBuffer.length > 0) {
+            const data = socket.binaryBuffer;
+            socket.binaryBuffer = Buffer.alloc(0);
 
-            mqttClient.publish(topic, payload, (err) => {
-                if (err) {
-                    console.error(`[MQTT] [${socket.deviceId}] Erro ao publicar dados:`, err);
-                } else {
-                    console.log(`[MQTT] [${socket.deviceId}] Dados publicados no tópico: ${topic}`);
-                }
-            });
-
-            try {
-                const conn = await promisePool.getConnection();
-                const sqlQuery = `
-                    INSERT INTO leituras_reles (
-                        rele_id, timestamp_leitura, 
-                        tensao_vab, tensao_vbc, tensao_vca,
-                        tensao_va, tensao_vb, tensao_vc,
-                        corrente_a, corrente_b, corrente_c,
-                        frequencia, temperatura_dispositivo, temperatura_ambiente, temperatura_enrolamento, payload_completo
-                    ) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                `;
-                const values = [
-                    socket.rele_id_db,
-                    parsedData.tensao_rs || null,
-                    parsedData.tensao_st || null,
-                    parsedData.tensao_tr || null,
-                    parsedData.tensao_rn || null,
-                    parsedData.tensao_sn || null,
-                    parsedData.tensao_tn || null,
-                    parsedData.corrente_r || null,
-                    parsedData.corrente_s || null,
-                    parsedData.corrente_t || null,
-                    parsedData.frequencia || null,
-                    parsedData.temperatura_dispositivo || null,
-                    parsedData.temperatura_ambiente || null,
-                    parsedData.temperatura_enrolamento || null,
-                    payload
-                ];
-                
-                await conn.query(sqlQuery, values);
-                
-                await conn.query(
-                    'UPDATE dispositivos_reles SET ultima_leitura = NOW() WHERE id = ?',
-                    [socket.rele_id_db]
-                );
-                conn.release();
-            } catch (dbError) {
-                console.error(`[Database] [${socket.deviceId}] Erro ao salvar leitura no banco de dados:`, dbError);
-            }
-        } else {
-            console.log(`[Parser] [${socket.deviceId}] Nenhum dado válido para processar.`);
-        }
-    };
-    
-    const startKeepalive = () => {
-        if (socket.keepaliveTimer) {
-            clearInterval(socket.keepaliveTimer);
-        }
-        socket.keepaliveTimer = setInterval(() => {
-            if (socket.state === 'IDLE') {
-                console.log(`[Keepalive] [${socket.deviceId}] Enviando pacote de keepalive.`);
-                socket.write(Buffer.from([0x00, 0x00, 0x00, 0x02, 0x01]));
-            }
-        }, keepaliveInterval);
-    };
-
-    socket.on('data', async (data) => {
-        if (socket.state === 'AWAITING_IDENTITY') {
             const deviceIdHex = extractDeviceIdFromBinary(data);
             let conn;
             try {
@@ -198,45 +174,88 @@ const server = net.createServer((socket) => {
                 if (conn) conn.release();
                 socket.end();
             }
-        } else {
-            socket.buffer += data.toString('latin1');
+        }
+
+        while (socket.textBuffer.includes('=>')) {
+            const completeMessage = socket.textBuffer.substring(0, socket.textBuffer.indexOf('=>') + 2);
+            socket.textBuffer = socket.textBuffer.substring(socket.textBuffer.indexOf('=>') + 2);
             
-            while (socket.buffer.includes('=>')) {
-                const completeMessage = socket.buffer.substring(0, socket.buffer.indexOf('=>') + 2);
-                socket.buffer = socket.buffer.substring(socket.buffer.indexOf('=>') + 2);
-                
-                switch (socket.state) {
-                    case 'LOGGING_IN_ACC':
-                        console.log(`[TCP Service] [${socket.deviceId}] Resposta do ACC recebida. Enviando OTTER.`);
-                        socket.state = 'LOGGING_IN_OTTER';
-                        socket.write("OTTER\r\n");
-                        break;
-                    case 'LOGGING_IN_OTTER':
-                        console.log(`[TCP Service] [${socket.deviceId}] Login concluído com sucesso.`);
-                        socket.state = 'IDLE';
-                        startPollingCycle();
-                        socket.pollTimer = setInterval(startPollingCycle, pollInterval);
-                        startKeepalive();
-                        break;
-                    case 'AWAITING_MET':
-                        socket.metData = completeMessage;
-                        console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
-                        socket.state = 'AWAITING_THE';
-                        socket.write("THE\r\n");
-                        break;
-                    case 'AWAITING_THE':
-                        socket.tempData = completeMessage;
-                        console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
-                        await processAndPublish();
-                        socket.state = 'IDLE';
-                        break;
-                }
+            switch (socket.state) {
+                case 'LOGGING_IN_ACC':
+                    console.log(`[TCP Service] [${socket.deviceId}] Resposta do ACC recebida. Enviando OTTER.`);
+                    socket.state = 'LOGGING_IN_OTTER';
+                    socket.write("OTTER\r\n");
+                    break;
+                case 'LOGGING_IN_OTTER':
+                    console.log(`[TCP Service] [${socket.deviceId}] Login concluído com sucesso.`);
+                    socket.state = 'IDLE';
+                    socket.startPollingCycle();
+                    socket.pollTimer = setInterval(socket.startPollingCycle, pollInterval);
+                    socket.startKeepalive();
+                    break;
+                case 'AWAITING_MET':
+                    socket.metData = completeMessage;
+                    console.log(`[Polling] [${socket.deviceId}] Resposta MET recebida. Enviando THE.`);
+                    socket.state = 'AWAITING_THE';
+                    socket.write("THE\r\n");
+                    break;
+                case 'AWAITING_THE':
+                    socket.tempData = completeMessage;
+                    console.log(`[Polling] [${socket.deviceId}] Resposta THE recebida. Processando dados.`);
+                    await processAndPublish(socket);
+                    socket.state = 'IDLE';
+                    break;
             }
         }
+    } finally {
+        socket.processing = false;
+    }
+}
+
+const server = net.createServer((socket) => {
+    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
+    console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
+
+    socket.state = 'AWAITING_IDENTITY';
+    socket.binaryBuffer = Buffer.alloc(0);
+    socket.textBuffer = '';
+    socket.processing = false;
+
+    socket.startPollingCycle = () => {
+        if (socket.state === 'IDLE') {
+            console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
+            socket.state = 'AWAITING_MET';
+            socket.write("MET\r\n");
+            if (socket.keepaliveTimer) {
+                clearInterval(socket.keepaliveTimer);
+                socket.keepaliveTimer = null;
+            }
+        }
+    };
+    
+    socket.startKeepalive = () => {
+        if (socket.keepaliveTimer) {
+            clearInterval(socket.keepaliveTimer);
+        }
+        socket.keepaliveTimer = setInterval(() => {
+            if (socket.state === 'IDLE') {
+                console.log(`[Keepalive] [${socket.deviceId}] Enviando pacote de keepalive.`);
+                socket.write(Buffer.from([0x00, 0x00, 0x00, 0x02, 0x01]));
+            }
+        }, keepaliveInterval);
+    };
+
+    socket.on('data', (data) => {
+        if (socket.state === 'AWAITING_IDENTITY') {
+            socket.binaryBuffer = Buffer.concat([socket.binaryBuffer, data]);
+        } else {
+            socket.textBuffer += data.toString('latin1');
+        }
+        handleSocketLogic(socket);
     });
 
     socket.on("close", () => {
-        if (socket.pollTimer) clearTimeout(socket.pollTimer);
+        if (socket.pollTimer) clearInterval(socket.pollTimer);
         if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
         console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
     });
