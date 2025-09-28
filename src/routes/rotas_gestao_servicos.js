@@ -2,44 +2,210 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs").promises;
-const { PDFDocument } = require("pdf-lib");
-const playwright = require("playwright");
-const { promisePool, upload } = require("../init");
+const { promisePool, upload, projectRootDir } = require("../init");
 const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
+const puppeteer = require("puppeteer");
+const { PDFDocument } = require("pdf-lib");
 
 const router = express.Router();
 
-function limparArquivosTemporarios(files) {
-  if (files) {
-    (Array.isArray(files) ? files : [files]).forEach((file) => {
-      if (file && file.path && fs.existsSync(file.path)) {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (e) {
-          console.error("Erro ao limpar arquivo temp:", file.path, e);
-        }
-      }
-    });
-  }
-}
+function gerarHtmlDoRelatorio(data) {
+  const gerarSecaoAnexos = (titulo, anexos) => {
+    const imagens = anexos.filter((a) => a.dataUrl);
+    if (imagens.length === 0) return "";
 
-function formatarTamanhoArquivo(bytes) {
-  if (bytes === 0 || !bytes) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return `
+            <div class="section">
+                <h2 class="section-title">${titulo}</h2>
+                <div class="anexos-container">
+                    ${imagens
+                      .map(
+                        (anexo) => `
+                        <div class="anexo-item">
+                            <img src="${anexo.dataUrl}" alt="${anexo.nome_original}">
+                            <p>${anexo.nome_original}</p>
+                        </div>`
+                      )
+                      .join("")}
+                </div>
+            </div>
+        `;
+  };
+
+  const anexosRegistro = data.anexos.filter(
+    (a) =>
+      a.tipo_anexo === "imagem" ||
+      a.tipo_anexo === "documento" ||
+      a.tipo_anexo === null
+  );
+  const anexosConclusao = data.anexos.filter(
+    (a) =>
+      a.tipo_anexo === "imagem_conclusao" ||
+      a.tipo_anexo === "documento_conclusao"
+  );
+
+  const itensHtml =
+    data.itens && Array.isArray(data.itens) && data.itens.length > 0
+      ? `
+        <div class="section">
+            <h2 class="section-title">Itens da Ordem de Serviço (Tarefas)</h2>
+            <table class="item-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descrição da Tarefa</th>
+                        <th>Status Final</th>
+                        <th>Observações da Finalização</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.itens
+                      .map(
+                        (item) => `
+                        <tr>
+                            <td>${item.codigo || "N/A"}</td>
+                            <td>${item.descricao || "N/A"}</td>
+                            <td class="${
+                              item.status === "concluido"
+                                ? "status-concluido"
+                                : "status-nao-concluido"
+                            }">
+                                ${(item.status || "")
+                                  .replace(/_/g, " ")
+                                  .toUpperCase()}
+                            </td>
+                            <td>${item.observacoes || "Nenhuma"}</td>
+                        </tr>
+                    `
+                      )
+                      .join("")}
+                </tbody>
+            </table>
+        </div>
+        `
+      : "";
+
+  const finalizacaoHtml =
+    data.status === "concluido" || data.status === "nao_concluido"
+      ? `
+        <div class="section">
+            <h2 class="section-title">Dados de Finalização</h2>
+            <div class="grid-container">
+                <div class="grid-item"><strong>Data de Finalização:</strong> ${
+                  data.data_conclusao || "N/A"
+                }</div>
+                <div class="grid-item"><strong>Status Final:</strong> ${(
+                  data.status || ""
+                )
+                  .replace("_", " ")
+                  .toUpperCase()}</div>
+                <div class="grid-item full-width description">
+                    <strong>Observações / Motivo da Finalização:</strong>
+                    <p>${data.motivo || "Nenhuma observação registrada."}</p>
+                </div>
+            </div>
+        </div>
+        `
+      : "";
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Serviço - ${data.id}</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 20px; font-size: 10pt; color: #333; }
+            .header { text-align: center; border-bottom: 2px solid #004a99; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; color: #004a99; font-size: 18pt; }
+            .header p { margin: 5px 0 0; font-size: 10pt; color: #555; }
+            .section { margin-bottom: 20px; page-break-inside: avoid; }
+            .section-title { font-size: 12pt; font-weight: bold; color: #004a99; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 10px; }
+            .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+            .grid-item { background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 8px; border-radius: 4px; overflow-wrap: break-word; }
+            .grid-item strong { display: block; color: #495057; margin-bottom: 4px; font-size: 8pt; text-transform: uppercase; }
+            .full-width { grid-column: 1 / -1; }
+            .description p { margin: 0; }
+            .item-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .item-table th, .item-table td { border: 1px solid #dee2e6; padding: 6px; text-align: left; font-size: 9pt; }
+            .item-table th { background-color: #e9ecef; font-weight: bold; }
+            .status-concluido { color: #155724; }
+            .status-nao-concluido { color: #721c24; font-weight: bold; }
+            .anexos-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+            .anexo-item { border: 1px solid #ccc; padding: 10px; text-align: center; page-break-inside: avoid; }
+            .anexo-item img { max-width: 100%; height: auto; max-height: 150px; margin-bottom: 5px; }
+            .anexo-item p { font-size: 8pt; margin: 0; word-break: break-all; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Relatório Consolidado de Serviço</h1>
+            <p>Documento gerado em: ${new Date().toLocaleString("pt-BR")}</p>
+        </div>
+        <div class="section">
+            <h2 class="section-title">Informações Gerais do Serviço</h2>
+            <div class="grid-container">
+                <div class="grid-item"><strong>ID do Serviço:</strong> ${
+                  data.id || "N/A"
+                }</div>
+                <div class="grid-item"><strong>Processo:</strong> ${
+                  data.processo || "N/A"
+                }</div>
+                <div class="grid-item"><strong>Status:</strong> ${(
+                  data.status || ""
+                )
+                  .replace("_", " ")
+                  .toUpperCase()}</div>
+                <div class="grid-item"><strong>Data Prevista:</strong> ${
+                  data.data_prevista_execucao || "N/A"
+                }</div>
+                <div class="grid-item"><strong>Subestação:</strong> ${
+                  data.subestacao || "N/A"
+                }</div>
+                <div class="grid-item"><strong>Alimentador:</strong> ${
+                  data.alimentador || "N/A"
+                }</div>
+                <div class="grid-item"><strong>Encarregado(s):</strong> ${
+                  data.responsavel_nome || data.responsavel_matricula || "N/A"
+                }</div>
+                <div class="grid-item"><strong>Desligamento:</strong> ${
+                  data.desligamento || "N/A"
+                }</div>
+            </div>
+        </div>
+        <div class="section">
+            <h2 class="section-title">Descrição do Registro</h2>
+            <div class="grid-container">
+                <div class="grid-item full-width description">
+                    <strong>Descrição / Motivo do Serviço:</strong>
+                    <p>${
+                      data.descricao_servico ||
+                      data.descricao_geral ||
+                      "Nenhuma descrição fornecida."
+                    }</p>
+                </div>
+                <div class="grid-item full-width description">
+                    <strong>Observações do Registro:</strong>
+                    <p>${
+                      data.observacoes ||
+                      data.observacoes_gerais ||
+                      "Nenhuma observação fornecida."
+                    }</p>
+                </div>
+            </div>
+        </div>
+        ${itensHtml}
+        ${finalizacaoHtml}
+        ${gerarSecaoAnexos("Anexos do Registro", anexosRegistro)}
+        ${gerarSecaoAnexos("Anexos da Conclusão", anexosConclusao)}
+    </body>
+    </html>
+    `;
 }
 
 router.get("/gestao-servicos", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/gestao_servico.html")
-  );
-});
-
-router.get("/registro_servicos", autenticar, verificarNivel(4), (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "../../public/pages/servicos/registro_servicos.html")
   );
 });
 
@@ -69,328 +235,116 @@ router.get("/detalhes_servico", autenticar, verificarNivel(2), (req, res) => {
   );
 });
 
-router.get(
-  "/servicos_atribuidos",
-  autenticar,
-  verificarNivel(3),
-  (req, res) => {
-    res.sendFile(
-      path.join(
-        __dirname,
-        "../../public/pages/servicos/servicos_atribuidos.html"
-      )
-    );
-  }
-);
-
 router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
     path.join(__dirname, "../../public/pages/servicos/editar_servico.html")
   );
 });
 
-async function determinarNomePastaParaServicoExistente(connection, servicoId) {
-  if (isNaN(parseInt(servicoId))) {
-    throw new Error(
-      `ID do Serviço inválido fornecido para determinar pasta: ${servicoId}`
-    );
-  }
-  const [servicoInfo] = await connection.query(
-    "SELECT id, processo, data_prevista_execucao FROM processos WHERE id = ?",
-    [servicoId]
-  );
-  if (servicoInfo.length === 0) {
-    throw new Error(
-      `Serviço com ID ${servicoId} não encontrado para determinar pasta de anexos.`
-    );
-  }
-  const { id, processo, data_prevista_execucao } = servicoInfo[0];
-
-  const [primeiroAnexoExistente] = await connection.query(
-    "SELECT caminho_servidor FROM processos_anexos WHERE processo_id = ? ORDER BY id ASC LIMIT 1",
-    [servicoId]
-  );
-
-  if (
-    primeiroAnexoExistente.length > 0 &&
-    primeiroAnexoExistente[0].caminho_servidor
-  ) {
-    const caminho = primeiroAnexoExistente[0].caminho_servidor;
-    const partes = caminho.split("/");
-    if (partes.length >= 3) {
-      return partes[partes.length - 2];
-    }
-  }
-
-  const nomeOriginalDoProcesso = processo;
-  if (
-    nomeOriginalDoProcesso &&
-    (nomeOriginalDoProcesso.includes("/") ||
-      (nomeOriginalDoProcesso.startsWith("EMERGENCIAL-") &&
-        String(id) !==
-          nomeOriginalDoProcesso
-            .replace(/\//g, "-")
-            .replace(`EMERGENCIAL-`, "")))
-  ) {
-    return nomeOriginalDoProcesso.replace(/\//g, "-");
-  } else {
-    if (!data_prevista_execucao) {
-      throw new Error(
-        `Data prevista de execução não encontrada para o serviço ID ${id}, necessário para nomear a pasta.`
-      );
-    }
-    const anoExecucao = new Date(data_prevista_execucao).getFullYear();
-    if (isNaN(anoExecucao)) {
-      throw new Error(
-        `Ano de execução inválido derivado de data_prevista_execucao: ${data_prevista_execucao}`
-      );
-    }
-    return `${id}_${anoExecucao}`;
-  }
-}
-
-router.post(
-  "/api/servicos",
-  autenticar,
-  verificarNivel(4),
-  upload.array("anexos", 5),
-  async (req, res) => {
-    const connection = await promisePool.getConnection();
-    try {
-      await connection.beginTransaction();
-      const {
-        processo,
-        tipo_processo = "Normal",
-        data_prevista_execucao,
-        desligamento,
-        hora_inicio = null,
-        hora_fim = null,
-        subestacao,
-        alimentador,
-        chave_montante,
-        responsavel_matricula = "pendente",
-        maps,
-        ordem_obra,
-        descricao_servico,
-        observacoes,
-      } = req.body;
-
-      if (!data_prevista_execucao || !subestacao || !desligamento) {
-        limparArquivosTemporarios(req.files);
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message:
-            "Campos obrigatórios faltando: data_prevista_execucao, subestacao ou desligamento",
-        });
-      }
-      if (desligamento === "SIM" && (!hora_inicio || !hora_fim)) {
-        limparArquivosTemporarios(req.files);
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message:
-            "Para desligamentos, hora_inicio e hora_fim são obrigatórios",
-        });
-      }
-
-      let processoParaAuditoria = processo ? processo.trim() : null;
-      let insertedId;
-
-      if (tipo_processo === "Emergencial") {
-        const [result] = await connection.query(
-          `INSERT INTO processos (tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, descricao_servico, observacoes, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
-          [
-            tipo_processo,
-            data_prevista_execucao,
-            desligamento,
-            desligamento === "SIM" ? hora_inicio : null,
-            desligamento === "SIM" ? hora_fim : null,
-            subestacao,
-            alimentador || null,
-            chave_montante || null,
-            responsavel_matricula,
-            maps || null,
-            ordem_obra || null,
-            descricao_servico || null,
-            observacoes || null,
-          ]
-        );
-        insertedId = result.insertId;
-        processoParaAuditoria = `EMERGENCIAL-${insertedId}`;
-        await connection.query(
-          "UPDATE processos SET processo = ? WHERE id = ?",
-          [processoParaAuditoria, insertedId]
-        );
-      } else {
-        if (
-          !processo ||
-          typeof processo !== "string" ||
-          processo.trim() === ""
-        ) {
-          limparArquivosTemporarios(req.files);
-          await connection.rollback();
-          connection.release();
-          return res.status(400).json({
-            success: false,
-            message:
-              "Para serviços normais, o número do processo é obrigatório",
-          });
-        }
-        processoParaAuditoria = processo.trim();
-        const [result] = await connection.query(
-          `INSERT INTO processos (processo, tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, responsavel_matricula, maps, ordem_obra, descricao_servico, observacoes, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
-          [
-            processoParaAuditoria,
-            tipo_processo,
-            data_prevista_execucao,
-            desligamento,
-            desligamento === "SIM" ? hora_inicio : null,
-            desligamento === "SIM" ? hora_fim : null,
-            subestacao,
-            alimentador || null,
-            chave_montante || null,
-            responsavel_matricula,
-            maps || null,
-            ordem_obra || null,
-            descricao_servico || null,
-            observacoes || null,
-          ]
-        );
-        insertedId = result.insertId;
-      }
-
-      const anoExecucao = new Date(data_prevista_execucao).getFullYear();
-      const nomeDaPastaParaAnexos = `${insertedId}_${anoExecucao}`;
-
-      const anexosInfo = [];
-      if (req.files && req.files.length > 0) {
-        const diretorioDoProcesso = path.join(
-          __dirname,
-          "../../upload_arquivos",
-          nomeDaPastaParaAnexos
-        );
-        if (!fs.existsSync(diretorioDoProcesso)) {
-          fs.mkdirSync(diretorioDoProcesso, { recursive: true });
-        }
-
-        for (const file of req.files) {
-          const extensao = path.extname(file.originalname).toLowerCase();
-          const novoNomeArquivo = `anexo_${Date.now()}${extensao}`;
-          const caminhoCompletoNovoArquivo = path.join(
-            diretorioDoProcesso,
-            novoNomeArquivo
-          );
-          await fsPromises.rename(file.path, caminhoCompletoNovoArquivo);
-          const tipoAnexo = [".jpg", ".jpeg", ".png"].includes(extensao)
-            ? "imagem"
-            : "documento";
-          const caminhoServidorParaSalvar = `/api/upload_arquivos/${nomeDaPastaParaAnexos}/${novoNomeArquivo}`;
-
-          await connection.query(
-            `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo) VALUES (?, ?, ?, ?, ?)`,
-            [
-              insertedId,
-              file.originalname,
-              caminhoServidorParaSalvar,
-              file.size,
-              tipoAnexo,
-            ]
-          );
-          anexosInfo.push({
-            nomeOriginal: file.originalname,
-            caminho: caminhoServidorParaSalvar,
-          });
-        }
-      }
-      await connection.commit();
-      if (req.user?.matricula) {
-        await registrarAuditoria(
-          req.user.matricula,
-          "Registro de Serviço",
-          `Serviço ${tipo_processo} registrado: ${
-            processoParaAuditoria || `ID ${insertedId}`
-          }`
-        );
-      }
-      res.status(201).json({
-        success: true,
-        processo: processoParaAuditoria || String(insertedId),
-        id: insertedId,
-        tipo: tipo_processo,
-        anexos: anexosInfo,
-      });
-    } catch (error) {
-      await connection.rollback();
-      console.error("Erro ao registrar serviço:", error);
-      limparArquivosTemporarios(req.files);
-      res.status(500).json({
-        success: false,
-        message: "Erro interno ao registrar serviço",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
 router.get("/api/servicos", autenticar, verificarNivel(2), async (req, res) => {
+  const { status } = req.query;
+  const { nivel, matricula } = req.user;
+
+  if (!status) {
+    return res
+      .status(400)
+      .json({ success: false, message: "O parâmetro 'status' é obrigatório." });
+  }
+
+  const connection = await promisePool.getConnection();
   try {
-    const { status } = req.query;
-    const userLevel = req.user.nivel;
+    const statusMap = {
+      ativo: ["ativo"],
+      concluido: ["concluido", "nao_concluido"],
+    };
 
-    let query = `
-            SELECT 
-                p.id, p.processo, p.data_prevista_execucao, p.desligamento, 
-                p.subestacao, p.alimentador, p.chave_montante, 
-                p.responsavel_matricula, p.maps, p.status, p.data_conclusao, 
-                p.observacoes_conclusao, p.motivo_nao_conclusao, u.nome as responsavel_nome,
-                p.ordem_obra,
-                CASE 
-                    WHEN p.tipo = 'Emergencial' THEN 'Emergencial'
-                    ELSE 'Normal'
-                END as tipo_processo,
-                (SELECT pa.caminho_servidor FROM processos_anexos pa WHERE pa.processo_id = p.id AND pa.tipo_anexo = 'APR_DOCUMENTO' ORDER BY pa.id DESC LIMIT 1) as caminho_apr_anexo,
-                (SELECT pa.nome_original FROM processos_anexos pa WHERE pa.processo_id = p.id AND pa.tipo_anexo = 'APR_DOCUMENTO' ORDER BY pa.id DESC LIMIT 1) as nome_original_apr_anexo
-            FROM processos p
-            LEFT JOIN users u ON p.responsavel_matricula = u.matricula
-        `;
-    const params = [];
-    let whereClauses = [];
+    if (!statusMap[status]) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Status inválido." });
+    }
 
-    if (status) {
-      if (status === "concluido") {
-        whereClauses.push("p.status IN ('concluido', 'nao_concluido')");
-      } else {
-        whereClauses.push("p.status = ?");
-        params.push(status);
+    const dbStatus = statusMap[status];
+
+    let whereClauseLegado = "";
+    const paramsLegado = [dbStatus];
+    if (nivel < 5) {
+      whereClauseLegado = "AND p.responsavel_matricula = ?";
+      paramsLegado.push(matricula);
+    }
+
+    let whereClauseModerno = "";
+    const paramsModerno = [dbStatus];
+    if (nivel < 5) {
+      whereClauseModerno = `AND EXISTS (SELECT 1 FROM ordem_servico_itens osi WHERE osi.ordem_servico_id = os.id AND osi.responsavel_matricula = ?)`;
+      paramsModerno.push(matricula);
+    }
+
+    await connection.query("SET SESSION group_concat_max_len = 10000;");
+
+    const queryLegado = `
+      SELECT
+          p.id, p.processo, p.subestacao, p.alimentador, p.data_prevista_execucao,
+          p.desligamento, p.ordem_obra, p.status, p.data_conclusao,
+          p.responsavel_matricula, u.nome as responsavel_nome,
+          'legado' as sistema_versao,
+          NULL as progresso_concluidos,
+          NULL as progresso_total,
+          p.observacoes_conclusao as motivo
+      FROM processos p
+      LEFT JOIN users u ON p.responsavel_matricula = u.matricula
+      WHERE p.status IN (?) ${whereClauseLegado};
+    `;
+    const [servicosLegado] = await connection.query(queryLegado, paramsLegado);
+
+    const queryModerno = `
+      SELECT
+          os.id, os.processo, os.subestacao, os.alimentador, os.data_prevista_execucao,
+          os.desligamento, os.ordem_obra, os.status, os.data_conclusao,
+          (
+            SELECT GROUP_CONCAT(DISTINCT CASE WHEN osi.responsavel_matricula = 'pendente' THEN 'Pendente' ELSE u_item.nome END SEPARATOR ', ')
+            FROM ordem_servico_itens osi
+            LEFT JOIN users u_item ON osi.responsavel_matricula = u_item.matricula
+            WHERE osi.ordem_servico_id = os.id
+          ) as responsavel_matricula,
+          NULL as responsavel_nome,
+          'moderno' as sistema_versao,
+          (SELECT COUNT(*) FROM ordem_servico_itens WHERE ordem_servico_id = os.id AND status IN ('concluido', 'finalizacao_impossibilitada')) as progresso_concluidos,
+          (SELECT COUNT(*) FROM ordem_servico_itens WHERE ordem_servico_id = os.id) as progresso_total,
+          (SELECT GROUP_CONCAT(osi_obs.observacoes SEPARATOR '; ') FROM ordem_servico_itens osi_obs WHERE osi_obs.ordem_servico_id = os.id AND osi_obs.status = 'finalizacao_impossibilitada') as motivo
+      FROM ordens_servico os
+      WHERE os.status IN (?) ${whereClauseModerno};
+    `;
+    const [servicosModernos] = await connection.query(
+      queryModerno,
+      paramsModerno
+    );
+
+    const servicosUnificados = [...servicosLegado, ...servicosModernos];
+
+    servicosUnificados.sort((a, b) => {
+      const dateA = a.data_prevista_execucao
+        ? new Date(a.data_prevista_execucao)
+        : 0;
+      const dateB = b.data_prevista_execucao
+        ? new Date(b.data_prevista_execucao)
+        : 0;
+      if (dateB - dateA !== 0) {
+        return dateB - dateA;
       }
-    }
+      return b.id - a.id;
+    });
 
-    if (userLevel <= 2) {
-      whereClauses.push("p.ordem_obra IN ('ODI', 'ODS')");
-    }
-
-    if (whereClauses.length > 0) {
-      query += " WHERE " + whereClauses.join(" AND ");
-    }
-
-    query += " ORDER BY p.data_prevista_execucao ASC, p.id DESC";
-    const [servicos] = await promisePool.query(query, params);
-    res.status(200).json(servicos);
+    res.status(200).json(servicosUnificados);
   } catch (error) {
-    console.error("Erro ao buscar serviços:", error);
+    console.error("Erro ao buscar serviços unificados:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao buscar serviços",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      error: error.message,
     });
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -399,41 +353,29 @@ router.get(
   autenticar,
   verificarNivel(2),
   async (req, res) => {
+    const { id } = req.params;
     const connection = await promisePool.getConnection();
     try {
-      const { id } = req.params;
       const [servicoRows] = await connection.query(
         `SELECT p.*, u.nome as responsavel_nome FROM processos p LEFT JOIN users u ON p.responsavel_matricula = u.matricula WHERE p.id = ?`,
         [id]
       );
-
       if (servicoRows.length === 0) {
         return res
           .status(404)
           .json({ success: false, message: "Serviço não encontrado" });
       }
-
       const [anexos] = await connection.query(
-        `SELECT id, nome_original as nomeOriginal, caminho_servidor as caminho, tamanho, tipo_anexo as tipo, DATE_FORMAT(data_upload, '%d/%m/%Y %H:%i') as dataUpload 
-       FROM processos_anexos WHERE processo_id = ? ORDER BY data_upload DESC`,
+        `SELECT id, nome_original as nomeOriginal, caminho_servidor as caminho, tamanho, tipo_anexo as tipo FROM processos_anexos WHERE processo_id = ?`,
         [id]
       );
-
-      const resultado = {
-        ...servicoRows[0],
-        anexos: anexos.map((anexo) => ({
-          ...anexo,
-          tamanho: formatarTamanhoArquivo(anexo.tamanho),
-        })),
-      };
+      const resultado = { ...servicoRows[0], anexos };
       res.status(200).json({ success: true, data: resultado });
     } catch (error) {
-      console.error("Erro ao buscar detalhes do serviço:", error);
+      console.error("Erro ao buscar detalhes do serviço legado:", error);
       res.status(500).json({
         success: false,
         message: "Erro ao buscar detalhes do serviço",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     } finally {
       if (connection) connection.release();
@@ -444,246 +386,116 @@ router.get(
 router.put(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(5),
   upload.array("anexos", 5),
   async (req, res) => {
-    const { id: servicoId } = req.params;
+    const { id } = req.params;
+    const {
+      processo,
+      subestacao,
+      alimentador,
+      chave_montante,
+      desligamento,
+      hora_inicio,
+      hora_fim,
+      responsavel_matricula,
+      ordem_obra,
+      maps,
+      descricao_geral,
+      observacoes_gerais,
+    } = req.body;
+
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
-      const {
-        processo,
-        subestacao,
-        alimentador,
-        chave_montante,
-        desligamento,
-        hora_inicio,
-        hora_fim,
-        maps,
-        responsavel_matricula,
-        ordem_obra,
-        descricao_servico,
-        observacoes,
-      } = req.body;
-
-      if (!processo || processo.trim() === "") {
-        limparArquivosTemporarios(req.files);
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message: "O número do processo é obrigatório.",
-        });
-      }
-
-      if (!subestacao) {
-        limparArquivosTemporarios(req.files);
-        await connection.rollback();
-        connection.release();
-        return res
-          .status(400)
-          .json({ success: false, message: "Subestação é obrigatória" });
-      }
-      if (desligamento === "SIM" && (!hora_inicio || !hora_fim)) {
-        limparArquivosTemporarios(req.files);
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message: "Horários são obrigatórios para desligamentos",
-        });
-      }
-      if (
-        maps &&
-        !/^(https?:\/\/)?(www\.)?(google\.[a-z]+\/maps\/|maps\.google\.[a-z]+\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(
-          maps
-        )
-      ) {
-        limparArquivosTemporarios(req.files);
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message: "Por favor, insira um link válido do Google Maps",
-        });
-      }
 
       await connection.query(
-        `UPDATE processos SET processo = ?, subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
-             hora_inicio = ?, hora_fim = ?, maps = ?, responsavel_matricula = ?, ordem_obra = ?,
-             descricao_servico = ?, observacoes = ? WHERE id = ?`,
+        `UPDATE processos SET
+          processo = ?, subestacao = ?, alimentador = ?, chave_montante = ?,
+          desligamento = ?, hora_inicio = ?, hora_fim = ?, responsavel_matricula = ?,
+          ordem_obra = ?, maps = ?, descricao_servico = ?, observacoes = ?
+        WHERE id = ?`,
         [
-          processo.trim(),
+          processo,
           subestacao,
-          alimentador || null,
-          chave_montante || null,
+          alimentador,
+          chave_montante,
           desligamento,
           desligamento === "SIM" ? hora_inicio : null,
           desligamento === "SIM" ? hora_fim : null,
-          maps || null,
           responsavel_matricula || "pendente",
-          ordem_obra || null,
-          descricao_servico || null,
-          observacoes || null,
-          servicoId,
+          ordem_obra,
+          maps,
+          descricao_geral,
+          observacoes_gerais,
+          id,
         ]
       );
 
       if (req.files && req.files.length > 0) {
-        const nomeDaPastaParaAnexos =
-          await determinarNomePastaParaServicoExistente(connection, servicoId);
-
-        const diretorioDoProcesso = path.join(
-          __dirname,
-          "../../upload_arquivos",
-          nomeDaPastaParaAnexos
-        );
-        if (!fs.existsSync(diretorioDoProcesso)) {
-          fs.mkdirSync(diretorioDoProcesso, { recursive: true });
-        }
-
-        for (const file of req.files) {
-          const extensao = path.extname(file.originalname).toLowerCase();
-          const novoNomeArquivo = `anexo_edit_${Date.now()}${extensao}`;
-          const caminhoCompletoNovoArquivo = path.join(
-            diretorioDoProcesso,
-            novoNomeArquivo
-          );
-          await fsPromises.rename(file.path, caminhoCompletoNovoArquivo);
-          const tipoAnexo = [".jpg", ".jpeg", ".png"].includes(extensao)
-            ? "imagem"
-            : "documento";
-          const caminhoServidorParaSalvar = `/api/upload_arquivos/${nomeDaPastaParaAnexos}/${novoNomeArquivo}`;
-          await connection.query(
-            `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo) VALUES (?, ?, ?, ?, ?)`,
-            [
-              servicoId,
-              file.originalname,
-              caminhoServidorParaSalvar,
-              file.size,
-              tipoAnexo,
-            ]
-          );
-        }
       }
+
       await connection.commit();
       await registrarAuditoria(
         req.user.matricula,
-        "Edição de Serviço",
-        `Serviço ${servicoId} editado. Processo alterado para: ${processo.trim()}`
+        "Edição de Serviço (Legado)",
+        `Serviço legado ID ${id} foi atualizado.`
       );
       res.json({
         success: true,
         message: "Serviço atualizado com sucesso!",
-        redirect: `/detalhes_servico?id=${servicoId}`,
+        redirect: `/detalhes_servico?id=${id}`,
       });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao atualizar serviço:", error);
-      limparArquivosTemporarios(req.files);
-      res.status(500).json({
-        success: false,
-        message: "Erro ao atualizar serviço",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+      console.error("Erro ao atualizar serviço legado:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erro ao atualizar serviço." });
     } finally {
       if (connection) connection.release();
     }
   }
 );
 
-router.post(
-  "/api/servicos/:servicoId/upload-apr",
+router.patch(
+  "/api/servicos/:id/responsavel",
   autenticar,
   verificarNivel(3),
-  upload.single("apr_file"),
   async (req, res) => {
-    const { servicoId } = req.params;
+    const { id } = req.params;
+    const { responsavel_matricula } = req.body;
+    if (!responsavel_matricula) {
+      return res.status(400).json({
+        success: false,
+        message: "Matrícula do responsável é obrigatória.",
+      });
+    }
     const connection = await promisePool.getConnection();
     try {
-      await connection.beginTransaction();
-
-      if (!req.file) {
-        await connection.rollback();
-        connection.release();
+      const [result] = await connection.query(
+        "UPDATE processos SET responsavel_matricula = ? WHERE id = ?",
+        [responsavel_matricula, id]
+      );
+      if (result.affectedRows === 0) {
         return res
-          .status(400)
-          .json({ success: false, message: "Nenhum arquivo de APR enviado." });
+          .status(404)
+          .json({ success: false, message: "Serviço não encontrado." });
       }
-
-      const nomeDaPastaParaAnexos =
-        await determinarNomePastaParaServicoExistente(connection, servicoId);
-      const diretorioDoProcesso = path.join(
-        __dirname,
-        "../../upload_arquivos",
-        nomeDaPastaParaAnexos
-      );
-
-      if (!fs.existsSync(diretorioDoProcesso)) {
-        fs.mkdirSync(diretorioDoProcesso, { recursive: true });
-      }
-
-      const file = req.file;
-      const extensao = path.extname(file.originalname).toLowerCase();
-      const novoNomeArquivoAPR = `APR_${servicoId}_${Date.now()}${extensao}`;
-      const caminhoCompletoNovoArquivoAPR = path.join(
-        diretorioDoProcesso,
-        novoNomeArquivoAPR
-      );
-
-      if (!fs.existsSync(file.path)) {
-        await connection.rollback();
-        connection.release();
-        console.error(`Arquivo temporário não encontrado: ${file.path}`);
-        return res.status(500).json({
-          success: false,
-          message:
-            "Erro no processamento do arquivo, arquivo temporário não encontrado.",
-        });
-      }
-      await fsPromises.rename(file.path, caminhoCompletoNovoArquivoAPR);
-
-      const caminhoServidorParaSalvarAPR = `/api/upload_arquivos/${nomeDaPastaParaAnexos}/${novoNomeArquivoAPR}`;
-
-      await connection.query(
-        "DELETE FROM processos_anexos WHERE processo_id = ? AND tipo_anexo = 'APR_DOCUMENTO'",
-        [servicoId]
-      );
-
-      const [insertResult] = await connection.query(
-        `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo) VALUES (?, ?, ?, ?, 'APR_DOCUMENTO')`,
-        [servicoId, file.originalname, caminhoServidorParaSalvarAPR, file.size]
-      );
-
-      if (insertResult.affectedRows === 0) {
-        throw new Error(
-          "Falha ao inserir o registro do anexo APR no banco de dados."
-        );
-      }
-
-      await connection.commit();
       await registrarAuditoria(
         req.user.matricula,
-        "Upload de APR",
-        `APR anexada ao Serviço ID: ${servicoId}`
+        "Atribuição de Responsável (Legado)",
+        `Serviço ID ${id} atribuído a ${responsavel_matricula}`
       );
       res.json({
         success: true,
-        message: "APR anexada com sucesso!",
-        caminho_apr_anexo: caminhoServidorParaSalvarAPR,
-        nome_original_apr_anexo: file.originalname,
+        message: "Responsável atualizado com sucesso.",
       });
     } catch (error) {
-      await connection.rollback();
-      console.error("Erro detalhado ao fazer upload da APR:", error);
-      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-        limparArquivosTemporarios(req.file);
-      }
-      res.status(500).json({
-        success: false,
-        message: `Erro interno ao fazer upload da APR: ${error.message}`,
-      });
+      console.error("Erro ao atualizar responsável legado:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erro ao atualizar responsável" });
     } finally {
       if (connection) connection.release();
     }
@@ -693,39 +505,21 @@ router.post(
 router.delete(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(5),
   async (req, res) => {
+    const { id } = req.params;
     const connection = await promisePool.getConnection();
     try {
       await connection.beginTransaction();
-      const { id } = req.params;
-      const user = req.user;
-
       const [servicoRows] = await connection.query(
-        "SELECT id, processo, data_prevista_execucao FROM processos WHERE id = ?",
+        "SELECT processo FROM processos WHERE id = ?",
         [id]
       );
       if (servicoRows.length === 0) {
         await connection.rollback();
-        connection.release();
         return res
           .status(404)
-          .json({ success: false, message: "Serviço não encontrado" });
-      }
-      const servico = servicoRows[0];
-      const nomeProcessoOriginalParaAuditoria = servico.processo;
-
-      let nomeDaPastaParaExcluir;
-      try {
-        nomeDaPastaParaExcluir = await determinarNomePastaParaServicoExistente(
-          connection,
-          id
-        );
-      } catch (e) {
-        console.warn(
-          `Não foi possível determinar o nome da pasta para o serviço ID ${id} durante a exclusão. A exclusão de arquivos/pasta pode não ocorrer. Erro: ${e.message}`
-        );
-        nomeDaPastaParaExcluir = null;
+          .json({ success: false, message: "Serviço legado não encontrado." });
       }
 
       await connection.query(
@@ -734,396 +528,22 @@ router.delete(
       );
       await connection.query("DELETE FROM processos WHERE id = ?", [id]);
 
-      if (nomeDaPastaParaExcluir) {
-        const diretorioDoProcesso = path.join(
-          __dirname,
-          "../../upload_arquivos",
-          nomeDaPastaParaExcluir
-        );
-        if (fs.existsSync(diretorioDoProcesso)) {
-          try {
-            await fsPromises.rm(diretorioDoProcesso, {
-              recursive: true,
-              force: true,
-            });
-          } catch (errPasta) {
-            console.error(
-              `Erro ao excluir pasta ${diretorioDoProcesso}:`,
-              errPasta
-            );
-          }
-        }
-      }
-
       await connection.commit();
       await registrarAuditoria(
-        user.matricula,
-        "Exclusão de Serviço",
-        `Serviço excluído - ID: ${id}, Processo: ${nomeProcessoOriginalParaAuditoria}`
+        req.user.matricula,
+        "Exclusão de Serviço (Legado)",
+        `Serviço legado ID ${id} (Processo: ${servicoRows[0].processo}) foi excluído.`
       );
       res.json({
         success: true,
-        message: "Serviço e seus anexos/pasta foram excluídos com sucesso",
+        message: "Serviço legado excluído com sucesso.",
       });
     } catch (error) {
       await connection.rollback();
-      console.error("Erro ao excluir serviço:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erro ao excluir serviço",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
-router.post(
-  "/api/servicos/:id/concluir",
-  autenticar,
-  verificarNivel(3),
-  async (req, res) => {
-    const { id: servicoId } = req.params;
-    const connection = await promisePool.getConnection();
-
-    try {
-      await connection.beginTransaction();
-      const {
-        observacoes,
-        dataConclusao,
-        horaConclusao,
-        status_final,
-        motivo_nao_conclusao,
-      } = req.body;
-      const matricula = req.user?.matricula;
-
-      if (!matricula) {
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message: "Matrícula do responsável não encontrada",
-        });
-      }
-
-      if (status_final !== "concluido" && status_final !== "nao_concluido") {
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message: "Status final inválido fornecido.",
-        });
-      }
-
-      const [servicoExistenteRows] = await connection.query(
-        "SELECT id, processo FROM processos WHERE id = ?",
-        [servicoId]
-      );
-      if (servicoExistenteRows.length === 0) {
-        await connection.rollback();
-        connection.release();
-        return res
-          .status(404)
-          .json({ success: false, message: "Serviço não encontrado" });
-      }
-      const servicoExistente = servicoExistenteRows[0];
-      let auditMessage = "";
-      let dataHoraConclusaoParaSalvar = null;
-      let observacoesParaSalvar = observacoes || null;
-      let motivoNaoConclusaoParaSalvar = null;
-
-      if (!dataConclusao || !horaConclusao) {
-        await connection.rollback();
-        connection.release();
-        return res.status(400).json({
-          success: false,
-          message: "Data e Hora de Conclusão são obrigatórias.",
-        });
-      }
-      dataHoraConclusaoParaSalvar = `${dataConclusao} ${horaConclusao}:00`;
-
-      if (status_final === "concluido") {
-        auditMessage = `Serviço ${servicoId} (${servicoExistente.processo}) concluído em ${dataHoraConclusaoParaSalvar}`;
-      } else {
-        if (!motivo_nao_conclusao || motivo_nao_conclusao.trim() === "") {
-          await connection.rollback();
-          connection.release();
-          return res.status(400).json({
-            success: false,
-            message: "Motivo da não conclusão é obrigatório.",
-          });
-        }
-        motivoNaoConclusaoParaSalvar = motivo_nao_conclusao.trim();
-        auditMessage = `Serviço ${servicoId} (${servicoExistente.processo}) marcado como Não Concluído. Motivo: ${motivoNaoConclusaoParaSalvar}`;
-      }
-
-      await connection.query(
-        `UPDATE processos SET 
-          status = ?, 
-          data_conclusao = ?, 
-          observacoes_conclusao = ?, 
-          motivo_nao_conclusao = ?,
-          responsavel_matricula = ? 
-         WHERE id = ?`,
-        [
-          status_final,
-          dataHoraConclusaoParaSalvar,
-          observacoesParaSalvar,
-          motivoNaoConclusaoParaSalvar,
-          matricula,
-          servicoId,
-        ]
-      );
-
-      await connection.commit();
-
-      await registrarAuditoria(
-        matricula,
-        status_final === "concluido"
-          ? "Conclusão de Serviço"
-          : "Não Conclusão de Serviço",
-        auditMessage
-      );
-      res.status(200).json({
-        success: true,
-        message: `Informações do serviço marcadas como ${
-          status_final === "concluido" ? "Concluído" : "Não Concluído"
-        } com sucesso.`,
-      });
-    } catch (error) {
-      await connection.rollback();
-      console.error("Erro ao finalizar/não concluir serviço (info):", error);
-      res.status(500).json({
-        success: false,
-        message: "Erro interno ao processar informações do serviço",
-        error:
-          process.env.NODE_ENV === "development"
-            ? error.message
-            : error.code === "WARN_DATA_TRUNCATED"
-            ? "Tipo de anexo inválido."
-            : undefined,
-      });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
-router.post(
-  "/api/servicos/:servicoId/upload-foto-conclusao",
-  autenticar,
-  verificarNivel(3),
-  upload.single("foto_conclusao"),
-  async (req, res) => {
-    const { servicoId } = req.params;
-    const { status_final } = req.body;
-    const connection = await promisePool.getConnection();
-
-    try {
-      if (!req.file) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Nenhum arquivo enviado." });
-      }
-
-      await connection.beginTransaction();
-
-      const nomeDaPastaParaAnexos =
-        await determinarNomePastaParaServicoExistente(connection, servicoId);
-      const diretorioDoProcesso = path.join(
-        __dirname,
-        "../../upload_arquivos",
-        nomeDaPastaParaAnexos
-      );
-      if (!fs.existsSync(diretorioDoProcesso)) {
-        fs.mkdirSync(diretorioDoProcesso, { recursive: true });
-      }
-
-      const file = req.file;
-      const fileExt = path.extname(file.originalname).toLowerCase();
-      const randomSuffix = Math.random().toString(36).substring(2, 8);
-      const newFilename = `${
-        status_final === "concluido" ? "conclusao" : "nao_conclusao_registro"
-      }_${Date.now()}_${randomSuffix}${fileExt}`;
-      const novoPathCompleto = path.join(diretorioDoProcesso, newFilename);
-
-      await fsPromises.rename(file.path, novoPathCompleto);
-
-      const tipoAnexo =
-        status_final === "concluido" ? "foto_conclusao" : "foto_nao_conclusao";
-      await connection.query(
-        `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tipo_anexo, tamanho) VALUES (?, ?, ?, ?, ?)`,
-        [
-          servicoId,
-          file.originalname,
-          `/api/upload_arquivos/${nomeDaPastaParaAnexos}/${newFilename}`,
-          tipoAnexo,
-          file.size,
-        ]
-      );
-
-      await connection.commit();
-
-      res.status(201).json({
-        success: true,
-        message: `Arquivo ${file.originalname} enviado com sucesso.`,
-      });
-    } catch (error) {
-      await connection.rollback();
-      limparArquivosTemporarios(req.file);
-      console.error("Erro ao fazer upload de foto de conclusão:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erro interno ao processar o upload do arquivo.",
-      });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
-router.patch(
-  "/api/servicos/:id/reativar",
-  autenticar,
-  verificarNivel(4),
-  async (req, res) => {
-    const connection = await promisePool.getConnection();
-    try {
-      const [result] = await connection.query(
-        'UPDATE processos SET status = "ativo", data_conclusao = NULL, observacoes_conclusao = NULL, motivo_nao_conclusao = NULL WHERE id = ?',
-        [req.params.id]
-      );
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Serviço não encontrado" });
-      }
-      await registrarAuditoria(
-        req.user.matricula,
-        "Reativação de Serviço",
-        `Serviço ${req.params.id} retornado para ativo.`
-      );
-      res.json({ message: "Serviço reativado com sucesso" });
-    } catch (error) {
-      console.error("Erro ao reativar serviço:", error);
-      res.status(500).json({ message: "Erro ao reativar serviço" });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
-router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
-  const { identificador, filename } = req.params;
-  const filePath = path.join(
-    __dirname,
-    "../../upload_arquivos",
-    identificador,
-    filename
-  );
-
-  if (!fs.existsSync(filePath)) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Arquivo não encontrado" });
-  }
-  const ext = path.extname(filename).toLowerCase();
-  const mimeTypes = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".pdf": "application/pdf",
-    ".xls": "application/vnd.ms-excel",
-    ".xlsx":
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ".csv": "text/csv",
-  };
-  res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
-  if (req.query.download === "true") {
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  }
-  fs.createReadStream(filePath).pipe(res);
-});
-
-router.delete(
-  "/api/servicos/:servicoId/anexos/:anexoId",
-  autenticar,
-  verificarNivel(4),
-  async (req, res) => {
-    const { servicoId, anexoId } = req.params;
-    const connection = await promisePool.getConnection();
-    try {
-      await connection.beginTransaction();
-      const [anexo] = await connection.query(
-        `SELECT caminho_servidor, nome_original FROM processos_anexos WHERE id = ? AND processo_id = ?`,
-        [anexoId, servicoId]
-      );
-      if (anexo.length === 0) {
-        await connection.rollback();
-        connection.release();
-        return res.status(404).json({
-          success: false,
-          message: "Anexo não encontrado ou não pertence a este serviço",
-        });
-      }
-      const caminhoRelativo = anexo[0].caminho_servidor.replace(
-        "/api/upload_arquivos/",
-        ""
-      );
-      const caminhoFisico = path.join(
-        __dirname,
-        "../../upload_arquivos",
-        caminhoRelativo
-      );
-      if (fs.existsSync(caminhoFisico)) await fsPromises.unlink(caminhoFisico);
-      await connection.query("DELETE FROM processos_anexos WHERE id = ?", [
-        anexoId,
-      ]);
-      await connection.commit();
-      await registrarAuditoria(
-        req.user.matricula,
-        "Remoção de Anexo",
-        `Anexo ${anexo[0].nome_original} removido do Serviço ID: ${servicoId}`
-      );
-      res.json({ success: true, message: "Anexo removido com sucesso" });
-    } catch (error) {
-      await connection.rollback();
-      console.error("Erro ao remover anexo:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erro ao remover anexo",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
-router.get(
-  "/api/servicos/contador",
-  autenticar,
-  verificarNivel(3),
-  async (req, res) => {
-    const connection = await promisePool.getConnection();
-    try {
-      const { status } = req.query;
-      let query = "SELECT COUNT(*) as total FROM processos";
-      const params = [];
-      if (status) {
-        if (status === "concluido") {
-          query += " WHERE status IN ('concluido', 'nao_concluido')";
-        } else {
-          query += " WHERE status = ?";
-          params.push(status);
-        }
-      }
-      const [result] = await connection.query(query, params);
-      res.json({ total: result[0].total });
-    } catch (error) {
-      console.error("Erro ao contar serviços:", error);
-      res.status(500).json({ message: "Erro ao contar serviços" });
+      console.error("Erro ao excluir serviço legado:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erro ao excluir serviço legado." });
     } finally {
       if (connection) connection.release();
     }
@@ -1158,7 +578,7 @@ router.get(
     const connection = await promisePool.getConnection();
     try {
       const [rows] = await connection.query(
-        'SELECT DISTINCT subestacao as nome FROM processos WHERE subestacao IS NOT NULL AND subestacao != "" ORDER BY subestacao'
+        '(SELECT DISTINCT subestacao as nome FROM processos WHERE subestacao IS NOT NULL AND subestacao != "") UNION (SELECT DISTINCT subestacao as nome FROM ordens_servico WHERE subestacao IS NOT NULL AND subestacao != "") ORDER BY nome'
       );
       res.status(200).json(rows);
     } catch (err) {
@@ -1170,309 +590,161 @@ router.get(
   }
 );
 
-router.patch(
-  "/api/servicos/:id/responsavel",
-  autenticar,
-  verificarNivel(3),
-  async (req, res) => {
-    const { id } = req.params;
-    const { responsavel_matricula } = req.body;
-    if (!responsavel_matricula) {
-      return res.status(400).json({
-        success: false,
-        message: "Matrícula do responsável é obrigatória.",
-      });
-    }
-    const connection = await promisePool.getConnection();
-    try {
-      const [result] = await connection.query(
-        "UPDATE processos SET responsavel_matricula = ? WHERE id = ?",
-        [responsavel_matricula, id]
-      );
-      if (result.affectedRows === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Serviço não encontrado." });
-      }
-      await registrarAuditoria(
-        req.user.matricula,
-        "Atribuição de Responsável",
-        `Serviço ID ${id} atribuído a ${responsavel_matricula}`
-      );
-      res.json({
-        success: true,
-        message: "Responsável atualizado com sucesso.",
-      });
-    } catch (error) {
-      console.error("Erro ao atualizar responsável:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erro ao atualizar responsável",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
-    } finally {
-      if (connection) connection.release();
-    }
-  }
-);
-
-async function processarImagensParaBase64(imagens, basePath) {
-  const imagensProcessadas = await Promise.all(
-    imagens.map(async (img) => {
-      if (!img.caminho) return null;
-      const caminhoRelativo = img.caminho.replace("/api/upload_arquivos/", "");
-      const caminhoFisico = path.join(
-        basePath,
-        "../../upload_arquivos",
-        caminhoRelativo
-      );
-
-      if (fs.existsSync(caminhoFisico)) {
-        try {
-          const buffer = await fsPromises.readFile(caminhoFisico);
-          const ext = path.extname(img.nomeOriginal).substring(1);
-          return {
-            src: `data:image/${ext};base64,${buffer.toString("base64")}`,
-            nome: img.nomeOriginal,
-          };
-        } catch (e) {
-          console.error(`Erro ao ler o arquivo de imagem: ${caminhoFisico}`, e);
-          return null;
-        }
-      }
-      return null;
-    })
-  );
-  return imagensProcessadas.filter(Boolean);
-}
-
-function gerarGaleriaHtml(imagens) {
-  if (!imagens || imagens.length === 0) {
-    return '<p class="no-content">Nenhuma imagem encontrada para esta seção.</p>';
-  }
-
-  let galleryHtml = "";
-  for (let i = 0; i < imagens.length; i += 4) {
-    const chunk = imagens.slice(i, i + 4);
-    galleryHtml += '<div class="photo-grid-container">';
-    galleryHtml += '<div class="photo-grid-4">';
-    chunk.forEach((img) => {
-      galleryHtml += `
-                <div class="gallery-item">
-                    <img src="${img.src}" alt="${img.nome}">
-                    <p class="caption">${img.nome}</p>
-                </div>
-            `;
-    });
-    galleryHtml += "</div></div>";
-  }
-  return galleryHtml;
-}
-
-async function preencherTemplateHtml(servicoData) {
-  const templatePath = path.join(
-    __dirname,
-    "../../public/pages/templates/relatorio_servico.html"
-  );
-  let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
-
-  const formatarData = (dataStr, comHora = false) => {
-    if (!dataStr) return "N/A";
-    const options = {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      timeZone: "UTC",
-    };
-    if (comHora) {
-      options.hour = "2-digit";
-      options.minute = "2-digit";
-    }
-    const dataObj = new Date(dataStr);
-    if (isNaN(dataObj.getTime())) return "Data inválida";
-    return dataObj.toLocaleDateString("pt-BR", options);
-  };
-
-  const imagensRegistro = servicoData.anexos.filter(
-    (anexo) => anexo.tipo === "imagem"
-  );
-  const imagensFinalizacao = servicoData.anexos.filter((anexo) =>
-    ["foto_conclusao", "foto_nao_conclusao"].includes(anexo.tipo)
-  );
-  const anexosPDF = servicoData.anexos.filter(
-    (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
-  );
-
-  const imagensRegistroBase64 = await processarImagensParaBase64(
-    imagensRegistro,
-    __dirname
-  );
-  const imagensFinalizacaoBase64 = await processarImagensParaBase64(
-    imagensFinalizacao,
-    __dirname
-  );
-
-  const galeriaRegistroHtml = gerarGaleriaHtml(imagensRegistroBase64);
-  const galeriaFinalizacaoHtml = gerarGaleriaHtml(imagensFinalizacaoBase64);
-
-  const listaAnexosPdfHtml =
-    anexosPDF.length > 0
-      ? `<ul>${anexosPDF
-          .map((pdf) => `<li>${pdf.nomeOriginal} (Tipo: ${pdf.tipo})</li>`)
-          .join("")}</ul>`
-      : '<p class="no-content">Nenhum documento PDF foi anexado a este serviço.</p>';
-
-  const dadosParaTemplate = {
-    processo: servicoData.processo || "N/A",
-    id: servicoData.id,
-    tipo: servicoData.tipo || "N/A",
-    data_prevista_execucao: formatarData(servicoData.data_prevista_execucao),
-    subestacao: servicoData.subestacao || "N/A",
-    alimentador: servicoData.alimentador || "N/A",
-    chave_montante: servicoData.chave_montante || "N/A",
-    desligamento: `${servicoData.desligamento || "N/A"} ${
-      servicoData.desligamento === "SIM"
-        ? `(${servicoData.hora_inicio || ""} - ${servicoData.hora_fim || ""})`
-        : ""
-    }`,
-    descricao_servico: servicoData.descricao_servico || "Nenhuma.",
-    observacoes: servicoData.observacoes || "Nenhuma.",
-    status_final_classe:
-      servicoData.status === "concluido"
-        ? "status-concluido"
-        : "status-nao-concluido",
-    status_final_texto:
-      servicoData.status === "concluido" ? "Concluído" : "Não Concluído",
-    data_finalizacao: formatarData(servicoData.data_conclusao, true),
-    responsavel_finalizacao: `${servicoData.responsavel_nome || "N/A"} (${
-      servicoData.responsavel_matricula || "N/A"
-    })`,
-    motivo_nao_conclusao_html:
-      servicoData.status === "nao_concluido"
-        ? `<div class="grid-item full-width"><strong>Motivo da Não Conclusão</strong><div class="text-area">${
-            servicoData.motivo_nao_conclusao || "Nenhum."
-          }</div></div>`
-        : "",
-    observacoes_conclusao: servicoData.observacoes_conclusao || "Nenhuma.",
-    galeria_registro: galeriaRegistroHtml,
-    galeria_finalizacao: galeriaFinalizacaoHtml,
-    lista_anexos_pdf: listaAnexosPdfHtml,
-    data_geracao: new Date().toLocaleString("pt-BR"),
-  };
-
-  for (const key in dadosParaTemplate) {
-    const regex = new RegExp(`{{${key}}}`, "g");
-    templateHtml = templateHtml.replace(regex, dadosParaTemplate[key]);
-  }
-
-  return templateHtml;
-}
-
 router.get(
-  "/api/servicos/:id/consolidar-pdfs",
+  "/api/servicos/:id/relatorio-completo",
   autenticar,
   verificarNivel(2),
   async (req, res) => {
-    const { id: servicoId } = req.params;
+    const { id } = req.params;
     const connection = await promisePool.getConnection();
-    let browser;
+    let browser = null;
 
     try {
-      const [servicoRows] = await connection.query(
-        `SELECT p.*, u.nome as responsavel_nome FROM processos p LEFT JOIN users u ON p.responsavel_matricula = u.matricula WHERE p.id = ?`,
-        [servicoId]
+      let servico,
+        anexos = [],
+        itens = [];
+      const [servicoLegado] = await connection.query(
+        "SELECT p.*, u.nome as responsavel_nome FROM processos p LEFT JOIN users u ON p.responsavel_matricula = u.matricula WHERE p.id = ?",
+        [id]
       );
-      if (servicoRows.length === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Serviço não encontrado" });
+
+      if (servicoLegado.length > 0) {
+        servico = servicoLegado[0];
+        const [anexosLegado] = await connection.query(
+          "SELECT *, nome_original as nome_original, caminho_servidor as caminho_servidor, tipo_anexo FROM processos_anexos WHERE processo_id = ?",
+          [id]
+        );
+        anexos = anexosLegado;
+      } else {
+        const [servicoModerno] = await connection.query(
+          "SELECT * FROM ordens_servico WHERE id = ?",
+          [id]
+        );
+        if (servicoModerno.length === 0) {
+          return res.status(404).json({ message: "Serviço não encontrado." });
+        }
+        servico = servicoModerno[0];
+
+        const [anexosPrincipais] = await connection.query(
+          "SELECT *, nome_original as nome_original, caminho_servidor as caminho_servidor, tipo_anexo FROM ordem_servico_anexos WHERE ordem_servico_id = ?",
+          [id]
+        );
+
+        const [anexosDeItens] = await connection.query(
+          `
+                SELECT osia.*, osia.nome_original as nome_original, osia.caminho_servidor as caminho_servidor, osia.tipo_anexo 
+                FROM ordem_servico_item_anexos osia
+                JOIN ordem_servico_itens osi ON osia.item_id = osi.id
+                WHERE osi.ordem_servico_id = ?`,
+          [id]
+        );
+
+        anexos = [...anexosPrincipais, ...anexosDeItens];
+
+        const [itensModernos] = await connection.query(
+          "SELECT osi.*, cd.codigo, cd.descricao FROM ordem_servico_itens osi JOIN codigos_defeito cd ON osi.codigo_defeito_id = cd.id WHERE osi.ordem_servico_id = ?",
+          [id]
+        );
+        itens = itensModernos;
       }
-      const [anexos] = await connection.query(
-        `SELECT id, nome_original as nomeOriginal, caminho_servidor as caminho, tipo_anexo as tipo FROM processos_anexos WHERE processo_id = ?`,
-        [servicoId]
-      );
-      const servicoData = { ...servicoRows[0], anexos };
 
-      const htmlContent = await preencherTemplateHtml(servicoData);
+      servico.itens = itens;
+      servico.anexos = anexos;
+      if (servico.data_prevista_execucao) {
+        servico.data_prevista_execucao = new Date(
+          servico.data_prevista_execucao
+        ).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+      }
+      if (servico.data_conclusao) {
+        servico.data_conclusao = new Date(
+          servico.data_conclusao
+        ).toLocaleString("pt-BR", { timeZone: "UTC" });
+      }
 
-      browser = await playwright.chromium.launch();
-      const page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: "networkidle" });
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "20mm", right: "10mm", bottom: "20mm", left: "10mm" },
-      });
-      await browser.close();
-      browser = null;
-
-      const pdfsAnexos = anexos.filter(
-        (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
-      );
-
-      if (pdfsAnexos.length > 0) {
-        const mergedPdfDoc = await PDFDocument.load(pdfBuffer);
-
-        for (const anexo of pdfsAnexos) {
-          const caminhoRelativo = anexo.caminho.replace(
-            "/api/upload_arquivos/",
-            ""
+      for (const anexo of servico.anexos) {
+        if (
+          anexo.caminho_servidor &&
+          /\.(jpg|jpeg|png)$/i.test(anexo.nome_original)
+        ) {
+          const anexoFullPath = path.join(
+            projectRootDir,
+            anexo.caminho_servidor.replace("/api/", "")
           );
-          const caminhoFisico = path.join(
-            __dirname,
-            "../../upload_arquivos",
-            caminhoRelativo
-          );
-
-          if (fs.existsSync(caminhoFisico)) {
-            const anexoPdfBytes = await fsPromises.readFile(caminhoFisico);
-            try {
-              const anexoPdfDoc = await PDFDocument.load(anexoPdfBytes, {
-                ignoreEncryption: true,
-              });
-              const copiedPages = await mergedPdfDoc.copyPages(
-                anexoPdfDoc,
-                anexoPdfDoc.getPageIndices()
-              );
-              copiedPages.forEach((page) => mergedPdfDoc.addPage(page));
-            } catch (pdfError) {
-              console.error(
-                `Falha ao processar o anexo PDF ${anexo.nomeOriginal}: ${pdfError.message}. Anexo ignorado.`
-              );
-            }
+          if (fs.existsSync(anexoFullPath)) {
+            const imageBuffer = await fsPromises.readFile(anexoFullPath);
+            const mimeType = anexo.nome_original.toLowerCase().endsWith(".png")
+              ? "image/png"
+              : "image/jpeg";
+            anexo.dataUrl = `data:${mimeType};base64,${imageBuffer.toString(
+              "base64"
+            )}`;
           }
         }
-        const finalPdfBytes = await mergedPdfDoc.save();
-
-        const nomeArquivo = `relatorio_servico_${(
-          servicoData.processo || servicoId
-        ).replace(/\//g, "-")}.pdf`;
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="${nomeArquivo}"`
-        );
-        return res.send(Buffer.from(finalPdfBytes));
       }
 
-      const nomeArquivo = `relatorio_servico_${(
-        servicoData.processo || servicoId
-      ).replace(/\//g, "-")}.pdf`;
+      const htmlContent = gerarHtmlDoRelatorio(servico);
+
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+      const coverPagePdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
+      });
+
+      const mergedPdf = await PDFDocument.create();
+      const coverDoc = await PDFDocument.load(coverPagePdfBuffer);
+      const coverPages = await mergedPdf.copyPages(
+        coverDoc,
+        coverDoc.getPageIndices()
+      );
+      coverPages.forEach((page) => mergedPdf.addPage(page));
+
+      const anexosPdf = anexos.filter(
+        (a) => a.nome_original && a.nome_original.toLowerCase().endsWith(".pdf")
+      );
+
+      for (const anexo of anexosPdf) {
+        const anexoPath = anexo.caminho_servidor;
+        const anexoFullPath = path.join(
+          projectRootDir,
+          anexoPath.replace("/api/", "")
+        );
+
+        if (fs.existsSync(anexoFullPath)) {
+          try {
+            const anexoPdfBytes = await fsPromises.readFile(anexoFullPath);
+            const anexoDoc = await PDFDocument.load(anexoPdfBytes);
+            const anexoPages = await mergedPdf.copyPages(
+              anexoDoc,
+              anexoDoc.getPageIndices()
+            );
+            anexoPages.forEach((page) => mergedPdf.addPage(page));
+          } catch (e) {
+            console.warn(
+              `Não foi possível anexar o PDF: ${anexoPath}. Erro: ${e.message}`
+            );
+          }
+        }
+      }
+
+      const finalPdfBytes = await mergedPdf.save();
+
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="${nomeArquivo}"`
+        `attachment; filename=relatorio_servico_${id}.pdf`
       );
-      res.send(pdfBuffer);
+      res.send(Buffer.from(finalPdfBytes));
     } catch (error) {
-      console.error("Erro ao gerar relatório PDF:", error);
-      if (browser) await browser.close();
-      res.status(500).json({
-        success: false,
-        message: "Erro interno ao gerar o relatório PDF.",
-      });
+      console.error("Erro ao gerar relatório completo:", error);
+      res.status(500).json({ message: "Erro ao gerar relatório." });
     } finally {
+      if (browser) await browser.close();
       if (connection) connection.release();
     }
   }
