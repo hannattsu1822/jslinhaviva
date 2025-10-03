@@ -164,6 +164,7 @@ async function processAndPublish(socket) {
 }
 
 async function handleSocketData(socket) {
+    console.log(`[HANDLER] handleSocketData chamado. Estado: ${socket.state}, Tamanho do buffer: ${socket.binaryBuffer.length}`);
     if (socket.processing) {
         return;
     }
@@ -278,6 +279,8 @@ const server = net.createServer((socket) => {
     };
 
     socket.on('data', (data) => {
+        console.log(`[RAW DATA] [${remoteAddress}] Dados recebidos (Buffer):`, data);
+        console.log(`[RAW DATA] [${remoteAddress}] Dados em HEX: ${data.toString('hex')}`);
         if (socket.state === 'AWAITING_IDENTITY') {
             socket.binaryBuffer = Buffer.concat([socket.binaryBuffer, data]);
         } else {
@@ -286,10 +289,10 @@ const server = net.createServer((socket) => {
         handleSocketData(socket);
     });
 
-    socket.on("close", () => {
+    socket.on("close", (hadError) => {
         if (socket.pollTimer) clearInterval(socket.pollTimer);
         if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
-        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
+        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada. Houve erro? ${hadError}`);
     });
 
     socket.on("error", (err) => {
