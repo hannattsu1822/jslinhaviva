@@ -126,8 +126,7 @@ body {
 
 .chart-container {
     position: relative;
-    height: 100%;
-    min-height: 300px;
+    height: 400px;
 }
 
 .chart-loader {
@@ -136,7 +135,7 @@ body {
     align-items: center;
     justify-content: center;
     height: 100%;
-    min-height: 300px;
+    min-height: 400px;
     color: var(--muted-color);
     font-weight: 500;
 }
