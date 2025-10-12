@@ -1,127 +1,198 @@
-/* Estilos Globais e Ajustes Finos */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+    --muted-color: #6c757d;
+    --card-bg: #ffffff;
+    --card-border-color: #dee2e6;
+    --body-bg: #f0f2f5;
+}
+
 body {
-  font-family: "Roboto", sans-serif;
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--body-bg);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-title h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    margin: 0;
 }
 
 .icon-header {
-  font-size: 2.5rem;
-  color: #343a40;
+    font-size: 2.5rem;
+    color: var(--primary-color);
 }
 
-/* Indicador de Status Geral (Círculo) */
-.status-indicator {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  transition: background-color 0.3s ease;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+.page-header .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
 }
 
-.status-indicator.pending {
-  background-color: #6c757d; /* Cinza (Pendente) */
-}
-.status-indicator.ok {
-  background-color: #198754; /* Verde (OK) */
-}
-.status-indicator.warning {
-  background-color: #ffc107; /* Amarelo (Aviso) */
-}
-.status-indicator.critical {
-  background-color: #dc3545; /* Vermelho (Crítico) */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
-/* Card de Temperatura Principal */
-.card-primary {
-  background: linear-gradient(135deg, #0d6efd, #0a58ca);
-  border: none;
-}
-.card-primary .display-4 {
-  font-size: 3.5rem;
-}
-
-/* Ícones */
-.material-symbols-outlined {
-  vertical-align: middle;
-  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
-}
-.material-symbols-outlined.md-36 {
-  font-size: 36px;
-}
-.icon-header.material-symbols-outlined {
-  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 48;
+.kpi-card {
+    background-color: var(--card-bg);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--card-border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-/* Badges de Status (para torná-los uniformes) */
-.badge {
-  min-width: 60px;
-  padding: 0.5em 0.75em;
-  transition: background-color 0.3s ease;
+.kpi-icon .material-symbols-outlined {
+    font-size: 2.5rem;
+    font-variation-settings: 'FILL' 1;
 }
 
-/* Lista de Alarmes Ativos */
-.alarms-list .placeholder {
-  padding: 1rem 1.25rem;
+.kpi-content {
+    display: flex;
+    flex-direction: column;
 }
 
-.alarms-list .alarm-item {
-  display: flex;
-  align-items: center;
-  font-weight: 500;
-}
-.alarms-list .alarm-item .material-symbols-outlined {
-  margin-right: 0.75rem;
+.kpi-label {
+    font-size: 0.875rem;
+    color: var(--muted-color);
+    font-weight: 500;
 }
 
-/* Cores de Status para Badges e Textos */
-.text-status-ok {
-  color: #198754;
-}
-.bg-status-ok {
-  background-color: #198754 !important;
-}
-
-.text-status-warning {
-  color: #ffc107;
-}
-.bg-status-warning {
-  background-color: #ffc107 !important;
+.kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    line-height: 1.2;
 }
 
-.text-status-critical {
-  color: #dc3545;
-}
-.bg-status-critical {
-  background-color: #dc3545 !important;
-}
-
-.text-status-info {
-  color: #0dcaf0;
-}
-.bg-status-info {
-  background-color: #0dcaf0 !important;
+.kpi-unit {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--muted-color);
+    margin-left: 0.25rem;
 }
 
-/* Loader */
-.loader {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 150px;
+.kpi-timestamp {
+    font-size: 0.75rem;
 }
-.loader::after {
-  content: "";
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #0d6efd;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
+
+.card {
+    border: 1px solid var(--card-border-color);
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
+
+.card-header {
+    background-color: var(--light-color);
+    font-weight: 700;
+    color: var(--dark-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--card-border-color);
+    padding: 1rem 1.25rem;
+}
+
+.card-header .material-symbols-outlined {
+    font-size: 1.5rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 100%;
+    min-height: 350px;
+}
+
+.chart-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 350px;
+    color: var(--muted-color);
+    font-weight: 500;
+}
+
+.chart-loader .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.stats-group h6 {
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.75rem;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-row span {
+    color: var(--muted-color);
+}
+
+.stat-row strong {
+    color: var(--dark-color);
+}
+
+.list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+}
+
+.list-group-item .material-symbols-outlined {
+    margin-right: 1rem;
+    vertical-align: middle;
+}
+
+.list-group-item .badge {
+    font-size: 0.8rem;
+    font-weight: 500;
+    min-width: 60px;
+    text-align: center;
 }
