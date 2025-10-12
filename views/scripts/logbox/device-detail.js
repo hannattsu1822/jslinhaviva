@@ -1,199 +1,272 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+let historicoChartInstance = null;
 
-:root {
-    --primary-color: #0d6efd;
-    --success-color: #198754;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
-    --info-color: #0dcaf0;
-    --light-color: #f8f9fa;
-    --dark-color: #212529;
-    --muted-color: #6c757d;
-    --card-bg: #ffffff;
-    --card-border-color: #dee2e6;
-    --body-bg: #f0f2f5;
+document.addEventListener("DOMContentLoaded", () => {
+    inicializarPainel();
+});
+
+function inicializarPainel() {
+    Promise.all([
+        carregarLeiturasIniciais(),
+        carregarStatusInicial(),
+        carregarEstatisticasDetalhes(),
+    ]).then(() => {
+        iniciarWebSocket();
+    }).catch((error) => {
+        const loader = document.getElementById("loader-historico");
+        if (loader) {
+            loader.innerHTML = "<span>Erro ao carregar dados. Tente recarregar a página.</span>";
+        }
+    });
 }
 
-body {
-    font-family: 'Roboto', sans-serif;
-    background-color: var(--body-bg);
+async function carregarLeiturasIniciais() {
+    const loader = document.getElementById("loader-historico");
+    const canvas = document.getElementById("graficoHistorico");
+    try {
+        if (loader) loader.style.display = "flex";
+        const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
+        if (!response.ok) throw new Error("Falha ao buscar histórico de leituras");
+
+        const data = await response.json();
+        gerarGraficoHistorico(data);
+        if (loader) loader.style.display = "none";
+        if (canvas) canvas.style.display = "block";
+    } catch (error) {
+        if (loader) loader.innerHTML = "<span>Erro ao carregar o gráfico.</span>";
+        throw error;
+    }
 }
 
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+async function carregarStatusInicial() {
+    try {
+        const response = await fetch(`/api/logbox-device/${serialNumber}/status`);
+        if (!response.ok) throw new Error("Falha ao buscar status do dispositivo");
+
+        const data = await response.json();
+        atualizarPainelCompleto(data.status);
+
+        const latestReadingResponse = await fetch(`/api/logbox-device/${serialNumber}/latest`);
+        if (latestReadingResponse.ok) {
+            const latestData = await latestReadingResponse.json();
+            const payloadObjeto = JSON.parse(latestData.payload);
+            const tempExterna = payloadObjeto.ch_analog_1 || (payloadObjeto.value_channels ? payloadObjeto.value_channels[2] : undefined);
+
+            if (tempExterna !== undefined) {
+                document.getElementById("latest-temp").textContent = tempExterna.toFixed(1);
+            }
+            document.getElementById("latest-timestamp").textContent = `Em: ${new Date(latestData.timestamp_leitura).toLocaleString("pt-BR")}`;
+        }
+    } catch (error) {
+        throw error;
+    }
 }
 
-.header-title {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+function atualizarPainelCompleto(status) {
+    if (!status || Object.keys(status).length === 0) return;
+
+    const connectionStatusEl = document.getElementById("connection-status-text");
+    if (status.connection_status === "offline") {
+        connectionStatusEl.textContent = "Offline";
+        connectionStatusEl.className = "kpi-value text-danger";
+    } else {
+        connectionStatusEl.textContent = "Online";
+        connectionStatusEl.className = "kpi-value text-success";
+    }
+
+    const sinalWifi = status.lqi;
+    const { text: wifiText } = getWifiStatus(sinalWifi);
+    document.getElementById("diag-wifi-rssi").textContent = `RSSI: ${sinalWifi || "--"} dBm (${wifiText})`;
+
+    const tensaoFonteExterna = status.ch_analog_2;
+    const { text: powerText } = getPowerSourceStatus(tensaoFonteExterna);
+    document.getElementById("diag-power-source").textContent = powerText;
+
+    const tensaoBateria = status.ch_analog_3 || status.battery;
+    document.getElementById("diag-battery-voltage").textContent = `Bateria: ${tensaoBateria?.toFixed(2) || "--"} V`;
+
+    const temperaturaInterna = status.temperature;
+    atualizarBadge("diag-internal-temp", `${temperaturaInterna?.toFixed(1) || "--"} °C`, "text-bg-info");
+
+    atualizarBadge("diag-pt100-status", "N/A via MQTT", "text-bg-secondary");
+    
+    const ipAddress = status.ip;
+    atualizarBadge("diag-ip-address", ipAddress || "--", "text-bg-secondary");
+
+    const firmwareVersion = status.firmware_version;
+    atualizarBadge("diag-firmware-version", firmwareVersion || "--", "text-bg-secondary");
+
+    atualizarListaAlarmes(status.alarms);
 }
 
-.header-title h1 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--dark-color);
-    margin: 0;
+function atualizarPainelLeitura(dados) {
+    const temperatura = dados.ch_analog_1;
+    if (temperatura !== undefined) {
+        document.getElementById("latest-temp").textContent = temperatura.toFixed(1);
+    }
+    document.getElementById("latest-timestamp").textContent = `Em: ${new Date().toLocaleString("pt-BR")}`;
+
+    if (historicoChartInstance) {
+        historicoChartInstance.data.datasets[0].data.push({
+            x: new Date(),
+            y: temperatura,
+        });
+        historicoChartInstance.update("quiet");
+    }
+
+    const tensaoFonteExterna = dados.ch_analog_2;
+    const { text: powerText } = getPowerSourceStatus(tensaoFonteExterna);
+    document.getElementById("diag-power-source").textContent = powerText;
+
+    const tensaoBateria = dados.ch_analog_3 || dados.battery;
+    document.getElementById("diag-battery-voltage").textContent = `Bateria: ${tensaoBateria?.toFixed(2) || "--"} V`;
+
+    carregarEstatisticasDetalhes();
 }
 
-.icon-header {
-    font-size: 2.5rem;
-    color: var(--primary-color);
+function atualizarBadge(elementId, text, className) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = text;
+        element.className = `badge ${className}`;
+    }
 }
 
-.page-header .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
+function atualizarListaAlarmes(alarms) {
+    const alarmCountEl = document.getElementById("active-alarms-count");
+    const alarmSubtextEl = alarmCountEl.nextElementSibling;
+    if (!alarms) {
+        alarmCountEl.textContent = "0";
+        alarmSubtextEl.textContent = "Nenhum alarme no momento";
+        return;
+    }
+
+    let activeAlarms = [];
+    if (Array.isArray(alarms)) {
+        const alarmNames = ["A1.L", "A1.H", "A2.L", "A2.H", "A3.L", "A3.H", "D1.H"];
+        alarms.forEach((status, index) => {
+            if (status === 1 && alarmNames[index]) {
+                activeAlarms.push([alarmNames[index], true]);
+            }
+        });
+    } else {
+        activeAlarms = Object.entries(alarms).filter(([key, value]) => value === true);
+    }
+
+    alarmCountEl.textContent = activeAlarms.length;
+    if (activeAlarms.length > 0) {
+        alarmSubtextEl.textContent = `${activeAlarms.length} alarme(s) ativo(s)`;
+    } else {
+        alarmSubtextEl.textContent = "Nenhum alarme no momento";
+    }
 }
 
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+function iniciarWebSocket() {
+    const socket = new WebSocket(`ws://${window.location.host}`);
+
+    socket.onopen = () => {};
+    socket.onclose = () => {
+        setTimeout(iniciarWebSocket, 5000);
+    };
+    socket.onerror = (error) => {};
+
+    socket.onmessage = function (event) {
+        try {
+            const message = JSON.parse(event.data);
+            if (message.dados && message.dados.serial_number !== serialNumber) {
+                return;
+            }
+            if (message.type === "nova_leitura_logbox") {
+                atualizarPainelLeitura(message.dados);
+            }
+            if (message.type === "atualizacao_status") {
+                atualizarPainelCompleto(message.dados);
+            }
+        } catch (e) {}
+    };
 }
 
-.kpi-card {
-    background-color: var(--card-bg);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    border: 1px solid var(--card-border-color);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+function getWifiStatus(rssi) {
+    if (!rssi) return { text: "Sem Sinal" };
+    if (rssi >= -67) return { text: "Excelente" };
+    if (rssi >= -75) return { text: "Bom" };
+    if (rssi >= -85) return { text: "Fraco" };
+    return { text: "Muito Fraco" };
 }
 
-.kpi-icon .material-symbols-outlined {
-    font-size: 2.75rem;
-    font-variation-settings: 'FILL' 1;
+function getPowerSourceStatus(voltage) {
+    if (voltage === undefined || voltage === null) return { text: "Verificando..." };
+    if (voltage > 9) return { text: "Rede Elétrica" };
+    return { text: "Apenas Bateria" };
 }
 
-.kpi-content {
-    display: flex;
-    flex-direction: column;
+async function carregarEstatisticasDetalhes() {
+    try {
+        const response = await fetch(`/api/logbox-device/${serialNumber}/stats-detail`);
+        if (!response.ok) throw new Error("Falha ao buscar estatísticas");
+        const stats = await response.json();
+
+        document.getElementById("stat-today-min").textContent = `${stats.today.min} °C`;
+        document.getElementById("stat-today-avg").textContent = `${stats.today.avg} °C`;
+        document.getElementById("stat-today-max").textContent = `${stats.today.max} °C`;
+        document.getElementById("stat-month-min").textContent = `${stats.month.min} °C`;
+        document.getElementById("stat-month-avg").textContent = `${stats.month.avg} °C`;
+        document.getElementById("stat-month-max").textContent = `${stats.month.max} °C`;
+    } catch (error) {}
 }
 
-.kpi-label {
-    font-size: 0.9rem;
-    color: var(--muted-color);
-    font-weight: 500;
-}
+function gerarGraficoHistorico(dados) {
+    const ctxEl = document.getElementById("graficoHistorico");
+    if (!ctxEl) return;
+    const ctx = ctxEl.getContext("2d");
 
-.kpi-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--dark-color);
-    line-height: 1.2;
-}
+    const initialData = dados.labels.map((label, index) => ({
+        x: new Date(label.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$2/$1/$3")).getTime(),
+        y: dados.temperaturas[index],
+    }));
 
-.kpi-unit {
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: var(--muted-color);
-    margin-left: 0.25rem;
-}
+    if (historicoChartInstance) {
+        historicoChartInstance.destroy();
+    }
 
-.kpi-timestamp {
-    font-size: 0.8rem;
-}
-
-.card {
-    border: 1px solid var(--card-border-color);
-    border-radius: 0.75rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.card-header {
-    background-color: var(--light-color);
-    font-weight: 700;
-    color: var(--dark-color);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    border-bottom: 1px solid var(--card-border-color);
-    padding: 1rem 1.5rem;
-}
-
-.card-header .material-symbols-outlined {
-    font-size: 1.5rem;
-}
-
-.chart-container {
-    position: relative;
-    height: 100%;
-    min-height: 300px;
-}
-
-.chart-loader {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    min-height: 300px;
-    color: var(--muted-color);
-    font-weight: 500;
-}
-
-.chart-loader .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.stats-group h6 {
-    font-weight: 700;
-    color: var(--primary-color);
-    margin-bottom: 1rem;
-}
-
-.stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1rem;
-    margin-bottom: 0.75rem;
-}
-
-.stat-row span {
-    color: var(--muted-color);
-}
-
-.stat-row strong {
-    color: var(--dark-color);
-}
-
-.list-group-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.1rem 1.5rem;
-}
-
-.list-group-item .material-symbols-outlined {
-    margin-right: 1rem;
-    vertical-align: middle;
-}
-
-.list-group-item .badge {
-    font-size: 0.875rem;
-    font-weight: 500;
-    min-width: 65px;
-    text-align: center;
-    padding: 0.4em 0.6em;
+    historicoChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+            datasets: [{
+                label: "Temperatura (°C)",
+                data: initialData,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.1)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                borderWidth: 2,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: "realtime",
+                    realtime: {
+                        duration: 900000,
+                        refresh: 10000,
+                        delay: 5000,
+                    },
+                    grid: { display: false },
+                },
+                y: {
+                    title: { display: false },
+                    grid: { color: "#e9ecef" },
+                },
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+        },
+    });
 }
