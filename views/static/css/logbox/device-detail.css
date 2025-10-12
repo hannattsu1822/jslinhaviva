@@ -61,16 +61,16 @@ body {
 .kpi-card {
     background-color: var(--card-bg);
     border-radius: 0.75rem;
-    padding: 1.25rem;
+    padding: 1.5rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.25rem;
     border: 1px solid var(--card-border-color);
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .kpi-icon .material-symbols-outlined {
-    font-size: 2.5rem;
+    font-size: 2.75rem;
     font-variation-settings: 'FILL' 1;
 }
 
@@ -80,27 +80,27 @@ body {
 }
 
 .kpi-label {
-    font-size: 0.875rem;
+    font-size: 0.9rem;
     color: var(--muted-color);
     font-weight: 500;
 }
 
 .kpi-value {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--dark-color);
     line-height: 1.2;
 }
 
 .kpi-unit {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 500;
     color: var(--muted-color);
     margin-left: 0.25rem;
 }
 
 .kpi-timestamp {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
 }
 
 .card {
@@ -117,7 +117,7 @@ body {
     align-items: center;
     gap: 0.75rem;
     border-bottom: 1px solid var(--card-border-color);
-    padding: 1rem 1.25rem;
+    padding: 1rem 1.5rem;
 }
 
 .card-header .material-symbols-outlined {
@@ -127,7 +127,7 @@ body {
 .chart-container {
     position: relative;
     height: 100%;
-    min-height: 350px;
+    min-height: 300px;
 }
 
 .chart-loader {
@@ -136,7 +136,7 @@ body {
     align-items: center;
     justify-content: center;
     height: 100%;
-    min-height: 350px;
+    min-height: 300px;
     color: var(--muted-color);
     font-weight: 500;
 }
@@ -159,15 +159,15 @@ body {
 .stats-group h6 {
     font-weight: 700;
     color: var(--primary-color);
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
 }
 
 .stat-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.95rem;
-    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 .stat-row span {
@@ -182,7 +182,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.25rem;
+    padding: 1.1rem 1.5rem;
 }
 
 .list-group-item .material-symbols-outlined {
@@ -191,8 +191,9 @@ body {
 }
 
 .list-group-item .badge {
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    min-width: 60px;
+    min-width: 65px;
     text-align: center;
+    padding: 0.4em 0.6em;
 }
