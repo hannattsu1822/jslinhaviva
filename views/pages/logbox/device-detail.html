@@ -59,27 +59,9 @@
             </div>
         </div>
 
-        <div class="row g-4">
-            <div class="col-lg-7">
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
                 <div class="card h-100">
-                    <div class="card-header">
-                        <span class="material-symbols-outlined">timeline</span>
-                        Histórico de Temperatura (Últimas Leituras)
-                    </div>
-                    <div class="card-body">
-                        <div id="loader-historico" class="chart-loader">
-                            <div class="spinner"></div>
-                            <span>Carregando histórico...</span>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="graficoHistorico" style="display: none;"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-5">
-                <div class="card mb-4">
                     <div class="card-header">
                         <span class="material-symbols-outlined">query_stats</span>
                         Estatísticas
@@ -112,8 +94,9 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="card">
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
                     <div class="card-header">
                         <span class="material-symbols-outlined">developer_board</span>
                         Diagnóstico do Dispositivo
@@ -140,6 +123,26 @@
                             <span id="diag-firmware-version" class="badge text-bg-secondary">--</span>
                         </li>
                     </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="material-symbols-outlined">timeline</span>
+                        Histórico de Temperatura (Últimas Leituras)
+                    </div>
+                    <div class="card-body">
+                        <div id="loader-historico" class="chart-loader">
+                            <div class="spinner"></div>
+                            <span>Carregando histórico...</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="graficoHistorico" style="display: none;"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
