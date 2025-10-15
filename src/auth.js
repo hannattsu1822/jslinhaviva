@@ -1,7 +1,7 @@
 const { promisePool } = require("./init");
 const bcrypt = require("bcrypt");
 
-// Função para autenticar (permanece a mesma)
+// Função para autenticar 
 function autenticar(req, res, next) {
   if (req.session.user) {
     req.user = req.session.user;
@@ -11,12 +11,12 @@ function autenticar(req, res, next) {
   }
 }
 
-// MODIFICADO: Função de login para incluir o 'nivel' na sessão
+
 async function loginSeguro(req, res, next) {
   const { matricula, senha } = req.body;
 
   try {
-    // MODIFICADO: Adicionado 'nivel' à consulta SELECT
+
     const [rows] = await promisePool.query(
       "SELECT *, nivel FROM users WHERE matricula = ?",
       [matricula]
@@ -56,7 +56,7 @@ async function loginSeguro(req, res, next) {
       return res.status(401).json({ message: "Matrícula ou senha inválida" });
     }
 
-    // MODIFICADO: O objeto do usuário na sessão agora inclui o 'nivel'
+
     const { senha: _, ...userWithoutPassword } = usuario;
     req.session.user = userWithoutPassword;
 
@@ -72,11 +72,10 @@ async function loginSeguro(req, res, next) {
   }
 }
 
-// NOVO: Middleware para verificar o nível de permissão
-// Esta função recebe o nível mínimo requerido e retorna um middleware
+
 function verificarNivel(nivelRequerido) {
   return (req, res, next) => {
-    // req.user é populado pela função autenticar()
+
     const nivelUsuario = req.user?.nivel;
 
     if (nivelUsuario === undefined) {
@@ -87,7 +86,7 @@ function verificarNivel(nivelRequerido) {
     }
 
     if (nivelUsuario >= nivelRequerido) {
-      // O usuário tem o nível necessário ou superior
+
       next();
     } else {
       console.log(
@@ -103,7 +102,7 @@ function verificarNivel(nivelRequerido) {
   };
 }
 
-// Função para registrar auditoria (permanece a mesma)
+
 async function registrarAuditoria(
   matricula,
   acao,
@@ -129,7 +128,6 @@ async function registrarAuditoria(
   }
 }
 
-// Funções de hash e verificação de senha (permanecem as mesmas)
 async function criarHashSenha(senha) {
   return await bcrypt.hash(senha, 10);
 }
@@ -138,12 +136,13 @@ async function verificarSenha(senhaDigitada, hashArmazenado) {
   return await bcrypt.compare(senhaDigitada, hashArmazenado);
 }
 
-// MODIFICADO: Exportando a nova função e removendo as antigas
+
 module.exports = {
   autenticar,
   loginSeguro,
-  verificarNivel, // <-- Nova função
+  verificarNivel, 
   registrarAuditoria,
   criarHashSenha,
   verificarSenha,
 };
+
