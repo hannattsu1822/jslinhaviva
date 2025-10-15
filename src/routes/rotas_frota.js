@@ -6,8 +6,6 @@ const { autenticar, verificarNivel, registrarAuditoria } = require("../auth");
 
 const router = express.Router();
 
-// ... (todas as outras rotas que já estavam aqui, de /frota até /api/agendamentos_checklist/:id) ...
-// ... vou omitir as rotas já existentes para não ficar gigante, mas elas devem permanecer no seu arquivo ...
 
 router.get("/frota", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/pages/frota/frota.html"));
@@ -424,7 +422,6 @@ router.get(
   }
 );
 
-// ROTA NOVA ADICIONADA AQUI
 router.get(
   "/api/agendamentos_abertos",
   autenticar,
@@ -481,8 +478,6 @@ router.get(
   }
 );
 
-// ... (resto do seu arquivo de rotas, de /api/veiculos_controle em diante) ...
-// ... vou omitir o resto para não ficar gigante, mas ele deve permanecer no seu arquivo ...
 
 router.get(
   "/api/veiculos_controle",
@@ -1589,3 +1584,4 @@ router.delete(
 );
 
 module.exports = router;
+
