@@ -6,7 +6,7 @@ const { promisePool, upload } = require("../init");
 
 const router = express.Router();
 
-// --- ROTAS DE RENDERIZAÇÃO DE PÁGINAS (Refatoradas) ---
+
 
 router.get("/avulsos-dashboard", autenticar, verificarNivel(2), (req, res) => {
   res.render("pages/avulsos/dashboard_avulsos.html", { user: req.user });
@@ -54,7 +54,7 @@ router.get(
   }
 );
 
-// --- ROTAS DE API (Permanecem Inalteradas) ---
+// --- ROTAS DE API  ---
 
 router.get(
   "/api/avulsos/turmas-encarregados",
