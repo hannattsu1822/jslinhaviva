@@ -40,11 +40,11 @@ router.post("/api/logout", async (req, res) => {
         );
       }
 
-      // CORREÇÃO: Redireciona para a página de login em vez de enviar JSON
+
       return res.redirect("/login");
     });
   } else {
-    // CORREÇÃO: Se não há sessão, apenas redireciona para o login
+
     return res.redirect("/login");
   }
 });
@@ -64,3 +64,4 @@ router.get("/api/me", autenticar, (req, res) => {
 });
 
 module.exports = router;
+
