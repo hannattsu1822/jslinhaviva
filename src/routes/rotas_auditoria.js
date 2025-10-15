@@ -3,24 +3,23 @@ const express = require("express");
 const path = require("path");
 const { promisePool } = require("../init");
 
-// MODIFICADO: Importando a nova função 'verificarNivel'
+
 const { autenticar, verificarNivel } = require("../auth");
 
 const router = express.Router();
 
-// MODIFICADO: Usando verificarNivel(4) para maior restrição
+
 router.get("/auditoria", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/pages/into/auditoria.html"));
 });
 
-// MODIFICADO: Usando verificarNivel(4) para maior restrição
+
 router.get(
   "/api/auditoria",
   autenticar,
   verificarNivel(4),
   async (req, res) => {
     try {
-      // A query SQL permanece a mesma
       const query = `
         SELECT 
           id, 
@@ -50,3 +49,4 @@ router.get(
 );
 
 module.exports = router;
+
