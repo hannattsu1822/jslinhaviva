@@ -1,8 +1,8 @@
 const net = require('net');
 
 // --- CONFIGURE OS DADOS DO SEU RELÉ AQUI ---
-const RELE_IP = 'SEU_IP_PUBLICO_DA_VPS'; // O IP do servidor que o conversor conecta
-const RELE_PORT = 4000;                  // A porta do servidor
+const RELE_IP = 'SEU_IP_PUBLICO_DA_VPS'; 
+const RELE_PORT = 4000;                  
 
 // --- DADOS DE LOGIN E COMANDO ---
 const LOGIN_USER = "ACC\r\n";
@@ -32,25 +32,25 @@ const server = net.createServer((socket) => {
 
     // --- A SEQUÊNCIA DE COMANDOS "HUMANA" ---
 
-    // Passo 1: Espera 1 segundo após a conexão para enviar o usuário
+ 
     setTimeout(() => {
         console.log(`>>> ENVIANDO USUÁRIO: ACC`);
         socket.write(LOGIN_USER);
     }, 1000);
 
-    // Passo 2: Espera 3 segundos no total para enviar a senha
+ 
     setTimeout(() => {
         console.log(`>>> ENVIANDO SENHA: OTTER`);
         socket.write(LOGIN_PASS);
     }, 3000);
 
-    // Passo 3: Espera 5 segundos no total para enviar o comando de medição
+
     setTimeout(() => {
         console.log(`>>> ENVIANDO COMANDO: MET`);
         socket.write(COMMAND_TO_POLL);
     }, 5000);
 
-    // Passo 4: Espera 10 segundos no total para analisar a resposta e encerrar
+ 
     setTimeout(() => {
         console.log('\n--- ANÁLISE FINAL DO BUFFER COMPLETO ---');
         console.log(buffer);
