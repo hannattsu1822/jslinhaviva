@@ -1,4 +1,4 @@
-const express = require("express");
+/*const express = require("express");
 const router = express.Router();
 const { promisePool } = require("../init");
 const { autenticar, verificarNivel, criarHashSenha } = require("../auth");
@@ -562,4 +562,5 @@ router.get(
     }
   }
 );
-module.exports = router;
+module.exports = router;*/
+
