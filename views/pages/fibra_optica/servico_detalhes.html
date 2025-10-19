@@ -237,10 +237,13 @@
                     class="d-flex justify-content-between align-items-center"
                   >
                     <strong>Horário Previsto</strong>
-                    <span
-                      ><%= servico.horario_inicio.substring(0, 5) %> - <%=
-                      servico.horario_fim.substring(0, 5) %></span
-                    >
+                    <span>
+                      <% if (servico.horario_inicio && servico.horario_fim) { %>
+                        <%= servico.horario_inicio.substring(0, 5) %> - <%= servico.horario_fim.substring(0, 5) %>
+                      <% } else { %>
+                        N/A
+                      <% } %>
+                    </span>
                   </div>
                 </div>
               </div>
