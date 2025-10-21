@@ -1,5 +1,6 @@
 require("dotenv").config();
 const http = require("http");
+const path = require("path"); // Adicionado para garantir que 'path' esteja disponível
 const { WebSocketServer } = require("ws");
 const { app } = require("./init");
 const { iniciarClienteMQTT } = require("./mqtt_handler");
@@ -29,13 +30,23 @@ wss.on("connection", (ws) => {
 
 iniciarClienteMQTT(app);
 
-// ADICIONE ESTA ROTA AQUI PARA SERVIR O SERVICE WORKER
-const path = require("path");
+// --- ROTA ESPECIAL PARA O SERVICE WORKER ---
 app.get('/firebase-messaging-sw.js', (req, res) => {
+  // LOG DE DEBUG: Isso vai aparecer no console da sua VPS
+  console.log(">>> ROTA /firebase-messaging-sw.js FOI ACESSADA! <<<");
+  
   res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.resolve(__dirname, '../public/firebase-messaging-sw.js'));
+  res.sendFile(path.resolve(__dirname, '../public/firebase-messaging-sw.js'), (err) => {
+    if (err) {
+      // LOG DE ERRO: Se o arquivo não for encontrado
+      console.error("!!! ERRO AO ENVIAR O ARQUIVO firebase-messaging-sw.js:", err);
+      res.status(500).send('Erro ao servir o Service Worker.');
+    } else {
+      console.log(">>> Arquivo firebase-messaging-sw.js enviado com sucesso. <<<");
+    }
+  });
 });
-// FIM DA ROTA DO SERVICE WORKER
+// --- FIM DA ROTA ESPECIAL ---
 
 const aggregatorRoutes = require("./routes");
 app.use("/", aggregatorRoutes);
