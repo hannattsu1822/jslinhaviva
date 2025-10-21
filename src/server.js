@@ -29,10 +29,13 @@ wss.on("connection", (ws) => {
 
 iniciarClienteMQTT(app);
 
+// ADICIONE ESTA ROTA AQUI PARA SERVIR O SERVICE WORKER
 const path = require("path");
 app.get('/firebase-messaging-sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
   res.sendFile(path.resolve(__dirname, '../public/firebase-messaging-sw.js'));
 });
+// FIM DA ROTA DO SERVICE WORKER
 
 const aggregatorRoutes = require("./routes");
 app.use("/", aggregatorRoutes);
