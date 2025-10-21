@@ -59,7 +59,31 @@
       </button>
     </div>
 
-    <script>
+    <script type="module">
+      import { messaging, getToken } from "/firebase-init.js";
+
+      async function solicitarPermissaoEEnviarToken() {
+        try {
+          const permissao = await Notification.requestPermission();
+          if (permissao === "granted") {
+            const vapidKey = "SUA_VAPID_KEY_AQUI";
+            const currentToken = await getToken(messaging, {
+              vapidKey: vapidKey,
+            });
+
+            if (currentToken) {
+              await fetch("/api/me/fcm-token", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fcm_token: currentToken }),
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Ocorreu um erro ao obter o token FCM.", error);
+        }
+      }
+
       console.log("Script de login iniciado.");
       const loginForm = document.getElementById("loginForm");
       const matriculaInput = document.getElementById("matricula");
@@ -69,7 +93,6 @@
       const loginButtonSpan = loginButton
         ? loginButton.querySelector("span")
         : null;
-      // Store the original button text when the script loads
       const originalButtonTextContent = loginButtonSpan
         ? loginButtonSpan.textContent
         : "Acessar Sistema";
@@ -93,7 +116,6 @@
         console.error("[Debug] ERRO: loginButton não encontrado no DOM!");
       }
 
-      // Function to reset the login form to its initial state
       function resetLoginForm() {
         console.log("[Form Lifecycle] resetLoginForm() called.");
         if (matriculaInput) {
@@ -102,17 +124,12 @@
         if (senhaInput) {
           senhaInput.value = "";
         }
-        hideMessage(); // Clears any error/success messages
+        hideMessage();
 
         if (loginButton && loginButtonSpan) {
           loginButton.disabled = false;
-          loginButtonSpan.textContent = originalButtonTextContent; // Reset button text to original
+          loginButtonSpan.textContent = originalButtonTextContent;
         }
-
-        // Optionally, focus the first field. Uncomment if desired.
-        // if (matriculaInput) {
-        //   matriculaInput.focus();
-        // }
         console.log("[Form Lifecycle] Login form has been reset.");
       }
 
@@ -176,7 +193,6 @@
         }
         hideMessage();
 
-        // const currentOriginalButtonText = loginButtonSpan.textContent; // Already captured globally as originalButtonTextContent
         loginButton.disabled = true;
         loginButtonSpan.textContent = "Acessando...";
         console.log("[Login Flow] Botão desabilitado, texto 'Acessando...'.");
@@ -219,7 +235,8 @@
 
             localStorage.setItem("user", JSON.stringify(currentResult.user));
 
-            // ##### MUDANÇA: Remover listener antes de redirecionar #####
+            await solicitarPermissaoEEnviarToken();
+
             console.log(
               "[Login Flow] Removing global keydown listener before redirection."
             );
@@ -263,12 +280,8 @@
               "[Login Flow] Reabilitando botão para o texto original."
             );
             loginButton.disabled = false;
-            // Use a constante global para restaurar o texto original
             loginButtonSpan.textContent = originalButtonTextContent;
           } else {
-            // Se responseOk é true, o botão já foi alterado para "Redirecionando..."
-            // ou permanecerá desabilitado até a navegação.
-            // Certifique-se que o texto seja "Redirecionando..." se já foi "Acessando..."
             console.log(
               "[Login Flow] Login OK, botão permanece desabilitado, texto 'Redirecionando...'."
             );
@@ -303,7 +316,7 @@
         messageEl.textContent = "";
       }
 
-      function handleLoginAttempt() {
+      window.handleLoginAttempt = function () {
         console.log("[Debug] handleLoginAttempt() chamada.");
         if (loginButton.disabled) {
           console.warn(
@@ -315,7 +328,7 @@
           "[Debug] loginButton.disabled é false, chamando performLogin()."
         );
         performLogin();
-      }
+      };
 
       if (loginForm) {
         loginForm.addEventListener("submit", function (event) {
@@ -331,19 +344,10 @@
       function handleEnterKey(event) {
         const keyPressed = event.key;
         const keyCodePressed = event.keyCode;
-        // console.log( // Reduzindo log excessivo para keydown normal
-        //   `[Debug] keydown event GLOBAL, key: ${keyPressed}, keyCode: ${keyCodePressed}`
-        // );
-
         if (keyPressed === "Enter" || keyCodePressed === 13) {
           console.log(
             `[Debug] Tecla 'Enter' detectada globalmente (key: ${keyPressed}, keyCode: ${keyCodePressed}).`
           );
-          // Previne o comportamento padrão do Enter apenas se não estivermos focados em um input text/password
-          // ou se o alvo não for um botão, para evitar duplo submit ou problemas com outros elementos interativos.
-          // No entanto, para a intenção de "Enter em qualquer lugar submete login",
-          // é mais simples prevenir sempre e chamar handleLoginAttempt.
-          // A função handleLoginAttempt já verifica se o botão está desabilitado.
           event.preventDefault();
           console.log(
             "[Debug] Chamando handleLoginAttempt() via Enter global."
@@ -352,45 +356,23 @@
         }
       }
 
-      // Adiciona o listener de keydown ao documento inteiro
-      // Este listener será removido no performLogin antes do redirecionamento
       document.addEventListener("keydown", handleEnterKey);
       console.log(
         "[Debug] Listener de KEYDOWN adicionado ao DOCUMENTO para Enter global."
       );
 
-      // ##### MUDANÇA: Limpar formulário ao mostrar a página (incluindo navegação de volta) #####
       window.addEventListener("pageshow", function (event) {
         console.log(
           `[Page Lifecycle] pageshow event fired. Page was from bfcache: ${event.persisted}`
         );
-        // Sempre reseta o formulário quando a página é exibida,
-        // garantindo que esteja limpa ao navegar de volta.
         resetLoginForm();
-
-        // Re-adicionar o listener de Enter global se não estivermos prestes a redirecionar
-        // Se o usuário voltou para a página, o listener pode ter sido removido por um login anterior.
-        // No entanto, se o listener só é removido antes de window.location.href,
-        // e o usuário navega para longe e volta, o JS é re-executado ou o estado é restaurado.
-        // Se o script é re-executado, o listener é adicionado novamente.
-        // Se é do bfcache, o estado do listener (adicionado ou removido) é preservado.
-        // Para simplificar: A adição do listener está fora desta função `pageshow`.
-        // A remoção ocorre apenas antes do redirecionamento.
-        // Se o usuário voltar, e o script for re-executado, ele será adicionado.
-        // Se for do bfcache e foi removido, precisamos re-adicionar.
-        // Porém, é mais seguro que o listener seja adicionado uma vez e removido SÓ antes de sair.
-        // Se o usuário volta, e o listener foi removido, ele precisa ser re-adicionado.
-        // A forma mais simples é garantir que ele esteja lá:
-        // Removê-lo primeiro para evitar duplicatas, depois adicionar.
-        document.removeEventListener("keydown", handleEnterKey); // Evita duplicatas se bfcache restaurar um estado onde ele já existe
+        document.removeEventListener("keydown", handleEnterKey);
         document.addEventListener("keydown", handleEnterKey);
         console.log(
           "[Page Lifecycle] Global Enter key listener re-ensured on pageshow."
         );
       });
 
-      // ##### MUDANÇA: Limpar formulário no carregamento inicial da página #####
-      // Isso garante que se a página for carregada (não de um bfcache), ela comece limpa.
       resetLoginForm();
 
       console.log(
