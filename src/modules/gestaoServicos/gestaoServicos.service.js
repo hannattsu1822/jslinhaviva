@@ -5,6 +5,7 @@ const { PDFDocument } = require("pdf-lib");
 const playwright = require("playwright");
 const { promisePool } = require("../../init");
 const { projectRootDir } = require("../../shared/path.helper");
+const admin = require("firebase-admin");
 
 function limparArquivosTemporarios(files) {
   if (files) {
@@ -746,12 +747,57 @@ async function atribuirResponsavel(servicoId, responsavel_matricula) {
   if (!responsavel_matricula) {
     throw new Error("Matrícula do responsável é obrigatória.");
   }
-  const [result] = await promisePool.query(
-    "UPDATE processos SET responsavel_matricula = ? WHERE id = ?",
-    [responsavel_matricula, servicoId]
-  );
-  if (result.affectedRows === 0) {
-    throw new Error("Serviço não encontrado.");
+  const connection = await promisePool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [updateResult] = await connection.query(
+      "UPDATE processos SET responsavel_matricula = ? WHERE id = ?",
+      [responsavel_matricula, servicoId]
+    );
+
+    if (updateResult.affectedRows === 0) {
+      throw new Error("Serviço não encontrado.");
+    }
+
+    const [userInfo] = await connection.query(
+      "SELECT fcm_token FROM users WHERE matricula = ?",
+      [responsavel_matricula]
+    );
+
+    const token = userInfo[0]?.fcm_token;
+
+    if (token) {
+      const [servicoInfo] = await connection.query(
+        "SELECT processo FROM processos WHERE id = ?",
+        [servicoId]
+      );
+      const nomeProcesso = servicoInfo[0]?.processo || `ID ${servicoId}`;
+
+      const message = {
+        notification: {
+          title: "Novo Serviço Atribuído!",
+          body: `O serviço '${nomeProcesso}' foi atribuído a você.`,
+        },
+        token: token,
+      };
+
+      await admin.messaging().send(message);
+      console.log(
+        `Notificação enviada com sucesso para a matrícula ${responsavel_matricula}`
+      );
+    } else {
+      console.log(
+        `Usuário com matrícula ${responsavel_matricula} não possui um token FCM para notificação.`
+      );
+    }
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    if (connection) connection.release();
   }
 }
 
