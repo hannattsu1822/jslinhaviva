@@ -64,49 +64,24 @@
 
       async function solicitarPermissaoEEnviarToken() {
         try {
-          console.log("1. Iniciando a função solicitarPermissaoEEnviarToken.");
-          
           const permissao = await Notification.requestPermission();
-          
-          console.log("2. Resultado da permissão:", permissao);
-
           if (permissao === "granted") {
             const vapidKey = "BJnPkIW3H37oCl0O19lxQWbfUcZt55TD2Qghf2UtWajPuWpCfev09kGf_LF8Uxq1d-QUZAFn_8tJqCbuLnBRPdY";
-            
-            console.log("3. Permissão concedida. Tentando obter o token...");
-
             const currentToken = await getToken(messaging, { vapidKey: vapidKey });
 
             if (currentToken) {
-              console.log("4. TOKEN OBTIDO COM SUCESSO:", currentToken);
-              
-              console.log("5. Enviando token para o backend em /api/me/fcm-token...");
-
-              const response = await fetch("/api/me/fcm-token", {
+              await fetch("/api/me/fcm-token", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ fcm_token: currentToken }),
               });
-
-              console.log("6. Resposta do backend:", response.status);
-              if (!response.ok) {
-                console.error("6.1. Erro do backend:", await response.text());
-              } else {
-                console.log("6.1. Sucesso! Backend respondeu OK.");
-              }
-
-            } else {
-              console.error("ERRO: Permissão concedida, mas o token não foi gerado. Verifique a VAPID key e a configuração do Firebase.");
             }
-          } else {
-            console.warn("AVISO: Permissão para notificações foi negada pelo usuário.");
           }
         } catch (error) {
-          console.error("ERRO CRÍTICO ao obter o token FCM:", error);
+          console.error("Erro ao obter o token FCM:", error);
         }
       }
 
-      console.log("Script de login iniciado.");
       const loginForm = document.getElementById("loginForm");
       const matriculaInput = document.getElementById("matricula");
       const senhaInput = document.getElementById("senha");
@@ -127,16 +102,6 @@
         "welcomeCardLastAccess"
       );
       const closeWelcomeCardBtn = document.getElementById("closeWelcomeCard");
-
-      if (!matriculaInput) {
-        console.error("[Debug] ERRO: matriculaInput não encontrado no DOM!");
-      }
-      if (!senhaInput) {
-        console.error("[Debug] ERRO: senhaInput não encontrado no DOM!");
-      }
-      if (!loginButton) {
-        console.error("[Debug] ERRO: loginButton não encontrado no DOM!");
-      }
 
       function resetLoginForm() {
         if (matriculaInput) {
@@ -339,4 +304,3 @@
     </script>
   </body>
 </html>
-
