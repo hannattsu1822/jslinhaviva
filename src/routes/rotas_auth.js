@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const { loginSeguro, registrarAuditoria, autenticar } = require("../auth");
+const { promisePool } = require("../init");
 
 const router = express.Router();
 
@@ -40,11 +41,9 @@ router.post("/api/logout", async (req, res) => {
         );
       }
 
-
       return res.redirect("/login");
     });
   } else {
-
     return res.redirect("/login");
   }
 });
@@ -63,5 +62,24 @@ router.get("/api/me", autenticar, (req, res) => {
   }
 });
 
-module.exports = router;
+router.patch("/api/me/fcm-token", autenticar, async (req, res) => {
+  const { fcm_token } = req.body;
+  const { matricula } = req.user;
 
+  if (!fcm_token) {
+    return res.status(400).json({ message: "FCM token não fornecido." });
+  }
+
+  try {
+    await promisePool.query(
+      "UPDATE users SET fcm_token = ? WHERE matricula = ?",
+      [fcm_token, matricula]
+    );
+    res.status(200).json({ message: "Token FCM atualizado com sucesso." });
+  } catch (error) {
+    console.error("Erro ao salvar token FCM:", error);
+    res.status(500).json({ message: "Erro interno ao salvar o token." });
+  }
+});
+
+module.exports = router;
