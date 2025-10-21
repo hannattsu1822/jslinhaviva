@@ -92,55 +92,10 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024,
     files: 25,
   },
-fileFilter: (req, file, cb) => {
-    // ADICIONE ESTA LINHA PARA DEPURAR
-    console.log(`[Multer File Filter] Recebendo arquivo: ${file.originalname}, MIME Type: ${file.mimetype}`);
-
-    const allowedMimeTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/heic",
-      "image/heif",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "text/csv",
-      "application/csv",
-      "text/x-csv",
-      "text/plain",
-      "application/octet-stream",
-    ];
-    const allowedExtensions = [
-      ".pdf",
-      ".jpg",
-      ".jpeg",
-      ".png",
-      ".gif",
-      ".heic",
-      ".heif",
-      ".doc",
-      ".docx",
-      ".xls",
-      ".xlsx",
-      ".csv",
-      ".txt",
-    ];
-    const ext = path.extname(file.originalname).toLowerCase();
-    const isValidExt = allowedExtensions.includes(ext);
-    const isValidMime = allowedMimeTypes.includes(file.mimetype);
-
-    if (isValidExt || isValidMime) {
-      return cb(null, true);
-    } else {
-      cb(
-        new Error("Tipo de arquivo não permitido. Verifique os tipos aceitos.")
-      );
-    }
+  fileFilter: (req, file, cb) => {
+    // MODIFICAÇÃO: Aceita qualquer arquivo, sem validação de tipo.
+    cb(null, true);
   },
-
 });
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -218,4 +173,3 @@ module.exports = {
   projectRootDir,
   uploadsSubestacoesDir,
 };
-
