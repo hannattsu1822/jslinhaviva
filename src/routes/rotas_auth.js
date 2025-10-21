@@ -62,44 +62,23 @@ router.get("/api/me", autenticar, (req, res) => {
   }
 });
 
-router.patch("/api/me/fcm-token", autenticar, async (req, res) => {
-  console.log("--- ROTA /api/me/fcm-token FOI ACESSADA ---");
+router.post("/api/push/subscribe", autenticar, async (req, res) => {
+  const subscription = req.body.subscription;
+  const matricula = req.user.matricula;
 
-  const { fcm_token } = req.body;
-  const { matricula } = req.user;
-
-  console.log("Token recebido no body:", fcm_token);
-  console.log("Matrícula do usuário da sessão:", matricula);
-
-  if (!fcm_token) {
-    console.error("ERRO: fcm_token está vazio ou não foi fornecido no body.");
-    return res.status(400).json({ message: "FCM token não fornecido." });
-  }
-  if (!matricula) {
-    console.error("ERRO: Não foi possível obter a matrícula do usuário da sessão.");
-    return res.status(401).json({ message: "Usuário não autenticado corretamente." });
+  if (!subscription) {
+    return res.status(400).json({ message: "Subscription object não fornecido." });
   }
 
   try {
-    console.log(`Executando SQL: UPDATE users SET fcm_token = '...' WHERE matricula = '${matricula}'`);
-    
-    const [result] = await promisePool.query("UPDATE users SET fcm_token = ? WHERE matricula = ?", [
-      fcm_token,
+    await promisePool.query("UPDATE users SET push_subscription = ? WHERE matricula = ?", [
+      JSON.stringify(subscription),
       matricula,
     ]);
-
-    console.log("SQL executado com sucesso. Linhas afetadas:", result.affectedRows);
-
-    if (result.affectedRows > 0) {
-      res.status(200).json({ message: "Token FCM atualizado com sucesso." });
-    } else {
-      console.warn(`AVISO: Nenhuma linha foi atualizada para a matrícula ${matricula}. Usuário existe na tabela?`);
-      res.status(404).json({ message: "Usuário não encontrado para atualizar o token." });
-    }
-    
+    res.status(201).json({ message: "Inscrição salva com sucesso." });
   } catch (error) {
-    console.error("ERRO CRÍTICO NO BANCO DE DADOS ao salvar token FCM:", error);
-    res.status(500).json({ message: "Erro interno ao salvar o token." });
+    console.error("Erro ao salvar inscrição push:", error);
+    res.status(500).json({ message: "Erro ao salvar inscrição." });
   }
 });
 
