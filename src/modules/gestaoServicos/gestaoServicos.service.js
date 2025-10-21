@@ -765,9 +765,15 @@ async function atribuirResponsavel(servicoId, responsavel_matricula) {
       [responsavel_matricula]
     );
 
-    const subscription = userInfo[0]?.push_subscription;
+    const subscriptionString = userInfo[0]?.push_subscription;
 
-    if (subscription) {
+    if (subscriptionString) {
+      console.log(`[PUSH] Encontrada inscrição para a matrícula ${responsavel_matricula}. Tentando enviar notificação.`);
+      
+      // --- A CORREÇÃO ESTÁ AQUI ---
+      const subscription = JSON.parse(subscriptionString);
+      // -----------------------------
+
       const [servicoInfo] = await connection.query(
         "SELECT processo FROM processos WHERE id = ?",
         [servicoId]
@@ -781,20 +787,26 @@ async function atribuirResponsavel(servicoId, responsavel_matricula) {
 
       try {
         await webpush.sendNotification(subscription, payload);
-        console.log(`Notificação (Web Push) enviada para ${responsavel_matricula}`);
+        console.log(`[PUSH] SUCESSO: Notificação (Web Push) enviada para ${responsavel_matricula}.`);
       } catch (error) {
-        console.error(`Falha ao enviar notificação para ${responsavel_matricula}. Erro:`, error);
+        console.error(`[PUSH] FALHA ao enviar notificação para ${responsavel_matricula}.`);
+        console.error("[PUSH] Detalhes do Erro:", error);
+
         if (error.statusCode === 410 || error.statusCode === 404) {
-          console.log('Inscrição expirada ou inválida. Removendo do banco de dados.');
+          console.log('[PUSH] Inscrição expirada ou inválida. Removendo do banco de dados.');
           await connection.query('UPDATE users SET push_subscription = NULL WHERE matricula = ?', [responsavel_matricula]);
         }
       }
+    } else {
+      console.log(`[PUSH] Nenhuma inscrição encontrada para a matrícula ${responsavel_matricula}. Nenhuma notificação foi enviada.`);
     }
 
     await connection.commit();
   } catch (error) {
     await connection.rollback();
-    throw error;
+    if (!error.statusCode) {
+        throw error;
+    }
   } finally {
     if (connection) connection.release();
   }
@@ -1057,3 +1069,4 @@ module.exports = {
   atribuirResponsavel,
   gerarPdfConsolidado,
 };
+
