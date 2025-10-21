@@ -29,6 +29,11 @@ wss.on("connection", (ws) => {
 
 iniciarClienteMQTT(app);
 
+const path = require("path");
+app.get('/firebase-messaging-sw.js', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../public/firebase-messaging-sw.js'));
+});
+
 const aggregatorRoutes = require("./routes");
 app.use("/", aggregatorRoutes);
 
