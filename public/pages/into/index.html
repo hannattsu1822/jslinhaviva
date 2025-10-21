@@ -66,7 +66,7 @@
         try {
           const permissao = await Notification.requestPermission();
           if (permissao === "granted") {
-            const vapidKey = "SUA_VAPID_KEY_AQUI";
+            const vapidKey = "BJnPklW3H37oCl0O19IxQWbfUcZt55TD2Qghf2UtWsjPuWpCfev09kGf_LF8Uxq1d-QUzAFn_8tJqCbuLnBRPdY";
             const currentToken = await getToken(messaging, {
               vapidKey: vapidKey,
             });
@@ -381,3 +381,4 @@
     </script>
   </body>
 </html>
+
