@@ -92,7 +92,10 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024,
     files: 25,
   },
-  fileFilter: (req, file, cb) => {
+fileFilter: (req, file, cb) => {
+    // ADICIONE ESTA LINHA PARA DEPURAR
+    console.log(`[Multer File Filter] Recebendo arquivo: ${file.originalname}, MIME Type: ${file.mimetype}`);
+
     const allowedMimeTypes = [
       "application/pdf",
       "image/jpeg",
@@ -137,6 +140,7 @@ const upload = multer({
       );
     }
   },
+
 });
 
 const sessionSecret = process.env.SESSION_SECRET;
@@ -214,3 +218,4 @@ module.exports = {
   projectRootDir,
   uploadsSubestacoesDir,
 };
+
