@@ -5,7 +5,7 @@ const { PDFDocument } = require("pdf-lib");
 const playwright = require("playwright");
 const { promisePool } = require("../../init");
 const { projectRootDir } = require("../../shared/path.helper");
-const admin = require("firebase-admin");
+const webpush = require('../../push-config');
 
 function limparArquivosTemporarios(files) {
   if (files) {
@@ -761,35 +761,34 @@ async function atribuirResponsavel(servicoId, responsavel_matricula) {
     }
 
     const [userInfo] = await connection.query(
-      "SELECT fcm_token FROM users WHERE matricula = ?",
+      "SELECT push_subscription FROM users WHERE matricula = ?",
       [responsavel_matricula]
     );
 
-    const token = userInfo[0]?.fcm_token;
+    const subscription = userInfo[0]?.push_subscription;
 
-    if (token) {
+    if (subscription) {
       const [servicoInfo] = await connection.query(
         "SELECT processo FROM processos WHERE id = ?",
         [servicoId]
       );
       const nomeProcesso = servicoInfo[0]?.processo || `ID ${servicoId}`;
 
-      const message = {
-        notification: {
-          title: "Novo Serviço Atribuído!",
-          body: `O serviço '${nomeProcesso}' foi atribuído a você.`,
-        },
-        token: token,
-      };
+      const payload = JSON.stringify({
+        title: 'Novo Serviço Atribuído!',
+        body: `O serviço '${nomeProcesso}' foi atribuído a você.`
+      });
 
-      await admin.messaging().send(message);
-      console.log(
-        `Notificação enviada com sucesso para a matrícula ${responsavel_matricula}`
-      );
-    } else {
-      console.log(
-        `Usuário com matrícula ${responsavel_matricula} não possui um token FCM para notificação.`
-      );
+      try {
+        await webpush.sendNotification(subscription, payload);
+        console.log(`Notificação (Web Push) enviada para ${responsavel_matricula}`);
+      } catch (error) {
+        console.error(`Falha ao enviar notificação para ${responsavel_matricula}. Erro:`, error);
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          console.log('Inscrição expirada ou inválida. Removendo do banco de dados.');
+          await connection.query('UPDATE users SET push_subscription = NULL WHERE matricula = ?', [responsavel_matricula]);
+        }
+      }
     }
 
     await connection.commit();
