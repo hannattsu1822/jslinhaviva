@@ -1,7 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const { upload } = require("../../init");
+const { upload, promisePool } = require("../../init");
 const { autenticar, verificarNivel } = require("../../auth");
 const controller = require("./gestaoServicos.controller");
 const { projectRootDir } = require("../../shared/path.helper");
@@ -206,5 +206,29 @@ router.get(
   verificarNivel(2),
   controller.gerarPdfConsolidado
 );
+
+router.post('/api/push/subscribe', autenticar, async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    const matricula = req.user.matricula;
+    console.log(`DEBUG: [Backend] Rota /api/push/subscribe foi chamada pela matrícula: ${matricula}`);
+    console.log("DEBUG: [Backend] Objeto de inscrição recebido do frontend:", subscription);
+    if (!subscription || !subscription.endpoint) {
+      console.error("DEBUG: [Backend] Objeto de inscrição inválido recebido.");
+      return res.status(400).json({ success: false, message: 'Objeto de inscrição inválido.' });
+    }
+    const subscriptionString = JSON.stringify(subscription);
+    console.log(`DEBUG: [Backend] Salvando a string de inscrição no banco de dados para a matrícula ${matricula}...`);
+    await promisePool.query(
+      'UPDATE users SET push_subscription = ? WHERE matricula = ?',
+      [subscriptionString, matricula]
+    );
+    console.log(`DEBUG: [Backend] Inscrição salva com sucesso para a matrícula ${matricula}.`);
+    res.status(201).json({ success: true });
+  } catch (error) {
+    console.error("DEBUG: [Backend] Erro ao salvar a inscrição no banco de dados:", error);
+    res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+  }
+});
 
 module.exports = router;
