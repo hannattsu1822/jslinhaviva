@@ -1,22 +1,23 @@
-self.addEventListener("push", function (event) {
+self.addEventListener('push', function(event) {
   if (!event.data) {
-    console.log("Push event sem dados recebido.");
     return;
   }
-
+  
   const data = event.data.json();
-
+  
   const options = {
     body: data.body,
-    icon: "/static/images/seu-icone.png",
+    icon: '/static/images/seu-icone.png',
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
 });
 
-self.addEventListener("notificationclick", function (event) {
+self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow("https://sulgipelinhaviva.online/servicos_ativos")
+    clients.openWindow('https://sulgipelinhaviva.online/servicos_ativos')
   );
 });
