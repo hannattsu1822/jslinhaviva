@@ -4,23 +4,20 @@ const { autenticar } = require("./auth");
 
 const rotasAuth = require("./routes/rotas_auth");
 const rotasAuditoria = require("./routes/rotas_auditoria");
+
 const rotasFrota = require("./modules/frota");
-const rotasGestaoServicos = require("./modules/gestaoServicos/gestaoServicos.routes");
+const rotasGestaoServicos = require("./modules/gestaoServicos");
 const rotasGestao = require("./modules/gestao");
 const rotasGestaoTurmas = require("./modules/gestaoTurmas");
 const rotasTransformadores = require("./modules/transformadores");
 const rotasTransformadoresReformados = require("./modules/trafosReformados");
 const rotasFibraOptica = require("./modules/fibraOptica");
-const rotasInspecoesRedes = require("./routes/rotas_inspecoes_redes");
-const rotasAvulsos = require("./routes/rotas_avulsos");
-const rotasRelatorios = require("./routes/rotas_relatorios");
-const rotasSubestacoesInfra = require("./routes/rotas_subestacoes_infra");
-const rotasSubestacoesServicos = require("./routes/rotas_subestacoes_servicos");
-const rotasSubestacoesChecklist = require("./routes/rotas_subestacoes_checklist");
-const rotasPaginasDirect = require("./routes/rotas_paginas_direct");
-const rotasLogbox = require("./routes/rotas_logbox");
-const rotasPrv = require("./routes/rotas_prv");
-const rotasReles = require("./routes/rotas_reles");
+const rotasAvulsos = require("./modules/avulsos");
+const rotasUteis = require("./modules/uteis");
+const rotasSubestacoes = require("./modules/subestacoes");
+const rotasLogbox = require("./modules/logbox");
+const rotasPrv = require("./modules/prv");
+const rotasReles = require("./modules/reles");
 
 const router = express.Router();
 
@@ -33,13 +30,9 @@ router.use("/", rotasGestaoTurmas);
 router.use("/", rotasTransformadores);
 router.use("/", rotasTransformadoresReformados);
 router.use("/", rotasFibraOptica);
-router.use("/", rotasInspecoesRedes);
 router.use("/", rotasAvulsos);
-router.use("/", rotasRelatorios);
-router.use("/", rotasSubestacoesInfra);
-router.use("/", rotasSubestacoesServicos);
-router.use("/", rotasSubestacoesChecklist);
-router.use("/", rotasPaginasDirect);
+router.use("/", rotasUteis);
+router.use("/", rotasSubestacoes);
 router.use("/", rotasLogbox);
 router.use("/", rotasPrv);
 router.use("/", rotasReles);
