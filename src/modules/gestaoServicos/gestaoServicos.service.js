@@ -768,11 +768,7 @@ async function atribuirResponsavel(servicoId, responsavel_matricula) {
     const subscriptionString = userInfo[0]?.push_subscription;
 
     if (subscriptionString) {
-      console.log(`[PUSH] Encontrada inscrição para a matrícula ${responsavel_matricula}. Tentando enviar notificação.`);
-      
-      // --- A CORREÇÃO ESTÁ AQUI ---
       const subscription = JSON.parse(subscriptionString);
-      // -----------------------------
 
       const [servicoInfo] = await connection.query(
         "SELECT processo FROM processos WHERE id = ?",
@@ -791,7 +787,6 @@ async function atribuirResponsavel(servicoId, responsavel_matricula) {
       } catch (error) {
         console.error(`[PUSH] FALHA ao enviar notificação para ${responsavel_matricula}.`);
         console.error("[PUSH] Detalhes do Erro:", error);
-
         if (error.statusCode === 410 || error.statusCode === 404) {
           console.log('[PUSH] Inscrição expirada ou inválida. Removendo do banco de dados.');
           await connection.query('UPDATE users SET push_subscription = NULL WHERE matricula = ?', [responsavel_matricula]);
@@ -1069,4 +1064,3 @@ module.exports = {
   atribuirResponsavel,
   gerarPdfConsolidado,
 };
-
