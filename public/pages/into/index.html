@@ -95,7 +95,7 @@
           let subscription = await registration.pushManager.getSubscription();
 
           if (!subscription) {
-            const vapidPublicKey = "BNAZwODsl4iP0G1lx_dbIFGsdmfIU_jbppyFduh_5hHz-NwoiK1kZ7_ahdhC4NxoQfEAOaWHedAFii1iGPtOtVQ";
+            const vapidPublicKey = "BG2t-ZK87tAQ35OSUXhxXFpCEhQizAqInAqK6PvKRBbbuaiZ6_7w2FBsVZoqCRbwXFZ-lpGlOPVZ0-HQs0Gupus";
             subscription = await registration.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
@@ -337,3 +337,4 @@
     </script>
   </body>
 </html>
+
