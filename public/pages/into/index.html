@@ -85,18 +85,25 @@
             console.log("DEBUG: [Frontend] Aguardando o service worker ficar 'pronto' (ativo)...");
             await navigator.serviceWorker.ready;
             console.log("DEBUG: [Frontend] Service worker está pronto.");
+
+            const existingSubscription = await registration.pushManager.getSubscription();
+            if (existingSubscription) {
+                console.log('DEBUG: [Frontend] Inscrição antiga encontrada. Removendo-a para criar uma nova...', existingSubscription);
+                await existingSubscription.unsubscribe();
+                console.log('DEBUG: [Frontend] Inscrição antiga removida com sucesso.');
+            }
+
             console.log("DEBUG: [Frontend] Solicitando permissão para notificações...");
             const permission = await Notification.requestPermission();
             console.log("DEBUG: [Frontend] Status da permissão:", permission);
             if (permission !== 'granted') {
                 console.warn('DEBUG: [Frontend] Permissão para notificações foi negada ou ignorada.');
+                if (permission === 'denied') {
+                    alert("As notificações estão bloqueadas. Para reativá-las, clique no cadeado na barra de endereços e mude a permissão de notificações para 'Permitir'.");
+                }
                 return;
             }
-            const existingSubscription = await registration.pushManager.getSubscription();
-            if (existingSubscription) {
-                console.log('DEBUG: [Frontend] Usuário já possui uma inscrição. Processo encerrado.', existingSubscription);
-                return;
-            }
+
             const vapidPublicKey = "BOJqp3DYakKat9iZiLBpbXZkoHRep5ZJ6SoaVXmEMo5JK5rT4Ti4rPKYuF3zjii0qonZ0QIlTWJtAO5g6Gxb2xc";
             console.log("DEBUG: [Frontend] Chave VAPID Pública que será usada para a inscrição:", vapidPublicKey);
             const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
@@ -106,8 +113,8 @@
                 userVisibleOnly: true,
                 applicationServerKey: applicationServerKey,
             });
-            console.log("DEBUG: [Frontend] Inscrição bem-sucedida! Objeto de inscrição:", subscription);
-            console.log("DEBUG: [Frontend] Enviando objeto de inscrição para o servidor em '/api/push/subscribe'...");
+            console.log("DEBUG: [Frontend] Inscrição BEM-SUCEDIDA! Novo objeto de inscrição:", subscription);
+            console.log("DEBUG: [Frontend] Enviando novo objeto de inscrição para o servidor em '/api/push/subscribe'...");
             await fetch('/api/push/subscribe', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -117,7 +124,7 @@
                     'Content-Type': 'application/json'
                 },
             });
-            console.log('DEBUG: [Frontend] Inscrição enviada para o servidor com sucesso.');
+            console.log('DEBUG: [Frontend] Nova inscrição enviada para o servidor com sucesso.');
         } catch (error) {
             console.error('DEBUG: [Frontend] FALHA CRÍTICA ao se inscrever para notificações push.');
             console.error('DEBUG: [Frontend] Nome do Erro:', error.name);
