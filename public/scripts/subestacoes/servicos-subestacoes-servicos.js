@@ -505,10 +505,13 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.innerHTML = `<span class="material-symbols-outlined spin">sync</span> Salvando...`;
 
     try {
-      await fetchData(`/api/servicos/item/${itemEscopoId}/concluir`, {
-        method: "PUT",
-        body: formData,
-      });
+      await fetchData(
+        `/api/servicos-subestacoes/item/${itemEscopoId}/concluir`,
+        {
+          method: "PUT",
+          body: formData,
+        }
+      );
       alert("Status do item atualizado com sucesso!");
       ocultarModal(modalConcluirItemEl);
       carregarServicos(currentPage);
@@ -588,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnSalvarGerenciamentoItens.disabled = true;
       try {
         await fetchData(
-          `/api/servicos/${servicoId}/atualizar-encarregados-itens`,
+          `/api/servicos-subestacoes/${servicoId}/atualizar-encarregados-itens`,
           {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
