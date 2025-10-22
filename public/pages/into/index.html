@@ -71,49 +71,71 @@
         return outputArray;
       }
 
-      async function subscribeUser() {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-          console.warn('Push messaging is not supported');
-          return;
-        }
+// Copie e substitua esta função no seu arquivo de login
 
-        try {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (let registration of registrations) {
-            await registration.unregister();
-          }
+async function subscribeUser() {
+  console.log("DEBUG: [Frontend] Iniciando o processo de inscrição para notificações push.");
 
-          const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-          await navigator.serviceWorker.ready;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('DEBUG: [Frontend] Push messaging não é suportado por este navegador.');
+    return;
+  }
+  console.log("DEBUG: [Frontend] Service Worker e Push Manager são suportados.");
 
-          const permission = await Notification.requestPermission();
-          if (permission !== 'granted') {
-            console.warn('Permissão para notificações foi negada.');
-            return;
-          }
+  try {
+    console.log("DEBUG: [Frontend] Registrando o service worker '/sw.js'...");
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log("DEBUG: [Frontend] Service worker registrado com sucesso:", registration);
 
-          let subscription = await registration.pushManager.getSubscription();
+    console.log("DEBUG: [Frontend] Aguardando o service worker ficar 'pronto' (ativo)...");
+    await navigator.serviceWorker.ready;
+    console.log("DEBUG: [Frontend] Service worker está pronto.");
 
-          if (!subscription) {
-            const vapidPublicKey = "BG2t-ZK87tAQ35OSUXhxXFpCEhQizAqInAqK6PvKRBbbuaiZ6_7w2FBsVZoqCRbwXFZ-lpGlOPVZ0-HQs0Gupus";
-            subscription = await registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-            });
-          }
+    console.log("DEBUG: [Frontend] Solicitando permissão para notificações...");
+    const permission = await Notification.requestPermission();
+    console.log("DEBUG: [Frontend] Status da permissão:", permission);
 
-          if (subscription) {
-            await fetch('/api/push/subscribe', {
-              method: 'POST',
-              body: JSON.stringify({ subscription }),
-              headers: { 'Content-Type': 'application/json' },
-            });
-          }
+    if (permission !== 'granted') {
+      console.warn('DEBUG: [Frontend] Permissão para notificações foi negada ou ignorada.');
+      return;
+    }
 
-        } catch (error) {
-          console.error('Falha ao se inscrever para notificações push:', error);
-        }
-      }
+    const existingSubscription = await registration.pushManager.getSubscription();
+    if (existingSubscription) {
+      console.log('DEBUG: [Frontend] Usuário já possui uma inscrição. Processo encerrado.', existingSubscription);
+      return;
+    }
+    
+    // --- PONTO CRÍTICO DE VERIFICAÇÃO ---
+    const vapidPublicKey = "BNAZwODsl4iP0G1lx_dbIFGsdmfIU_jbppyFduh_5hHz-NwoiK1kZ7_ahdhC4NxoQfEAOaWHedAFii1iGPtOtVQ";
+    console.log("DEBUG: [Frontend] Chave VAPID Pública que será usada para a inscrição:", vapidPublicKey);
+
+    const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+    console.log("DEBUG: [Frontend] Chave convertida para Uint8Array:", applicationServerKey);
+
+    console.log("DEBUG: [Frontend] Tentando se inscrever no push manager...");
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: applicationServerKey,
+    });
+    console.log("DEBUG: [Frontend] Inscrição bem-sucedida! Objeto de inscrição:", subscription);
+
+    console.log("DEBUG: [Frontend] Enviando objeto de inscrição para o servidor em '/api/push/subscribe'...");
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ subscription }), // Enviando o objeto aninhado
+      headers: { 'Content-Type': 'application/json' },
+    });
+    console.log('DEBUG: [Frontend] Inscrição enviada para o servidor com sucesso.');
+
+  } catch (error) {
+    // --- LOG DO ERRO DETALHADO ---
+    console.error('DEBUG: [Frontend] FALHA CRÍTICA ao se inscrever para notificações push.');
+    console.error('DEBUG: [Frontend] Nome do Erro:', error.name);
+    console.error('DEBUG: [Frontend] Mensagem do Erro:', error.message);
+    console.error('DEBUG: [Frontend] Objeto completo do Erro:', error);
+  }
+}
 
       const loginForm = document.getElementById("loginForm");
       const matriculaInput = document.getElementById("matricula");
@@ -337,4 +359,5 @@
     </script>
   </body>
 </html>
+
 
