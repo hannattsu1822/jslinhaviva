@@ -97,7 +97,7 @@
                 console.log('DEBUG: [Frontend] Usuário já possui uma inscrição. Processo encerrado.', existingSubscription);
                 return;
             }
-            const vapidPublicKey = "BNAZwODsl4iP0G1lx_dbIFGsdmfIU_jbppyFduh_5hHz-NwoiK1kZ7_ahdhC4NxoQfEAOaWHedAFii1iGPtOtVQ";
+            const vapidPublicKey = "BOJqp3DYakKat9iZiLBpbXZkoHRep5ZJ6SoaVXmEMo5JK5rT4Ti4rPKYuF3zjii0qonZ0QIlTWJtAO5g6Gxb2xc";
             console.log("DEBUG: [Frontend] Chave VAPID Pública que será usada para a inscrição:", vapidPublicKey);
             const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
             console.log("DEBUG: [Frontend] Chave convertida para Uint8Array:", applicationServerKey);
