@@ -277,18 +277,6 @@
 
           <div class="row mb-3">
             <div class="col-md-6">
-              <label for="servico-responsavel" class="form-label"
-                >Responsável Técnico</label
-              >
-              <select
-                class="form-select"
-                id="servico-responsavel"
-                name="responsavel_matricula"
-              >
-                <option value="">Carregando/Selecione...</option>
-              </select>
-            </div>
-            <div class="col-md-6">
               <label for="ordem_obra" class="form-label">Ordem de Obra</label>
               <select class="form-select" id="ordem_obra" name="ordem_obra">
                 <option value="">Nenhuma</option>
@@ -297,10 +285,7 @@
                 <option value="ODS">ODS</option>
               </select>
             </div>
-          </div>
-
-          <div class="row mb-3">
-            <div class="col-md-12">
+            <div class="col-md-6">
               <label for="maps" class="form-label">Link do Google Maps</label>
               <input
                 type="url"
@@ -311,6 +296,15 @@
               />
               <div class="invalid-feedback">
                 Por favor, insira um link válido do Google Maps.
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <div class="alert alert-info small">
+                <i class="fas fa-info-circle me-2"></i>A atribuição da equipe é
+                feita na tela de <a href="/servicos_ativos">Serviços Ativos</a>.
               </div>
             </div>
           </div>
@@ -426,7 +420,7 @@
               class="btn btn-primary"
               data-bs-dismiss="modal"
             >
-              Entendido
+              Entendi
             </button>
           </div>
         </div>

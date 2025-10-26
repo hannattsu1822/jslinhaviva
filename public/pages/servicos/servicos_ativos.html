@@ -44,6 +44,9 @@
       .upload-status-overlay.d-none {
         display: none !important;
       }
+      #modalResponsavelBody .list-group-item {
+        padding: 0.5rem 1rem;
+      }
     </style>
   </head>
   <body>
@@ -211,13 +214,13 @@
               <div class="row g-3">
                 <div class="col-md-3">
                   <label for="filtroProcesso" class="form-label"
-                    >Número do Processo</label
+                    >ID / Processo</label
                   >
                   <input
                     type="text"
                     class="form-control glass-input"
                     id="filtroProcesso"
-                    placeholder="Filtrar por processo..."
+                    placeholder="Filtrar por ID ou processo..."
                   />
                 </div>
                 <div class="col-md-3">
@@ -265,7 +268,7 @@
                     <th>Subestação</th>
                     <th>Alimentador</th>
                     <th>Data Prevista</th>
-                    <th>Responsável</th>
+                    <th>Equipe / Progresso</th>
                     <th>Desligamento</th>
                     <th>APR</th>
                     <th>Ordem</th>
@@ -394,7 +397,7 @@
         <div class="modal-content glass-modal">
           <div class="modal-header">
             <h5 class="modal-title" id="concluirModalTitle">
-              Finalizar Serviço
+              Finalizar Minha Parte do Serviço
             </h5>
             <button
               type="button"
@@ -407,7 +410,7 @@
             <form id="formConcluirServico">
               <div class="mb-3">
                 <label for="statusFinalServico" class="form-label"
-                  >Status da Finalização *</label
+                  >Status da Minha Parte *</label
                 >
                 <select
                   class="form-select glass-input"
@@ -545,11 +548,11 @@
       aria-labelledby="modalResponsavelLabel"
       aria-hidden="true"
     >
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content glass-modal">
           <div class="modal-header">
             <h5 class="modal-title" id="modalResponsavelLabel">
-              Selecionar Responsável
+              Atribuir Equipe
             </h5>
             <button
               type="button"
@@ -558,7 +561,19 @@
               aria-label="Fechar"
             ></button>
           </div>
-          <div class="modal-body" id="modalResponsavelBody"></div>
+          <div class="modal-body">
+            <input
+              type="text"
+              id="filtroResponsaveis"
+              class="form-control glass-input mb-3"
+              placeholder="Filtrar por nome ou matrícula..."
+            />
+            <div
+              id="modalResponsavelBody"
+              class="list-group"
+              style="max-height: 300px; overflow-y: auto"
+            ></div>
+          </div>
           <div class="modal-footer">
             <button type="button" class="btn glass-btn" data-bs-dismiss="modal">
               Cancelar
@@ -568,7 +583,7 @@
               class="btn glass-btn btn-primary"
               onclick="confirmarResponsavel()"
             >
-              Confirmar
+              Confirmar Atribuição
             </button>
           </div>
         </div>
@@ -624,7 +639,7 @@
               class="btn btn-primary"
               data-bs-dismiss="modal"
             >
-              Entendido
+              Entendi
             </button>
           </div>
         </div>

@@ -88,6 +88,23 @@
         color: #721c24 !important;
         border: 1px solid #f5c6cb;
       }
+      .status-badge.bg-em-progresso {
+        background-color: #cff4fc !important;
+        color: #055160 !important;
+        border: 1px solid #b6effb;
+      }
+      .responsaveis-table {
+        width: 100%;
+        font-size: 0.9rem;
+      }
+      .responsaveis-table th,
+      .responsaveis-table td {
+        padding: 0.5rem;
+        vertical-align: middle;
+      }
+      .responsaveis-table thead th {
+        background-color: #f8f9fa;
+      }
     </style>
   </head>
   <body>
@@ -406,15 +423,10 @@
             <div class="col-lg-7 col-md-12 mb-4">
               <div class="detail-card card h-100">
                 <div class="card-header">
-                  <i class="fas fa-user-tie me-2"></i>Responsáveis
+                  <i class="fas fa-users me-2"></i>Equipe Responsável
                 </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-12">
-                      <span class="detail-label">Responsável Técnico</span>
-                      <div class="detail-value" id="servico-responsavel">-</div>
-                    </div>
-                  </div>
+                <div class="card-body" id="servico-responsaveis-container">
+                  <p class="text-muted">Carregando equipe...</p>
                 </div>
               </div>
             </div>
@@ -521,7 +533,7 @@
                   </div>
                   <div class="row">
                     <div class="col-12">
-                      <span class="detail-label">Observações</span>
+                      <span class="detail-label">Observações Gerais</span>
                       <div
                         class="detail-value"
                         id="servico-observacoes"
@@ -643,7 +655,7 @@
               class="btn btn-primary"
               data-bs-dismiss="modal"
             >
-              Entendido
+              Entendi
             </button>
           </div>
         </div>
