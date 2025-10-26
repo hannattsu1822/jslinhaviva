@@ -41,8 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
           option.textContent = `${enc.nome} (${enc.matricula})`;
           filtroEncarregadoRelEl.appendChild(option);
         });
-      } else {
-        console.warn("Não foi possível carregar encarregados para o filtro.");
       }
     } catch (error) {
       console.error("Erro ao popular filtro de encarregados:", error);
@@ -87,18 +85,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const params = new URLSearchParams();
-    params.append("ano", ano); // A rota do backend espera 'ano'
+    params.append("ano", ano);
     if (responsavel) params.append("responsavel_matricula", responsavel);
 
     if (tituloGraficoPorMesEl)
       tituloGraficoPorMesEl.textContent = `Serviços Concluídos por Mês (${tituloAno})`;
-
-    // Adiciona filtros de data inicio/fim se estiverem presentes, pois a rota de backend para mês não usa adicionarFiltrosComuns
-    // e o filtro de data é específico (YEAR(data_conclusao)).
-    // Se quisermos que o gráfico por mês também respeite o intervalo de datas dia-a-dia, a rota backend precisaria de ajuste.
-    // Por ora, vamos manter o filtro de ano para o gráfico por mês.
-    // Se as datas de início e fim forem para o mesmo ano, podemos refinar.
-    // Se os filtros de data de início/fim forem para refinar dentro do ano, a rota backend precisaria ser mais complexa.
 
     return `/api/relatorios/servicos-concluidos-por-mes?${params.toString()}`;
   }
@@ -107,24 +98,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxEncarregado) return;
     try {
       const url = getApiUrl("/api/relatorios/servicos-por-encarregado");
-      console.log("Fetching URL (Encarregado):", url);
       const response = await fetch(url);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) throw new Error("Falha ao buscar dados");
       const data = await response.json();
-
-      console.log(
-        "Dados da API (Serviços por Encarregado):",
-        JSON.stringify(data, null, 2)
-      );
 
       const labels = data.map(
         (item) => item.responsavel_nome || item.responsavel_matricula || "N/A"
       );
       const totais = data.map((item) => item.total_servicos);
-
-      console.log("Labels para o Gráfico (Encarregado):", labels);
-      console.log("Totais para o Gráfico (Encarregado):", totais);
 
       if (chartEncarregado) chartEncarregado.destroy();
       chartEncarregado = new Chart(ctxEncarregado, {
@@ -150,14 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (error) {
       console.error("Erro ao carregar relatório por encarregado:", error);
-      if (
-        ctxEncarregado &&
-        ctxEncarregado.canvas &&
-        ctxEncarregado.canvas.parentElement
-      ) {
-        ctxEncarregado.canvas.parentElement.innerHTML =
-          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
-      }
     }
   }
 
@@ -165,16 +138,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxDesligamento) return;
     try {
       const url = getApiUrl("/api/relatorios/servicos-por-desligamento");
-      console.log("Fetching URL (Desligamento):", url);
       const response = await fetch(url);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) throw new Error("Falha ao buscar dados");
       const data = await response.json();
-
-      console.log(
-        "Dados da API (Serviços por Desligamento):",
-        JSON.stringify(data, null, 2)
-      );
 
       const labels = data.map((item) =>
         item.desligamento === "SIM" ? "Com Desligamento" : "Sem Desligamento"
@@ -202,14 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (error) {
       console.error("Erro ao carregar relatório por desligamento:", error);
-      if (
-        ctxDesligamento &&
-        ctxDesligamento.canvas &&
-        ctxDesligamento.canvas.parentElement
-      ) {
-        ctxDesligamento.canvas.parentElement.innerHTML =
-          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
-      }
     }
   }
 
@@ -217,16 +175,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxPorMes) return;
     try {
       const url = getApiUrlPorMes();
-      console.log("Fetching URL (Por Mês):", url);
       const response = await fetch(url);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) throw new Error("Falha ao buscar dados");
       const data = await response.json();
-
-      console.log(
-        "Dados da API (Serviços por Mês):",
-        JSON.stringify(data, null, 2)
-      );
 
       const mesesNomes = [
         "Jan",
@@ -242,18 +193,13 @@ document.addEventListener("DOMContentLoaded", () => {
         "Nov",
         "Dez",
       ];
-      const labels = Array(12)
-        .fill(0)
-        .map((_, i) => mesesNomes[i]);
+      const labels = mesesNomes;
       const totais = Array(12).fill(0);
       data.forEach((item) => {
         if (item.mes >= 1 && item.mes <= 12) {
           totais[item.mes - 1] = item.total_servicos;
         }
       });
-
-      console.log("Labels para o Gráfico (Por Mês):", labels);
-      console.log("Totais para o Gráfico (Por Mês):", totais);
 
       if (chartPorMes) chartPorMes.destroy();
       chartPorMes = new Chart(ctxPorMes, {
@@ -278,10 +224,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (error) {
       console.error("Erro ao carregar relatório por mês:", error);
-      if (ctxPorMes && ctxPorMes.canvas && ctxPorMes.canvas.parentElement) {
-        ctxPorMes.canvas.parentElement.innerHTML =
-          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
-      }
     }
   }
 
@@ -289,16 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!ctxStatusFinal) return;
     try {
       const url = getApiUrl("/api/relatorios/status-finalizacao");
-      console.log("Fetching URL (Status Finalização):", url);
       const response = await fetch(url);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) throw new Error("Falha ao buscar dados");
       const data = await response.json();
-
-      console.log(
-        "Dados da API (Status Finalização):",
-        JSON.stringify(data, null, 2)
-      );
 
       const labels = data.map((item) => {
         if (item.status === "concluido") return "Concluídos";
@@ -306,9 +241,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return item.status;
       });
       const totais = data.map((item) => item.total_servicos);
-
-      console.log("Labels para o Gráfico (Status):", labels);
-      console.log("Totais para o Gráfico (Status):", totais);
 
       if (chartStatusFinal) chartStatusFinal.destroy();
       chartStatusFinal = new Chart(ctxStatusFinal, {
@@ -339,14 +271,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "Erro ao carregar relatório de status de finalização:",
         error
       );
-      if (
-        ctxStatusFinal &&
-        ctxStatusFinal.canvas &&
-        ctxStatusFinal.canvas.parentElement
-      ) {
-        ctxStatusFinal.canvas.parentElement.innerHTML =
-          '<p class="text-danger text-center small">Erro ao carregar dados.</p>';
-      }
     }
   }
 

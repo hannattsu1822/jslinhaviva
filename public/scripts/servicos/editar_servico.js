@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   await carregarDadosServico(servicoId);
-  await carregarResponsaveis();
 
   const desligamentoSelect = document.getElementById("desligamento");
   if (desligamentoSelect) {
@@ -94,45 +93,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-async function carregarResponsaveis() {
-  const selectResponsavel = document.getElementById("servico-responsavel");
-  if (!selectResponsavel) return;
-
-  try {
-    const response = await fetch("/api/encarregados");
-    if (!response.ok) {
-      throw new Error("Falha ao carregar responsáveis");
-    }
-    const responsaveis = await response.json();
-
-    const valorAtual = selectResponsavel.value;
-    selectResponsavel.innerHTML =
-      '<option value="">Selecione um responsável...</option>';
-
-    responsaveis.forEach((resp) => {
-      const option = document.createElement("option");
-      option.value = resp.matricula;
-      option.textContent = `${resp.nome} (${resp.matricula})`;
-      selectResponsavel.appendChild(option);
-    });
-
-    if (valorAtual) {
-      if (
-        Array.from(selectResponsavel.options).some(
-          (opt) => opt.value === valorAtual
-        )
-      ) {
-        selectResponsavel.value = valorAtual;
-      } else if (valorAtual === "pendente") {
-        selectResponsavel.value = "";
-      }
-    }
-  } catch (error) {
-    console.error("Erro ao carregar responsáveis:", error);
-    selectResponsavel.innerHTML = '<option value="">Erro ao carregar</option>';
-  }
-}
-
 function validarMaps(url) {
   if (!url || url.trim() === "") return true;
   const patterns = [
@@ -167,16 +127,7 @@ async function carregarDadosServico(servicoId) {
   try {
     const response = await fetch(`/api/servicos/${servicoId}`);
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Erro raw do servidor:", errorText);
-      let errorMsg = "Erro ao carregar dados do serviço";
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMsg = errorData.message || errorMsg;
-      } catch (e) {
-        errorMsg = `Erro ${response.status}: ${response.statusText}`;
-      }
-      throw new Error(errorMsg);
+      throw new Error("Erro ao carregar dados do serviço");
     }
 
     const result = await response.json();
@@ -203,20 +154,8 @@ async function carregarDadosServico(servicoId) {
       data.descricao_servico || "";
     document.getElementById("observacoes").value = data.observacoes || "";
 
-    const selectResponsavel = document.getElementById("servico-responsavel");
-    if (selectResponsavel) {
-      await carregarResponsaveis();
-      if (data.responsavel_matricula) {
-        selectResponsavel.value = data.responsavel_matricula;
-      } else {
-        selectResponsavel.value = "pendente";
-      }
-    }
-
     const desligamentoSelect = document.getElementById("desligamento");
     if (data.desligamento === "SIM") {
-      const horariosContainer = document.getElementById("horariosContainer");
-      if (horariosContainer) horariosContainer.style.display = "block";
       document.getElementById("horaInicio").value = data.hora_inicio
         ? data.hora_inicio.substring(0, 5)
         : "";
@@ -280,13 +219,7 @@ function preencherAnexosAtuais(anexos) {
           )
         ) {
           const servicoId = document.getElementById("servicoId").value;
-          if (servicoId && anexoIdParaRemover) {
-            await removerAnexo(servicoId, anexoIdParaRemover);
-          } else {
-            alert(
-              "Não foi possível identificar o serviço ou o anexo para remoção."
-            );
-          }
+          await removerAnexo(servicoId, anexoIdParaRemover);
         }
       });
     }
@@ -311,13 +244,7 @@ function getFileIcon(filename) {
 
 async function removerAnexo(servicoId, anexoId) {
   const btnSalvar = document.getElementById("btnSalvar");
-  let originalSalvarBtnHTML = "";
-  if (btnSalvar) {
-    originalSalvarBtnHTML = btnSalvar.innerHTML;
-    btnSalvar.disabled = true;
-    btnSalvar.innerHTML =
-      '<i class="fas fa-spinner fa-spin me-1"></i> Removendo anexo...';
-  }
+  if (btnSalvar) btnSalvar.disabled = true;
   try {
     const response = await fetch(
       `/api/servicos/${servicoId}/anexos/${anexoId}`,
@@ -327,20 +254,14 @@ async function removerAnexo(servicoId, anexoId) {
     );
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.message || "Erro ao remover anexo do servidor.");
+      throw new Error(result.message || "Erro ao remover anexo.");
     }
     alert("Anexo removido com sucesso!");
     await carregarDadosServico(servicoId);
   } catch (error) {
-    console.error("Erro ao remover anexo:", error);
     alert("Erro ao remover anexo: " + error.message);
   } finally {
-    if (btnSalvar) {
-      btnSalvar.disabled = false;
-      btnSalvar.innerHTML =
-        originalSalvarBtnHTML ||
-        '<i class="fas fa-save me-1"></i> Salvar Alterações';
-    }
+    if (btnSalvar) btnSalvar.disabled = false;
   }
 }
 
@@ -381,13 +302,6 @@ async function salvarAlteracoes(servicoId) {
   );
   formData.append("observacoes", document.getElementById("observacoes").value);
 
-  const selectResponsavel = document.getElementById("servico-responsavel");
-  if (selectResponsavel && selectResponsavel.value) {
-    formData.append("responsavel_matricula", selectResponsavel.value);
-  } else {
-    formData.append("responsavel_matricula", "pendente");
-  }
-
   if (document.getElementById("desligamento").value === "SIM") {
     const horaInicioVal = document.getElementById("horaInicio").value;
     const horaFimVal = document.getElementById("horaFim").value;
@@ -399,26 +313,14 @@ async function salvarAlteracoes(servicoId) {
       btnSalvar.innerHTML = originalSalvarBtnHTML;
       return;
     }
-    formData.append(
-      "hora_inicio",
-      horaInicioVal.includes(":00") ? horaInicioVal : horaInicioVal + ":00"
-    );
-    formData.append(
-      "hora_fim",
-      horaFimVal.includes(":00") ? horaFimVal : horaFimVal + ":00"
-    );
+    formData.append("hora_inicio", horaInicioVal);
+    formData.append("hora_fim", horaFimVal);
   }
 
   const novosAnexosInput = document.getElementById("novosAnexos");
   if (novosAnexosInput && novosAnexosInput.files.length > 0) {
-    for (let i = 0; i < novosAnexosInput.files.length; i++) {
-      if (novosAnexosInput.files[i].size > 10 * 1024 * 1024) {
-        alert(
-          `O arquivo ${novosAnexosInput.files[i].name} excede o limite de 10MB e não será enviado.`
-        );
-        continue;
-      }
-      formData.append("anexos", novosAnexosInput.files[i]);
+    for (const file of novosAnexosInput.files) {
+      formData.append("anexos", file);
     }
   }
 
@@ -437,7 +339,6 @@ async function salvarAlteracoes(servicoId) {
     window.location.href =
       result.redirect || `/detalhes_servico?id=${servicoId}`;
   } catch (error) {
-    console.error("Erro ao salvar alterações:", error);
     alert("Erro ao salvar alterações: " + error.message);
   } finally {
     btnSalvar.disabled = false;
