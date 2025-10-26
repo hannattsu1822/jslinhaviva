@@ -3,8 +3,13 @@ const path = require("path");
 const fs = require("fs");
 const { upload, promisePool } = require("../../init");
 const { autenticar, verificarNivel } = require("../../auth");
-const controller = require("./gestaoServicos.controller");
 const { projectRootDir } = require("../../shared/path.helper");
+
+const coreController = require("./core/core.controller");
+const anexoController = require("./anexo/anexo.controller");
+const lifecycleController = require("./lifecycle/lifecycle.controller");
+const queryController = require("./query/query.controller");
+const relatorioController = require("./relatorio/relatorio.controller");
 
 const router = express.Router();
 
@@ -71,21 +76,21 @@ router.post(
   autenticar,
   verificarNivel(4),
   upload.array("anexos", 5),
-  controller.criarServico
+  coreController.criarServico
 );
 
 router.get(
   "/api/servicos",
   autenticar,
   verificarNivel(2),
-  controller.listarServicos
+  coreController.listarServicos
 );
 
 router.get(
   "/api/servicos/:id",
   autenticar,
   verificarNivel(2),
-  controller.obterDetalhesServico
+  coreController.obterDetalhesServico
 );
 
 router.put(
@@ -93,7 +98,7 @@ router.put(
   autenticar,
   verificarNivel(4),
   upload.array("anexos", 5),
-  controller.atualizarServico
+  coreController.atualizarServico
 );
 
 router.post(
@@ -101,21 +106,21 @@ router.post(
   autenticar,
   verificarNivel(3),
   upload.single("apr_file"),
-  controller.anexarAPR
+  anexoController.anexarAPR
 );
 
 router.delete(
   "/api/servicos/:id",
   autenticar,
   verificarNivel(4),
-  controller.deletarServico
+  coreController.deletarServico
 );
 
 router.post(
   "/api/servicos/:id/concluir",
   autenticar,
   verificarNivel(3),
-  controller.concluirServico
+  lifecycleController.atualizarStatusParteServico
 );
 
 router.post(
@@ -123,14 +128,14 @@ router.post(
   autenticar,
   verificarNivel(3),
   upload.single("foto_conclusao"),
-  controller.uploadFotoConclusao
+  anexoController.uploadFotoConclusao
 );
 
 router.patch(
   "/api/servicos/:id/reativar",
   autenticar,
   verificarNivel(4),
-  controller.reativarServico
+  lifecycleController.reativarServico
 );
 
 router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
@@ -169,65 +174,81 @@ router.delete(
   "/api/servicos/:servicoId/anexos/:anexoId",
   autenticar,
   verificarNivel(4),
-  controller.deletarAnexo
+  anexoController.deletarAnexo
 );
 
 router.get(
   "/api/servicos/contador",
   autenticar,
   verificarNivel(3),
-  controller.contarServicos
+  queryController.contarServicos
 );
 
 router.get(
   "/api/encarregados",
   autenticar,
   verificarNivel(3),
-  controller.listarEncarregados
+  queryController.listarEncarregados
 );
 
 router.get(
   "/api/subestacoes",
   autenticar,
   verificarNivel(3),
-  controller.listarSubestacoes
+  queryController.listarSubestacoes
 );
 
 router.patch(
   "/api/servicos/:id/responsavel",
   autenticar,
   verificarNivel(3),
-  controller.atribuirResponsavel
+  lifecycleController.atribuirResponsavel
 );
 
 router.get(
   "/api/servicos/:id/consolidar-pdfs",
   autenticar,
   verificarNivel(2),
-  controller.gerarPdfConsolidado
+  relatorioController.gerarPdfConsolidado
 );
 
-router.post('/api/push/subscribe', autenticar, async (req, res) => {
+router.post("/api/push/subscribe", autenticar, async (req, res) => {
   try {
     const { subscription } = req.body;
     const matricula = req.user.matricula;
-    console.log(`DEBUG: [Backend] Rota /api/push/subscribe foi chamada pela matrícula: ${matricula}`);
-    console.log("DEBUG: [Backend] Objeto de inscrição recebido do frontend:", subscription);
+    console.log(
+      `DEBUG: [Backend] Rota /api/push/subscribe foi chamada pela matrícula: ${matricula}`
+    );
+    console.log(
+      "DEBUG: [Backend] Objeto de inscrição recebido do frontend:",
+      subscription
+    );
     if (!subscription || !subscription.endpoint) {
       console.error("DEBUG: [Backend] Objeto de inscrição inválido recebido.");
-      return res.status(400).json({ success: false, message: 'Objeto de inscrição inválido.' });
+      return res
+        .status(400)
+        .json({ success: false, message: "Objeto de inscrição inválido." });
     }
     const subscriptionString = JSON.stringify(subscription);
-    console.log(`DEBUG: [Backend] Salvando a string de inscrição no banco de dados para a matrícula ${matricula}...`);
+    console.log(
+      `DEBUG: [Backend] Salvando a string de inscrição no banco de dados para a matrícula ${matricula}...`
+    );
     await promisePool.query(
-      'UPDATE users SET push_subscription = ? WHERE matricula = ?',
+      "UPDATE users SET push_subscription = ? WHERE matricula = ?",
       [subscriptionString, matricula]
     );
-    console.log(`DEBUG: [Backend] Inscrição salva com sucesso para a matrícula ${matricula}.`);
+    console.log(
+      `DEBUG: [Backend] Inscrição salva com sucesso para a matrícula ${matricula}.`
+    );
     res.status(201).json({ success: true });
   } catch (error) {
-    console.error("DEBUG: [Backend] Erro ao salvar a inscrição no banco de dados:", error);
-    res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    console.error(
+      "DEBUG: [Backend] Erro ao salvar a inscrição no banco de dados:",
+      error
+    );
+    res
+      .status(500)
+      .json({ success: false, message: "Erro interno do servidor." });
   }
 });
 
