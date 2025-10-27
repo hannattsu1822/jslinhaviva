@@ -58,7 +58,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     agendamentos = await response.json();
 
-    // FILTRO ADICIONAL NO FRONTEND: Garante que apenas agendamentos não concluídos sejam processados
     const agendamentosPendentes = agendamentos.filter(
       (ag) => ag.status !== "Concluído"
     );
@@ -69,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return;
     }
 
-    agendamentos = agendamentosPendentes; // Substitui a lista original pela filtrada
+    agendamentos = agendamentosPendentes;
   } catch (error) {
     console.error(
       "Erro ao carregar agendamentos para o calendário do dashboard:",
@@ -81,47 +80,44 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   const events = [];
   const todayNormalized = new Date();
-  todayNormalized.setHours(0, 0, 0, 0); // Normaliza a data de hoje para o início do dia
+  todayNormalized.setHours(0, 0, 0, 0);
 
   agendamentos.forEach((agendamento) => {
     if (
       canViewAllChecklists ||
       agendamento.encarregado_matricula === loggedInUserMatricula
     ) {
-      let eventColor = "#007bff"; // Cor padrão para 'Agendado'
-      let eventClassName = "checklist-event-highlight"; // Classe base para todos os eventos de checklist
+      let eventColor = "#007bff";
+      let eventClassName = "checklist-event-highlight";
 
-      const agendamentoDate = new Date(agendamento.data_agendamento);
-      agendamentoDate.setHours(0, 0, 0, 0); // Normaliza a data do agendamento
+      const agendamentoDate = new Date(agendamento.data_agendamento + 'T00:00:00');
+      agendamentoDate.setHours(0, 0, 0, 0);
 
       const diffTime = agendamentoDate.getTime() - todayNormalized.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Calcula a diferença em dias
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      let statusCategory = agendamento.status_display; // Usa o status do backend
+      let statusCategory = agendamento.status_display;
 
-      // Lógica para determinar "Pra Vencer"
       if (statusCategory === "Agendado" && diffDays > 0 && diffDays <= 7) {
-        statusCategory = "PraVencer"; // Categoria customizada para "Pra Vencer"
+        statusCategory = "PraVencer";
       }
 
-      // Atribui cor e classe com base na categoria de status
       switch (statusCategory) {
         case "Concluído":
-          // Este caso não deve mais ocorrer devido ao filtro, mas mantemos por segurança
-          eventColor = "#28a745"; // Verde
+          eventColor = "#28a745";
           eventClassName += " status-concluido";
           break;
         case "Atrasado":
-          eventColor = "#dc3545"; // Vermelho
+          eventColor = "#dc3545";
           eventClassName += " status-atrasado";
           break;
         case "PraVencer":
-          eventColor = "#ffc107"; // Amarelo
+          eventColor = "#ffc107";
           eventClassName += " status-pra-vencer";
           break;
-        case "Agendado": // Se for 'Agendado' e não 'PraVencer'
+        case "Agendado":
         default:
-          eventColor = "#007bff"; // Azul
+          eventColor = "#007bff";
           eventClassName += " status-agendado";
           break;
       }
@@ -133,10 +129,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         })`,
         start: agendamento.data_agendamento,
         allDay: true,
-        color: eventColor, // FullCalendar usa esta cor como primária/fallback
-        className: eventClassName, // Classes CSS customizadas
+        color: eventColor,
+        className: eventClassName,
         extendedProps: {
-          // Propriedades adicionais para depuração ou uso futuro
           status: agendamento.status_display,
           statusCategory: statusCategory,
           veiculo_id: agendamento.veiculo_id,
