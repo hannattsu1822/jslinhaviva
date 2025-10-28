@@ -101,8 +101,9 @@ function atualizarTabela() {
   const filtroSubestacao = document.getElementById("filtroSubestacao").value;
   const filtroEncarregado = document.getElementById("filtroEncarregado").value;
   const filtroData = document.getElementById("filtroData").value;
+  const ordenarPor = document.getElementById("ordenarPor").value;
 
-  const servicosFiltrados = servicosData.filter((servico) => {
+  let servicosFiltrados = servicosData.filter((servico) => {
     const termoMatch =
       !filtroTermo ||
       String(servico.id).includes(filtroTermo) ||
@@ -121,6 +122,27 @@ function atualizarTabela() {
       (servico.data_prevista_execucao &&
         servico.data_prevista_execucao.startsWith(filtroData));
     return termoMatch && subestacaoMatch && encarregadoMatch && dataMatch;
+  });
+
+  // Aplica a lógica de ordenação
+  servicosFiltrados.sort((a, b) => {
+    switch (ordenarPor) {
+      case "id_asc":
+        return a.id - b.id;
+      case "id_desc":
+        return b.id - a.id;
+      case "data_asc":
+        return (
+          new Date(a.data_prevista_execucao) -
+          new Date(b.data_prevista_execucao)
+        );
+      case "data_desc":
+      default:
+        return (
+          new Date(b.data_prevista_execucao) -
+          new Date(a.data_prevista_execucao)
+        );
+    }
   });
 
   if (servicosFiltrados.length === 0) {
@@ -437,6 +459,9 @@ document.addEventListener("DOMContentLoaded", () => {
       .getElementById(id)
       .addEventListener("input", debounce(atualizarTabela, 300))
   );
+  document
+    .getElementById("ordenarPor")
+    .addEventListener("change", atualizarTabela);
   document.getElementById("btnTirarFoto").onclick = () =>
     document.getElementById("fotoCamera").click();
   document.getElementById("btnAdicionarFotos").onclick = () =>

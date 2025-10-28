@@ -1,7 +1,7 @@
 // public/scripts/servicos/gestao_servico.js
 
 let accessDeniedModalInstance;
-let developmentModalInstance; // Adicionado para consistência com navigateTo
+let developmentModalInstance;
 
 document.addEventListener("DOMContentLoaded", function () {
   if (
@@ -13,14 +13,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const devmEl = document.getElementById("development-modal");
     if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
+  }
 
-    console.log(
-      "Gestão de Serviços: Modais Bootstrap inicializados (ou tentativa)."
-    );
-  } else {
-    console.warn(
-      "Gestão de Serviços: Bootstrap JS não carregado ou bootstrap.Modal não está definido."
-    );
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user) {
+    const cardPermissions = {
+      "card-registro-servico": { nivel: 5 },
+      "card-servicos-ativos": { nivel: 3 },
+      "card-servicos-concluidos": { nivel: 3 },
+      "card-relatorios": { nivel: 5 },
+      "card-acompanhamento-construcao": {
+        cargos: ["Construção", "Engenheiro", "ADMIN", "ADM"],
+      },
+    };
+
+    for (const cardId in cardPermissions) {
+      const card = document.getElementById(cardId);
+      if (card) {
+        const perm = cardPermissions[cardId];
+        let hasPermission = false;
+
+        if (perm.nivel && user.nivel >= perm.nivel) {
+          hasPermission = true;
+        }
+
+        if (perm.cargos && perm.cargos.includes(user.cargo)) {
+          hasPermission = true;
+        }
+
+        if (hasPermission) {
+          card.style.display = "block";
+        }
+      }
+    }
   }
 });
 
@@ -30,14 +55,7 @@ window.navigateTo = async function (pageNameOrUrl) {
     urlToNavigate = `/${pageNameOrUrl}`;
   }
 
-  console.log(
-    `Gestão de Serviços (navigateTo): Tentando navegar para: ${urlToNavigate}`
-  );
-
   if (window.location.pathname === urlToNavigate) {
-    console.log(
-      `Gestão de Serviços (navigateTo): Já está na página ${urlToNavigate}.`
-    );
     return;
   }
 
@@ -57,20 +75,11 @@ window.navigateTo = async function (pageNameOrUrl) {
       if (developmentModalInstance) developmentModalInstance.show();
       else alert("Página não encontrada ou em desenvolvimento.");
     } else {
-      console.error(
-        `Gestão de Serviços (navigateTo): Erro ${response.status} ao acessar ${urlToNavigate}.`
-      );
       if (developmentModalInstance) developmentModalInstance.show();
       else alert("Erro ao tentar acessar a página. Verifique o console.");
     }
   } catch (error) {
-    console.error(
-      "Gestão de Serviços (navigateTo): Erro de rede ou na requisição:",
-      error
-    );
     if (developmentModalInstance) developmentModalInstance.show();
     else alert("Erro de rede ou falha na navegação.");
   }
 };
-
-console.log("Gestão de Serviços: Script específico da página carregado.");

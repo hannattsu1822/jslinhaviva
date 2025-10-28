@@ -32,6 +32,7 @@ const elementos = {
     data: null,
     status: null,
   },
+  ordenarPor: null,
 };
 
 function inicializarElementos() {
@@ -46,6 +47,7 @@ function inicializarElementos() {
   elementos.filtros.alimentador = document.getElementById("filtroAlimentador");
   elementos.filtros.data = document.getElementById("filtroData");
   elementos.filtros.status = document.getElementById("filtroStatus");
+  elementos.ordenarPor = document.getElementById("ordenarPor");
 
   if (bootstrap.Modal) {
     const admEl = document.getElementById("access-denied-modal");
@@ -63,6 +65,9 @@ function configurarEventListeners() {
     if (el)
       el.addEventListener("input", debounce(aplicarFiltrosEAtualizar, 300));
   });
+  if (elementos.ordenarPor) {
+    elementos.ordenarPor.addEventListener("change", aplicarFiltrosEAtualizar);
+  }
   const btnConfirmarUploadAPR = document.getElementById(
     "btnConfirmarUploadAPR"
   );
@@ -129,8 +134,23 @@ function obterServicosFiltrados() {
 function atualizarTabela() {
   if (!elementos.tabela || !elementos.contador) return;
   elementos.tabela.innerHTML = "";
-  const servicosFiltrados = obterServicosFiltrados();
+  let servicosFiltrados = obterServicosFiltrados();
   elementos.contador.textContent = `${servicosFiltrados.length} serviço(s)`;
+
+  const ordenarPorValor = elementos.ordenarPor.value;
+  servicosFiltrados.sort((a, b) => {
+    switch (ordenarPorValor) {
+      case "id_asc":
+        return a.id - b.id;
+      case "id_desc":
+        return b.id - a.id;
+      case "data_asc":
+        return new Date(a.data_conclusao) - new Date(b.data_conclusao);
+      case "data_desc":
+      default:
+        return new Date(b.data_conclusao) - new Date(a.data_conclusao);
+    }
+  });
 
   const totalPages = Math.ceil(servicosFiltrados.length / itemsPerPage);
   currentPage = Math.min(currentPage, totalPages || 1);
