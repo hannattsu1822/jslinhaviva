@@ -29,8 +29,36 @@ async function listarSubestacoes() {
   return rows;
 }
 
+async function listarServicosPorOrigem(origem) {
+  const query = `
+    SELECT 
+        p.id, 
+        p.processo, 
+        p.alimentador, 
+        p.status_geral as status, 
+        p.motivo_nao_conclusao, 
+        p.data_conclusao,
+        COALESCE(resp.nomes_responsaveis, u_legado.nome) as nomes_responsaveis
+    FROM processos p
+    LEFT JOIN (
+        SELECT 
+            sr.servico_id,
+            GROUP_CONCAT(u.nome SEPARATOR ', ') as nomes_responsaveis
+        FROM servicos_responsaveis sr
+        JOIN users u ON sr.responsavel_matricula = u.matricula
+        GROUP BY sr.servico_id
+    ) as resp ON p.id = resp.servico_id
+    LEFT JOIN users u_legado ON p.responsavel_matricula = u_legado.matricula
+    WHERE p.origem = ?
+    ORDER BY p.id ASC;
+  `;
+  const [servicos] = await promisePool.query(query, [origem]);
+  return servicos;
+}
+
 module.exports = {
   contarServicos,
   listarEncarregados,
   listarSubestacoes,
+  listarServicosPorOrigem,
 };

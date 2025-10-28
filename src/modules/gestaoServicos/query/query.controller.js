@@ -31,8 +31,33 @@ async function listarSubestacoes(req, res) {
   }
 }
 
+async function listarServicosPorOrigem(req, res) {
+  try {
+    const { origem } = req.params;
+    if (!origem) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Parâmetro 'origem' é obrigatório." });
+    }
+
+    // A verificação de permissão foi removida daqui e movida para o arquivo de rotas.
+    const servicos = await service.listarServicosPorOrigem(origem);
+    res.status(200).json(servicos);
+  } catch (error) {
+    console.error(
+      `Erro ao buscar serviços pela origem '${req.params.origem}':`,
+      error
+    );
+    res.status(500).json({
+      success: false,
+      message: "Erro ao buscar serviços por origem.",
+    });
+  }
+}
+
 module.exports = {
   contarServicos,
   listarEncarregados,
   listarSubestacoes,
+  listarServicosPorOrigem,
 };
