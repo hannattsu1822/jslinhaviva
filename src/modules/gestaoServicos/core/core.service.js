@@ -15,6 +15,7 @@ async function criarServico(servicoData, files) {
     const {
       processo,
       tipo_processo = "Normal",
+      origem,
       data_prevista_execucao,
       desligamento,
       hora_inicio = null,
@@ -28,9 +29,9 @@ async function criarServico(servicoData, files) {
       observacoes,
     } = servicoData;
 
-    if (!data_prevista_execucao || !subestacao || !desligamento) {
+    if (!data_prevista_execucao || !subestacao || !desligamento || !origem) {
       throw new Error(
-        "Campos obrigatórios faltando: data_prevista_execucao, subestacao ou desligamento"
+        "Campos obrigatórios faltando: origem, data_prevista_execucao, subestacao ou desligamento"
       );
     }
     if (desligamento === "SIM" && (!hora_inicio || !hora_fim)) {
@@ -44,10 +45,11 @@ async function criarServico(servicoData, files) {
 
     if (tipo_processo === "Emergencial") {
       const [result] = await connection.query(
-        `INSERT INTO processos (tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, maps, ordem_obra, descricao_servico, observacoes, status, status_geral) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo', 'ativo')`,
+        `INSERT INTO processos (tipo, origem, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, maps, ordem_obra, descricao_servico, observacoes, status, status_geral) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo', 'ativo')`,
         [
           tipo_processo,
+          origem,
           data_prevista_execucao,
           desligamento,
           desligamento === "SIM" ? hora_inicio : null,
@@ -75,11 +77,12 @@ async function criarServico(servicoData, files) {
       }
       processoParaAuditoria = processo.trim();
       const [result] = await connection.query(
-        `INSERT INTO processos (processo, tipo, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, maps, ordem_obra, descricao_servico, observacoes, status, status_geral) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo', 'ativo')`,
+        `INSERT INTO processos (processo, tipo, origem, data_prevista_execucao, desligamento, hora_inicio, hora_fim, subestacao, alimentador, chave_montante, maps, ordem_obra, descricao_servico, observacoes, status, status_geral) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo', 'ativo')`,
         [
           processoParaAuditoria,
           tipo_processo,
+          origem,
           data_prevista_execucao,
           desligamento,
           desligamento === "SIM" ? hora_inicio : null,
@@ -162,6 +165,7 @@ async function listarServicos(status, user) {
         p.maps, p.status_geral as status, p.data_conclusao, 
         p.observacoes_conclusao, p.motivo_nao_conclusao,
         p.ordem_obra,
+        p.origem,
         CASE 
             WHEN p.tipo = 'Emergencial' THEN 'Emergencial'
             ELSE 'Normal'
@@ -260,6 +264,7 @@ async function atualizarServico(servicoId, servicoData, files) {
     await connection.beginTransaction();
     const {
       processo,
+      origem,
       subestacao,
       alimentador,
       chave_montante,
@@ -278,6 +283,9 @@ async function atualizarServico(servicoId, servicoData, files) {
     if (!subestacao) {
       throw new Error("Subestação é obrigatória");
     }
+    if (!origem) {
+      throw new Error("O campo 'origem' do serviço é obrigatório.");
+    }
     if (desligamento === "SIM" && (!hora_inicio || !hora_fim)) {
       throw new Error("Horários são obrigatórios para desligamentos");
     }
@@ -291,11 +299,12 @@ async function atualizarServico(servicoId, servicoData, files) {
     }
 
     await connection.query(
-      `UPDATE processos SET processo = ?, subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
+      `UPDATE processos SET processo = ?, origem = ?, subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
            hora_inicio = ?, hora_fim = ?, maps = ?, ordem_obra = ?,
            descricao_servico = ?, observacoes = ? WHERE id = ?`,
       [
         processo.trim(),
+        origem,
         subestacao,
         alimentador || null,
         chave_montante || null,
