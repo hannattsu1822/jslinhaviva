@@ -93,7 +93,6 @@ const upload = multer({
     files: 25,
   },
   fileFilter: (req, file, cb) => {
-    // MODIFICAÇÃO: Aceita qualquer arquivo, sem validação de tipo.
     cb(null, true);
   },
 });
@@ -128,6 +127,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  timezone: 'local', // *** CORREÇÃO ADICIONADA AQUI ***
 });
 
 const promisePool = pool.promise();
