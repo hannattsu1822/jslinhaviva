@@ -119,6 +119,37 @@
             </div>
           </div>
           <div class="row form-row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="origem" class="form-label">Setor de Origem *</label>
+                <select
+                  class="form-control form-select"
+                  id="origem"
+                  name="origem"
+                  required
+                >
+                  <option value="Operação" selected>Operação</option>
+                  <option value="Construção">Construção</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="ordem_obra" class="form-label">Ordem de Obra</label>
+                <select
+                  class="form-control form-select"
+                  id="ordem_obra"
+                  name="ordem_obra"
+                >
+                  <option value="">Nenhuma</option>
+                  <option value="ODI">ODI</option>
+                  <option value="ODD">ODD</option>
+                  <option value="ODS">ODS</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row form-row">
             <div class="col-md-4">
               <div class="form-group">
                 <label for="desligamento" class="form-label"
@@ -227,22 +258,7 @@
             </div>
           </div>
           <div class="row form-row">
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="ordem_obra" class="form-label">Ordem de Obra</label>
-                <select
-                  class="form-control form-select"
-                  id="ordem_obra"
-                  name="ordem_obra"
-                >
-                  <option value="">Nenhuma</option>
-                  <option value="ODI">ODI</option>
-                  <option value="ODD">ODD</option>
-                  <option value="ODS">ODS</option>
-                </select>
-              </div>
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-12">
               <div class="form-group">
                 <label for="maps" class="form-label">Link do Google Maps</label>
                 <div class="input-group">

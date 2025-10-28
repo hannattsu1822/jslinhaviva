@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acompanhamento de Serviços | Construção</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
+    <link rel="stylesheet" href="/static/css/toast.css" />
+    <style>
+      body {
+        background-color: #f4f7f6;
+      }
+      .main-content {
+        padding-top: 2rem;
+      }
+      .page-title {
+        font-weight: 600;
+        color: #333;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .table thead {
+        background-color: rgba(0, 98, 204, 0.8);
+        color: white;
+      }
+      .status-concluido {
+        color: #198754;
+        font-weight: 500;
+      }
+      .status-nao-concluido {
+        color: #dc3545;
+        font-weight: 500;
+      }
+      .status-andamento {
+        color: #0dcaf0;
+        font-weight: 500;
+      }
+      .motivo-nao-concluido {
+        font-size: 0.8em;
+        color: #6c757d;
+        display: block;
+        margin-top: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar bg-glass">
+      <div class="sidebar-header text-center py-3">
+        <div class="user-icon mb-2"><i class="fas fa-user-circle"></i></div>
+        <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
+      </div>
+      <div class="user-info p-3 mt-2 rounded">
+        <div class="info-item mb-2">
+          <i class="fas fa-id-card me-2"></i
+          ><span id="user-matricula">Matrícula: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-briefcase me-2"></i
+          ><span id="user-cargo">Cargo: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-calendar-alt me-2"></i
+          ><span id="current-date">--/--/----</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-clock me-2"></i
+          ><span id="current-time">--:--:--</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav flex-grow-1">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('dashboard');"
+              class="nav-link"
+              ><i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('gestao-servicos');"
+              class="nav-link"
+            >
+              <i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços
+            </a>
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-construcao-link"
+            style="display: none"
+          >
+            <a
+              href="#"
+              onclick="event.preventDefault(); navigateTo('acompanhamento_construcao');"
+              class="nav-link active"
+            >
+              <i class="fas fa-hard-hat fa-fw me-2"></i>Acompanhamento
+              Construção
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <button onclick="logout()" class="btn-logout">
+          <i class="fas fa-sign-out-alt me-2"></i>Sair
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h1 class="page-title mb-0">
+            <i class="fas fa-hard-hat me-3"></i>Acompanhamento de Serviços -
+            Construção
+          </h1>
+          <button class="btn btn-outline-primary" id="btn-atualizar">
+            <i class="fas fa-sync-alt me-2"></i>Atualizar
+          </button>
+        </div>
+
+        <div class="card glass-card mb-4">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="filtro-processo" class="form-label"
+                  >Filtrar por ID ou Processo</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filtro-processo"
+                  placeholder="Digite para buscar..."
+                />
+              </div>
+              <div class="col-md-4">
+                <label for="filtro-status" class="form-label"
+                  >Filtrar por Status</label
+                >
+                <select class="form-select" id="filtro-status">
+                  <option value="">Todos</option>
+                  <option value="andamento">Em Andamento</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="nao_concluido">Não Concluído</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="filtro-data" class="form-label"
+                  >Filtrar por Data de Finalização</label
+                >
+                <input type="date" class="form-control" id="filtro-data" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Processo</th>
+                    <th>Equipe</th>
+                    <th>Alimentador</th>
+                    <th>Status / Motivo</th>
+                    <th>Data Finalização</th>
+                    <th class="text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-servicos-construcao">
+                  <tr>
+                    <td colspan="7" class="text-center py-5">
+                      Carregando serviços...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content-overlay"></div>
+
+    <div
+      id="access-denied-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-exclamation-circle text-danger mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3">Acesso negado!</h4>
+            <p>Você não tem permissão para acessar este recurso.</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      id="development-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-hammer text-warning mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3">Em Desenvolvimento!</h4>
+            <p>
+              Este recurso está sendo construído e estará disponível em breve.
+            </p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/servicos/servicos_construcao.js"></script>
+  </body>
+</html>

@@ -67,87 +67,24 @@
           <li class="nav-item">
             <a
               href="#"
-              onclick="event.preventDefault(); navigateTo('transformadores');"
-              class="nav-link"
-            >
-              <i class="fas fa-bolt fa-fw me-2"></i>Transformadores
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('transformadores_reformados');"
-              class="nav-link"
-            >
-              <i class="fas fa-sync-alt fa-fw me-2"></i>Reformados
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('subestacao');"
-              class="nav-link"
-            >
-              <i class="fas fa-industry fa-fw me-2"></i>Subestação
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('frota');"
-              class="nav-link"
-            >
-              <i class="fas fa-truck fa-fw me-2"></i>Frota
-            </a>
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-auditoria-link"
-            style="display: none"
-          >
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('auditoria');"
-              class="nav-link"
-            >
-              <i class="fas fa-search fa-fw me-2"></i>Auditoria
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
               onclick="event.preventDefault(); navigateTo('gestao-servicos');"
               class="nav-link active"
             >
               <i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços
             </a>
           </li>
-          <li class="nav-item">
+          <li
+            class="nav-item"
+            id="sidebar-construcao-link"
+            style="display: none"
+          >
             <a
               href="#"
-              onclick="event.preventDefault(); navigateTo('gestao-turmas');"
+              onclick="event.preventDefault(); navigateTo('acompanhamento_construcao');"
               class="nav-link"
             >
-              <i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de Turmas
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('fibra-optica');"
-              class="nav-link"
-            >
-              <i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              onclick="event.preventDefault(); navigateTo('inspecoes-redes');"
-              class="nav-link"
-            >
-              <i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de
-              Redes
+              <i class="fas fa-hard-hat fa-fw me-2"></i>Acompanhamento
+              Construção
             </a>
           </li>
         </ul>
@@ -167,7 +104,12 @@
         </h1>
 
         <div class="row g-4">
-          <div class="col-md-6 col-lg-4">
+          <!-- Card Registro de Serviço -->
+          <div
+            class="col-md-6 col-lg-4"
+            id="card-registro-servico"
+            style="display: none"
+          >
             <div class="card h-100" onclick="navigateTo('registro_servicos')">
               <div
                 class="card-body d-flex flex-column align-items-center justify-content-center p-4"
@@ -181,7 +123,12 @@
             </div>
           </div>
 
-          <div class="col-md-6 col-lg-4">
+          <!-- Card Serviços Ativos -->
+          <div
+            class="col-md-6 col-lg-4"
+            id="card-servicos-ativos"
+            style="display: none"
+          >
             <div class="card h-100" onclick="navigateTo('servicos_ativos')">
               <div
                 class="card-body d-flex flex-column align-items-center justify-content-center p-4"
@@ -195,7 +142,12 @@
             </div>
           </div>
 
-          <div class="col-md-6 col-lg-4">
+          <!-- Card Serviços Concluídos -->
+          <div
+            class="col-md-6 col-lg-4"
+            id="card-servicos-concluidos"
+            style="display: none"
+          >
             <div class="card h-100" onclick="navigateTo('servicos_concluidos')">
               <div
                 class="card-body d-flex flex-column align-items-center justify-content-center p-4"
@@ -208,7 +160,13 @@
               </div>
             </div>
           </div>
-          <div class="col-md-6 col-lg-4">
+
+          <!-- Card Relatórios -->
+          <div
+            class="col-md-6 col-lg-4"
+            id="card-relatorios"
+            style="display: none"
+          >
             <div class="card h-100" onclick="navigateTo('relatorios-servicos')">
               <div
                 class="card-body d-flex flex-column align-items-center justify-content-center p-4"
@@ -218,6 +176,30 @@
                 </div>
                 <h3 class="card-title">Relatórios de Serviços</h3>
                 <p class="card-text text-center">Visualize dados e gráficos</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Acompanhamento Construção -->
+          <div
+            class="col-md-6 col-lg-4"
+            id="card-acompanhamento-construcao"
+            style="display: none"
+          >
+            <div
+              class="card h-100"
+              onclick="navigateTo('acompanhamento_construcao')"
+            >
+              <div
+                class="card-body d-flex flex-column align-items-center justify-content-center p-4"
+              >
+                <div class="icon-circle bg-secondary mb-3">
+                  <i class="fas fa-hard-hat"></i>
+                </div>
+                <h3 class="card-title">Acompanhamento Construção</h3>
+                <p class="card-text text-center">
+                  Visualize serviços do setor de Construção
+                </p>
               </div>
             </div>
           </div>
