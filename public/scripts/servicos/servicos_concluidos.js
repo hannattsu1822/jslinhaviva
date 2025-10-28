@@ -112,9 +112,18 @@ function obterServicosFiltrados() {
   const filtroStatus = elementos.filtros.status?.value || "";
 
   return servicosData.filter((servico) => {
-    const dataConclusao = servico.data_conclusao
-      ? servico.data_conclusao.split("T")[0]
-      : "";
+    // *** ALTERAÇÃO AQUI ***
+    // Converte a data de conclusão para o formato YYYY-MM-DD no fuso horário local do navegador
+    let dataConclusaoLocal = "";
+    if (servico.data_conclusao) {
+      const data = new Date(servico.data_conclusao);
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, "0");
+      const dia = String(data.getDate()).padStart(2, "0");
+      dataConclusaoLocal = `${ano}-${mes}-${dia}`;
+    }
+    // *** FIM DA ALTERAÇÃO ***
+
     const termoMatch =
       !filtroTermo ||
       String(servico.id).includes(filtroTermo) ||
@@ -125,7 +134,7 @@ function obterServicosFiltrados() {
       termoMatch &&
       (servico.subestacao || "").toLowerCase().includes(filtroSubestacao) &&
       (servico.alimentador || "").toLowerCase().includes(filtroAlimentador) &&
-      (!filtroData || dataConclusao === filtroData) &&
+      (!filtroData || dataConclusaoLocal === filtroData) && // Usa a data local para comparar
       (!filtroStatus || servico.status === filtroStatus)
     );
   });
