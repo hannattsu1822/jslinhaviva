@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { upload, promisePool } = require("../../init");
-const { autenticar, verificarNivel } = require("../../auth");
+const { autenticar, verificarNivel, verificarCargo } = require("../../auth");
 const { projectRootDir } = require("../../shared/path.helper");
 
 const coreController = require("./core/core.controller");
@@ -71,6 +71,21 @@ router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
   );
 });
 
+// Rota para a página de acompanhamento da Construção - CORRIGIDA
+router.get(
+  "/acompanhamento_construcao",
+  autenticar,
+  verificarCargo(["Construção", "ADM", "ADMIN", "Engenheiro"]),
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        projectRootDir,
+        "public/pages/servicos/servicos_construcao.html"
+      )
+    );
+  }
+);
+
 router.post(
   "/api/servicos",
   autenticar,
@@ -84,6 +99,14 @@ router.get(
   autenticar,
   verificarNivel(2),
   coreController.listarServicos
+);
+
+// Endpoint da API para buscar serviços por origem - CORRIGIDO
+router.get(
+  "/api/servicos/origem/:origem",
+  autenticar,
+  verificarCargo(["Construção", "ADM", "ADMIN", "Engenheiro"]),
+  queryController.listarServicosPorOrigem
 );
 
 router.get(
