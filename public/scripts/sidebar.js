@@ -1,9 +1,6 @@
 async function logout() {
   console.log("Logout Padrão (sidebar.js) - Iniciando processo de logout.");
   try {
-    console.log(
-      "Logout Padrão (sidebar.js) - Tentando chamar POST /api/logout no servidor..."
-    );
     const response = await fetch("/api/logout", {
       method: "POST",
       headers: {
@@ -11,22 +8,9 @@ async function logout() {
       },
     });
 
-    if (response.ok) {
-      const result = await response.json();
-      console.log(
-        "Logout Padrão (sidebar.js) - Resposta do servidor para /api/logout:",
-        result.message
-      );
-    } else {
-      let errorMsg = `Status: ${response.status}`;
-      try {
-        const errorResult = await response.json();
-        errorMsg += `, Mensagem: ${errorResult.message}`;
-      } catch (e) {
-        // No-op
-      }
+    if (!response.ok) {
       console.warn(
-        `Logout Padrão (sidebar.js) - Chamada para /api/logout no servidor falhou. ${errorMsg}`
+        `Logout Padrão (sidebar.js) - Chamada para /api/logout no servidor falhou.`
       );
     }
   } catch (networkError) {
@@ -35,19 +19,9 @@ async function logout() {
       networkError
     );
   } finally {
-    console.log(
-      "Logout Padrão (sidebar.js) - Limpando dados locais e redirecionando."
-    );
     localStorage.removeItem("user");
     localStorage.removeItem("token");
-    console.log(
-      "Logout Padrão (sidebar.js) - localStorage 'user' e 'token' removidos."
-    );
-
     window.location.href = "/login";
-    console.log(
-      "Logout Padrão (sidebar.js) - Redirecionamento para '/login' iniciado."
-    );
   }
 }
 
@@ -65,72 +39,62 @@ function updateDateTimeSidebar() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("Padrão (sidebar.js): DOMContentLoaded disparado.");
-
-  // *** CORREÇÃO APLICADA AQUI ***
-  // Adiciona o evento de clique ao botão de logout para chamar a função logout.
-  const logoutButton = document.getElementById("logoutButton");
-  if (logoutButton) {
-    logoutButton.addEventListener("click", logout);
-  }
-  // *** FIM DA CORREÇÃO ***
-
   const user = JSON.parse(localStorage.getItem("user"));
 
   if (user) {
-    console.log(
-      "Padrão (sidebar.js): Usuário encontrado no localStorage:",
-      user
-    );
     const userNameElement = document.getElementById("user-name");
     const userMatriculaElement = document.getElementById("user-matricula");
     const userCargoElement = document.getElementById("user-cargo");
 
-    if (userNameElement) {
+    if (userNameElement)
       userNameElement.textContent = user.nome || "Usuário Desconhecido";
-    }
-    if (userMatriculaElement) {
-      // O HTML já tem "Matrícula:", então só precisamos do valor.
+    if (userMatriculaElement)
       userMatriculaElement.textContent = user.matricula || "N/A";
-    }
-    if (userCargoElement) {
-      // O HTML já tem "Cargo:", então só precisamos do valor.
-      userCargoElement.textContent = user.cargo || "N/A";
-    }
+    if (userCargoElement) userCargoElement.textContent = user.cargo || "N/A";
 
     updateDateTimeSidebar();
     setInterval(updateDateTimeSidebar, 1000);
 
-    const auditoriaCard = document.getElementById("auditoria-card");
-    const sidebarAuditoriaLink = document.getElementById(
-      "sidebar-auditoria-link"
-    );
-    const cargosPermitidosAuditoria = ["Técnico", "Engenheiro", "ADMIN"];
-    const temPermissaoAuditoria = cargosPermitidosAuditoria.includes(
-      user.cargo
-    );
+    // Mapeamento centralizado das permissões dos links da sidebar
+    const sidebarPermissions = {
+      "sidebar-subestacoes-link": 3,
+      "sidebar-transformadores-link": 5,
+      "sidebar-frota-link": 2, // ATUALIZADO
+      "sidebar-gestao-servicos-link": 2, // ATUALIZADO
+      "sidebar-gestao-turmas-link": 3,
+      "sidebar-fibra-optica-link": 3,
+      "sidebar-inspecoes-redes-link": 3,
+      "sidebar-avulsos-link": 2,
+      "sidebar-monitoramento-link": 5,
+      "sidebar-gestao-link": 5,
+      "sidebar-auditoria-link": 10,
+    };
 
-    if (auditoriaCard) {
-      auditoriaCard.style.display = temPermissaoAuditoria ? "block" : "none";
+    // Itera sobre as permissões baseadas em NÍVEL
+    for (const linkId in sidebarPermissions) {
+      const requiredLevel = sidebarPermissions[linkId];
+      const linkElement = document.getElementById(linkId);
+      if (linkElement && user.nivel >= requiredLevel) {
+        linkElement.style.display = "list-item";
+      }
     }
-    if (sidebarAuditoriaLink) {
-      sidebarAuditoriaLink.style.display = temPermissaoAuditoria
-        ? "list-item"
-        : "none";
+
+    // Lógica específica para permissões baseadas em CARGO (se houver)
+    const sidebarConstrucaoLink = document.getElementById(
+      "sidebar-construcao-link"
+    );
+    if (sidebarConstrucaoLink) {
+      const cargosPermitidos = ["Construção", "Engenheiro", "ADMIN", "ADM"];
+      if (cargosPermitidos.includes(user.cargo)) {
+        sidebarConstrucaoLink.style.display = "list-item";
+      }
     }
   } else {
-    console.warn(
-      "Padrão (sidebar.js): Usuário não encontrado no localStorage ao carregar a página."
-    );
     if (
       window.location.pathname !== "/login" &&
-      window.location.pathname !== "/" &&
-      window.location.pathname !== "/index.html"
+      window.location.pathname !== "/"
     ) {
-      console.log(
-        "Padrão (sidebar.js): Usuário não logado. Redirecionamento para login DESATIVADO em sidebar.js nesta página."
-      );
-      // window.location.href = "/login";
+      window.location.href = "/login";
     }
   }
 
@@ -155,9 +119,4 @@ document.addEventListener("DOMContentLoaded", function () {
       mainContentOverlayElement.classList.remove("active");
     });
   }
-  console.log(
-    "Padrão (sidebar.js): Configuração do DOMContentLoaded finalizada."
-  );
 });
-
-console.log("Padrão (sidebar.js): Arquivo completamente carregado e pronto.");
