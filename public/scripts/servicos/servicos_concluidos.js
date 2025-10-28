@@ -112,8 +112,6 @@ function obterServicosFiltrados() {
   const filtroStatus = elementos.filtros.status?.value || "";
 
   return servicosData.filter((servico) => {
-    // *** ALTERAÇÃO AQUI ***
-    // Converte a data de conclusão para o formato YYYY-MM-DD no fuso horário local do navegador
     let dataConclusaoLocal = "";
     if (servico.data_conclusao) {
       const data = new Date(servico.data_conclusao);
@@ -122,7 +120,6 @@ function obterServicosFiltrados() {
       const dia = String(data.getDate()).padStart(2, "0");
       dataConclusaoLocal = `${ano}-${mes}-${dia}`;
     }
-    // *** FIM DA ALTERAÇÃO ***
 
     const termoMatch =
       !filtroTermo ||
@@ -134,7 +131,7 @@ function obterServicosFiltrados() {
       termoMatch &&
       (servico.subestacao || "").toLowerCase().includes(filtroSubestacao) &&
       (servico.alimentador || "").toLowerCase().includes(filtroAlimentador) &&
-      (!filtroData || dataConclusaoLocal === filtroData) && // Usa a data local para comparar
+      (!filtroData || dataConclusaoLocal === filtroData) &&
       (!filtroStatus || servico.status === filtroStatus)
     );
   });
@@ -312,10 +309,10 @@ function formatarData(dataString) {
   if (!dataString) return "Não informado";
   const data = new Date(dataString);
   if (isNaN(data.getTime())) return "Data inválida";
+  // A opção 'timeZone' foi removida para usar o fuso horário local do navegador
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
-    timeZone: "America/Sao_Paulo",
   }).format(data);
 }
 
