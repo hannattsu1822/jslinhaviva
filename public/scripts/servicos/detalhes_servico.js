@@ -16,12 +16,12 @@ function formatarDataParaExibicao(dataString, includeTime = true) {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      timeZone: "UTC",
     };
     if (includeTime) {
       options.hour = "2-digit";
       options.minute = "2-digit";
     }
+    // A opção 'timeZone' foi removida para permitir que o navegador use o fuso horário local.
     return data.toLocaleString("pt-BR", options).replace(",", "");
   } catch (e) {
     return dataString;
