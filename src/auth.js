@@ -1,7 +1,7 @@
 const { promisePool } = require("./init");
 const bcrypt = require("bcrypt");
 
-// Função para autenticar 
+// Função para autenticar
 function autenticar(req, res, next) {
   if (req.session.user) {
     req.user = req.session.user;
@@ -11,12 +11,10 @@ function autenticar(req, res, next) {
   }
 }
 
-
 async function loginSeguro(req, res, next) {
   const { matricula, senha } = req.body;
 
   try {
-
     const [rows] = await promisePool.query(
       "SELECT *, nivel FROM users WHERE matricula = ?",
       [matricula]
@@ -28,7 +26,6 @@ async function loginSeguro(req, res, next) {
 
     const usuario = rows[0];
 
-    // ADICIONADO: Verificação de nível para impedir login de usuários desativados/sem permissão
     if (usuario.nivel === 0) {
       return res
         .status(403)
@@ -56,7 +53,6 @@ async function loginSeguro(req, res, next) {
       return res.status(401).json({ message: "Matrícula ou senha inválida" });
     }
 
-
     const { senha: _, ...userWithoutPassword } = usuario;
     req.session.user = userWithoutPassword;
 
@@ -72,10 +68,8 @@ async function loginSeguro(req, res, next) {
   }
 }
 
-
 function verificarNivel(nivelRequerido) {
   return (req, res, next) => {
-
     const nivelUsuario = req.user?.nivel;
 
     if (nivelUsuario === undefined) {
@@ -86,22 +80,46 @@ function verificarNivel(nivelRequerido) {
     }
 
     if (nivelUsuario >= nivelRequerido) {
-
       next();
     } else {
       console.log(
         `Acesso negado! Nível do usuário: ${nivelUsuario}, Nível requerido: ${nivelRequerido}`
       );
-      res
-        .status(403)
-        .json({
-          message:
-            "Acesso negado! Você não tem permissão para acessar este recurso.",
-        });
+      res.status(403).json({
+        message:
+          "Acesso negado! Você não tem permissão para acessar este recurso.",
+      });
     }
   };
 }
 
+// NOVA FUNÇÃO ADICIONADA
+function verificarCargo(cargosPermitidos) {
+  return (req, res, next) => {
+    const cargoUsuario = req.user?.cargo;
+
+    if (!cargoUsuario) {
+      console.log("Acesso negado! Cargo do usuário não definido na sessão.");
+      return res
+        .status(403)
+        .json({ message: "Acesso negado! Cargo de permissão não encontrado." });
+    }
+
+    if (cargosPermitidos.includes(cargoUsuario)) {
+      next();
+    } else {
+      console.log(
+        `Acesso negado! Cargo do usuário: ${cargoUsuario}, Cargos permitidos: ${cargosPermitidos.join(
+          ", "
+        )}`
+      );
+      res.status(403).json({
+        message:
+          "Acesso negado! Você não tem permissão para acessar este recurso.",
+      });
+    }
+  };
+}
 
 async function registrarAuditoria(
   matricula,
@@ -136,13 +154,12 @@ async function verificarSenha(senhaDigitada, hashArmazenado) {
   return await bcrypt.compare(senhaDigitada, hashArmazenado);
 }
 
-
 module.exports = {
   autenticar,
   loginSeguro,
-  verificarNivel, 
+  verificarNivel,
+  verificarCargo, // EXPORTAÇÃO ADICIONADA
   registrarAuditoria,
   criarHashSenha,
   verificarSenha,
 };
-
