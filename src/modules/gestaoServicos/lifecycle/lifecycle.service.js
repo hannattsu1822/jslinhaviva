@@ -1,7 +1,11 @@
 const { promisePool } = require("../../../init");
 const webpush = require("../../../push-config");
 
-async function atualizarStatusGeralServico(servicoId, connection) {
+async function atualizarStatusGeralServico(
+  servicoId,
+  connection,
+  dataHoraConclusao
+) {
   const [statusResponsaveis] = await connection.query(
     `SELECT status_individual FROM servicos_responsaveis WHERE servico_id = ?`,
     [servicoId]
@@ -35,8 +39,8 @@ async function atualizarStatusGeralServico(servicoId, connection) {
 
   if (novoStatusGeral === "concluido") {
     await connection.query(
-      "UPDATE processos SET status_geral = ?, data_conclusao = NOW() WHERE id = ?",
-      [novoStatusGeral, servicoId]
+      "UPDATE processos SET status_geral = ?, data_conclusao = ? WHERE id = ?",
+      [novoStatusGeral, dataHoraConclusao, servicoId]
     );
   } else {
     await connection.query(
@@ -71,7 +75,11 @@ async function concluirParteServico(servicoId, conclusaoData, matricula) {
       throw new Error("Atribuição para este serviço e usuário não encontrada.");
     }
 
-    await atualizarStatusGeralServico(servicoId, connection);
+    await atualizarStatusGeralServico(
+      servicoId,
+      connection,
+      dataHoraConclusaoParaSalvar
+    );
 
     await connection.commit();
 
@@ -123,8 +131,12 @@ async function naoConcluirParteServico(servicoId, conclusaoData, matricula) {
     }
 
     await connection.query(
-      `UPDATE processos SET status_geral = 'nao_concluido', motivo_nao_conclusao = ?, data_conclusao = NOW() WHERE id = ?`,
-      [`[${matricula}] ${motivo_nao_conclusao.trim()}`, servicoId]
+      `UPDATE processos SET status_geral = 'nao_concluido', motivo_nao_conclusao = ?, data_conclusao = ? WHERE id = ?`,
+      [
+        `[${matricula}] ${motivo_nao_conclusao.trim()}`,
+        dataHoraConclusaoParaSalvar,
+        servicoId,
+      ]
     );
 
     await connection.commit();
@@ -214,7 +226,7 @@ async function atribuirResponsavel(servicoId, responsaveisMatriculas) {
       );
     }
 
-    await atualizarStatusGeralServico(servicoId, connection);
+    await atualizarStatusGeralServico(servicoId, connection, null);
 
     for (const matricula of responsaveisMatriculas) {
       const [userInfo] = await connection.query(
