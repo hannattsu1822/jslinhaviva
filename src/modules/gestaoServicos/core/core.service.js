@@ -264,7 +264,9 @@ async function atualizarServico(servicoId, servicoData, files) {
     await connection.beginTransaction();
     const {
       processo,
+      tipo_processo,
       origem,
+      data_prevista_execucao,
       subestacao,
       alimentador,
       chave_montante,
@@ -281,13 +283,16 @@ async function atualizarServico(servicoId, servicoData, files) {
       throw new Error("O número do processo é obrigatório.");
     }
     if (!subestacao) {
-      throw new Error("Subestação é obrigatória");
+      throw new Error("Subestação é obrigatória.");
     }
     if (!origem) {
       throw new Error("O campo 'origem' do serviço é obrigatório.");
     }
+    if (!data_prevista_execucao) {
+      throw new Error("A data prevista de execução é obrigatória.");
+    }
     if (desligamento === "SIM" && (!hora_inicio || !hora_fim)) {
-      throw new Error("Horários são obrigatórios para desligamentos");
+      throw new Error("Horários são obrigatórios para desligamentos.");
     }
     if (
       maps &&
@@ -295,16 +300,20 @@ async function atualizarServico(servicoId, servicoData, files) {
         maps
       )
     ) {
-      throw new Error("Por favor, insira um link válido do Google Maps");
+      throw new Error("Por favor, insira um link válido do Google Maps.");
     }
 
     await connection.query(
-      `UPDATE processos SET processo = ?, origem = ?, subestacao = ?, alimentador = ?, chave_montante = ?, desligamento = ?, 
-           hora_inicio = ?, hora_fim = ?, maps = ?, ordem_obra = ?,
-           descricao_servico = ?, observacoes = ? WHERE id = ?`,
+      `UPDATE processos SET 
+           processo = ?, tipo = ?, origem = ?, data_prevista_execucao = ?, subestacao = ?, 
+           alimentador = ?, chave_montante = ?, desligamento = ?, hora_inicio = ?, hora_fim = ?, 
+           maps = ?, ordem_obra = ?, descricao_servico = ?, observacoes = ? 
+       WHERE id = ?`,
       [
         processo.trim(),
+        tipo_processo,
         origem,
+        data_prevista_execucao,
         subestacao,
         alimentador || null,
         chave_montante || null,
