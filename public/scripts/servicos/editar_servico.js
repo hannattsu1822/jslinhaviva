@@ -1,347 +1,253 @@
-document.addEventListener("DOMContentLoaded", async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const servicoId = urlParams.get("id");
-
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("editarServicoForm");
   const servicoIdInput = document.getElementById("servicoId");
-  if (servicoIdInput) servicoIdInput.value = servicoId;
+  const btnVoltar = document.getElementById("btn-voltar-detalhes");
+  const btnSalvar = document.getElementById("btnSalvar");
 
-  if (!servicoId) {
-    alert("ID do serviço não especificado");
-    window.location.href = "/servicos_ativos";
-    return;
-  }
-
-  await carregarDadosServico(servicoId);
-
+  // Campos do formulário
+  const processoInput = document.getElementById("processo");
+  const tipoProcessoSelect = document.getElementById("tipo_processo");
+  const origemSelect = document.getElementById("origem");
+  const dataPrevistaInput = document.getElementById("data_prevista_execucao");
+  const subestacaoInput = document.getElementById("subestacao");
+  const alimentadorInput = document.getElementById("alimentador");
+  const chaveMontanteInput = document.getElementById("chaveMontante");
   const desligamentoSelect = document.getElementById("desligamento");
-  if (desligamentoSelect) {
-    desligamentoSelect.addEventListener("change", function () {
-      const mostrarHorarios = this.value === "SIM";
-      const horariosContainer = document.getElementById("horariosContainer");
-      const horaInicioInput = document.getElementById("horaInicio");
-      const horaFimInput = document.getElementById("horaFim");
-
-      if (horariosContainer)
-        horariosContainer.style.display = mostrarHorarios ? "block" : "none";
-
-      if (mostrarHorarios) {
-        if (horaInicioInput) horaInicioInput.setAttribute("required", "");
-        if (horaFimInput) horaFimInput.setAttribute("required", "");
-      } else {
-        if (horaInicioInput) horaInicioInput.removeAttribute("required");
-        if (horaFimInput) horaFimInput.removeAttribute("required");
-      }
-    });
-    desligamentoSelect.dispatchEvent(new Event("change"));
-  }
-
+  const horariosContainer = document.getElementById("horariosContainer");
+  const horaInicioInput = document.getElementById("horaInicio");
+  const horaFimInput = document.getElementById("horaFim");
+  const ordemObraSelect = document.getElementById("ordem_obra");
+  const mapsInput = document.getElementById("maps");
+  const descricaoTextarea = document.getElementById("descricao_servico");
+  const observacoesTextarea = document.getElementById("observacoes");
+  const anexosAtuaisContainer = document.getElementById("anexosAtuais");
   const novosAnexosInput = document.getElementById("novosAnexos");
-  if (novosAnexosInput) {
-    novosAnexosInput.addEventListener("change", function () {
-      const previewContainer = document.getElementById("previewNovosAnexos");
-      if (!previewContainer) return;
-      previewContainer.innerHTML = "";
-
-      Array.from(this.files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const previewItem = document.createElement("div");
-          previewItem.className = "preview-item";
-
-          if (file.type.startsWith("image/")) {
-            previewItem.innerHTML = `
-                            <img src="${e.target.result}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; object-fit: cover;">
-                            <div class="small text-truncate mt-1" style="max-width: 100px;">${file.name}</div>
-                        `;
-          } else {
-            previewItem.innerHTML = `
-                            <div class="text-center">
-                                <i class="fas ${getFileIcon(
-                                  file.name
-                                )} fa-2x mb-1"></i>
-                                <div class="small text-truncate" style="max-width: 100px;">${
-                                  file.name
-                                }</div>
-                            </div>
-                        `;
-          }
-          previewContainer.appendChild(previewItem);
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-  }
-
-  const mapsInput = document.getElementById("maps");
-  if (mapsInput) {
-    mapsInput.addEventListener("blur", function () {
-      validarMapsCampo(this);
-    });
-  }
-
-  const editarServicoForm = document.getElementById("editarServicoForm");
-  if (editarServicoForm) {
-    editarServicoForm.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      await salvarAlteracoes(servicoId);
-    });
-  }
-
-  const cancelButton = document.getElementById("btn-voltar-detalhes");
-  if (cancelButton) {
-    cancelButton.href = `/detalhes_servico?id=${servicoId}`;
-  }
-});
-
-function validarMaps(url) {
-  if (!url || url.trim() === "") return true;
-  const patterns = [
-    /^(https?:\/\/)?(www\.)?google\.[a-z\.]{2,6}\/maps\/.+/i,
-    /^(https?:\/\/)?maps\.google\.[a-z\.]{2,6}\/.+/i,
-    /^(https?:\/\/)?goo\.gl\/maps\/.+/i,
-    /^(https?:\/\/)?maps\.app\.goo\.gl\/.+/i,
-  ];
-  return patterns.some((pattern) => pattern.test(url));
-}
-
-function validarMapsCampo(input) {
-  const url = input.value.trim();
-  const feedbackEl =
-    input.parentElement.querySelector(".invalid-feedback") ||
-    input.nextElementSibling;
-
-  if (url && !validarMaps(url)) {
-    input.classList.add("is-invalid");
-    if (feedbackEl && feedbackEl.classList.contains("invalid-feedback"))
-      feedbackEl.style.display = "block";
-    return false;
-  } else {
-    input.classList.remove("is-invalid");
-    if (feedbackEl && feedbackEl.classList.contains("invalid-feedback"))
-      feedbackEl.style.display = "none";
-    return true;
-  }
-}
-
-async function carregarDadosServico(servicoId) {
-  try {
-    const response = await fetch(`/api/servicos/${servicoId}`);
-    if (!response.ok) {
-      throw new Error("Erro ao carregar dados do serviço");
-    }
-
-    const result = await response.json();
-    if (!result.success || !result.data) {
-      throw new Error(result.message || "Dados do serviço não encontrados.");
-    }
-    const data = result.data;
-
-    const processoInput = document.getElementById("processo");
-    if (processoInput) {
-      processoInput.value = data.processo || "";
-      if (data.tipo === "Emergencial") {
-        processoInput.readOnly = true;
-      }
-    }
-
-    document.getElementById("subestacao").value = data.subestacao || "";
-    document.getElementById("alimentador").value = data.alimentador || "";
-    document.getElementById("chaveMontante").value = data.chave_montante || "";
-    document.getElementById("desligamento").value = data.desligamento || "NAO";
-    document.getElementById("maps").value = data.maps || "";
-    document.getElementById("ordem_obra").value = data.ordem_obra || "";
-    document.getElementById("descricao_servico").value =
-      data.descricao_servico || "";
-    document.getElementById("observacoes").value = data.observacoes || "";
-
-    const desligamentoSelect = document.getElementById("desligamento");
-    if (data.desligamento === "SIM") {
-      document.getElementById("horaInicio").value = data.hora_inicio
-        ? data.hora_inicio.substring(0, 5)
-        : "";
-      document.getElementById("horaFim").value = data.hora_fim
-        ? data.hora_fim.substring(0, 5)
-        : "";
-    }
-    if (desligamentoSelect)
-      desligamentoSelect.dispatchEvent(new Event("change"));
-
-    preencherAnexosAtuais(data.anexos || []);
-  } catch (error) {
-    console.error("Erro em carregarDadosServico:", error);
-    alert("Erro ao carregar dados do serviço: " + error.message);
-  }
-}
-
-function preencherAnexosAtuais(anexos) {
-  const container = document.getElementById("anexosAtuais");
+  const previewNovosAnexosContainer =
+    document.getElementById("previewNovosAnexos");
   const semAnexosMsg = document.getElementById("semAnexos");
-  if (!container || !semAnexosMsg) return;
-  container.innerHTML = "";
 
-  if (anexos.length === 0) {
-    semAnexosMsg.style.display = "block";
-    return;
+  let anexosParaDeletar = new Set();
+  let novosAnexosFiles = [];
+
+  function getServicoId() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("id");
   }
 
-  semAnexosMsg.style.display = "none";
-  anexos.forEach((anexo) => {
-    const anexoElement = document.createElement("div");
-    anexoElement.className = "attachment-item";
-    const nomeDoAnexo = anexo.nomeOriginal || "arquivo";
-    const caminhoDoAnexo =
-      anexo.caminho && anexo.caminho.startsWith("/")
-        ? anexo.caminho
-        : `/${anexo.caminho || "#"}`;
-
-    anexoElement.innerHTML = `
-            <button type="button" class="remove-attachment" data-anexoid="${
-              anexo.id
-            }" title="Remover este anexo">×</button>
-            <div class="text-center">
-                <i class="fas ${getFileIcon(nomeDoAnexo)} fa-2x mb-1"></i>
-                <div class="small text-truncate" title="${nomeDoAnexo}">${nomeDoAnexo}</div>
-                <a href="${caminhoDoAnexo}" target="_blank" class="btn btn-sm btn-link p-0 mt-1 ${
-      caminhoDoAnexo === "/#" || caminhoDoAnexo === "#" ? "disabled" : ""
-    }">Visualizar</a>
-            </div>
-        `;
-    container.appendChild(anexoElement);
-
-    const removeButton = anexoElement.querySelector(".remove-attachment");
-    if (removeButton) {
-      removeButton.addEventListener("click", async function (e) {
-        e.stopPropagation();
-        const anexoIdParaRemover = this.getAttribute("data-anexoid");
-        if (
-          confirm(
-            "Deseja realmente remover este anexo? Esta ação não pode ser desfeita."
-          )
-        ) {
-          const servicoId = document.getElementById("servicoId").value;
-          await removerAnexo(servicoId, anexoIdParaRemover);
-        }
-      });
+  function toggleHorarios() {
+    if (desligamentoSelect.value === "SIM") {
+      horariosContainer.style.display = "block";
+      horaInicioInput.required = true;
+      horaFimInput.required = true;
+    } else {
+      horariosContainer.style.display = "none";
+      horaInicioInput.required = false;
+      horaFimInput.required = false;
+      horaInicioInput.value = "";
+      horaFimInput.value = "";
     }
-  });
-}
-
-function getFileIcon(filename) {
-  if (!filename) return "fa-file text-secondary";
-  const ext = filename.split(".").pop().toLowerCase();
-  const icons = {
-    pdf: "fa-file-pdf text-danger",
-    jpg: "fa-file-image text-primary",
-    jpeg: "fa-file-image text-primary",
-    png: "fa-file-image text-primary",
-    doc: "fa-file-word text-info",
-    docx: "fa-file-word text-info",
-    xls: "fa-file-excel text-success",
-    xlsx: "fa-file-excel text-success",
-  };
-  return icons[ext] || "fa-file text-secondary";
-}
-
-async function removerAnexo(servicoId, anexoId) {
-  const btnSalvar = document.getElementById("btnSalvar");
-  if (btnSalvar) btnSalvar.disabled = true;
-  try {
-    const response = await fetch(
-      `/api/servicos/${servicoId}/anexos/${anexoId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.message || "Erro ao remover anexo.");
-    }
-    alert("Anexo removido com sucesso!");
-    await carregarDadosServico(servicoId);
-  } catch (error) {
-    alert("Erro ao remover anexo: " + error.message);
-  } finally {
-    if (btnSalvar) btnSalvar.disabled = false;
-  }
-}
-
-async function salvarAlteracoes(servicoId) {
-  const btnSalvar = document.getElementById("btnSalvar");
-  if (!btnSalvar) return;
-
-  const originalSalvarBtnHTML = btnSalvar.innerHTML;
-  btnSalvar.disabled = true;
-  btnSalvar.innerHTML =
-    '<i class="fas fa-spinner fa-spin me-1"></i> Salvando...';
-
-  const mapsInput = document.getElementById("maps");
-  if (!validarMapsCampo(mapsInput)) {
-    btnSalvar.disabled = false;
-    btnSalvar.innerHTML = originalSalvarBtnHTML;
-    alert("Por favor, corrija o link do Google Maps antes de salvar.");
-    return;
   }
 
-  const formData = new FormData();
-  formData.append("processo", document.getElementById("processo").value);
-  formData.append("subestacao", document.getElementById("subestacao").value);
-  formData.append("alimentador", document.getElementById("alimentador").value);
-  formData.append(
-    "chave_montante",
-    document.getElementById("chaveMontante").value
-  );
-  formData.append(
-    "desligamento",
-    document.getElementById("desligamento").value
-  );
-  formData.append("maps", document.getElementById("maps").value.trim());
-  formData.append("ordem_obra", document.getElementById("ordem_obra").value);
-  formData.append(
-    "descricao_servico",
-    document.getElementById("descricao_servico").value
-  );
-  formData.append("observacoes", document.getElementById("observacoes").value);
+  function formatarDataParaInput(dataISO) {
+    if (!dataISO) return "";
+    return dataISO.split("T")[0];
+  }
 
-  if (document.getElementById("desligamento").value === "SIM") {
-    const horaInicioVal = document.getElementById("horaInicio").value;
-    const horaFimVal = document.getElementById("horaFim").value;
-    if (!horaInicioVal || !horaFimVal) {
-      alert(
-        "Para desligamento SIM, os horários de início e fim são obrigatórios."
-      );
-      btnSalvar.disabled = false;
-      btnSalvar.innerHTML = originalSalvarBtnHTML;
+  function renderizarAnexosAtuais(anexos) {
+    anexosAtuaisContainer.innerHTML = "";
+    if (!anexos || anexos.length === 0) {
+      anexosAtuaisContainer.appendChild(semAnexosMsg);
+      semAnexosMsg.style.display = "block";
       return;
     }
-    formData.append("hora_inicio", horaInicioVal);
-    formData.append("hora_fim", horaFimVal);
-  }
 
-  const novosAnexosInput = document.getElementById("novosAnexos");
-  if (novosAnexosInput && novosAnexosInput.files.length > 0) {
-    for (const file of novosAnexosInput.files) {
-      formData.append("anexos", file);
-    }
-  }
+    semAnexosMsg.style.display = "none";
 
-  try {
-    const response = await fetch(`/api/servicos/${servicoId}`, {
-      method: "PUT",
-      body: formData,
+    anexos.forEach((anexo) => {
+      const anexoItem = document.createElement("div");
+      anexoItem.className = "attachment-item";
+      anexoItem.dataset.anexoId = anexo.id;
+
+      const isImage = anexo.tipo === "imagem";
+      const iconClass = isImage ? "" : "fas fa-file-alt fa-2x";
+
+      anexoItem.innerHTML = `
+        ${
+          isImage
+            ? `<img src="${anexo.caminho}" alt="${anexo.nomeOriginal}">`
+            : `<i class="${iconClass}"></i>`
+        }
+        <small class="text-muted" title="${anexo.nomeOriginal}">${
+        anexo.nomeOriginal
+      }</small>
+        <button type="button" class="remove-attachment" title="Remover anexo">&times;</button>
+      `;
+
+      anexoItem
+        .querySelector(".remove-attachment")
+        .addEventListener("click", () => {
+          if (
+            confirm(
+              `Tem certeza que deseja remover o anexo "${anexo.nomeOriginal}"?`
+            )
+          ) {
+            anexosParaDeletar.add(anexo.id);
+            anexoItem.remove();
+            if (anexosAtuaisContainer.childElementCount === 0) {
+              semAnexosMsg.style.display = "block";
+            }
+          }
+        });
+
+      anexosAtuaisContainer.appendChild(anexoItem);
     });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(
-        result.message || "Erro ao salvar alterações do serviço."
-      );
-    }
-    alert(result.message || "Alterações salvas com sucesso!");
-    window.location.href =
-      result.redirect || `/detalhes_servico?id=${servicoId}`;
-  } catch (error) {
-    alert("Erro ao salvar alterações: " + error.message);
-  } finally {
-    btnSalvar.disabled = false;
-    btnSalvar.innerHTML = originalSalvarBtnHTML;
   }
-}
+
+  function renderizarPreviewNovosAnexos() {
+    previewNovosAnexosContainer.innerHTML = "";
+    novosAnexosFiles.forEach((file, index) => {
+      const anexoItem = document.createElement("div");
+      anexoItem.className = "preview-item";
+
+      const isImage = file.type.startsWith("image/");
+      const iconClass = isImage ? "" : "fas fa-file-alt fa-2x";
+      const previewSrc = isImage ? URL.createObjectURL(file) : "";
+
+      anexoItem.innerHTML = `
+        ${
+          isImage
+            ? `<img src="${previewSrc}" alt="${file.name}">`
+            : `<i class="${iconClass}"></i>`
+        }
+        <small class="text-muted" title="${file.name}">${file.name}</small>
+        <button type="button" class="remove-attachment" title="Remover anexo">&times;</button>
+      `;
+
+      anexoItem
+        .querySelector(".remove-attachment")
+        .addEventListener("click", () => {
+          novosAnexosFiles.splice(index, 1);
+          renderizarPreviewNovosAnexos();
+        });
+
+      previewNovosAnexosContainer.appendChild(anexoItem);
+    });
+  }
+
+  async function carregarDadosServico(id) {
+    try {
+      const response = await fetch(`/api/servicos/${id}`);
+      if (!response.ok) {
+        throw new Error("Serviço não encontrado ou erro na requisição.");
+      }
+      const resultado = await response.json();
+      const servico = resultado.data;
+
+      servicoIdInput.value = servico.id;
+      processoInput.value = servico.processo;
+      tipoProcessoSelect.value = servico.tipo;
+      origemSelect.value = servico.origem;
+      dataPrevistaInput.value = formatarDataParaInput(
+        servico.data_prevista_execucao
+      );
+      subestacaoInput.value = servico.subestacao;
+      alimentadorInput.value = servico.alimentador;
+      chaveMontanteInput.value = servico.chave_montante;
+      desligamentoSelect.value = servico.desligamento;
+      horaInicioInput.value = servico.hora_inicio || "";
+      horaFimInput.value = servico.hora_fim || "";
+      ordemObraSelect.value = servico.ordem_obra || "";
+      mapsInput.value = servico.maps || "";
+      descricaoTextarea.value = servico.descricao_servico || "";
+      observacoesTextarea.value = servico.observacoes || "";
+
+      if (servico.tipo === "Emergencial") {
+        processoInput.readOnly = true;
+        processoInput.title =
+          "Não é possível editar o processo de um serviço emergencial.";
+      }
+
+      toggleHorarios();
+      renderizarAnexosAtuais(servico.anexos);
+    } catch (error) {
+      console.error("Erro ao carregar dados do serviço:", error);
+      alert(
+        "Não foi possível carregar os dados do serviço. Verifique o console para mais detalhes."
+      );
+      form.innerHTML =
+        "<p class='text-danger text-center'>Erro ao carregar. Tente recarregar a página.</p>";
+    }
+  }
+
+  async function handleFormSubmit(event) {
+    event.preventDefault();
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML =
+      '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+
+    const formData = new FormData();
+    formData.append("processo", processoInput.value);
+    formData.append("tipo_processo", tipoProcessoSelect.value);
+    formData.append("origem", origemSelect.value);
+    formData.append("data_prevista_execucao", dataPrevistaInput.value);
+    formData.append("subestacao", subestacaoInput.value);
+    formData.append("alimentador", alimentadorInput.value);
+    formData.append("chave_montante", chaveMontanteInput.value);
+    formData.append("desligamento", desligamentoSelect.value);
+    formData.append("hora_inicio", horaInicioInput.value);
+    formData.append("hora_fim", horaFimInput.value);
+    formData.append("ordem_obra", ordemObraSelect.value);
+    formData.append("maps", mapsInput.value);
+    formData.append("descricao_servico", descricaoTextarea.value);
+    formData.append("observacoes", observacoesTextarea.value);
+
+    novosAnexosFiles.forEach((file) => {
+      formData.append("anexos", file);
+    });
+
+    // Adiciona a lista de IDs de anexos a serem deletados
+    formData.append(
+      "anexosParaDeletar",
+      JSON.stringify(Array.from(anexosParaDeletar))
+    );
+
+    const id = getServicoId();
+    try {
+      const response = await fetch(`/api/servicos/${id}`, {
+        method: "PUT",
+        body: formData,
+      });
+
+      const resultado = await response.json();
+
+      if (!response.ok) {
+        throw new Error(resultado.message || "Erro desconhecido ao salvar.");
+      }
+
+      alert(resultado.message);
+      window.location.href = resultado.redirect;
+    } catch (error) {
+      console.error("Erro ao salvar alterações:", error);
+      alert(`Erro ao salvar: ${error.message}`);
+      btnSalvar.disabled = false;
+      btnSalvar.innerHTML = '<i class="fas fa-save me-2"></i>Salvar Alterações';
+    }
+  }
+
+  const servicoId = getServicoId();
+  if (servicoId) {
+    btnVoltar.href = `/detalhes_servico?id=${servicoId}`;
+    carregarDadosServico(servicoId);
+  } else {
+    alert("ID do serviço não encontrado na URL.");
+    form.innerHTML =
+      "<p class='text-danger text-center'>ID do serviço inválido.</p>";
+  }
+
+  desligamentoSelect.addEventListener("change", toggleHorarios);
+  novosAnexosInput.addEventListener("change", (event) => {
+    novosAnexosFiles.push(...event.target.files);
+    renderizarPreviewNovosAnexos();
+  });
+  form.addEventListener("submit", handleFormSubmit);
+});
