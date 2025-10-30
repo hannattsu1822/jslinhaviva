@@ -505,13 +505,11 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.innerHTML = `<span class="material-symbols-outlined spin">sync</span> Salvando...`;
 
     try {
-      await fetchData(
-        `/api/servicos-subestacoes/item/${itemEscopoId}/concluir`,
-        {
-          method: "PUT",
-          body: formData,
-        }
-      );
+      // A URL da API foi corrigida para apontar para a rota padronizada.
+      await fetchData(`/api/servicos/itens/${itemEscopoId}/concluir`, {
+        method: "PUT",
+        body: formData,
+      });
       alert("Status do item atualizado com sucesso!");
       ocultarModal(modalConcluirItemEl);
       carregarServicos(currentPage);
@@ -590,14 +588,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       btnSalvarGerenciamentoItens.disabled = true;
       try {
-        await fetchData(
-          `/api/servicos-subestacoes/${servicoId}/atualizar-encarregados-itens`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ atualizacoes_encarregados: atualizacoes }),
-          }
-        );
+        // A URL da API foi corrigida para apontar para a rota padronizada.
+        await fetchData(`/api/servicos/${servicoId}/itens/encarregados`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ atualizacoes_encarregados: atualizacoes }),
+        });
         alert("Encarregados dos itens atualizados com sucesso!");
         ocultarModal(modalGerenciarItensServicoEl);
         carregarServicos(currentPage);
