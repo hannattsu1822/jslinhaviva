@@ -102,6 +102,49 @@ async function obterServicoPorId(req, res) {
   }
 }
 
+async function atualizarServico(req, res) {
+  const { servicoId } = req.params;
+  const dados = req.body;
+  const arquivos = req.files;
+
+  try {
+    const { connection } = await service.atualizarServico(
+      servicoId,
+      dados,
+      arquivos
+    );
+
+    if (req.user?.matricula) {
+      await registrarAuditoria(
+        req.user.matricula,
+        "UPDATE_SERVICO_SUBESTACAO",
+        `Serviço ID ${servicoId} (Proc: ${req.servico.processo}) foi atualizado.`,
+        connection
+      );
+    }
+
+    res.json({ message: "Serviço atualizado com sucesso!" });
+  } catch (error) {
+    // Limpa arquivos temporários em caso de falha
+    if (arquivos?.length) {
+      arquivos.forEach((f) => {
+        if (f.path) fs.unlink(f.path, () => {});
+      });
+    }
+    const statusCode =
+      error.message.includes("inválido") ||
+      error.message.includes("obrigatórios")
+        ? 400
+        : error.message.includes("não encontrado")
+        ? 404
+        : 500;
+    res.status(statusCode).json({
+      message: "Erro ao atualizar o serviço.",
+      detalhes: error.message,
+    });
+  }
+}
+
 async function reabrirServico(req, res) {
   try {
     const { connection } = await service.reabrirServico(
@@ -150,64 +193,6 @@ async function excluirServico(req, res) {
   }
 }
 
-async function atualizarEncarregadosItens(req, res) {
-  try {
-    const { servicoId } = req.params;
-    const { atualizacoes_encarregados } = req.body;
-
-    const { connection } = await service.atualizarEncarregadosItens(
-      servicoId,
-      atualizacoes_encarregados
-    );
-
-    if (req.user?.matricula) {
-      await registrarAuditoria(
-        req.user.matricula,
-        "UPDATE_SERVICO_ENCARREGADOS",
-        `Encarregados dos itens do serviço ID ${servicoId} foram atualizados.`,
-        connection
-      );
-    }
-
-    res.json({ message: "Encarregados atualizados com sucesso!" });
-  } catch (error) {
-    res.status(500).json({
-      message: "Erro ao atualizar encarregados dos itens.",
-      detalhes: error.message,
-    });
-  }
-}
-
-async function concluirItemServico(req, res) {
-  try {
-    const { itemEscopoId } = req.params;
-    const dadosConclusao = req.body;
-    const arquivos = req.files || [];
-
-    await service.concluirItemServico(itemEscopoId, dadosConclusao, arquivos);
-
-    if (req.user?.matricula) {
-      await registrarAuditoria(
-        req.user.matricula,
-        "CONCLUDE_SERVICO_ITEM",
-        `Item de serviço ID ${itemEscopoId} foi concluído.`
-      );
-    }
-
-    res.json({ message: "Item de serviço concluído com sucesso!" });
-  } catch (error) {
-    if (req.files?.length) {
-      req.files.forEach((f) => {
-        if (f.path) fs.unlink(f.path, () => {});
-      });
-    }
-    res.status(500).json({
-      message: "Erro ao concluir o item de serviço.",
-      detalhes: error.message,
-    });
-  }
-}
-
 module.exports = {
   listarUsuariosResponsaveis,
   listarEncarregadosInspetores,
@@ -215,8 +200,7 @@ module.exports = {
   criarServico,
   listarServicos,
   obterServicoPorId,
+  atualizarServico,
   reabrirServico,
   excluirServico,
-  atualizarEncarregadosItens,
-  concluirItemServico,
 };

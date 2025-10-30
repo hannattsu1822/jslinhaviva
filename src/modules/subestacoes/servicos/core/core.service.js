@@ -338,6 +338,184 @@ async function obterServicoPorId(servicoId) {
   return servico;
 }
 
+async function atualizarServico(servicoId, dados, arquivos) {
+  const connection = await promisePool.getConnection();
+  const arquivosMovidos = [];
+
+  try {
+    await connection.beginTransaction();
+
+    // 1. Atualizar dados principais do serviço
+    const {
+      processo,
+      subestacao_id,
+      motivo,
+      responsavel_id,
+      data_prevista,
+      horario_inicio,
+      horario_fim,
+      status,
+      prioridade,
+      tipo_ordem,
+    } = dados;
+    await connection.query(
+      `UPDATE servicos_subestacoes SET processo = ?, subestacao_id = ?, motivo = ?, responsavel_id = ?, data_prevista = ?, horario_inicio = ?, horario_fim = ?, status = ?, prioridade = ?, tipo_ordem = ? WHERE id = ?`,
+      [
+        processo,
+        subestacao_id,
+        motivo,
+        responsavel_id,
+        data_prevista,
+        horario_inicio,
+        horario_fim,
+        status,
+        prioridade,
+        tipo_ordem,
+        servicoId,
+      ]
+    );
+
+    // 2. Processar exclusões
+    const anexosParaDeletar = dados.anexosParaDeletar
+      ? JSON.parse(dados.anexosParaDeletar)
+      : [];
+    for (const anexoId of anexosParaDeletar) {
+      // Esta lógica pode ser movida para um serviço de anexo dedicado
+      const [anexoRows] = await connection.query(
+        "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id = ? UNION SELECT caminho_servidor FROM servico_item_escopo_anexos WHERE id = ?",
+        [anexoId, anexoId]
+      );
+      if (anexoRows.length > 0 && anexoRows[0].caminho_servidor) {
+        const caminhoCompleto = path.join(
+          __dirname,
+          "../../../../public",
+          anexoRows[0].caminho_servidor
+        );
+        try {
+          await fsPromises.unlink(caminhoCompleto);
+        } catch (err) {
+          if (err.code !== "ENOENT")
+            console.warn(
+              `Arquivo de anexo ${anexoId} não encontrado para exclusão.`
+            );
+        }
+      }
+      await connection.query(
+        "DELETE FROM servicos_subestacoes_anexos WHERE id = ?",
+        [anexoId]
+      );
+      await connection.query(
+        "DELETE FROM servico_item_escopo_anexos WHERE id = ?",
+        [anexoId]
+      );
+    }
+
+    const itensParaDeletar = dados.itensParaDeletar
+      ? JSON.parse(dados.itensParaDeletar)
+      : [];
+    for (const itemId of itensParaDeletar) {
+      // Adicionar lógica para excluir anexos do item antes de excluir o item
+      await connection.query("DELETE FROM servico_itens_escopo WHERE id = ?", [
+        itemId,
+      ]);
+    }
+
+    // 3. Processar adições de novos itens
+    const novosItens = dados.novosItens ? JSON.parse(dados.novosItens) : [];
+    const itemTempIdMap = new Map();
+    for (const item of novosItens) {
+      const [result] = await connection.query(
+        `INSERT INTO servico_itens_escopo (servico_id, descricao_item_servico, tag_equipamento_alvo, catalogo_defeito_id, catalogo_equipamento_id, status_item_escopo) VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          servicoId,
+          item.descricao_item_servico,
+          item.tag_equipamento_alvo,
+          item.catalogo_defeito_id || null,
+          item.catalogo_equipamento_id || null,
+          "PENDENTE",
+        ]
+      );
+      if (item.temp_id) {
+        itemTempIdMap.set(item.temp_id, result.insertId);
+      }
+    }
+
+    // 4. Processar novos anexos
+    const servicoUploadDir = path.join(
+      uploadsSubestacoesDir,
+      "servicos",
+      `servico_${String(servicoId)}`
+    );
+    await fsPromises.mkdir(servicoUploadDir, { recursive: true });
+
+    for (const file of arquivos) {
+      const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
+        /[^a-zA-Z0-9.\-_]/g,
+        "_"
+      )}`;
+      const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
+      await fsPromises.rename(file.path, caminhoDestino);
+      arquivosMovidos.push(caminhoDestino);
+      const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
+      const caminhoFinal = `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`;
+
+      const fieldnameParts = file.fieldname.split("_");
+      const parentId = fieldnameParts.pop();
+      const parentType = fieldnameParts.join("_");
+
+      if (parentType === "anexo" && parentId === "geral") {
+        await connection.query(
+          `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            servicoId,
+            file.originalname,
+            caminhoFinal,
+            file.mimetype,
+            file.size,
+            "DOCUMENTO_REGISTRO",
+          ]
+        );
+      } else if (parentType === "anexo") {
+        let itemEscopoId = parseInt(parentId, 10);
+        if (isNaN(itemEscopoId)) {
+          itemEscopoId = itemTempIdMap.get(parentId);
+        }
+        if (itemEscopoId) {
+          await connection.query(
+            `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?, ?, ?, ?, ?)`,
+            [
+              itemEscopoId,
+              file.originalname,
+              caminhoFinal,
+              file.mimetype,
+              file.size,
+            ]
+          );
+        }
+      }
+    }
+
+    await connection.commit();
+    return { connection };
+  } catch (error) {
+    if (connection) await connection.rollback();
+    // Tenta limpar arquivos que foram movidos antes do erro
+    for (const filePath of arquivosMovidos) {
+      try {
+        await fsPromises.unlink(filePath);
+      } catch (cleanupError) {
+        console.error(
+          `Falha ao limpar arquivo após erro na transação: ${filePath}`,
+          cleanupError
+        );
+      }
+    }
+    throw error;
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
 async function reabrirServico(servicoId, servico) {
   const statusPermitidosParaReabertura = [
     "CONCLUIDO",
@@ -417,138 +595,13 @@ async function excluirServico(servicoId) {
   }
 }
 
-async function atualizarEncarregadosItens(servicoId, itens) {
-  if (!Array.isArray(itens) || itens.length === 0) {
-    throw new Error("Nenhum item para atualizar foi fornecido.");
-  }
-
-  const connection = await promisePool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    for (const item of itens) {
-      if (
-        item.item_escopo_id === undefined ||
-        item.novo_encarregado_item_id === undefined
-      ) {
-        throw new Error(
-          "Cada item deve ter 'item_escopo_id' e 'novo_encarregado_item_id'."
-        );
-      }
-
-      await connection.query(
-        `UPDATE servico_itens_escopo 
-         SET encarregado_item_id = ? 
-         WHERE id = ? AND servico_id = ?`,
-        [item.novo_encarregado_item_id, item.item_escopo_id, servicoId]
-      );
-    }
-
-    await connection.commit();
-    return { connection };
-  } catch (error) {
-    if (connection) await connection.rollback();
-    throw error;
-  } finally {
-    if (connection) connection.release();
-  }
-}
-
-async function concluirItemServico(itemEscopoId, dadosConclusao, arquivos) {
-  const { status_item, data_conclusao, observacoes_conclusao } = dadosConclusao;
-
-  if (!status_item || !data_conclusao) {
-    throw new Error("Status e data de conclusão são obrigatórios.");
-  }
-
-  const connection = await promisePool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    await connection.query(
-      `UPDATE servico_itens_escopo 
-       SET status_item_escopo = ?, data_conclusao_item = ?, observacoes_conclusao_item = ?
-       WHERE id = ?`,
-      [status_item, data_conclusao, observacoes_conclusao, itemEscopoId]
-    );
-
-    const [itemRows] = await connection.query(
-      "SELECT servico_id FROM servico_itens_escopo WHERE id = ?",
-      [itemEscopoId]
-    );
-    if (itemRows.length === 0) {
-      throw new Error("Item de escopo não encontrado.");
-    }
-    const servicoId = itemRows[0].servico_id;
-
-    if (arquivos && arquivos.length > 0) {
-      const itemUploadDir = path.join(
-        uploadsSubestacoesDir,
-        "servicos",
-        `servico_${String(servicoId)}`,
-        "itens",
-        `item_${String(itemEscopoId)}`
-      );
-      await fsPromises.mkdir(itemUploadDir, { recursive: true });
-
-      for (const file of arquivos) {
-        const nomeUnicoArquivo = `${Date.now()}_${file.originalname.replace(
-          /[^a-zA-Z0-9.\-_]/g,
-          "_"
-        )}`;
-        const caminhoDestino = path.join(itemUploadDir, nomeUnicoArquivo);
-        await fsPromises.rename(file.path, caminhoDestino);
-        const caminhoRelativoServidor = `servicos/servico_${servicoId}/itens/item_${itemEscopoId}/${nomeUnicoArquivo}`;
-
-        await connection.query(
-          `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?, ?, ?, ?, ?)`,
-          [
-            itemEscopoId,
-            file.originalname,
-            `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`,
-            file.mimetype,
-            file.size,
-          ]
-        );
-      }
-    }
-
-    const [totalItensRows] = await connection.query(
-      "SELECT COUNT(*) as total FROM servico_itens_escopo WHERE servico_id = ?",
-      [servicoId]
-    );
-    const totalItens = totalItensRows[0].total;
-
-    const [itensFinalizadosRows] = await connection.query(
-      "SELECT COUNT(*) as finalizados FROM servico_itens_escopo WHERE servico_id = ? AND (status_item_escopo LIKE 'CONCLUIDO%' OR status_item_escopo = 'NAO_CONCLUIDO')",
-      [servicoId]
-    );
-    const itensFinalizados = itensFinalizadosRows[0].finalizados;
-
-    if (totalItens > 0 && totalItens === itensFinalizados) {
-      await connection.query(
-        "UPDATE servicos_subestacoes SET status = 'CONCLUIDO', data_conclusao = CURDATE() WHERE id = ?",
-        [servicoId]
-      );
-    }
-
-    await connection.commit();
-  } catch (error) {
-    if (connection) await connection.rollback();
-    throw error;
-  } finally {
-    if (connection) connection.release();
-  }
-}
-
 module.exports = {
   listarUsuariosPorCargo,
   listarCatalogoDefeitos,
   criarServico,
   listarServicos,
   obterServicoPorId,
+  atualizarServico,
   reabrirServico,
   excluirServico,
-  atualizarEncarregadosItens,
-  concluirItemServico,
 };

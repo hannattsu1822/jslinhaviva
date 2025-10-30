@@ -66,26 +66,23 @@ router.get(
   verificarNivel(3),
   controller.obterServicoPorId
 );
+
+// Rota adicionada para permitir a edição/atualização completa de um serviço.
+router.put(
+  "/api/servicos-subestacoes/:servicoId",
+  autenticar,
+  verificarNivel(3),
+  verificarServicoExiste,
+  upload.any(),
+  controller.atualizarServico
+);
+
 router.put(
   "/api/servicos-subestacoes/:servicoId/reabrir",
   autenticar,
   verificarNivel(3),
   verificarServicoExiste,
   controller.reabrirServico
-);
-router.put(
-  "/api/servicos-subestacoes/:servicoId/atualizar-encarregados-itens",
-  autenticar,
-  verificarNivel(3),
-  verificarServicoExiste,
-  controller.atualizarEncarregadosItens
-);
-router.put(
-  "/api/servicos-subestacoes/item/:itemEscopoId/concluir",
-  autenticar,
-  verificarNivel(3),
-  upload.any(),
-  controller.concluirItemServico
 );
 router.delete(
   "/api/servicos-subestacoes/:servicoId",
