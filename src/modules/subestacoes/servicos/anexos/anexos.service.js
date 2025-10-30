@@ -1,7 +1,6 @@
 const { promisePool, uploadsSubestacoesDir } = require("../../../../init");
 const path = require("path");
 const fs = require("fs").promises;
-const { projectRootDir } = require("../../../../shared/path.helper");
 
 async function anexarPosterior(servicoId, descricao, arquivos) {
   if (!arquivos || arquivos.length === 0) {
@@ -107,11 +106,14 @@ async function excluirAnexo(anexoId) {
     }
     const anexo = anexoRows[0];
     if (anexo.caminho_servidor) {
-      const fullPath = path.join(
-        projectRootDir,
-        "public",
-        anexo.caminho_servidor
-      );
+      // Lógica corrigida para montar o caminho do arquivo de forma segura.
+      const prefixoUpload = "/upload_arquivos_subestacoes/";
+      const caminhoRelativo = anexo.caminho_servidor.startsWith(prefixoUpload)
+        ? anexo.caminho_servidor.substring(prefixoUpload.length)
+        : anexo.caminho_servidor;
+
+      const fullPath = path.join(uploadsSubestacoesDir, caminhoRelativo);
+
       try {
         await fs.unlink(fullPath);
       } catch (err) {
