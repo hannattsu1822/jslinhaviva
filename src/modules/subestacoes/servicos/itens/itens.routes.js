@@ -14,12 +14,11 @@ router.put(
   controller.atualizarEncarregados
 );
 
-// Rota para concluir um item de escopo específico, permitindo anexos
-router.post(
+router.put(
   "/api/servicos/itens/:itemEscopoId/concluir",
   autenticar,
   verificarNivel(3),
-  upload.array("anexosConclusaoItem", 5), // 'anexosConclusaoItem' é um nome de campo sugerido
+  upload.array("anexosConclusaoItem", 5),
   controller.concluirItem
 );
 
