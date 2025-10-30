@@ -51,7 +51,6 @@
         font-size: 0.9rem;
         padding: 0.5rem 1rem;
       }
-
       .attachment-container,
       .preview-container {
         display: flex;
@@ -78,32 +77,10 @@
         text-align: center;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
       }
-      @media (max-width: 991px) {
-        .attachment-item,
-        .preview-item {
-          width: calc(33.333% - 10px);
-        }
-      }
       @media (max-width: 767px) {
         .attachment-item,
         .preview-item {
           width: calc(50% - 10px);
-        }
-      }
-      @media (max-width: 575px) {
-        .attachment-item,
-        .preview-item {
-          width: 100%;
-        }
-        .form-header {
-          flex-direction: column;
-          align-items: flex-start;
-        }
-        .form-header h2 {
-          margin-bottom: 0.5rem;
-        }
-        .form-container-card {
-          padding: 1.5rem;
         }
       }
       .attachment-item img,
@@ -141,26 +118,6 @@
         justify-content: center;
         cursor: pointer;
         font-size: 10px;
-        line-height: 1;
-        padding: 0;
-      }
-      .is-invalid {
-        border-color: #dc3545 !important;
-      }
-      .is-invalid:focus {
-        border-color: #dc3545;
-        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
-      }
-      .invalid-feedback {
-        display: none;
-        width: 100%;
-        margin-top: 0.25rem;
-        font-size: 0.875em;
-        color: #dc3545;
-      }
-      .form-control.is-invalid ~ .invalid-feedback,
-      .form-select.is-invalid ~ .invalid-feedback {
-        display: block;
       }
     </style>
   </head>
@@ -198,6 +155,45 @@
               </div>
             </div>
             <div class="col-md-6">
+              <label for="tipo_processo" class="form-label"
+                >Tipo de Processo *</label
+              >
+              <select
+                class="form-select"
+                id="tipo_processo"
+                name="tipo_processo"
+                required
+              >
+                <option value="Normal">Normal</option>
+                <option value="Emergencial">Emergencial</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="origem" class="form-label">Setor de Origem *</label>
+              <select class="form-select" id="origem" name="origem" required>
+                <option value="Operação">Operação</option>
+                <option value="Construção">Construção</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="data_prevista_execucao" class="form-label"
+                >Data Prevista *</label
+              >
+              <input
+                type="date"
+                class="form-control"
+                id="data_prevista_execucao"
+                name="data_prevista_execucao"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
               <label for="subestacao" class="form-label">Subestação *</label>
               <input
                 type="text"
@@ -207,9 +203,6 @@
                 required
               />
             </div>
-          </div>
-
-          <div class="row mb-3">
             <div class="col-md-6">
               <label for="alimentador" class="form-label">Alimentador</label>
               <input
@@ -219,6 +212,9 @@
                 name="alimentador"
               />
             </div>
+          </div>
+
+          <div class="row mb-3">
             <div class="col-md-6">
               <label for="chaveMontante" class="form-label"
                 >Chave Montante</label
@@ -229,6 +225,15 @@
                 id="chaveMontante"
                 name="chave_montante"
               />
+            </div>
+            <div class="col-md-6">
+              <label for="ordem_obra" class="form-label">Ordem de Obra</label>
+              <select class="form-select" id="ordem_obra" name="ordem_obra">
+                <option value="">Nenhuma</option>
+                <option value="ODI">ODI</option>
+                <option value="ODD">ODD</option>
+                <option value="ODS">ODS</option>
+              </select>
             </div>
           </div>
 
@@ -244,7 +249,7 @@
                 required
               >
                 <option value="SIM">Sim</option>
-                <option value="NAO">Não</option>
+                <option value="NÃO">Não</option>
               </select>
             </div>
             <div class="col-md-6" id="horariosContainer" style="display: none">
@@ -276,16 +281,7 @@
           </div>
 
           <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="ordem_obra" class="form-label">Ordem de Obra</label>
-              <select class="form-select" id="ordem_obra" name="ordem_obra">
-                <option value="">Nenhuma</option>
-                <option value="ODI">ODI</option>
-                <option value="ODD">ODD</option>
-                <option value="ODS">ODS</option>
-              </select>
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-12">
               <label for="maps" class="form-label">Link do Google Maps</label>
               <input
                 type="url"
@@ -294,18 +290,6 @@
                 name="maps"
                 placeholder="https://maps.app.goo.gl/exemplo"
               />
-              <div class="invalid-feedback">
-                Por favor, insira um link válido do Google Maps.
-              </div>
-            </div>
-          </div>
-
-          <div class="row mb-3">
-            <div class="col-md-12">
-              <div class="alert alert-info small">
-                <i class="fas fa-info-circle me-2"></i>A atribuição da equipe é
-                feita na tela de <a href="/servicos_ativos">Serviços Ativos</a>.
-              </div>
             </div>
           </div>
 
@@ -337,7 +321,11 @@
           <div class="mb-3">
             <label class="form-label">Anexos Atuais</label>
             <div id="anexosAtuais" class="attachment-container">
-              <p id="semAnexos" class="text-muted w-100 text-center my-2">
+              <p
+                id="semAnexos"
+                class="text-muted w-100 text-center my-2"
+                style="display: none"
+              >
                 Nenhum anexo atual.
               </p>
             </div>
@@ -367,63 +355,6 @@
             </button>
           </div>
         </form>
-      </div>
-    </div>
-
-    <div
-      id="access-denied-modal"
-      class="modal fade"
-      tabindex="-1"
-      aria-labelledby="accessDeniedModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal">
-          <div class="modal-body text-center p-4">
-            <i
-              class="fas fa-exclamation-circle text-danger mb-3"
-              style="font-size: 3rem"
-            ></i>
-            <h4 class="mb-3" id="accessDeniedModalLabel">Acesso negado!</h4>
-            <p>Você não tem permissão para acessar este recurso.</p>
-            <button
-              type="button"
-              class="btn btn-primary"
-              data-bs-dismiss="modal"
-            >
-              Entendi
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      id="development-modal"
-      class="modal fade"
-      tabindex="-1"
-      aria-labelledby="developmentModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-modal">
-          <div class="modal-body text-center p-4">
-            <i
-              class="fas fa-hammer text-warning mb-3"
-              style="font-size: 3rem"
-            ></i>
-            <h4 class="mb-3" id="developmentModalLabel">Em Desenvolvimento!</h4>
-            <p>
-              Este recurso está sendo construído e estará disponível em breve.
-            </p>
-            <button
-              type="button"
-              class="btn btn-primary"
-              data-bs-dismiss="modal"
-            >
-              Entendi
-            </button>
-          </div>
-        </div>
       </div>
     </div>
 
