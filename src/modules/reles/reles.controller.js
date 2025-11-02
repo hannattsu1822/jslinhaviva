@@ -34,9 +34,10 @@ async function criarRele(req, res) {
   } catch (err) {
     console.error("Erro ao criar relé:", err);
     if (err.code === "ER_DUP_ENTRY") {
-      return res
-        .status(409)
-        .json({ message: "Já existe um relé com essa 'local_tag'." });
+      const message = err.message.includes("listen_port")
+        ? "Já existe um relé utilizando essa 'listen_port'."
+        : "Já existe um relé com essa 'local_tag'.";
+      return res.status(409).json({ message });
     }
     const statusCode = err.message.includes("obrigatórios") ? 400 : 500;
     res.status(statusCode).json({ message: err.message });
@@ -55,9 +56,10 @@ async function atualizarRele(req, res) {
   } catch (err) {
     console.error("Erro ao atualizar relé:", err);
     if (err.code === "ER_DUP_ENTRY") {
-      return res
-        .status(409)
-        .json({ message: "Já existe um relé com essa 'local_tag'." });
+      const message = err.message.includes("listen_port")
+        ? "Já existe um relé utilizando essa 'listen_port'."
+        : "Já existe um relé com essa 'local_tag'.";
+      return res.status(409).json({ message });
     }
     const statusCode = err.message.includes("obrigatórios")
       ? 400

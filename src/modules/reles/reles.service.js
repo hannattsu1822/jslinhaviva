@@ -1,13 +1,15 @@
 const { promisePool } = require("../../init");
 
 async function listarReles() {
+  // Adiciona a coluna custom_id à consulta para garantir que sempre seja retornada.
   const [rows] = await promisePool.query(
-    "SELECT id, nome_rele, local_tag, ip_address, port, ativo, ultima_leitura, status_json FROM dispositivos_reles ORDER BY nome_rele"
+    "SELECT id, nome_rele, local_tag, ip_address, port, ativo, ultima_leitura, status_json, listen_port, custom_id FROM dispositivos_reles ORDER BY nome_rele"
   );
   return rows;
 }
 
 async function obterRelePorId(id) {
+  // A consulta com '*' já inclui a coluna, mas é boa prática ser explícito.
   const [rows] = await promisePool.query(
     "SELECT * FROM dispositivos_reles WHERE id = ?",
     [id]
@@ -19,25 +21,60 @@ async function obterRelePorId(id) {
 }
 
 async function criarRele(dadosRele) {
-  const { nome_rele, local_tag, ip_address, port, ativo } = dadosRele;
+  const {
+    nome_rele,
+    local_tag,
+    ip_address,
+    port,
+    ativo,
+    listen_port,
+    custom_id,
+  } = dadosRele;
   if (!nome_rele || !ip_address || !port) {
     throw new Error("Campos obrigatórios: nome_rele, ip_address, port");
   }
+  // Adiciona a coluna custom_id à instrução de inserção.
   const [result] = await promisePool.query(
-    "INSERT INTO dispositivos_reles (nome_rele, local_tag, ip_address, port, ativo) VALUES (?, ?, ?, ?, ?)",
-    [nome_rele, local_tag, ip_address, port, ativo !== undefined ? ativo : 1]
+    "INSERT INTO dispositivos_reles (nome_rele, local_tag, ip_address, port, ativo, listen_port, custom_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [
+      nome_rele,
+      local_tag,
+      ip_address,
+      port,
+      ativo !== undefined ? ativo : 1,
+      listen_port || null,
+      custom_id || null,
+    ]
   );
   return { id: result.insertId };
 }
 
 async function atualizarRele(id, dadosRele) {
-  const { nome_rele, local_tag, ip_address, port, ativo } = dadosRele;
+  const {
+    nome_rele,
+    local_tag,
+    ip_address,
+    port,
+    ativo,
+    listen_port,
+    custom_id,
+  } = dadosRele;
   if (!nome_rele || !ip_address || !port) {
     throw new Error("Campos obrigatórios: nome_rele, ip_address, port");
   }
+  // Adiciona a coluna custom_id à instrução de atualização.
   const [result] = await promisePool.query(
-    "UPDATE dispositivos_reles SET nome_rele = ?, local_tag = ?, ip_address = ?, port = ?, ativo = ? WHERE id = ?",
-    [nome_rele, local_tag, ip_address, port, ativo, id]
+    "UPDATE dispositivos_reles SET nome_rele = ?, local_tag = ?, ip_address = ?, port = ?, ativo = ?, listen_port = ?, custom_id = ? WHERE id = ?",
+    [
+      nome_rele,
+      local_tag,
+      ip_address,
+      port,
+      ativo,
+      listen_port || null,
+      custom_id || null,
+      id,
+    ]
   );
   if (result.affectedRows === 0) {
     throw new Error("Relé não encontrado");
