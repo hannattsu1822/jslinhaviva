@@ -360,13 +360,23 @@ async function visualizarChecklist(registroId) {
   checklistModalInstance.show();
 
   try {
-    const response = await fazerRequisicao(
+    const checklistResponse = await fazerRequisicao(
       `/api/checklist_por_registro/${registroId}`
     );
-    if (!response.success || !response.data) {
-      throw new Error(response.message || "Checklist não encontrado.");
+    const trafoResponse = await fazerRequisicao(
+      `/api/transformadores_reformados/${registroId}`
+    );
+
+    if (!checklistResponse.success || !checklistResponse.data) {
+      throw new Error(checklistResponse.message || "Checklist não encontrado.");
     }
-    const checklist = response.data;
+    if (!trafoResponse.success || !trafoResponse.data) {
+      throw new Error(
+        trafoResponse.message || "Dados do transformador não encontrados."
+      );
+    }
+    const checklist = checklistResponse.data;
+    const transformador = trafoResponse.data;
 
     container.innerHTML = `
             <p><strong>ID do Teste:</strong> ${checklist.id}</p>
@@ -401,6 +411,9 @@ async function visualizarChecklist(registroId) {
             }</p>
             <p><strong>Observações do Checklist:</strong> ${
               checklist.observacoes_checklist || "Nenhuma."
+            }</p>
+            <p><strong>Observações Gerais / Motivo da Reprovação:</strong> ${
+              transformador.resultado_avaliacao || "Nenhuma."
             }</p>
         `;
   } catch (error) {
