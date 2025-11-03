@@ -213,7 +213,15 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
                     /\n/g,
                     "<br>"
                   )}</p></div>`
-                : '<div class="section obs"><p>Nenhuma observação no checklist.</p></div>'
+                : ""
+            }
+            ${
+              transformador.resultado_avaliacao
+                ? `<div class="section obs"><h2>Observações Gerais / Motivo da Reprovação</h2><p>${transformador.resultado_avaliacao.replace(
+                    /\n/g,
+                    "<br>"
+                  )}</p></div>`
+                : ""
             }
             <div class="section">
                 <h2>Conclusão da Avaliação (Checklist)</h2>
