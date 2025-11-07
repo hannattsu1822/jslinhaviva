@@ -139,6 +139,15 @@ async function handleSocketData(socket) {
                     break; 
                 }
             }
+            if (socket.state === 'AWAITING_BANNER_AFTER_ACC') {
+                if (socket.textBuffer.length > 0) {
+                    console.log(`[TCP Service] [${socket.deviceId}] Banner recebido. Enviando senha OTTER.`);
+                    socket.state = 'AWAITING_LOGIN_BANNER';
+                    socket.write("OTTER\r\n");
+                } else {
+                    break;
+                }
+            }
             const promptIndex = socket.textBuffer.indexOf('=>');
             if (promptIndex === -1) break;
             const completeMessage = socket.textBuffer.substring(0, promptIndex + 2);
@@ -254,10 +263,9 @@ function createLegacyServer(listenPort) {
         
         setupSocketLogic(socket);
         
-        console.log(`[TCP Service] [${socket.deviceId}] Enviando credenciais de login (ACC/OTTER).`);
-        socket.state = 'AWAITING_LOGIN_BANNER';
+        console.log(`[TCP Service] [${socket.deviceId}] Enviando comando de acesso (ACC).`);
+        socket.state = 'AWAITING_BANNER_AFTER_ACC';
         socket.write("ACC\r\n");
-        socket.write("OTTER\r\n");
     });
 
     legacyServer.listen(listenPort, '0.0.0.0', () => {
