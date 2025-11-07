@@ -136,10 +136,6 @@ async function handleSocketData(socket) {
                     socket.state = 'LOGGING_IN_OTTER';
                     socket.write("OTTER\r\n");
                 } else {
-                    if (socket.textBuffer.includes('=>')) break;
-                    if (socket.textBuffer.trim().length > 0) {
-                         console.log(`[DEBUG] [${socket.deviceId}] Buffer aguardando senha: ${socket.textBuffer.trim()}`);
-                    }
                     break; 
                 }
             }
@@ -147,14 +143,12 @@ async function handleSocketData(socket) {
             if (promptIndex === -1) break;
             const completeMessage = socket.textBuffer.substring(0, promptIndex + 2);
             socket.textBuffer = socket.textBuffer.substring(promptIndex + 2);
+            
+            let loginSuccessful = false;
             switch (socket.state) {
-                case 'LOGGING_IN_OTTER':
                 case 'AWAITING_LOGIN_BANNER':
-                    console.log(`[TCP Service] [${socket.deviceId}] Login concluído com sucesso.`);
-                    socket.state = 'IDLE';
-                    socket.startPollingCycle();
-                    socket.pollTimer = setInterval(socket.startPollingCycle, pollInterval);
-                    socket.startKeepalive();
+                case 'LOGGING_IN_OTTER':
+                    loginSuccessful = true;
                     break;
                 case 'AWAITING_MET':
                     socket.metData = completeMessage;
@@ -168,6 +162,14 @@ async function handleSocketData(socket) {
                     await processAndPublish(socket);
                     socket.state = 'IDLE';
                     break;
+            }
+
+            if (loginSuccessful) {
+                console.log(`[TCP Service] [${socket.deviceId}] Login concluído com sucesso.`);
+                socket.state = 'IDLE';
+                socket.startPollingCycle();
+                socket.pollTimer = setInterval(socket.startPollingCycle, pollInterval);
+                socket.startKeepalive();
             }
         }
     } catch (err) {
