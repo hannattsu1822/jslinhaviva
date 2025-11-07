@@ -139,15 +139,6 @@ async function handleSocketData(socket) {
                     break; 
                 }
             }
-            if (socket.state === 'AWAITING_BANNER_AFTER_ACC') {
-                if (socket.textBuffer.length > 0) {
-                    console.log(`[TCP Service] [${socket.deviceId}] Banner recebido. Enviando senha OTTER.`);
-                    socket.state = 'AWAITING_LOGIN_BANNER';
-                    socket.write("OTTER\r\n");
-                } else {
-                    break;
-                }
-            }
             const promptIndex = socket.textBuffer.indexOf('=>');
             if (promptIndex === -1) break;
             const completeMessage = socket.textBuffer.substring(0, promptIndex + 2);
@@ -155,7 +146,6 @@ async function handleSocketData(socket) {
             
             let loginSuccessful = false;
             switch (socket.state) {
-                case 'AWAITING_LOGIN_BANNER':
                 case 'LOGGING_IN_OTTER':
                     loginSuccessful = true;
                     break;
@@ -263,8 +253,8 @@ function createLegacyServer(listenPort) {
         
         setupSocketLogic(socket);
         
-        console.log(`[TCP Service] [${socket.deviceId}] Enviando comando de acesso (ACC).`);
-        socket.state = 'AWAITING_BANNER_AFTER_ACC';
+        console.log(`[TCP Service] [${socket.deviceId}] Iniciando login (enviando ACC).`);
+        socket.state = 'AWAITING_PASSWORD_PROMPT';
         socket.write("ACC\r\n");
     });
 
@@ -296,7 +286,8 @@ process.on('SIGINT', async () => {
     console.log('[Shutdown] Recebido sinal SIGINT. Encerrando conexões de forma organizada...');
 
     for (const socket of activeSockets) {
-        socket.destroy();
+        console.log(`[Shutdown] Encerrando conexão com ${socket.deviceId || socket.remoteAddress}...`);
+        socket.end();
     }
 
     mainServer.close(() => {
