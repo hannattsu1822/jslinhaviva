@@ -149,6 +149,7 @@ async function handleSocketData(socket) {
             socket.textBuffer = socket.textBuffer.substring(promptIndex + 2);
             switch (socket.state) {
                 case 'LOGGING_IN_OTTER':
+                case 'AWAITING_LOGIN_BANNER':
                     console.log(`[TCP Service] [${socket.deviceId}] Login concluído com sucesso.`);
                     socket.state = 'IDLE';
                     socket.startPollingCycle();
@@ -248,11 +249,13 @@ function createLegacyServer(listenPort) {
         
         socket.rele_id_db = deviceInfo.rele_id_db;
         socket.deviceId = deviceInfo.deviceId;
-        socket.state = 'AWAITING_PASSWORD_PROMPT';
         
         setupSocketLogic(socket);
         
+        console.log(`[TCP Service] [${socket.deviceId}] Enviando credenciais de login (ACC/OTTER).`);
+        socket.state = 'AWAITING_LOGIN_BANNER';
         socket.write("ACC\r\n");
+        socket.write("OTTER\r\n");
     });
 
     legacyServer.listen(listenPort, '0.0.0.0', () => {
