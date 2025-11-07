@@ -249,7 +249,8 @@ function createLegacyServer(listenPort) {
         socket.write("ACC\r\n");
     });
 
-    legacyServer.listen(listenPort, () => {
+    // CORREÇÃO APLICADA AQUI: Força o listener a usar IPv4
+    legacyServer.listen(listenPort, '0.0.0.0', () => {
         const deviceInfo = portToDeviceMap.get(listenPort);
         console.log(`[TCP Service] Servidor dedicado para '${deviceInfo.deviceId}' ouvindo na porta ${listenPort}`);
     });
