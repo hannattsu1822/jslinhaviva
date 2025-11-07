@@ -23,7 +23,7 @@ const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 const deviceCache = new Map();
 const portToDeviceMap = new Map();
 const legacyServers = [];
-const activeSockets = new Set(); // NOVO: Rastreia todas as conexões ativas
+const activeSockets = new Set();
 
 async function loadDeviceCaches() {
     try {
@@ -128,7 +128,6 @@ async function handleSocketData(socket) {
                 }
                 continue;
             }
-            // ALTERADO: Lógica de detecção de senha mais robusta
             if (socket.state === 'AWAITING_PASSWORD_PROMPT') {
                 const passIndex = socket.textBuffer.indexOf('Password:');
                 if (passIndex !== -1) {
@@ -137,8 +136,6 @@ async function handleSocketData(socket) {
                     socket.state = 'LOGGING_IN_OTTER';
                     socket.write("OTTER\r\n");
                 } else {
-                    // Se não encontrou a senha, mas encontrou um prompt, pode ser um erro.
-                    // Por enquanto, apenas quebra o loop para aguardar mais dados.
                     if (socket.textBuffer.includes('=>')) break;
                     if (socket.textBuffer.trim().length > 0) {
                          console.log(`[DEBUG] [${socket.deviceId}] Buffer aguardando senha: ${socket.textBuffer.trim()}`);
@@ -181,7 +178,7 @@ async function handleSocketData(socket) {
 }
 
 function setupSocketLogic(socket) {
-    activeSockets.add(socket); // NOVO: Adiciona socket ao rastreador
+    activeSockets.add(socket);
     socket.binaryBuffer = Buffer.alloc(0);
     socket.textBuffer = '';
     socket.processing = false;
@@ -218,7 +215,7 @@ function setupSocketLogic(socket) {
     });
 
     socket.on("close", () => {
-        activeSockets.delete(socket); // NOVO: Remove socket do rastreador
+        activeSockets.delete(socket);
         if (socket.pollTimer) clearInterval(socket.pollTimer);
         if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
         console.log(`[TCP Service] Conexão com ${socket.deviceId || socket.remoteAddress} fechada.`);
@@ -282,32 +279,32 @@ async function startServer() {
     }
 }
 
-// ALTERADO: Lógica de Graceful Shutdown completa
 process.on('SIGINT', async () => {
     console.log('[Shutdown] Recebido sinal SIGINT. Encerrando conexões de forma organizada...');
 
-    // 1. Encerra todas as conexões ativas
     for (const socket of activeSockets) {
         socket.destroy();
     }
 
-    // 2. Para de aceitar novas conexões nos servidores
     mainServer.close(() => {
         console.log('[Shutdown] Servidor principal fechado.');
     });
-    legacyServers.forEach(server => server.close(() => {
-        console.log(`[Shutdown] Servidor legado na porta ${server.address().port} fechado.`);
-    }));
+    legacyServers.forEach(server => {
+        server.close(() => {
+            const address = server.address();
+            if (address) {
+                console.log(`[Shutdown] Servidor legado na porta ${address.port} fechado.`);
+            }
+        });
+    });
 
-    // 3. Encerra a conexão com o MQTT Broker
     mqttClient.end();
 
-    // 4. Encerra o pool de conexões com o banco de dados
     await promisePool.end();
 
     console.log('[Shutdown] Todas as conexões foram encerradas. Saindo.');
-    // Adiciona um pequeno timeout para garantir que os callbacks de 'close' sejam chamados
-    setTimeout(() => process.exit(0), 1000);
+    
+    setTimeout(() => process.exit(0), 1500);
 });
 
 startServer();
