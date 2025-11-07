@@ -21,21 +21,32 @@ const promisePool = mysql.createPool(dbConfig);
 const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
 const deviceCache = new Map();
+const portToDeviceMap = new Map();
 
-async function loadDeviceCache() {
+async function loadDeviceCaches() {
     try {
         console.log('[Cache] Carregando dispositivos do banco de dados...');
-        const [rows] = await promisePool.query('SELECT id, nome_rele, custom_id FROM dispositivos_reles WHERE custom_id IS NOT NULL');
+        // CORREÇÃO APLICADA AQUI: Adicionada a coluna 'custom_id' à consulta.
+        const [rows] = await promisePool.query('SELECT id, nome_rele, custom_id, listen_port FROM dispositivos_reles WHERE ativo = 1');
+        
         deviceCache.clear();
+        portToDeviceMap.clear();
+
         for (const device of rows) {
+            const deviceInfo = {
+                rele_id_db: device.id,
+                deviceId: device.nome_rele
+            };
+
             if (device.custom_id) {
-                deviceCache.set(device.custom_id.toLowerCase(), {
-                    rele_id_db: device.id,
-                    deviceId: device.nome_rele
-                });
+                deviceCache.set(device.custom_id.toLowerCase(), deviceInfo);
+            }
+            if (device.listen_port) {
+                portToDeviceMap.set(device.listen_port, deviceInfo);
             }
         }
-        console.log(`[Cache] ${deviceCache.size} dispositivos carregados com sucesso.`);
+        console.log(`[Cache] ${deviceCache.size} dispositivos com custom_id (reg packet) carregados.`);
+        console.log(`[Cache] ${portToDeviceMap.size} dispositivos com porta dedicada (legacy) carregados.`);
     } catch (error) {
         console.error('[Cache] Falha ao carregar dispositivos. O servidor pode não identificar os relés.', error);
     }
@@ -162,13 +173,11 @@ async function handleSocketData(socket) {
     }
 }
 
-const server = net.createServer((socket) => {
-    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-    console.log(`[TCP Service] Nova conexão de ${remoteAddress}.`);
-    socket.state = 'AWAITING_IDENTITY';
+function setupSocketLogic(socket) {
     socket.binaryBuffer = Buffer.alloc(0);
     socket.textBuffer = '';
     socket.processing = false;
+
     socket.startPollingCycle = () => {
         if (socket.state === 'IDLE') {
             console.log(`[Polling] [${socket.deviceId}] Iniciando ciclo de coleta.`);
@@ -180,6 +189,7 @@ const server = net.createServer((socket) => {
             }
         }
     };
+
     socket.startKeepalive = () => {
         if (socket.keepaliveTimer) { clearInterval(socket.keepaliveTimer); }
         socket.keepaliveTimer = setInterval(() => {
@@ -189,6 +199,7 @@ const server = net.createServer((socket) => {
             }
         }, keepaliveInterval);
     };
+
     socket.on('data', (data) => {
         if (socket.state === 'AWAITING_IDENTITY') {
             socket.binaryBuffer = Buffer.concat([socket.binaryBuffer, data]);
@@ -197,21 +208,67 @@ const server = net.createServer((socket) => {
         }
         handleSocketData(socket);
     });
+
     socket.on("close", () => {
         if (socket.pollTimer) clearInterval(socket.pollTimer);
         if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
-        console.log(`[TCP Service] Conexão com ${socket.deviceId || remoteAddress} fechada.`);
+        console.log(`[TCP Service] Conexão com ${socket.deviceId || socket.remoteAddress} fechada.`);
     });
+
     socket.on("error", (err) => {
-        console.error(`[TCP Service] Erro no socket de ${remoteAddress}:`, err.message);
+        console.error(`[TCP Service] Erro no socket de ${socket.remoteAddress}:`, err.message);
     });
+}
+
+const mainServer = net.createServer((socket) => {
+    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
+    console.log(`[TCP Service - Porta ${port}] Nova conexão de ${remoteAddress}. Aguardando pacote de registro.`);
+    socket.state = 'AWAITING_IDENTITY';
+    setupSocketLogic(socket);
 });
 
-async function startServer() {
-    await loadDeviceCache();
-    server.listen(port, () => {
-        console.log(`[TCP Service] Servidor TCP ouvindo na porta ${port}`);
+function createLegacyServer(listenPort) {
+    const legacyServer = net.createServer((socket) => {
+        const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
+        const deviceInfo = portToDeviceMap.get(listenPort);
+
+        if (!deviceInfo) {
+            console.error(`[TCP Service - Porta ${listenPort}] Conexão recebida, mas nenhum dispositivo está mapeado para esta porta. Encerrando.`);
+            socket.end();
+            return;
+        }
+
+        console.log(`[TCP Service - Porta ${listenPort}] Nova conexão de ${remoteAddress}. Identificado como '${deviceInfo.deviceId}'.`);
+        
+        socket.rele_id_db = deviceInfo.rele_id_db;
+        socket.deviceId = deviceInfo.deviceId;
+        socket.state = 'AWAITING_PASSWORD_PROMPT';
+        
+        setupSocketLogic(socket);
+        
+        socket.write("ACC\r\n");
     });
+
+    legacyServer.listen(listenPort, () => {
+        const deviceInfo = portToDeviceMap.get(listenPort);
+        console.log(`[TCP Service] Servidor dedicado para '${deviceInfo.deviceId}' ouvindo na porta ${listenPort}`);
+    });
+
+    legacyServer.on('error', (err) => {
+        console.error(`[TCP Service - Porta ${listenPort}] Erro no servidor:`, err);
+    });
+}
+
+async function startServer() {
+    await loadDeviceCaches();
+
+    mainServer.listen(port, () => {
+        console.log(`[TCP Service] Servidor principal (reg packet) ouvindo na porta ${port}`);
+    });
+
+    for (const listenPort of portToDeviceMap.keys()) {
+        createLegacyServer(listenPort);
+    }
 }
 
 startServer();
