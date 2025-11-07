@@ -7,7 +7,7 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 300000;
+const pollInterval = 120000;
 const keepaliveInterval = 120000;
 
 const dbConfig = {
@@ -22,11 +22,11 @@ const mqttClient = mqtt.connect(MQTT_BROKER_URL);
 
 const deviceCache = new Map();
 const portToDeviceMap = new Map();
+const legacyServers = [];
 
 async function loadDeviceCaches() {
     try {
         console.log('[Cache] Carregando dispositivos do banco de dados...');
-        // CORREÇÃO APLICADA AQUI: Adicionada a coluna 'custom_id' à consulta.
         const [rows] = await promisePool.query('SELECT id, nome_rele, custom_id, listen_port FROM dispositivos_reles WHERE ativo = 1');
         
         deviceCache.clear();
@@ -257,6 +257,8 @@ function createLegacyServer(listenPort) {
     legacyServer.on('error', (err) => {
         console.error(`[TCP Service - Porta ${listenPort}] Erro no servidor:`, err);
     });
+
+    legacyServers.push(legacyServer);
 }
 
 async function startServer() {
@@ -270,5 +272,19 @@ async function startServer() {
         createLegacyServer(listenPort);
     }
 }
+
+process.on('SIGINT', async () => {
+    console.log('[Shutdown] Recebido sinal SIGINT. Encerrando conexões de forma organizada...');
+
+    mainServer.close();
+    legacyServers.forEach(server => server.close());
+
+    mqttClient.end();
+
+    await promisePool.end();
+
+    console.log('[Shutdown] Todas as conexões foram encerradas. Saindo.');
+    process.exit(0);
+});
 
 startServer();
