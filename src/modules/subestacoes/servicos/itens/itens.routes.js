@@ -1,4 +1,4 @@
-// src/modules/subestacoes/servicos/itens/itens.routes.js
+// src/routes/subestacoes/servicos/itens/itens.routes.js
 
 const express = require("express");
 const router = express.Router();
@@ -14,11 +14,12 @@ router.put(
   controller.atualizarEncarregados
 );
 
+// Rota para concluir um item de serviço, agora corrigida para aceitar um formulário misto
 router.put(
   "/api/servicos/itens/:itemEscopoId/concluir",
   autenticar,
   verificarNivel(3),
-  upload.array("anexosConclusaoItem", 5),
+  upload.fields([{ name: "anexosConclusaoItem", maxCount: 5 }]),
   controller.concluirItem
 );
 
