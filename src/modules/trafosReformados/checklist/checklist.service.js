@@ -1,6 +1,7 @@
 const { promisePool } = require("../../../init");
 const { chromium } = require("playwright");
 const path = require("path");
+const fs = require("fs");
 const { projectRootDir } = require("../../../shared/path.helper");
 
 async function obterChecklistPorRegistroId(registroId) {
@@ -51,6 +52,7 @@ async function avaliarCompleto(id, dadosAvaliacao) {
     status_avaliacao,
     resultado_avaliacao,
     checklist_data,
+    anexo_imagem,
   } = dadosAvaliacao;
 
   if (!matricula_responsavel || !status_avaliacao) {
@@ -88,13 +90,18 @@ async function avaliarCompleto(id, dadosAvaliacao) {
       [matricula_responsavel, status_avaliacao, resultado_avaliacao || null, id]
     );
 
+    let anexoPath = null;
+    if (anexo_imagem) {
+      anexoPath = path.relative(projectRootDir, anexo_imagem.path);
+    }
+
     await connection.query(
       `INSERT INTO trafos_reformados_testes (
                 trafos_reformados_id, bobina_primaria_i, bobina_primaria_ii, bobina_primaria_iii,
                 bobina_secundaria_i, bobina_secundaria_ii, bobina_secundaria_iii, estado_fisico,
-                conclusao_checklist, observacoes_checklist, tecnico_responsavel_teste, data_teste,
+                conclusao_checklist, observacoes_checklist, anexo_imagem_path, tecnico_responsavel_teste, data_teste,
                 valor_bobina_i, valor_bobina_ii, valor_bobina_iii
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
       [
         id,
         checklist_data.bobina_primaria_i,
@@ -106,6 +113,7 @@ async function avaliarCompleto(id, dadosAvaliacao) {
         checklist_data.estado_fisico,
         conclusaoChecklistParaDb,
         checklist_data.observacoes_checklist,
+        anexoPath,
         matricula_responsavel,
         checklist_data.valor_bobina_i || null,
         checklist_data.valor_bobina_ii || null,
@@ -116,6 +124,9 @@ async function avaliarCompleto(id, dadosAvaliacao) {
     await connection.commit();
   } catch (err) {
     await connection.rollback();
+    if (anexo_imagem && fs.existsSync(anexo_imagem.path)) {
+      fs.unlinkSync(anexo_imagem.path);
+    }
     throw err;
   } finally {
     connection.release();
@@ -131,6 +142,23 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
     );
     if (userRows.length > 0) {
       tecnicoNomeChecklist = `${userRows[0].nome} (${checklist.tecnico_responsavel_teste})`;
+    }
+  }
+
+  let anexoHtml = "";
+  if (checklist.anexo_imagem_path) {
+    const absoluteImagePath = path.join(
+      projectRootDir,
+      checklist.anexo_imagem_path
+    );
+    if (fs.existsSync(absoluteImagePath)) {
+      const imageSrc = `file://${absoluteImagePath}`;
+      anexoHtml = `
+        <div class="section">
+            <h2>Anexo Fotográfico</h2>
+            <img src="${imageSrc}" style="max-width: 100%; height: auto; border-radius: 4px; margin-top: 10px;" alt="Anexo do Checklist">
+        </div>
+      `;
     }
   }
 
@@ -238,6 +266,7 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
                   )}</p></div>`
                 : ""
             }
+            ${anexoHtml}
             <div class="section">
                 <h2>Conclusão da Avaliação (Checklist)</h2>
                 <p><span>Status Final:</span> <span>${
