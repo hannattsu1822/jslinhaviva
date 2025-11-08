@@ -14,12 +14,12 @@ router.put(
   controller.atualizarEncarregados
 );
 
-// Rota para concluir um item de serviço, agora corrigida para aceitar um formulário misto
+// Rota para concluir um item de serviço
 router.put(
   "/api/servicos/itens/:itemEscopoId/concluir",
   autenticar,
   verificarNivel(3),
-  upload.fields([{ name: "anexosConclusaoItem", maxCount: 5 }]),
+  upload.any(),
   controller.concluirItem
 );
 
