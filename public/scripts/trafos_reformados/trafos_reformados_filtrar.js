@@ -1,9 +1,13 @@
-let currentPage = 1;
-const itemsPerPage = 15;
-let checklistModalInstance;
+let avaliacaoModalInstance;
 let accessDeniedModalInstance;
 let developmentModalInstance;
 let user = null;
+
+let currentPage = 1;
+const itemsPerPage = 15;
+let fileList = [];
+const MAX_FILES = 10;
+const MAX_TOTAL_SIZE_MB = 3;
 
 async function fazerRequisicao(url, options = {}) {
   try {
@@ -40,6 +44,25 @@ async function fazerRequisicao(url, options = {}) {
   }
 }
 
+async function carregarFabricantes() {
+  try {
+    const data = await fazerRequisicao("/api/fabricantes_trafos_reformados");
+    const select = document.getElementById("filterFabricante");
+    if (!select) return;
+    select.innerHTML = '<option value="">Todos</option>';
+    if (Array.isArray(data)) {
+      data.forEach((fabricante) => {
+        const option = document.createElement("option");
+        option.value = fabricante;
+        option.textContent = fabricante;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    alert("Erro ao carregar fabricantes: " + error.message);
+  }
+}
+
 async function carregarPotencias() {
   try {
     const data = await fazerRequisicao("/api/potencias_trafos_reformados");
@@ -59,33 +82,12 @@ async function carregarPotencias() {
   }
 }
 
-async function carregarTecnicos() {
-  try {
-    const data = await fazerRequisicao(
-      "/api/tecnicos_responsaveis_trafos_reformados"
-    );
-    const select = document.getElementById("filterTecnico");
-    if (!select) return;
-    select.innerHTML = '<option value="">Todos</option>';
-    if (Array.isArray(data)) {
-      data.forEach((tecnico) => {
-        const option = document.createElement("option");
-        option.value = tecnico.matricula;
-        option.textContent = `${tecnico.nome} (${tecnico.matricula})`;
-        select.appendChild(option);
-      });
-    }
-  } catch (error) {
-    alert("Erro ao carregar técnicos: " + error.message);
-  }
-}
-
-async function buscarChecklistsAvaliados(page = 1) {
+async function carregarTrafos(page = 1) {
   currentPage = parseInt(page) || 1;
 
   const tbody = document.querySelector("#tabelaResultados tbody");
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Buscando...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Carregando...</td></tr>`;
 
   const paginationControlsContainer = document.getElementById(
     "paginationControlsContainer"
@@ -96,32 +98,18 @@ async function buscarChecklistsAvaliados(page = 1) {
   if (paginationInfoEl) paginationInfoEl.textContent = "Carregando...";
 
   try {
-    const idFilter = document.getElementById("filterId")?.value || "";
     const numeroSerieFilter =
       document.getElementById("filterNumeroSerie")?.value || "";
-    const status = document.getElementById("filterStatus")?.value || "";
+    const fabricante = document.getElementById("filterFabricante")?.value || "";
     const potencia = document.getElementById("filterPotencia")?.value || "";
-    const tecnico = document.getElementById("filterTecnico")?.value || "";
-    const dataAvaliacaoInicial =
-      document.getElementById("filterDataAvaliacaoInicial")?.value || "";
-    const dataAvaliacaoFinal =
-      document.getElementById("filterDataAvaliacaoFinal")?.value || "";
 
     const params = new URLSearchParams();
 
-    if (idFilter) params.append("id", idFilter);
+    params.append("status", "pendente");
+
     if (numeroSerieFilter) params.append("numero_serie", numeroSerieFilter);
-    if (status) {
-      params.append("status", status);
-    } else {
-      params.append("status_not_in", "pendente");
-    }
+    if (fabricante) params.append("fabricante", fabricante);
     if (potencia) params.append("pot", potencia);
-    if (tecnico) params.append("tecnico_responsavel", tecnico);
-    if (dataAvaliacaoInicial)
-      params.append("data_avaliacao_inicial", dataAvaliacaoInicial);
-    if (dataAvaliacaoFinal)
-      params.append("data_avaliacao_final", dataAvaliacaoFinal);
 
     params.append("page", currentPage);
     params.append("limit", itemsPerPage);
@@ -143,7 +131,7 @@ async function buscarChecklistsAvaliados(page = 1) {
     }
   } catch (error) {
     if (tbody)
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro ao buscar dados: ${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro ao carregar dados: ${error.message}</td></tr>`;
     if (paginationInfoEl)
       paginationInfoEl.textContent = "Falha ao carregar dados";
   }
@@ -193,7 +181,7 @@ function renderizarControlesPaginacao(pagination) {
   prevA.addEventListener("click", (e) => {
     e.preventDefault();
     if (currentPage > 1) {
-      buscarChecklistsAvaliados(currentPage - 1);
+      carregarTrafos(currentPage - 1);
     }
   });
   prevLi.appendChild(prevA);
@@ -227,7 +215,7 @@ function renderizarControlesPaginacao(pagination) {
     firstPageA.textContent = "1";
     firstPageA.addEventListener("click", (e) => {
       e.preventDefault();
-      buscarChecklistsAvaliados(1);
+      carregarTrafos(1);
     });
     firstPageLi.appendChild(firstPageA);
     ul.appendChild(firstPageLi);
@@ -251,7 +239,7 @@ function renderizarControlesPaginacao(pagination) {
         "click",
         ((pageNum) => (e) => {
           e.preventDefault();
-          buscarChecklistsAvaliados(pageNum);
+          carregarTrafos(pageNum);
         })(i)
       );
     }
@@ -274,7 +262,7 @@ function renderizarControlesPaginacao(pagination) {
     lastPageA.textContent = totalPages;
     lastPageA.addEventListener("click", (e) => {
       e.preventDefault();
-      buscarChecklistsAvaliados(totalPages);
+      carregarTrafos(totalPages);
     });
     lastPageLi.appendChild(lastPageA);
     ul.appendChild(lastPageLi);
@@ -292,7 +280,7 @@ function renderizarControlesPaginacao(pagination) {
   nextA.addEventListener("click", (e) => {
     e.preventDefault();
     if (currentPage < totalPages) {
-      buscarChecklistsAvaliados(currentPage + 1);
+      carregarTrafos(currentPage + 1);
     }
   });
   nextLi.appendChild(nextA);
@@ -307,31 +295,38 @@ function preencherTabela(trafos) {
   tbody.innerHTML = "";
 
   if (!trafos || trafos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum checklist encontrado com os filtros aplicados.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum transformador pendente encontrado.</td></tr>`;
     return;
   }
 
   trafos.forEach((trafo) => {
-    let statusClass =
-      trafo.status_avaliacao === "avaliado"
-        ? "bg-success text-white"
-        : "bg-danger text-white";
-    let statusText =
-      trafo.status_avaliacao === "avaliado" ? "Aprovado" : "Reprovado";
-    const dataAvaliacao = trafo.data_avaliacao
-      ? new Date(trafo.data_avaliacao).toLocaleDateString("pt-BR")
+    const statusClass = "bg-warning text-dark";
+    const statusText = "Pendente";
+    const dataImportacao = trafo.data_importacao
+      ? new Date(trafo.data_importacao).toLocaleDateString("pt-BR", {
+          timeZone: "UTC",
+        })
       : "-";
-    const historicoButtonHtml = `<button class="btn btn-sm btn-outline-info" onclick="window.location.href='/transformadores/historico/${trafo.numero_serie}'" title="Ver todos os históricos para este Nº de Série"><i class="fas fa-history"></i> (${trafo.total_ciclos})</button>`;
+
+    let ultimaAvaliacaoHtml = "Nenhuma";
+    if (trafo.ultima_avaliacao_anterior) {
+      const dataFormatada = new Date(
+        trafo.ultima_avaliacao_anterior
+      ).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+      ultimaAvaliacaoHtml = `<span class="badge bg-warning text-dark">${dataFormatada}</span>`;
+    }
 
     const actionButtonsHtml = `
-        <button class="btn btn-sm btn-info" onclick="visualizarChecklist(${trafo.id})" title="Visualizar Detalhes">
-            <i class="fas fa-eye"></i>
+        <button onclick="window.abrirModalAvaliacao(${trafo.id})" 
+                class="btn btn-sm btn-primary" 
+                title="Avaliar">
+            <i class="fas fa-clipboard-check"></i>
         </button>
-        <button class="btn btn-sm btn-secondary" onclick="gerarPDFChecklist(${trafo.id})" title="Gerar PDF do Checklist">
-            <i class="fas fa-file-pdf"></i>
-        </button>
-        <button class="btn btn-sm btn-warning" onclick="reverterParaPendente(${trafo.id})" title="Reverter para Pendente">
-            <i class="fas fa-undo"></i>
+        <button onclick="window.confirmarExclusao(${
+          trafo.id
+        }, '${trafo.numero_serie.replace(/'/g, "\\'")}')" 
+                class="btn btn-sm btn-danger" title="Excluir">
+            <i class="fas fa-trash-alt"></i>
         </button>
     `;
 
@@ -341,285 +336,297 @@ function preencherTabela(trafos) {
       <td>${trafo.numero_serie}</td>
       <td>${trafo.fabricante || "-"}</td>
       <td>${trafo.pot || "-"}</td>
+      <td>${dataImportacao}</td>
       <td><span class="badge ${statusClass}">${statusText}</span></td>
-      <td>${dataAvaliacao}</td>
-      <td class="text-center">${historicoButtonHtml}</td>
+      <td>${ultimaAvaliacaoHtml}</td>
       <td class="text-center">
-        <div class="btn-group">
-            ${actionButtonsHtml}
+        <div class="d-flex gap-1 justify-content-center">
+          ${actionButtonsHtml}
         </div>
       </td>`;
     tbody.appendChild(tr);
   });
 }
 
-async function visualizarChecklist(registroId) {
-  const container = document.getElementById("checklistDetailsContainer");
-  container.innerHTML =
-    '<div class="text-center p-4"><div class="spinner-border" role="status"></div></div>';
-  checklistModalInstance.show();
-
-  try {
-    const response = await fazerRequisicao(
-      `/api/checklist_por_registro/${registroId}`
-    );
-
-    if (!response.success || !response.data) {
-      throw new Error(response.message || "Checklist não encontrado.");
-    }
-    const checklistData = response.data;
-
-    let anexoHtml = "";
-    if (checklistData.anexos && checklistData.anexos.length > 0) {
-      const imageLinks = checklistData.anexos
-        .map((anexo) => {
-          const imagePath = `/${anexo.caminho_arquivo.replace(/\\/g, "/")}`;
-          return `
-            <a href="${imagePath}" target="_blank" title="Ver imagem: ${
-            anexo.nome_original
-          }">
-              <img src="${imagePath}" alt="${
-            anexo.nome_original
-          }" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
-            </a>
-          `;
-        })
-        .join("");
-
-      anexoHtml = `
-        <hr>
-        <h6>Anexos Fotográficos</h6>
-        <div class="d-flex flex-wrap gap-2 mt-2">
-          ${imageLinks}
-        </div>
-      `;
-    }
-
-    container.innerHTML = `
-            <p><strong>ID do Teste:</strong> ${checklistData.id}</p>
-            <p><strong>Data do Teste:</strong> ${new Date(
-              checklistData.data_teste
-            ).toLocaleString("pt-BR")}</p>
-            <p><strong>Técnico:</strong> ${
-              checklistData.nome_tecnico ||
-              checklistData.tecnico_responsavel_teste
-            }</p>
-            <hr>
-            <h6>Bobinas Primárias</h6>
-            <p><strong>Primária I/II/III:</strong> ${
-              checklistData.bobina_primaria_i || "N/A"
-            } / ${checklistData.bobina_primaria_ii || "N/A"} / ${
-      checklistData.bobina_primaria_iii || "N/A"
-    }</p>
-            <h6>Bobinas Secundárias</h6>
-            <p><strong>Secundária I/II/III:</strong> ${
-              checklistData.bobina_secundaria_i || "N/A"
-            } / ${checklistData.bobina_secundaria_ii || "N/A"} / ${
-      checklistData.bobina_secundaria_iii || "N/A"
-    }</p>
-            <h6>Valores TTR</h6>
-            <p><strong>Valor I/II/III:</strong> ${
-              checklistData.valor_bobina_i || "N/A"
-            } / ${checklistData.valor_bobina_ii || "N/A"} / ${
-      checklistData.valor_bobina_iii || "N/A"
-    }</p>
-            <hr>
-            <p><strong>Estado Físico Geral:</strong> ${
-              checklistData.estado_fisico || "N/A"
-            }</p>
-            <p><strong>Observações do Checklist:</strong> ${
-              checklistData.observacoes_checklist || "Nenhuma."
-            }</p>
-            <p><strong>Observações Gerais / Motivo da Reprovação:</strong> ${
-              checklistData.resultado_avaliacao || "Nenhuma."
-            }</p>
-            ${anexoHtml}
-        `;
-  } catch (error) {
-    container.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
-  }
-}
-
-async function gerarPDFChecklist(registroId) {
-  const btn = event.currentTarget;
-  const originalIcon = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML =
-    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-
-  try {
-    const response = await fazerRequisicao(
-      `/api/checklist_por_registro/${registroId}`
-    );
-
-    if (!response.success || !response.data) {
-      throw new Error("Não foi possível obter os dados para gerar o PDF.");
-    }
-
-    const combinedData = response.data;
-
-    const payload = {
-      checklist: combinedData,
-      transformador: {
-        id: combinedData.trafos_reformados_id,
-        numero_serie: combinedData.numero_serie,
-        fabricante: combinedData.fabricante,
-        pot: combinedData.pot,
-        resultado_avaliacao: combinedData.resultado_avaliacao,
-      },
-    };
-
-    const pdfResponse = await fetch("/api/gerar_pdf_checklist_especifico", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-    if (!pdfResponse.ok) {
-      const errorData = await pdfResponse.json();
-      throw new Error(errorData.message || "Erro ao gerar PDF.");
-    }
-
-    const blob = await pdfResponse.blob();
-    const urlBlob = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = urlBlob;
-    a.download = `Checklist_Trafo_${combinedData.numero_serie}_ID${combinedData.id}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(urlBlob);
-  } catch (error) {
-    alert("Erro ao gerar PDF: " + error.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalIcon;
-  }
-}
-
-async function reverterParaPendente(registroId) {
+window.confirmarExclusao = function (id, numeroSerie) {
   if (
-    !confirm(
-      `Tem certeza que deseja reverter o registro ID ${registroId} para o status "Pendente"? Ele voltará para a fila de avaliação.`
+    confirm(
+      `Tem certeza que deseja excluir o registro de avaliação ID ${id} (${numeroSerie})? Esta ação não pode ser desfeita.`
     )
   ) {
+    excluirTransformador(id);
+  }
+};
+
+async function excluirTransformador(id) {
+  try {
+    const response = await fetch(`/api/transformadores_reformados/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Erro ao excluir");
+
+    if (data.success) {
+      alert("Registro de avaliação excluído com sucesso!");
+      carregarTrafos(currentPage);
+    } else {
+      alert("Erro ao excluir: " + data.message);
+    }
+  } catch (error) {
+    alert("Erro ao excluir registro: " + error.message);
+  }
+}
+
+async function apagarTodosPendentes() {
+  const confirmacao1 = prompt(
+    'Esta ação é irreversível e irá apagar TODOS os transformadores com status "Pendente". Para confirmar, digite "APAGAR TUDO" na caixa abaixo.'
+  );
+  if (confirmacao1 !== "APAGAR TUDO") {
+    alert(
+      "Ação cancelada. A frase de confirmação não foi digitada corretamente."
+    );
     return;
   }
 
+  const confirmacao2 = confirm(
+    "Confirmação final: Tem certeza absoluta que deseja apagar todos os registros pendentes?"
+  );
+  if (!confirmacao2) {
+    alert("Ação cancelada.");
+    return;
+  }
+
+  const btn = document.getElementById("btnApagarPendentes");
+  btn.disabled = true;
+  btn.innerHTML =
+    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Apagando...';
+
   try {
-    const response = await fazerRequisicao(
-      `/api/transformadores/${registroId}/reverter`,
-      { method: "PUT" }
-    );
-
-    if (!response.success) {
-      throw new Error(response.message || "Erro ao reverter o status.");
+    const response = await fazerRequisicao("/api/trafos_pendentes", {
+      method: "DELETE",
+    });
+    if (response.success) {
+      alert(
+        `${response.deletedCount} registros pendentes foram apagados com sucesso.`
+      );
+      carregarTrafos(1);
+    } else {
+      throw new Error(
+        response.message || "Erro desconhecido ao apagar registros."
+      );
     }
-
-    alert('Registro revertido para "Pendente" com sucesso!');
-    buscarChecklistsAvaliados(currentPage);
   } catch (error) {
-    alert("Erro: " + error.message);
+    alert("Erro ao apagar registros pendentes: " + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML =
+      '<i class="fas fa-trash-alt me-2"></i>Apagar Todos os Pendentes';
   }
 }
 
-async function gerarPDFTabela() {
-  const btn = document.getElementById("btnGerarPDFTabela");
-  const originalBtnHTML = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML =
-    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gerando...';
+function resetChecklistModal() {
+  document.getElementById("checkBobinaPrimariaI").value = "N/A";
+  document.getElementById("checkBobinaPrimariaII").value = "N/A";
+  document.getElementById("checkBobinaPrimariaIII").value = "N/A";
+  document.getElementById("checkBobinaSecundariaI").value = "N/A";
+  document.getElementById("checkBobinaSecundariaII").value = "N/A";
+  document.getElementById("checkBobinaSecundariaIII").value = "N/A";
+  document.getElementById("valorBobinaI").value = "";
+  document.getElementById("valorBobinaII").value = "";
+  document.getElementById("valorBobinaIII").value = "";
+  document.getElementById("checkEstadoFisico").value = "N/A";
+  document.getElementById("observacoesChecklist").value = "";
+  document.getElementById("statusAvaliacao").value = "";
+  document.getElementById("observacoes").value = "";
+  fileList = [];
+  document.getElementById("anexosInput").value = "";
+  renderPreviews();
+}
+
+window.abrirModalAvaliacao = async function (id) {
+  resetChecklistModal();
+  try {
+    const response = await fazerRequisicao(
+      `/api/transformadores_reformados/${id}`
+    );
+    if (response.success) {
+      const trafo = response.data;
+      document.getElementById("trafoId").value = trafo.id;
+      document.getElementById("numeroSerieModal").value = trafo.numero_serie;
+      document.getElementById("fabricanteModal").value =
+        trafo.fabricante || "-";
+      document.getElementById("potenciaModal").value = trafo.pot || "-";
+
+      const statusSelect = document.getElementById("statusAvaliacao");
+      statusSelect.value = "";
+
+      const obsEl = document.getElementById("observacoes");
+      if (obsEl) obsEl.value = "";
+
+      if (avaliacaoModalInstance) avaliacaoModalInstance.show();
+    } else {
+      throw new Error(
+        response.message || "Erro ao carregar dados do transformador"
+      );
+    }
+  } catch (error) {
+    alert(
+      "Erro ao carregar dados do transformador para avaliação: " + error.message
+    );
+  }
+};
+
+async function salvarAvaliacao() {
+  const id = document.getElementById("trafoId").value;
+  const status_final_avaliacao =
+    document.getElementById("statusAvaliacao").value;
+  const observacoes_gerais = document.getElementById("observacoes").value;
+
+  if (!status_final_avaliacao) {
+    alert("Selecione o Status Final da Avaliação.");
+    return;
+  }
+  if (status_final_avaliacao === "reprovado" && !observacoes_gerais.trim()) {
+    alert(
+      'Para o status final "Reprovado", o campo "Observações Gerais / Motivo Final da Reprovação" é obrigatório.'
+    );
+    return;
+  }
+
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+  if (!currentUser || !currentUser.matricula) {
+    alert(
+      "Usuário não autenticado ou matrícula não encontrada. Faça login novamente."
+    );
+    return;
+  }
+
+  const dadosChecklist = {
+    bobina_primaria_i: document.getElementById("checkBobinaPrimariaI").value,
+    bobina_primaria_ii: document.getElementById("checkBobinaPrimariaII").value,
+    bobina_primaria_iii: document.getElementById("checkBobinaPrimariaIII")
+      .value,
+    bobina_secundaria_i: document.getElementById("checkBobinaSecundariaI")
+      .value,
+    bobina_secundaria_ii: document.getElementById("checkBobinaSecundariaII")
+      .value,
+    bobina_secundaria_iii: document.getElementById("checkBobinaSecundariaIII")
+      .value,
+    valor_bobina_i: document.getElementById("valorBobinaI").value,
+    valor_bobina_ii: document.getElementById("valorBobinaII").value,
+    valor_bobina_iii: document.getElementById("valorBobinaIII").value,
+    estado_fisico: document.getElementById("checkEstadoFisico").value,
+    observacoes_checklist: document.getElementById("observacoesChecklist")
+      .value,
+  };
+
+  const formData = new FormData();
+  formData.append("matricula_responsavel", currentUser.matricula);
+  formData.append("status_avaliacao", status_final_avaliacao);
+  formData.append("resultado_avaliacao", observacoes_gerais);
+  formData.append("checklist_data", JSON.stringify(dadosChecklist));
+
+  fileList.forEach((file) => {
+    formData.append("anexos_imagem", file);
+  });
+
+  const btnSalvarAvaliacao = document.getElementById("btnSalvarAvaliacao");
+  const originalBtnHTML = btnSalvarAvaliacao.innerHTML;
+  btnSalvarAvaliacao.disabled = true;
+  btnSalvarAvaliacao.innerHTML =
+    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
 
   try {
-    const idFilter = document.getElementById("filterId")?.value || "";
-    const numeroSerieFilter =
-      document.getElementById("filterNumeroSerie")?.value || "";
-    const status = document.getElementById("filterStatus")?.value || "";
-    const potencia = document.getElementById("filterPotencia")?.value || "";
-    const tecnico = document.getElementById("filterTecnico")?.value || "";
-    const dataAvaliacaoInicial =
-      document.getElementById("filterDataAvaliacaoInicial")?.value || "";
-    const dataAvaliacaoFinal =
-      document.getElementById("filterDataAvaliacaoFinal")?.value || "";
-
-    const params = new URLSearchParams();
-
-    if (idFilter) params.append("id", idFilter);
-    if (numeroSerieFilter) params.append("numero_serie", numeroSerieFilter);
-    if (status) {
-      params.append("status", status);
-    } else {
-      params.append("status_not_in", "pendente");
-    }
-    if (potencia) params.append("pot", potencia);
-    if (tecnico) params.append("tecnico_responsavel", tecnico);
-    if (dataAvaliacaoInicial)
-      params.append("data_avaliacao_inicial", dataAvaliacaoInicial);
-    if (dataAvaliacaoFinal)
-      params.append("data_avaliacao_final", dataAvaliacaoFinal);
-
-    params.append("getAll", "true");
-
-    const responseData = await fazerRequisicao(
-      `/api/transformadores_reformados?${params.toString()}`
+    const response = await fetch(
+      `/api/transformadores_reformados/${id}/avaliar_completo`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        credentials: "include",
+        body: formData,
+      }
     );
 
-    if (!responseData.success || responseData.data.length === 0) {
+    const responseData = await response.json();
+
+    if (!response.ok) {
       throw new Error(
-        "Não há dados para gerar o relatório com os filtros atuais."
+        responseData.message || "Erro desconhecido ao salvar avaliação."
       );
     }
 
-    const filtrosTexto = {
-      "ID do Registro": idFilter,
-      "Número de Série": numeroSerieFilter,
-      Status:
-        document.getElementById("filterStatus").options[
-          document.getElementById("filterStatus").selectedIndex
-        ].text,
-      "Potência (kVA)": potencia,
-      Técnico:
-        document.getElementById("filterTecnico").options[
-          document.getElementById("filterTecnico").selectedIndex
-        ].text,
-      "Data Aval. Inicial": dataAvaliacaoInicial,
-      "Data Aval. Final": dataAvaliacaoFinal,
-    };
+    alert("Avaliação salva com sucesso!");
+    if (avaliacaoModalInstance) avaliacaoModalInstance.hide();
 
-    const pdfResponse = await fetch("/api/gerar_pdf_tabela_historico", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      credentials: "include",
-      body: JSON.stringify({ dados: responseData.data, filtros: filtrosTexto }),
-    });
-
-    if (!pdfResponse.ok) {
-      const errorData = await pdfResponse.json();
-      throw new Error(errorData.message || "Erro ao gerar PDF da tabela.");
-    }
-
-    const blob = await pdfResponse.blob();
-    const urlBlob = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = urlBlob;
-    a.download = "Relatorio_Checklists_Avaliados.pdf";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(urlBlob);
+    carregarTrafos(currentPage);
   } catch (error) {
-    alert("Erro ao gerar PDF da tabela: " + error.message);
+    console.error("Erro completo ao salvar avaliação:", error);
+    alert("Erro ao salvar avaliação: " + error.message);
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalBtnHTML;
+    btnSalvarAvaliacao.disabled = false;
+    btnSalvarAvaliacao.innerHTML = originalBtnHTML;
   }
+}
+
+function handleFiles(files) {
+  const anexosInput = document.getElementById("anexosInput");
+  let currentTotalSize = fileList.reduce((acc, file) => acc + file.size, 0);
+
+  for (const file of files) {
+    if (fileList.length >= MAX_FILES) {
+      alert(`Você pode anexar no máximo ${MAX_FILES} arquivos.`);
+      break;
+    }
+    if (!file.type.startsWith("image/")) {
+      alert(`O arquivo "${file.name}" não é uma imagem e será ignorado.`);
+      continue;
+    }
+    if (currentTotalSize + file.size > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
+      alert(
+        `O arquivo "${file.name}" excede o limite total de ${MAX_TOTAL_SIZE_MB}MB e não pode ser adicionado.`
+      );
+      continue;
+    }
+    fileList.push(file);
+    currentTotalSize += file.size;
+  }
+  anexosInput.value = "";
+  renderPreviews();
+}
+
+function renderPreviews() {
+  const previewArea = document.getElementById("previewArea");
+  previewArea.innerHTML = "";
+
+  fileList.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const previewItem = document.createElement("div");
+      previewItem.className = "preview-item";
+
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      img.alt = file.name;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "remove-btn";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.type = "button";
+      removeBtn.onclick = () => {
+        fileList.splice(index, 1);
+        renderPreviews();
+      };
+
+      previewItem.appendChild(img);
+      previewItem.appendChild(removeBtn);
+      previewArea.appendChild(previewItem);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 window.navigateTo = async function (pageNameOrUrl) {
@@ -666,14 +673,12 @@ window.navigateTo = async function (pageNameOrUrl) {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const modalEl = document.getElementById("visualizarChecklistModal");
-  if (modalEl) {
-    checklistModalInstance = new bootstrap.Modal(modalEl);
-  }
-
   user = JSON.parse(localStorage.getItem("user"));
 
   if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+    const avalModalEl = document.getElementById("avaliacaoModal");
+    if (avalModalEl) avaliacaoModalInstance = new bootstrap.Modal(avalModalEl);
+
     const admEl = document.getElementById("access-denied-modal");
     if (admEl) accessDeniedModalInstance = new bootstrap.Modal(admEl);
 
@@ -681,20 +686,56 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
   }
 
+  await carregarFabricantes();
   await carregarPotencias();
-  await carregarTecnicos();
-  await buscarChecklistsAvaliados(1);
+  await carregarTrafos(1);
 
-  const filtroFormEl = document.getElementById("filtroFormHistorico");
+  const filtroFormEl = document.getElementById("filtroForm");
   if (filtroFormEl) {
-    filtroFormEl.addEventListener("submit", (e) => {
+    filtroFormEl.addEventListener("submit", async (e) => {
       e.preventDefault();
-      buscarChecklistsAvaliados(1);
+      currentPage = 1;
+      await carregarTrafos(currentPage);
     });
   }
 
-  const btnGerarPDFTabela = document.getElementById("btnGerarPDFTabela");
-  if (btnGerarPDFTabela) {
-    btnGerarPDFTabela.addEventListener("click", gerarPDFTabela);
+  const btnSalvarAvaliacaoEl = document.getElementById("btnSalvarAvaliacao");
+  if (btnSalvarAvaliacaoEl)
+    btnSalvarAvaliacaoEl.addEventListener("click", salvarAvaliacao);
+
+  const btnApagarPendentesEl = document.getElementById("btnApagarPendentes");
+  if (btnApagarPendentesEl) {
+    btnApagarPendentesEl.addEventListener("click", apagarTodosPendentes);
+  }
+
+  const uploadArea = document.getElementById("uploadArea");
+  const anexosInput = document.getElementById("anexosInput");
+
+  if (uploadArea && anexosInput) {
+    uploadArea.addEventListener("click", () => anexosInput.click());
+    anexosInput.addEventListener("change", () => handleFiles(anexosInput.files));
+
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, () =>
+        uploadArea.classList.add("dragging")
+      );
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, () =>
+        uploadArea.classList.remove("dragging")
+      );
+    });
+
+    uploadArea.addEventListener("drop", (e) => {
+      handleFiles(e.dataTransfer.files);
+    });
   }
 });
