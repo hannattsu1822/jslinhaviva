@@ -35,18 +35,30 @@ async function atualizarEncarregados(req, res) {
 }
 
 async function concluirItem(req, res) {
-  // MODIFICAÇÃO: Acessa os arquivos de dentro do objeto req.files,
-  // pois upload.fields() organiza os arquivos por nome de campo.
-  const arquivos = req.files ? req.files.anexosConclusaoItem || [] : [];
+  // MODIFICAÇÃO: Como estamos usando upload.any(), req.files é um array de todos os arquivos.
+  // Filtramos para pegar apenas os que pertencem ao campo 'anexosConclusaoItem'.
+  const arquivos = req.files
+    ? req.files.filter((f) => f.fieldname === "anexosConclusaoItem")
+    : [];
 
   try {
     await service.concluirItem(req.params.itemEscopoId, req.body, arquivos);
     res.json({ message: "Status do item atualizado com sucesso!" });
   } catch (error) {
-    if (arquivos?.length)
+    // Limpa apenas os arquivos que foram processados por esta requisição
+    if (arquivos?.length) {
       arquivos.forEach((f) => {
-        if (f.path) fs.unlink(f.path, () => {});
+        if (f.path) {
+          fs.unlink(f.path, (err) => {
+            if (err)
+              console.error(
+                `Erro ao limpar arquivo temporário ${f.path}:`,
+                err
+              );
+          });
+        }
       });
+    }
     const statusCode =
       error.message.includes("inválido") ||
       error.message.includes("obrigatória")
