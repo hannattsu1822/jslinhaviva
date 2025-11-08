@@ -22,7 +22,7 @@ router.put(
   "/api/transformadores_reformados/:id/avaliar_completo",
   autenticar,
   verificarNivel(3),
-  uploadAnexoChecklist.single("anexo_imagem"),
+  uploadAnexoChecklist.array("anexos_imagem", 10),
   controller.avaliarCompleto
 );
 
@@ -38,6 +38,13 @@ router.post(
   autenticar,
   verificarNivel(3),
   controller.gerarPdfTabelaHistorico
+);
+
+router.delete(
+  "/api/checklist_anexos/:anexoId",
+  autenticar,
+  verificarNivel(3),
+  controller.excluirAnexo
 );
 
 module.exports = router;
