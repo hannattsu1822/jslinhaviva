@@ -147,7 +147,11 @@ async function criarServico(dados, arquivos) {
         "_"
       )}`;
       const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-      await fsPromises.rename(file.path, caminhoDestino);
+      
+      // MODIFICAÇÃO: Substituído fsPromises.rename por copyFile + unlink para robustez
+      await fsPromises.copyFile(file.path, caminhoDestino);
+      await fsPromises.unlink(file.path);
+
       const caminhoRelativoServidor = `servicos/servico_${novoServicoId}/${nomeUnicoArquivo}`;
 
       if (file.fieldname.startsWith("item_anexo__")) {
@@ -345,7 +349,6 @@ async function atualizarServico(servicoId, dados, arquivos) {
   try {
     await connection.beginTransaction();
 
-    // 1. Atualizar dados principais do serviço
     const {
       processo,
       subestacao_id,
@@ -375,12 +378,10 @@ async function atualizarServico(servicoId, dados, arquivos) {
       ]
     );
 
-    // 2. Processar exclusões
     const anexosParaDeletar = dados.anexosParaDeletar
       ? JSON.parse(dados.anexosParaDeletar)
       : [];
     for (const anexoId of anexosParaDeletar) {
-      // Esta lógica pode ser movida para um serviço de anexo dedicado
       const [anexoRows] = await connection.query(
         "SELECT caminho_servidor FROM servicos_subestacoes_anexos WHERE id = ? UNION SELECT caminho_servidor FROM servico_item_escopo_anexos WHERE id = ?",
         [anexoId, anexoId]
@@ -414,13 +415,11 @@ async function atualizarServico(servicoId, dados, arquivos) {
       ? JSON.parse(dados.itensParaDeletar)
       : [];
     for (const itemId of itensParaDeletar) {
-      // Adicionar lógica para excluir anexos do item antes de excluir o item
       await connection.query("DELETE FROM servico_itens_escopo WHERE id = ?", [
         itemId,
       ]);
     }
 
-    // 3. Processar adições de novos itens
     const novosItens = dados.novosItens ? JSON.parse(dados.novosItens) : [];
     const itemTempIdMap = new Map();
     for (const item of novosItens) {
@@ -440,7 +439,6 @@ async function atualizarServico(servicoId, dados, arquivos) {
       }
     }
 
-    // 4. Processar novos anexos
     const servicoUploadDir = path.join(
       uploadsSubestacoesDir,
       "servicos",
@@ -454,7 +452,11 @@ async function atualizarServico(servicoId, dados, arquivos) {
         "_"
       )}`;
       const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-      await fsPromises.rename(file.path, caminhoDestino);
+      
+      // MODIFICAÇÃO: Substituído fsPromises.rename por copyFile + unlink para robustez
+      await fsPromises.copyFile(file.path, caminhoDestino);
+      await fsPromises.unlink(file.path);
+
       arquivosMovidos.push(caminhoDestino);
       const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
       const caminhoFinal = `/upload_arquivos_subestacoes/${caminhoRelativoServidor}`;
@@ -499,7 +501,6 @@ async function atualizarServico(servicoId, dados, arquivos) {
     return { connection };
   } catch (error) {
     if (connection) await connection.rollback();
-    // Tenta limpar arquivos que foram movidos antes do erro
     for (const filePath of arquivosMovidos) {
       try {
         await fsPromises.unlink(filePath);
