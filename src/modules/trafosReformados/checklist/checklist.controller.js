@@ -33,15 +33,19 @@ async function obterHistoricoPorSerie(req, res) {
 async function avaliarCompleto(req, res) {
   try {
     const dadosAvaliacao = { ...req.body };
-    if (req.file) {
-      dadosAvaliacao.anexo_imagem = req.file;
+    if (req.files && req.files.length > 0) {
+      dadosAvaliacao.anexos_imagem = req.files;
     }
 
-    await service.avaliarCompleto(req.params.id, dadosAvaliacao);
+    const resultado = await service.avaliarCompleto(
+      req.params.id,
+      dadosAvaliacao
+    );
 
     res.json({
       success: true,
       message: "Avaliação completa salva com sucesso.",
+      data: resultado,
     });
   } catch (err) {
     console.error("Erro ao salvar avaliação completa:", err);
@@ -105,10 +109,23 @@ async function gerarPdfTabelaHistorico(req, res) {
   }
 }
 
+async function excluirAnexo(req, res) {
+  try {
+    const anexoId = req.params.anexoId;
+    await service.excluirAnexo(anexoId);
+    res.json({ success: true, message: "Anexo excluído com sucesso." });
+  } catch (error) {
+    console.error("Erro ao excluir anexo:", error);
+    const statusCode = error.message.includes("não encontrado") ? 404 : 500;
+    res.status(statusCode).json({ success: false, message: error.message });
+  }
+}
+
 module.exports = {
   obterChecklistPorRegistroId,
   obterHistoricoPorSerie,
   avaliarCompleto,
   gerarPdfChecklist,
   gerarPdfTabelaHistorico,
+  excluirAnexo,
 };
