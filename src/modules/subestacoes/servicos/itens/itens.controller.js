@@ -1,3 +1,5 @@
+// src/routes/subestacoes/servicos/itens/itens.controller.js
+
 const service = require("./itens.service");
 const { registrarAuditoria } = require("../../../../auth");
 const fs = require("fs");
@@ -33,7 +35,10 @@ async function atualizarEncarregados(req, res) {
 }
 
 async function concluirItem(req, res) {
-  const arquivos = req.files;
+  // MODIFICAÇÃO: Acessa os arquivos de dentro do objeto req.files,
+  // pois upload.fields() organiza os arquivos por nome de campo.
+  const arquivos = req.files ? req.files.anexosConclusaoItem || [] : [];
+
   try {
     await service.concluirItem(req.params.itemEscopoId, req.body, arquivos);
     res.json({ message: "Status do item atualizado com sucesso!" });
