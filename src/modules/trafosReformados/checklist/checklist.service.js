@@ -51,9 +51,10 @@ async function avaliarCompleto(id, dadosAvaliacao) {
     matricula_responsavel,
     status_avaliacao,
     resultado_avaliacao,
-    checklist_data,
     anexo_imagem,
   } = dadosAvaliacao;
+
+  const checklist_data = JSON.parse(dadosAvaliacao.checklist_data);
 
   if (!matricula_responsavel || !status_avaliacao) {
     throw new Error(
@@ -90,9 +91,11 @@ async function avaliarCompleto(id, dadosAvaliacao) {
       [matricula_responsavel, status_avaliacao, resultado_avaliacao || null, id]
     );
 
-    let anexoPath = null;
+    let anexoPathParaDB = null;
     if (anexo_imagem) {
-      anexoPath = path.relative(projectRootDir, anexo_imagem.path);
+      anexoPathParaDB = path
+        .relative(projectRootDir, anexo_imagem.path)
+        .replace(/\\/g, "/");
     }
 
     await connection.query(
@@ -113,7 +116,7 @@ async function avaliarCompleto(id, dadosAvaliacao) {
         checklist_data.estado_fisico,
         conclusaoChecklistParaDb,
         checklist_data.observacoes_checklist,
-        anexoPath,
+        anexoPathParaDB,
         matricula_responsavel,
         checklist_data.valor_bobina_i || null,
         checklist_data.valor_bobina_ii || null,
