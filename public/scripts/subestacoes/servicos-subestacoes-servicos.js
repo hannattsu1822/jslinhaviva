@@ -496,7 +496,6 @@ document.addEventListener("DOMContentLoaded", () => {
       observacoesConclusaoItemTextarea.value
     );
     anexosConclusaoTemporarios.forEach((file) => {
-      // MODIFICAÇÃO: Corrigido o nome do campo para corresponder ao backend
       formData.append("anexosConclusaoItem", file);
     });
 
