@@ -204,10 +204,20 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
   if (checklist.anexos && checklist.anexos.length > 0) {
     const imageTags = checklist.anexos
       .map((anexo) => {
-        const absoluteImagePath = path.join(projectRootDir, anexo.caminho_arquivo);
+        const absoluteImagePath = path.join(
+          projectRootDir,
+          anexo.caminho_arquivo
+        );
         if (fs.existsSync(absoluteImagePath)) {
-          const imageSrc = `file://${absoluteImagePath}`;
-          return `<img src="${imageSrc}" style="max-width: 48%; height: auto; border-radius: 4px; margin: 1%;" alt="${anexo.nome_original}">`;
+          const imageBuffer = fs.readFileSync(absoluteImagePath);
+          const base64Image = imageBuffer.toString("base64");
+          const mimeType = anexo.tipo_mime || "image/jpeg";
+          const imageSrc = `data:${mimeType};base64,${base64Image}`;
+
+          return `<div class="anexo-item">
+                    <img src="${imageSrc}" alt="${anexo.nome_original}">
+                    <p>${anexo.nome_original}</p>
+                  </div>`;
         }
         return "";
       })
@@ -215,9 +225,10 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
 
     if (imageTags) {
       anexoHtml = `
+        <div class="page-break"></div>
         <div class="section">
             <h2>Anexos Fotográficos</h2>
-            <div style="display: flex; flex-wrap: wrap; justify-content: flex-start; margin-top: 10px;">
+            <div class="anexos-container">
                 ${imageTags}
             </div>
         </div>
@@ -226,123 +237,134 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
   }
 
   const htmlContent = `
-        <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório de Checklist do Transformador</title>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Avaliação do Transformador</title>
         <style>
-            body { font-family: 'Poppins', Arial, sans-serif; color: #333; margin: 20px; font-size: 11px; }
-            .container { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 800px; margin: auto; }
-            h1 { color: #2a5298; text-align: center; margin-bottom: 20px; font-size: 18px; }
-            h2 { color: #2a5298; font-size: 14px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
-            .info-trafo p, .info-checklist p, .section p { margin: 6px 0; line-height: 1.6; }
-            .info-trafo strong, .info-checklist strong { color: #102a52; min-width: 140px; display: inline-block; font-weight: 600;}
-            .section { margin-bottom:15px; padding-left: 10px; page-break-inside: avoid; }
-            .section p { display: flex; justify-content: space-between; border-bottom: 1px dotted #eaeaea; padding: 4px 0;}
-            .section p span:first-child {color: #555;}
-            .section p span:last-child { font-weight: bold; text-align: right; color: #111; }
-            .obs { margin-top:15px; padding:10px; background-color:#f9f9f9; border: 1px solid #efefef; border-radius:4px; }
-            .obs p {border-bottom: none; white-space: pre-wrap; word-wrap: break-word;}
-            .footer { margin-top: 30px; font-size: 9px; text-align: center; color: #777; }
-        </style></head><body>
+            body { font-family: Arial, sans-serif; color: #333; font-size: 10pt; }
+            .container { padding: 0 1cm; }
+            h1 {
+                color: #003366; text-align: center; margin-bottom: 20px;
+                font-size: 16pt; border-bottom: 2px solid #003366; padding-bottom: 10px;
+            }
+            h2 {
+                color: #004a99; font-size: 12pt; margin-top: 25px;
+                margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;
+            }
+            .info-grid {
+                display: grid; grid-template-columns: 1fr 1fr;
+                gap: 0 20px; margin-bottom: 20px;
+            }
+            .info-grid p { margin: 5px 0; }
+            .info-grid strong { color: #003366; min-width: 120px; display: inline-block; }
+            table {
+                width: 100%; border-collapse: collapse; margin-top: 10px;
+            }
+            th, td {
+                border: 1px solid #ddd; padding: 8px; text-align: left;
+            }
+            th {
+                background-color: #f2f9ff; font-weight: bold; color: #003366;
+            }
+            .obs-box {
+                margin-top: 20px; padding: 15px; background-color: #f9f9f9;
+                border: 1px solid #eee; border-radius: 5px;
+                white-space: pre-wrap; word-wrap: break-word;
+            }
+            .status { font-weight: bold; }
+            .status.aprovado { color: #28a745; }
+            .status.reprovado { color: #dc3545; }
+            .page-break { page-break-before: always; }
+            .anexos-container {
+                display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start;
+            }
+            .anexo-item {
+                width: calc(50% - 10px); text-align: center; border: 1px solid #eee;
+                padding: 10px; border-radius: 5px;
+            }
+            .anexo-item img {
+                max-width: 100%; height: auto; max-height: 280px;
+                border-radius: 4px; margin-bottom: 5px;
+            }
+            .anexo-item p { font-size: 8pt; color: #555; margin: 0; }
+        </style>
+    </head>
+    <body>
         <div class="container">
-            <h1>Checklist de Avaliação do Transformador</h1>
-            <div class="info-trafo">
-                <h2>Dados do Transformador</h2>
-                <p><strong>ID do Registro:</strong> ${
-                  transformador.id || "N/A"
-                }</p>
-                <p><strong>Número de Série:</strong> ${
-                  transformador.numero_serie || "N/A"
-                }</p>
-                <p><strong>Fabricante:</strong> ${
-                  transformador.fabricante || "N/A"
-                }</p>
-                <p><strong>Potência:</strong> ${
-                  transformador.pot ? transformador.pot + " kVA" : "N/A"
-                }</p>
+            <div class="info-grid">
+                <div>
+                    <h2>Dados do Transformador</h2>
+                    <p><strong>ID do Registro:</strong> ${transformador.id || "N/A"}</p>
+                    <p><strong>Número de Série:</strong> ${transformador.numero_serie || "N/A"}</p>
+                    <p><strong>Fabricante:</strong> ${transformador.fabricante || "N/A"}</p>
+                    <p><strong>Potência:</strong> ${transformador.pot ? transformador.pot + " kVA" : "N/A"}</p>
+                </div>
+                <div>
+                    <h2>Detalhes da Avaliação</h2>
+                    <p><strong>ID do Teste:</strong> ${checklist.id || "N/A"}</p>
+                    <p><strong>Data do Teste:</strong> ${checklist.data_teste ? new Date(checklist.data_teste).toLocaleString("pt-BR") : "N/A"}</p>
+                    <p><strong>Técnico Responsável:</strong> ${tecnicoNomeChecklist}</p>
+                </div>
             </div>
-            <div class="info-checklist">
-                <h2>Detalhes do Teste/Checklist</h2>
-                <p><strong>ID do Teste:</strong> ${checklist.id || "N/A"}</p>
-                <p><strong>Data do Teste:</strong> ${
-                  checklist.data_teste
-                    ? new Date(checklist.data_teste).toLocaleString("pt-BR", {
-                        timeZone: "America/Sao_Paulo",
-                      })
-                    : "N/A"
-                }</p>
-                <p><strong>Técnico Responsável:</strong> ${tecnicoNomeChecklist}</p>
-            </div>
-            <div class="section">
-                <h2>Bobinas Primárias</h2>
-                <p><span>Primária I:</span> <span>${
-                  checklist.bobina_primaria_i || "N/A"
-                }</span></p>
-                <p><span>Primária II:</span> <span>${
-                  checklist.bobina_primaria_ii || "N/A"
-                }</span></p>
-                <p><span>Primária III:</span> <span>${
-                  checklist.bobina_primaria_iii || "N/A"
-                }</span></p>
-            </div>
-            <div class="section">
-                <h2>Bobinas Secundárias</h2>
-                <p><span>Secundária I:</span> <span>${
-                  checklist.bobina_secundaria_i || "N/A"
-                }</span></p>
-                <p><span>Secundária II:</span> <span>${
-                  checklist.bobina_secundaria_ii || "N/A"
-                }</span></p>
-                <p><span>Secundária III:</span> <span>${
-                  checklist.bobina_secundaria_iii || "N/A"
-                }</span></p>
-            </div>
-            <div class="section">
-                <h2>Valores Obtidos - Teste TTR</h2>
-                <p><span>Valor Bobina I:</span> <span>${
-                  checklist.valor_bobina_i || "N/A"
-                }</span></p>
-                <p><span>Valor Bobina II:</span> <span>${
-                  checklist.valor_bobina_ii || "N/A"
-                }</span></p>
-                <p><span>Valor Bobina III:</span> <span>${
-                  checklist.valor_bobina_iii || "N/A"
-                }</span></p>
-            </div>
-            <div class="section">
-                <h2>Outras Verificações</h2>
-                <p><span>Estado Físico Geral:</span> <span>${
-                  checklist.estado_fisico || "N/A"
-                }</span></p>
-            </div>
-            ${
-              checklist.observacoes_checklist
-                ? `<div class="section obs"><h2>Observações do Checklist</h2><p>${checklist.observacoes_checklist.replace(
-                    /\n/g,
-                    "<br>"
-                  )}</p></div>`
-                : ""
-            }
-            ${
-              transformador.resultado_avaliacao
-                ? `<div class="section obs"><h2>Observações Gerais / Motivo da Reprovação</h2><p>${transformador.resultado_avaliacao.replace(
-                    /\n/g,
-                    "<br>"
-                  )}</p></div>`
-                : ""
-            }
+
+            <h2>Resultados do Checklist Técnico</h2>
+            <table>
+                <tr><th>Verificação</th><th>Fase I</th><th>Fase II</th><th>Fase III</th></tr>
+                <tr><td><strong>Bobinas Primárias</strong></td><td>${checklist.bobina_primaria_i || "N/A"}</td><td>${checklist.bobina_primaria_ii || "N/A"}</td><td>${checklist.bobina_primaria_iii || "N/A"}</td></tr>
+                <tr><td><strong>Bobinas Secundárias</strong></td><td>${checklist.bobina_secundaria_i || "N/A"}</td><td>${checklist.bobina_secundaria_ii || "N/A"}</td><td>${checklist.bobina_secundaria_iii || "N/A"}</td></tr>
+                <tr><td><strong>Valores Teste TTR</strong></td><td>${checklist.valor_bobina_i || "N/A"}</td><td>${checklist.valor_bobina_ii || "N/A"}</td><td>${checklist.valor_bobina_iii || "N/A"}</td></tr>
+            </table>
+
+            <table>
+                <tr>
+                    <th style="width: 200px;">Estado Físico Geral</th>
+                    <td>${checklist.estado_fisico || "N/A"}</td>
+                </tr>
+            </table>
+
+            ${checklist.observacoes_checklist ? `
+                <h2>Observações do Checklist</h2>
+                <div class="obs-box">${checklist.observacoes_checklist}</div>
+            ` : ""}
+            
+            ${transformador.resultado_avaliacao ? `
+                <h2>Observações Gerais / Motivo da Reprovação</h2>
+                <div class="obs-box">${transformador.resultado_avaliacao}</div>
+            ` : ""}
+
+            <h2>Conclusão Final</h2>
+            <table>
+                <tr>
+                    <th style="width: 200px;">Status Final</th>
+                    <td class="status ${checklist.conclusao_checklist === "APROVADO" ? "aprovado" : "reprovado"}">
+                        ${checklist.conclusao_checklist || "N/A"}
+                    </td>
+                </tr>
+            </table>
             ${anexoHtml}
-            <div class="section">
-                <h2>Conclusão da Avaliação (Checklist)</h2>
-                <p><span>Status Final:</span> <span>${
-                  checklist.conclusao_checklist || "N/A"
-                }</span></p>
-            </div>
         </div>
-        <div class="footer">Gerado por ${usuarioLogado.nome} (${
-    usuarioLogado.matricula
-  }) em ${new Date().toLocaleString("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-  })}</div>
-        </body></html>`;
+    </body>
+    </html>`;
+
+  const headerTemplate = `
+    <div style="font-family: Arial, sans-serif; font-size: 10pt; color: #003366; width: 100%; text-align: center; padding: 0.5cm 1cm; border-bottom: 1px solid #ccc;">
+        Relatório de Avaliação de Transformadores Reformados
+    </div>`;
+
+  const footerTemplate = `
+    <div style="font-family: Arial, sans-serif; font-size: 8pt; color: #777; width: 100%; padding: 0 1cm;">
+        <table style="width: 100%; border: 0;">
+            <tr>
+                <td style="text-align: left; border: 0;">Gerado por: ${usuarioLogado.nome} (${usuarioLogado.matricula})</td>
+                <td style="text-align: right; border: 0;">Página <span class="pageNumber"></span> de <span class="totalPages"></span></td>
+            </tr>
+            <tr>
+                <td colspan="2" style="text-align: left; border: 0;">Data de Geração: ${new Date().toLocaleString("pt-BR")}</td>
+            </tr>
+        </table>
+    </div>`;
 
   const browser = await chromium.launch({
     headless: true,
@@ -353,7 +375,10 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
   const pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
-    margin: { top: "20mm", right: "10mm", bottom: "20mm", left: "10mm" },
+    margin: { top: "2cm", right: "1cm", bottom: "2.5cm", left: "1cm" },
+    headerTemplate: headerTemplate,
+    footerTemplate: footerTemplate,
+    displayHeaderFooter: true,
   });
   await browser.close();
   return pdfBuffer;
@@ -453,7 +478,9 @@ async function excluirAnexo(anexoId) {
     );
 
     if (deleteResult.affectedRows === 0) {
-      throw new Error("Falha ao excluir o registro do anexo do banco de dados.");
+      throw new Error(
+        "Falha ao excluir o registro do anexo do banco de dados."
+      );
     }
 
     if (fs.existsSync(absolutePath)) {
