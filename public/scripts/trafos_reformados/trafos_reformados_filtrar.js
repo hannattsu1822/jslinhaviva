@@ -5,6 +5,9 @@ let user = null;
 
 let currentPage = 1;
 const itemsPerPage = 15;
+let fileList = [];
+const MAX_FILES = 10;
+const MAX_SIZE_MB = 3;
 
 async function fazerRequisicao(url, options = {}) {
   try {
@@ -435,9 +438,10 @@ function resetChecklistModal() {
   document.getElementById("valorBobinaIII").value = "";
   document.getElementById("checkEstadoFisico").value = "N/A";
   document.getElementById("observacoesChecklist").value = "";
-  document.getElementById("anexoImagem").value = "";
   document.getElementById("statusAvaliacao").value = "";
   document.getElementById("observacoes").value = "";
+  fileList = [];
+  renderPreviews();
 }
 
 window.abrirModalAvaliacao = async function (id) {
@@ -478,8 +482,6 @@ async function salvarAvaliacao() {
   const status_final_avaliacao =
     document.getElementById("statusAvaliacao").value;
   const observacoes_gerais = document.getElementById("observacoes").value;
-  const anexoInput = document.getElementById("anexoImagem");
-  const anexoFile = anexoInput.files.length > 0 ? anexoInput.files[0] : null;
 
   if (!status_final_avaliacao) {
     alert("Selecione o Status Final da Avaliação.");
@@ -489,10 +491,6 @@ async function salvarAvaliacao() {
     alert(
       'Para o status final "Reprovado", o campo "Observações Gerais / Motivo Final da Reprovação" é obrigatório.'
     );
-    return;
-  }
-  if (anexoFile && anexoFile.size > 3 * 1024 * 1024) {
-    alert("O arquivo de imagem não pode exceder 3MB.");
     return;
   }
 
@@ -528,9 +526,10 @@ async function salvarAvaliacao() {
   formData.append("status_avaliacao", status_final_avaliacao);
   formData.append("resultado_avaliacao", observacoes_gerais);
   formData.append("checklist_data", JSON.stringify(dadosChecklist));
-  if (anexoFile) {
-    formData.append("anexo_imagem", anexoFile);
-  }
+
+  fileList.forEach((file) => {
+    formData.append("anexos_imagem", file);
+  });
 
   const btnSalvarAvaliacao = document.getElementById("btnSalvarAvaliacao");
   const originalBtnHTML = btnSalvarAvaliacao.innerHTML;
@@ -570,6 +569,60 @@ async function salvarAvaliacao() {
     btnSalvarAvaliacao.disabled = false;
     btnSalvarAvaliacao.innerHTML = originalBtnHTML;
   }
+}
+
+function handleFiles(files) {
+  const anexosInput = document.getElementById("anexosInput");
+  for (const file of files) {
+    if (fileList.length >= MAX_FILES) {
+      alert(`Você pode anexar no máximo ${MAX_FILES} arquivos.`);
+      break;
+    }
+    if (!file.type.startsWith("image/")) {
+      alert(`O arquivo "${file.name}" não é uma imagem e será ignorado.`);
+      continue;
+    }
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      alert(
+        `O arquivo "${file.name}" excede o limite de ${MAX_SIZE_MB}MB e será ignorado.`
+      );
+      continue;
+    }
+    fileList.push(file);
+  }
+  anexosInput.value = "";
+  renderPreviews();
+}
+
+function renderPreviews() {
+  const previewArea = document.getElementById("previewArea");
+  previewArea.innerHTML = "";
+
+  fileList.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const previewItem = document.createElement("div");
+      previewItem.className = "preview-item";
+
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      img.alt = file.name;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "remove-btn";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.type = "button";
+      removeBtn.onclick = () => {
+        fileList.splice(index, 1);
+        renderPreviews();
+      };
+
+      previewItem.appendChild(img);
+      previewItem.appendChild(removeBtn);
+      previewArea.appendChild(previewItem);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 window.navigateTo = async function (pageNameOrUrl) {
@@ -649,5 +702,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnApagarPendentesEl = document.getElementById("btnApagarPendentes");
   if (btnApagarPendentesEl) {
     btnApagarPendentesEl.addEventListener("click", apagarTodosPendentes);
+  }
+
+  const uploadArea = document.getElementById("uploadArea");
+  const anexosInput = document.getElementById("anexosInput");
+
+  if (uploadArea && anexosInput) {
+    uploadArea.addEventListener("click", () => anexosInput.click());
+    anexosInput.addEventListener("change", () => handleFiles(anexosInput.files));
+
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, () =>
+        uploadArea.classList.add("dragging")
+      );
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      uploadArea.addEventListener(eventName, () =>
+        uploadArea.classList.remove("dragging")
+      );
+    });
+
+    uploadArea.addEventListener("drop", (e) => {
+      handleFiles(e.dataTransfer.files);
+    });
   }
 });
