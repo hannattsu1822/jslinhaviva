@@ -24,7 +24,17 @@ async function obterChecklistPorRegistroId(registroId) {
   if (rows.length === 0) {
     throw new Error("Nenhum checklist encontrado para este registro.");
   }
-  return rows[0];
+
+  const checklist = rows[0];
+
+  const [anexos] = await promisePool.query(
+    "SELECT * FROM reform_anexos_checklist WHERE teste_id = ?",
+    [checklist.id]
+  );
+
+  checklist.anexos = anexos;
+
+  return checklist;
 }
 
 async function obterHistoricoPorSerie(numero_serie) {
@@ -43,6 +53,27 @@ async function obterHistoricoPorSerie(numero_serie) {
      ORDER BY tst.data_teste DESC, tst.id DESC`,
     [numero_serie]
   );
+
+  if (checklists.length > 0) {
+    const testeIds = checklists.map((c) => c.id);
+    const [anexos] = await promisePool.query(
+      "SELECT * FROM reform_anexos_checklist WHERE teste_id IN (?)",
+      [testeIds]
+    );
+
+    const anexosMap = anexos.reduce((acc, anexo) => {
+      if (!acc[anexo.teste_id]) {
+        acc[anexo.teste_id] = [];
+      }
+      acc[anexo.teste_id].push(anexo);
+      return acc;
+    }, {});
+
+    checklists.forEach((checklist) => {
+      checklist.anexos = anexosMap[checklist.id] || [];
+    });
+  }
+
   return checklists;
 }
 
@@ -51,7 +82,7 @@ async function avaliarCompleto(id, dadosAvaliacao) {
     matricula_responsavel,
     status_avaliacao,
     resultado_avaliacao,
-    anexo_imagem,
+    anexos_imagem,
   } = dadosAvaliacao;
 
   const checklist_data = JSON.parse(dadosAvaliacao.checklist_data);
@@ -91,20 +122,13 @@ async function avaliarCompleto(id, dadosAvaliacao) {
       [matricula_responsavel, status_avaliacao, resultado_avaliacao || null, id]
     );
 
-    let anexoPathParaDB = null;
-    if (anexo_imagem) {
-      anexoPathParaDB = path
-        .relative(projectRootDir, anexo_imagem.path)
-        .replace(/\\/g, "/");
-    }
-
-    await connection.query(
+    const [testeResult] = await connection.query(
       `INSERT INTO trafos_reformados_testes (
                 trafos_reformados_id, bobina_primaria_i, bobina_primaria_ii, bobina_primaria_iii,
                 bobina_secundaria_i, bobina_secundaria_ii, bobina_secundaria_iii, estado_fisico,
-                conclusao_checklist, observacoes_checklist, anexo_imagem_path, tecnico_responsavel_teste, data_teste,
+                conclusao_checklist, observacoes_checklist, tecnico_responsavel_teste, data_teste,
                 valor_bobina_i, valor_bobina_ii, valor_bobina_iii
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
       [
         id,
         checklist_data.bobina_primaria_i,
@@ -116,7 +140,6 @@ async function avaliarCompleto(id, dadosAvaliacao) {
         checklist_data.estado_fisico,
         conclusaoChecklistParaDb,
         checklist_data.observacoes_checklist,
-        anexoPathParaDB,
         matricula_responsavel,
         checklist_data.valor_bobina_i || null,
         checklist_data.valor_bobina_ii || null,
@@ -124,11 +147,42 @@ async function avaliarCompleto(id, dadosAvaliacao) {
       ]
     );
 
+    const novoTesteId = testeResult.insertId;
+    const anexosSalvos = [];
+
+    if (anexos_imagem && anexos_imagem.length > 0) {
+      for (const file of anexos_imagem) {
+        const anexoPathParaDB = path
+          .relative(projectRootDir, file.path)
+          .replace(/\\/g, "/");
+        const [anexoResult] = await connection.query(
+          `INSERT INTO reform_anexos_checklist (teste_id, caminho_arquivo, nome_original, tamanho_arquivo, tipo_mime) VALUES (?, ?, ?, ?, ?)`,
+          [
+            novoTesteId,
+            anexoPathParaDB,
+            file.originalname,
+            file.size,
+            file.mimetype,
+          ]
+        );
+        anexosSalvos.push({
+          id: anexoResult.insertId,
+          caminho_arquivo: anexoPathParaDB,
+          nome_original: file.originalname,
+        });
+      }
+    }
+
     await connection.commit();
+    return { teste_id: novoTesteId, anexos: anexosSalvos };
   } catch (err) {
     await connection.rollback();
-    if (anexo_imagem && fs.existsSync(anexo_imagem.path)) {
-      fs.unlinkSync(anexo_imagem.path);
+    if (anexos_imagem && anexos_imagem.length > 0) {
+      for (const file of anexos_imagem) {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      }
     }
     throw err;
   } finally {
@@ -149,17 +203,25 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
   }
 
   let anexoHtml = "";
-  if (checklist.anexo_imagem_path) {
-    const absoluteImagePath = path.join(
-      projectRootDir,
-      checklist.anexo_imagem_path
-    );
-    if (fs.existsSync(absoluteImagePath)) {
-      const imageSrc = `file://${absoluteImagePath}`;
+  if (checklist.anexos && checklist.anexos.length > 0) {
+    const imageTags = checklist.anexos
+      .map((anexo) => {
+        const absoluteImagePath = path.join(projectRootDir, anexo.caminho_arquivo);
+        if (fs.existsSync(absoluteImagePath)) {
+          const imageSrc = `file://${absoluteImagePath}`;
+          return `<img src="${imageSrc}" style="max-width: 48%; height: auto; border-radius: 4px; margin: 1%;" alt="${anexo.nome_original}">`;
+        }
+        return "";
+      })
+      .join("");
+
+    if (imageTags) {
       anexoHtml = `
         <div class="section">
-            <h2>Anexo Fotográfico</h2>
-            <img src="${imageSrc}" style="max-width: 100%; height: auto; border-radius: 4px; margin-top: 10px;" alt="Anexo do Checklist">
+            <h2>Anexos Fotográficos</h2>
+            <div style="display: flex; flex-wrap: wrap; justify-content: flex-start; margin-top: 10px;">
+                ${imageTags}
+            </div>
         </div>
       `;
     }
@@ -174,7 +236,7 @@ async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
             h2 { color: #2a5298; font-size: 14px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
             .info-trafo p, .info-checklist p, .section p { margin: 6px 0; line-height: 1.6; }
             .info-trafo strong, .info-checklist strong { color: #102a52; min-width: 140px; display: inline-block; font-weight: 600;}
-            .section { margin-bottom:15px; padding-left: 10px; }
+            .section { margin-bottom:15px; padding-left: 10px; page-break-inside: avoid; }
             .section p { display: flex; justify-content: space-between; border-bottom: 1px dotted #eaeaea; padding: 4px 0;}
             .section p span:first-child {color: #555;}
             .section p span:last-child { font-weight: bold; text-align: right; color: #111; }
@@ -370,10 +432,50 @@ async function gerarPdfTabelaHistorico(dados, filtros) {
   return pdfBuffer;
 }
 
+async function excluirAnexo(anexoId) {
+  const connection = await promisePool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [anexoRows] = await connection.query(
+      "SELECT caminho_arquivo FROM reform_anexos_checklist WHERE id = ?",
+      [anexoId]
+    );
+
+    if (anexoRows.length === 0) {
+      throw new Error("Anexo não encontrado.");
+    }
+
+    const anexo = anexoRows[0];
+    const absolutePath = path.join(projectRootDir, anexo.caminho_arquivo);
+
+    const [deleteResult] = await connection.query(
+      "DELETE FROM reform_anexos_checklist WHERE id = ?",
+      [anexoId]
+    );
+
+    if (deleteResult.affectedRows === 0) {
+      throw new Error("Falha ao excluir o registro do anexo do banco de dados.");
+    }
+
+    if (fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath);
+    }
+
+    await connection.commit();
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
 module.exports = {
   obterChecklistPorRegistroId,
   obterHistoricoPorSerie,
   avaliarCompleto,
   gerarPdfChecklist,
   gerarPdfTabelaHistorico,
+  excluirAnexo,
 };
