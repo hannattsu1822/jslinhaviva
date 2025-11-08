@@ -435,6 +435,7 @@ function resetChecklistModal() {
   document.getElementById("valorBobinaIII").value = "";
   document.getElementById("checkEstadoFisico").value = "N/A";
   document.getElementById("observacoesChecklist").value = "";
+  document.getElementById("anexoImagem").value = "";
   document.getElementById("statusAvaliacao").value = "";
   document.getElementById("observacoes").value = "";
 }
@@ -477,6 +478,8 @@ async function salvarAvaliacao() {
   const status_final_avaliacao =
     document.getElementById("statusAvaliacao").value;
   const observacoes_gerais = document.getElementById("observacoes").value;
+  const anexoInput = document.getElementById("anexoImagem");
+  const anexoFile = anexoInput.files.length > 0 ? anexoInput.files[0] : null;
 
   if (!status_final_avaliacao) {
     alert("Selecione o Status Final da Avaliação.");
@@ -486,6 +489,10 @@ async function salvarAvaliacao() {
     alert(
       'Para o status final "Reprovado", o campo "Observações Gerais / Motivo Final da Reprovação" é obrigatório.'
     );
+    return;
+  }
+  if (anexoFile && anexoFile.size > 3 * 1024 * 1024) {
+    alert("O arquivo de imagem não pode exceder 3MB.");
     return;
   }
 
@@ -516,6 +523,15 @@ async function salvarAvaliacao() {
       .value,
   };
 
+  const formData = new FormData();
+  formData.append("matricula_responsavel", currentUser.matricula);
+  formData.append("status_avaliacao", status_final_avaliacao);
+  formData.append("resultado_avaliacao", observacoes_gerais);
+  formData.append("checklist_data", JSON.stringify(dadosChecklist));
+  if (anexoFile) {
+    formData.append("anexo_imagem", anexoFile);
+  }
+
   const btnSalvarAvaliacao = document.getElementById("btnSalvarAvaliacao");
   const originalBtnHTML = btnSalvarAvaliacao.innerHTML;
   btnSalvarAvaliacao.disabled = true;
@@ -523,27 +539,23 @@ async function salvarAvaliacao() {
     '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
 
   try {
-    const payload = {
-      matricula_responsavel: currentUser.matricula,
-      status_avaliacao: status_final_avaliacao,
-      resultado_avaliacao: observacoes_gerais,
-      checklist_data: dadosChecklist,
-    };
-
-    const response = await fazerRequisicao(
+    const response = await fetch(
       `/api/transformadores_reformados/${id}/avaliar_completo`,
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        credentials: "include",
+        body: formData,
       }
     );
 
-    if (!response || !response.success) {
+    const responseData = await response.json();
+
+    if (!response.ok) {
       throw new Error(
-        response
-          ? response.message
-          : "Erro desconhecido ao salvar avaliação completa."
+        responseData.message || "Erro desconhecido ao salvar avaliação."
       );
     }
 
