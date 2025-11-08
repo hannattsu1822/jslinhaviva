@@ -369,6 +369,23 @@ async function visualizarChecklist(registroId) {
     }
     const checklistData = response.data;
 
+    let anexoHtml = "";
+    if (checklistData.anexo_imagem_path) {
+      anexoHtml = `
+        <hr>
+        <h6>Anexo Fotográfico</h6>
+        <a href="/${checklistData.anexo_imagem_path.replace(
+          /\\/g,
+          "/"
+        )}" target="_blank" title="Clique para abrir em nova aba">
+            <img src="/${checklistData.anexo_imagem_path.replace(
+              /\\/g,
+              "/"
+            )}" class="img-fluid rounded" style="max-height: 400px; margin-top: 10px;" alt="Anexo do Checklist">
+        </a>
+      `;
+    }
+
     container.innerHTML = `
             <p><strong>ID do Teste:</strong> ${checklistData.id}</p>
             <p><strong>Data do Teste:</strong> ${new Date(
@@ -407,6 +424,7 @@ async function visualizarChecklist(registroId) {
             <p><strong>Observações Gerais / Motivo da Reprovação:</strong> ${
               checklistData.resultado_avaliacao || "Nenhuma."
             }</p>
+            ${anexoHtml}
         `;
   } catch (error) {
     container.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
