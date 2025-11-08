@@ -22,7 +22,11 @@ async function anexarPosterior(servicoId, descricao, arquivos) {
         "_"
       )}`;
       const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-      await fs.rename(file.path, caminhoDestino);
+
+      // MODIFICAÇÃO: Substituído fs.rename por copyFile + unlink para robustez
+      await fs.copyFile(file.path, caminhoDestino);
+      await fs.unlink(file.path);
+
       const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
       await connection.query(
         `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo, descricao_anexo) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -66,7 +70,11 @@ async function anexarAPR(servicoId, arquivos) {
         "_"
       )}`;
       const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-      await fs.rename(file.path, caminhoDestino);
+
+      // MODIFICAÇÃO: Substituído fs.rename por copyFile + unlink para robustez
+      await fs.copyFile(file.path, caminhoDestino);
+      await fs.unlink(file.path);
+
       const caminhoRelativoServidor = `servicos/servico_${servicoId}/${nomeUnicoArquivo}`;
       await connection.query(
         `INSERT INTO servicos_subestacoes_anexos (id_servico, nome_original, caminho_servidor, tipo_mime, tamanho, categoria_anexo) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -106,7 +114,6 @@ async function excluirAnexo(anexoId) {
     }
     const anexo = anexoRows[0];
     if (anexo.caminho_servidor) {
-      // Lógica corrigida para montar o caminho do arquivo de forma segura.
       const prefixoUpload = "/upload_arquivos_subestacoes/";
       const caminhoRelativo = anexo.caminho_servidor.startsWith(prefixoUpload)
         ? anexo.caminho_servidor.substring(prefixoUpload.length)
