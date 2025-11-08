@@ -6,14 +6,13 @@ const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 require("dotenv").config();
+const { projectRootDir } = require("./shared/path.helper"); 
 
 const app = express();
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cors());
-
-const projectRootDir = path.resolve(__dirname, "..");
 
 app.engine("html", require("ejs").renderFile);
 app.set("view engine", "html");
@@ -64,6 +63,24 @@ if (!fs.existsSync(uploadsFibraDir)) {
 }
 app.use("/upload_arquivos_fibra", express.static(uploadsFibraDir));
 
+// NOVA PASTA DE ANEXOS DOS TRAFOS REFORMADOS
+const trafosReformadosAnexosDir = path.join(
+  projectRootDir,
+  "trafos_reformados_anexos"
+);
+if (!fs.existsSync(trafosReformadosAnexosDir)) {
+  try {
+    fs.mkdirSync(trafosReformadosAnexosDir, { recursive: true });
+  } catch (err) {
+    console.error(
+      `Falha ao criar diretório de anexos de trafos reformados em ${trafosReformadosAnexosDir}:`,
+      err
+    );
+  }
+}
+app.use("/trafos_reformados_anexos", express.static(trafosReformadosAnexosDir));
+// FIM DA NOVA PASTA
+
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
 if (!fs.existsSync(multerTempDir)) {
   try {
@@ -97,6 +114,40 @@ const upload = multer({
   },
 });
 
+const anexoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const trafoId = req.params.id;
+    if (!trafoId) {
+      return cb(new Error("ID do transformador não encontrado na requisição."));
+    }
+    const dir = path.join(trafosReformadosAnexosDir, String(trafoId));
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const extension = path.extname(file.originalname);
+    cb(null, `anexo-${uniqueSuffix}${extension}`);
+  },
+});
+
+const anexoFileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Apenas arquivos de imagem são permitidos!"), false);
+  }
+};
+
+const uploadAnexoChecklist = multer({
+  storage: anexoStorage,
+  fileFilter: anexoFileFilter,
+  limits: {
+    fileSize: 3 * 1024 * 1024, // 3 MB
+  },
+});
+// FIM DA NOVA CONFIGURAÇÃO
+
 const sessionSecret = process.env.SESSION_SECRET;
 if (
   !sessionSecret ||
@@ -127,7 +178,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  timezone: 'local', // *** CORREÇÃO ADICIONADA AQUI ***
+  timezone: "local",
 });
 
 const promisePool = pool.promise();
@@ -172,4 +223,5 @@ module.exports = {
   salvarAnexos,
   projectRootDir,
   uploadsSubestacoesDir,
+  uploadAnexoChecklist, 
 };
