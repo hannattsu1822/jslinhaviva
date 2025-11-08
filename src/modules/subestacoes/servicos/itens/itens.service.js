@@ -102,7 +102,11 @@ async function concluirItem(itemEscopoId, dadosConclusao, arquivos) {
           "_"
         )}`;
         const finalPath = path.join(itemAnexoDir, nomeUnicoArq);
-        await fsPromises.rename(file.path, finalPath);
+        
+        // MODIFICAÇÃO: Substituído fsPromises.rename por copyFile + unlink para robustez
+        await fsPromises.copyFile(file.path, finalPath);
+        await fsPromises.unlink(file.path);
+
         const caminhoRelServ = `servicos/servico_${servico_id}/itens_conclusao/${nomeUnicoArq}`;
         await connection.query(
           `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho) VALUES (?,?,?,?,?)`,
