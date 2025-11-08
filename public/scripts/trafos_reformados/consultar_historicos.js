@@ -370,19 +370,28 @@ async function visualizarChecklist(registroId) {
     const checklistData = response.data;
 
     let anexoHtml = "";
-    if (checklistData.anexo_imagem_path) {
+    if (checklistData.anexos && checklistData.anexos.length > 0) {
+      const imageLinks = checklistData.anexos
+        .map((anexo) => {
+          const imagePath = `/${anexo.caminho_arquivo.replace(/\\/g, "/")}`;
+          return `
+            <a href="${imagePath}" target="_blank" title="Ver imagem: ${
+            anexo.nome_original
+          }">
+              <img src="${imagePath}" alt="${
+            anexo.nome_original
+          }" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+            </a>
+          `;
+        })
+        .join("");
+
       anexoHtml = `
         <hr>
-        <h6>Anexo Fotográfico</h6>
-        <a href="/${checklistData.anexo_imagem_path.replace(
-          /\\/g,
-          "/"
-        )}" target="_blank" title="Clique para abrir em nova aba">
-            <img src="/${checklistData.anexo_imagem_path.replace(
-              /\\/g,
-              "/"
-            )}" class="img-fluid rounded" style="max-height: 400px; margin-top: 10px;" alt="Anexo do Checklist">
-        </a>
+        <h6>Anexos Fotográficos</h6>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          ${imageLinks}
+        </div>
       `;
     }
 
