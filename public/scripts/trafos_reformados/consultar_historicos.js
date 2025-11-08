@@ -360,60 +360,52 @@ async function visualizarChecklist(registroId) {
   checklistModalInstance.show();
 
   try {
-    const checklistResponse = await fazerRequisicao(
+    const response = await fazerRequisicao(
       `/api/checklist_por_registro/${registroId}`
     );
-    const trafoResponse = await fazerRequisicao(
-      `/api/transformadores_reformados/${registroId}`
-    );
 
-    if (!checklistResponse.success || !checklistResponse.data) {
-      throw new Error(checklistResponse.message || "Checklist não encontrado.");
+    if (!response.success || !response.data) {
+      throw new Error(response.message || "Checklist não encontrado.");
     }
-    if (!trafoResponse.success || !trafoResponse.data) {
-      throw new Error(
-        trafoResponse.message || "Dados do transformador não encontrados."
-      );
-    }
-    const checklist = checklistResponse.data;
-    const transformador = trafoResponse.data;
+    const checklistData = response.data;
 
     container.innerHTML = `
-            <p><strong>ID do Teste:</strong> ${checklist.id}</p>
+            <p><strong>ID do Teste:</strong> ${checklistData.id}</p>
             <p><strong>Data do Teste:</strong> ${new Date(
-              checklist.data_teste
+              checklistData.data_teste
             ).toLocaleString("pt-BR")}</p>
             <p><strong>Técnico:</strong> ${
-              checklist.nome_tecnico || checklist.tecnico_responsavel_teste
+              checklistData.nome_tecnico ||
+              checklistData.tecnico_responsavel_teste
             }</p>
             <hr>
             <h6>Bobinas Primárias</h6>
             <p><strong>Primária I/II/III:</strong> ${
-              checklist.bobina_primaria_i || "N/A"
-            } / ${checklist.bobina_primaria_ii || "N/A"} / ${
-      checklist.bobina_primaria_iii || "N/A"
+              checklistData.bobina_primaria_i || "N/A"
+            } / ${checklistData.bobina_primaria_ii || "N/A"} / ${
+      checklistData.bobina_primaria_iii || "N/A"
     }</p>
             <h6>Bobinas Secundárias</h6>
             <p><strong>Secundária I/II/III:</strong> ${
-              checklist.bobina_secundaria_i || "N/A"
-            } / ${checklist.bobina_secundaria_ii || "N/A"} / ${
-      checklist.bobina_secundaria_iii || "N/A"
+              checklistData.bobina_secundaria_i || "N/A"
+            } / ${checklistData.bobina_secundaria_ii || "N/A"} / ${
+      checklistData.bobina_secundaria_iii || "N/A"
     }</p>
             <h6>Valores TTR</h6>
             <p><strong>Valor I/II/III:</strong> ${
-              checklist.valor_bobina_i || "N/A"
-            } / ${checklist.valor_bobina_ii || "N/A"} / ${
-      checklist.valor_bobina_iii || "N/A"
+              checklistData.valor_bobina_i || "N/A"
+            } / ${checklistData.valor_bobina_ii || "N/A"} / ${
+      checklistData.valor_bobina_iii || "N/A"
     }</p>
             <hr>
             <p><strong>Estado Físico Geral:</strong> ${
-              checklist.estado_fisico || "N/A"
+              checklistData.estado_fisico || "N/A"
             }</p>
             <p><strong>Observações do Checklist:</strong> ${
-              checklist.observacoes_checklist || "Nenhuma."
+              checklistData.observacoes_checklist || "Nenhuma."
             }</p>
             <p><strong>Observações Gerais / Motivo da Reprovação:</strong> ${
-              transformador.resultado_avaliacao || "Nenhuma."
+              checklistData.resultado_avaliacao || "Nenhuma."
             }</p>
         `;
   } catch (error) {
@@ -429,23 +421,28 @@ async function gerarPDFChecklist(registroId) {
     '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
 
   try {
-    const checklistResponse = await fazerRequisicao(
+    const response = await fazerRequisicao(
       `/api/checklist_por_registro/${registroId}`
     );
-    const trafoResponse = await fazerRequisicao(
-      `/api/transformadores_reformados/${registroId}`
-    );
 
-    if (!checklistResponse.success || !trafoResponse.success) {
+    if (!response.success || !response.data) {
       throw new Error("Não foi possível obter os dados para gerar o PDF.");
     }
 
+    const combinedData = response.data;
+
     const payload = {
-      checklist: checklistResponse.data,
-      transformador: trafoResponse.data,
+      checklist: combinedData,
+      transformador: {
+        id: combinedData.trafos_reformados_id,
+        numero_serie: combinedData.numero_serie,
+        fabricante: combinedData.fabricante,
+        pot: combinedData.pot,
+        resultado_avaliacao: combinedData.resultado_avaliacao,
+      },
     };
 
-    const response = await fetch("/api/gerar_pdf_checklist_especifico", {
+    const pdfResponse = await fetch("/api/gerar_pdf_checklist_especifico", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -455,16 +452,16 @@ async function gerarPDFChecklist(registroId) {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
+    if (!pdfResponse.ok) {
+      const errorData = await pdfResponse.json();
       throw new Error(errorData.message || "Erro ao gerar PDF.");
     }
 
-    const blob = await response.blob();
+    const blob = await pdfResponse.blob();
     const urlBlob = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = urlBlob;
-    a.download = `Checklist_Trafo_${trafoResponse.data.numero_serie}_ID${checklistResponse.data.id}.pdf`;
+    a.download = `Checklist_Trafo_${combinedData.numero_serie}_ID${combinedData.id}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

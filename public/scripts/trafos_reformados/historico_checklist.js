@@ -111,23 +111,16 @@ function renderHistoryList(checklists) {
             </div>
         `;
 
-    item.querySelector(".btn-pdf-item").addEventListener("click", async (e) => {
+    item.querySelector(".btn-pdf-item").addEventListener("click", (e) => {
       e.stopPropagation();
-      const trafoResponse = await fazerRequisicao(
-        `/api/transformadores_reformados/${checklist.trafos_reformados_id}`
-      );
-      if (trafoResponse.success) {
-        gerarPDFChecklistEspecifico(checklist, trafoResponse.data);
-      } else {
-        alert("Erro ao obter dados do transformador para gerar o PDF.");
-      }
+      gerarPDFChecklistEspecifico(checklist);
     });
 
     historyListEl.appendChild(item);
   });
 }
 
-async function gerarPDFChecklistEspecifico(checklistData, trafoInfo) {
+async function gerarPDFChecklistEspecifico(checklistData) {
   const btn = document.querySelector(
     `.btn-pdf-item[data-checklist-id="${checklistData.id}"]`
   );
@@ -139,7 +132,13 @@ async function gerarPDFChecklistEspecifico(checklistData, trafoInfo) {
   try {
     const payload = {
       checklist: checklistData,
-      transformador: trafoInfo,
+      transformador: {
+        id: checklistData.trafos_reformados_id,
+        numero_serie: checklistData.numero_serie,
+        fabricante: checklistData.fabricante,
+        pot: checklistData.pot,
+        resultado_avaliacao: checklistData.resultado_avaliacao,
+      },
     };
 
     const response = await fetch("/api/gerar_pdf_checklist_especifico", {
@@ -161,7 +160,7 @@ async function gerarPDFChecklistEspecifico(checklistData, trafoInfo) {
     const urlBlob = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = urlBlob;
-    a.download = `Checklist_Trafo_${trafoInfo.numero_serie}_ID${checklistData.id}.pdf`;
+    a.download = `Checklist_Trafo_${checklistData.numero_serie}_ID${checklistData.id}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
