@@ -19,6 +19,70 @@
     <link rel="stylesheet" href="/static/css/trafos_reformados_filtrar.css" />
     <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
+    <style>
+      .upload-area {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color 0.3s,
+          background-color 0.3s;
+      }
+      .upload-area:hover,
+      .upload-area.dragging {
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+      }
+      .upload-area-content i {
+        font-size: 3rem;
+        color: #6c757d;
+      }
+      .upload-area-content p {
+        margin: 1rem 0 0.5rem;
+        font-weight: 500;
+      }
+      .preview-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .preview-item {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .preview-item .remove-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .preview-item:hover .remove-btn {
+        opacity: 1;
+      }
+    </style>
   </head>
 
   <body>
@@ -541,20 +605,26 @@
               </div>
 
               <div class="mb-3">
-                <label for="anexoImagem" class="form-label"
-                  >Anexar Imagem (Opcional)</label
-                >
-                <input
-                  class="form-control"
-                  type="file"
-                  id="anexoImagem"
-                  name="anexo_imagem"
-                  accept="image/*"
-                />
-                <div id="anexoImagemHelp" class="form-text">
-                  Anexe uma foto relevante para a avaliação. Tamanho máximo:
-                  3MB.
+                <label class="form-label">Anexar Imagens (Opcional)</label>
+                <div class="upload-area" id="uploadArea">
+                  <input
+                    type="file"
+                    id="anexosInput"
+                    multiple
+                    accept="image/*"
+                    class="d-none"
+                  />
+                  <div class="upload-area-content">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>
+                      Arraste e solte as imagens aqui, ou clique para selecionar.
+                    </p>
+                    <small class="form-text"
+                      >Máximo de 10 arquivos, 3MB por arquivo.</small
+                    >
+                  </div>
                 </div>
+                <div class="preview-area mt-3" id="previewArea"></div>
               </div>
 
               <hr />
