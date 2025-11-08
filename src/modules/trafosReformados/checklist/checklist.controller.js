@@ -32,7 +32,13 @@ async function obterHistoricoPorSerie(req, res) {
 
 async function avaliarCompleto(req, res) {
   try {
-    await service.avaliarCompleto(req.params.id, req.body);
+    const dadosAvaliacao = { ...req.body };
+    if (req.file) {
+      dadosAvaliacao.anexo_imagem = req.file;
+    }
+
+    await service.avaliarCompleto(req.params.id, dadosAvaliacao);
+
     res.json({
       success: true,
       message: "Avaliação completa salva com sucesso.",
