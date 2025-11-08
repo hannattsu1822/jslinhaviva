@@ -6,7 +6,7 @@ const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 require("dotenv").config();
-const { projectRootDir } = require("./shared/path.helper"); 
+const { projectRootDir } = require("./shared/path.helper");
 
 const app = express();
 
@@ -63,7 +63,6 @@ if (!fs.existsSync(uploadsFibraDir)) {
 }
 app.use("/upload_arquivos_fibra", express.static(uploadsFibraDir));
 
-// NOVA PASTA DE ANEXOS DOS TRAFOS REFORMADOS
 const trafosReformadosAnexosDir = path.join(
   projectRootDir,
   "trafos_reformados_anexos"
@@ -79,7 +78,6 @@ if (!fs.existsSync(trafosReformadosAnexosDir)) {
   }
 }
 app.use("/trafos_reformados_anexos", express.static(trafosReformadosAnexosDir));
-// FIM DA NOVA PASTA
 
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
 if (!fs.existsSync(multerTempDir)) {
@@ -146,7 +144,6 @@ const uploadAnexoChecklist = multer({
     fileSize: 3 * 1024 * 1024, // 3 MB
   },
 });
-// FIM DA NOVA CONFIGURAÇÃO
 
 const sessionSecret = process.env.SESSION_SECRET;
 if (
@@ -223,5 +220,5 @@ module.exports = {
   salvarAnexos,
   projectRootDir,
   uploadsSubestacoesDir,
-  uploadAnexoChecklist, 
+  uploadAnexoChecklist,
 };
