@@ -152,9 +152,7 @@ async function avaliarCompleto(id, dadosAvaliacao) {
 
     if (anexos_imagem && anexos_imagem.length > 0) {
       for (const file of anexos_imagem) {
-        const anexoPathParaDB = path
-          .relative(projectRootDir, file.path)
-          .replace(/\\/g, "/");
+        const anexoPathParaDB = `trafos_reformados_anexos/${id}/${file.filename}`;
         const [anexoResult] = await connection.query(
           `INSERT INTO reform_anexos_checklist (teste_id, caminho_arquivo, nome_original, tamanho_arquivo, tipo_mime) VALUES (?, ?, ?, ?, ?)`,
           [
