@@ -496,7 +496,8 @@ document.addEventListener("DOMContentLoaded", () => {
       observacoesConclusaoItemTextarea.value
     );
     anexosConclusaoTemporarios.forEach((file) => {
-      formData.append("anexos_conclusao_item", file);
+      // MODIFICAÇÃO: Corrigido o nome do campo para corresponder ao backend
+      formData.append("anexosConclusaoItem", file);
     });
 
     const btn =
@@ -505,7 +506,6 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.innerHTML = `<span class="material-symbols-outlined spin">sync</span> Salvando...`;
 
     try {
-      // A URL da API foi corrigida para apontar para a rota padronizada.
       await fetchData(`/api/servicos/itens/${itemEscopoId}/concluir`, {
         method: "PUT",
         body: formData,
@@ -588,7 +588,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       btnSalvarGerenciamentoItens.disabled = true;
       try {
-        // A URL da API foi corrigida para apontar para a rota padronizada.
         await fetchData(`/api/servicos/${servicoId}/itens/encarregados`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
