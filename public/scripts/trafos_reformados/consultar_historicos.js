@@ -373,7 +373,7 @@ async function visualizarChecklist(registroId) {
     if (checklistData.anexos && checklistData.anexos.length > 0) {
       const imageLinks = checklistData.anexos
         .map((anexo) => {
-          const imagePath = `/${anexo.caminho_arquivo.replace(/\\/g, "/")}`;
+          const imagePath = `/${anexo.caminho_arquivo}`;
           return `
             <a href="${imagePath}" target="_blank" title="Ver imagem: ${
             anexo.nome_original
