@@ -5,10 +5,19 @@ const { projectRootDir } = require("../../../shared/path.helper");
 
 async function obterChecklistPorRegistroId(registroId) {
   const [rows] = await promisePool.query(
-    `SELECT tst.*, u.nome as nome_tecnico 
-         FROM trafos_reformados_testes tst
-         LEFT JOIN users u ON tst.tecnico_responsavel_teste = u.matricula
-         WHERE tst.trafos_reformados_id = ?`,
+    `SELECT 
+        tst.*, 
+        u.nome as nome_tecnico,
+        tr.numero_serie,
+        tr.fabricante,
+        tr.pot,
+        tr.resultado_avaliacao
+     FROM trafos_reformados_testes tst
+     JOIN trafos_reformados tr ON tst.trafos_reformados_id = tr.id
+     LEFT JOIN users u ON tst.tecnico_responsavel_teste = u.matricula
+     WHERE tst.trafos_reformados_id = ?
+     ORDER BY tst.data_teste DESC, tst.id DESC
+     LIMIT 1`,
     [registroId]
   );
   if (rows.length === 0) {
@@ -19,12 +28,18 @@ async function obterChecklistPorRegistroId(registroId) {
 
 async function obterHistoricoPorSerie(numero_serie) {
   const [checklists] = await promisePool.query(
-    `SELECT tst.*, tr.numero_serie, u.nome as nome_tecnico
-         FROM trafos_reformados_testes tst
-         JOIN trafos_reformados tr ON tst.trafos_reformados_id = tr.id
-         LEFT JOIN users u ON tst.tecnico_responsavel_teste = u.matricula
-         WHERE tr.numero_serie = ? 
-         ORDER BY tst.data_teste DESC, tst.id DESC`,
+    `SELECT 
+        tst.*, 
+        tr.numero_serie, 
+        tr.fabricante,
+        tr.pot,
+        tr.resultado_avaliacao,
+        u.nome as nome_tecnico
+     FROM trafos_reformados_testes tst
+     JOIN trafos_reformados tr ON tst.trafos_reformados_id = tr.id
+     LEFT JOIN users u ON tst.tecnico_responsavel_teste = u.matricula
+     WHERE tr.numero_serie = ? 
+     ORDER BY tst.data_teste DESC, tst.id DESC`,
     [numero_serie]
   );
   return checklists;
