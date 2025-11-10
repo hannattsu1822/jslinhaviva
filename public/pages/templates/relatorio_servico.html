@@ -36,7 +36,7 @@
         margin-top: 25px;
         margin-bottom: 15px;
         font-weight: bold;
-        page-break-after: avoid;
+        page-break-after: avoid; /* Impede a quebra de página logo após o título */
       }
 
       .grid-container {
@@ -44,7 +44,7 @@
         grid-template-columns: 1fr 1fr;
         gap: 15px 20px;
         margin-bottom: 20px;
-        page-break-inside: avoid;
+        page-break-inside: avoid; /* Tenta manter este bloco na mesma página */
       }
 
       .grid-item {
@@ -79,6 +79,7 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 10px;
+        page-break-inside: avoid;
       }
 
       .responsaveis-table th,
@@ -165,7 +166,9 @@
       <main>
         <h2>Detalhes do Serviço</h2>
         <div class="grid-container">
-          <div class="grid-item"><strong>Processo:</strong> {{processo}}</div>
+          <div class="grid-item">
+            <strong>Processo:</strong> {{processo}}
+          </div>
           <div class="grid-item"><strong>ID do Serviço:</strong> {{id}}</div>
           <div class="grid-item">
             <strong>Data Prevista:</strong> {{data_prevista_execucao}}
@@ -216,10 +219,10 @@
           </div>
         </div>
 
-        <h2>Registro Fotográfico (Execução)</h2>
+        <h2>Anexos de Registro de Serviço</h2>
         {{galeria_registro}}
 
-        <h2>Registro Fotográfico (Finalização)</h2>
+        <h2>Anexos de Registro de Finalização</h2>
         {{galeria_finalizacao}}
 
         <h2>Documentos Anexos (PDF)</h2>
