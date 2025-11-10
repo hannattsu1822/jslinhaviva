@@ -29,12 +29,7 @@
         font-weight: bold;
       }
 
-      section {
-        /* Evita quebras dentro de uma mesma seção, quando possível */
-        page-break-inside: avoid;
-      }
-
-      /* Classe específica para forçar o início em uma nova página */
+      /* Classe para forçar o início em uma nova página */
       .page-break {
         page-break-before: always;
       }
@@ -60,6 +55,7 @@
         border: 1px solid #ddd;
         background-color: #f9f9f9;
         word-wrap: break-word;
+        page-break-inside: avoid; /* Evita que um item individual seja quebrado */
       }
 
       .grid-item strong {
@@ -87,6 +83,7 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 10px;
+        page-break-inside: avoid; /* Evita que a tabela de responsáveis quebre */
       }
 
       .responsaveis-table th,
@@ -104,6 +101,7 @@
 
       .photo-grid-container {
         margin-top: 15px;
+        page-break-inside: avoid;
       }
 
       .photo-grid-4 {
