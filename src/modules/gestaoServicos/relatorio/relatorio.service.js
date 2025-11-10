@@ -138,6 +138,7 @@ async function preencherTemplateHtml(servicoData) {
   }
 
   const dadosParaTemplate = {
+    titulo_relatorio: "Relatório Final de Serviço de Redes de Distribuição",
     processo: servicoData.processo || "N/A",
     id: servicoData.id,
     tipo: servicoData.tipo || "N/A",
@@ -189,9 +190,33 @@ async function gerarPdfConsolidado(servicoId) {
   let browser;
   try {
     const [servicoRows] = await connection.query(
-      `SELECT p.*, u.nome as responsavel_nome, p.status_geral as status FROM processos p LEFT JOIN users u ON p.responsavel_matricula = u.matricula WHERE p.id = ?`,
-      [servicoId]
+      `
+      SELECT
+          p.*,
+          p.status_geral AS status,
+          u_finalizador.nome AS responsavel_nome,
+          u_finalizador.matricula AS responsavel_matricula
+      FROM
+          processos p
+      LEFT JOIN (
+          SELECT
+              sr.servico_id,
+              sr.responsavel_matricula
+          FROM
+              servicos_responsaveis sr
+          INNER JOIN (
+              SELECT servico_id, MAX(data_conclusao_individual) as max_data
+              FROM servicos_responsaveis
+              WHERE servico_id = ?
+              GROUP BY servico_id
+          ) as max_sr ON sr.servico_id = max_sr.servico_id AND sr.data_conclusao_individual = max_sr.max_data
+      ) AS ultimo_responsavel ON p.id = ultimo_responsavel.servico_id
+      LEFT JOIN users u_finalizador ON ultimo_responsavel.responsavel_matricula = u_finalizador.matricula
+      WHERE p.id = ?;
+    `,
+      [servicoId, servicoId]
     );
+
     if (servicoRows.length === 0) {
       throw new Error("Serviço não encontrado");
     }
@@ -214,6 +239,7 @@ async function gerarPdfConsolidado(servicoId) {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
+      landscape: true,
       margin: { top: "20mm", right: "10mm", bottom: "20mm", left: "10mm" },
     });
     await browser.close();
