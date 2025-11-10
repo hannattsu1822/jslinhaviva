@@ -30,8 +30,13 @@
       }
 
       section {
-        /* Regra principal para evitar quebras de página indesejadas dentro de uma seção */
+        /* Evita quebras dentro de uma mesma seção, quando possível */
         page-break-inside: avoid;
+      }
+
+      /* Classe específica para forçar o início em uma nova página */
+      .page-break {
+        page-break-before: always;
       }
 
       h2 {
@@ -165,6 +170,7 @@
       </header>
 
       <main>
+        <!-- PÁGINA 1: INFORMAÇÕES GERAIS -->
         <section>
           <h2>Detalhes do Serviço</h2>
           <div class="grid-container">
@@ -228,7 +234,8 @@
           </div>
         </section>
 
-        <section>
+        <!-- PÁGINA 2 E SEGUINTES: EVIDÊNCIAS -->
+        <section class="page-break">
           <h2>Anexos Fotográficos</h2>
           {{galeria_geral}}
         </section>
