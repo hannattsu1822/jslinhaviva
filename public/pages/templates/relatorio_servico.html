@@ -29,6 +29,11 @@
         font-weight: bold;
       }
 
+      section {
+        /* Regra principal para evitar quebras de página indesejadas dentro de uma seção */
+        page-break-inside: avoid;
+      }
+
       h2 {
         font-size: 14pt;
         border-bottom: 1px solid #ccc;
@@ -36,7 +41,6 @@
         margin-top: 25px;
         margin-bottom: 15px;
         font-weight: bold;
-        page-break-after: avoid; /* Impede a quebra de página logo após o título */
       }
 
       .grid-container {
@@ -44,7 +48,6 @@
         grid-template-columns: 1fr 1fr;
         gap: 15px 20px;
         margin-bottom: 20px;
-        page-break-inside: avoid; /* Tenta manter este bloco na mesma página */
       }
 
       .grid-item {
@@ -79,7 +82,6 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 10px;
-        page-break-inside: avoid;
       }
 
       .responsaveis-table th,
@@ -96,7 +98,6 @@
       }
 
       .photo-grid-container {
-        page-break-inside: avoid;
         margin-top: 15px;
       }
 
@@ -164,69 +165,78 @@
       </header>
 
       <main>
-        <h2>Detalhes do Serviço</h2>
-        <div class="grid-container">
-          <div class="grid-item">
-            <strong>Processo:</strong> {{processo}}
+        <section>
+          <h2>Detalhes do Serviço</h2>
+          <div class="grid-container">
+            <div class="grid-item">
+              <strong>Processo:</strong> {{processo}}
+            </div>
+            <div class="grid-item"><strong>ID do Serviço:</strong> {{id}}</div>
+            <div class="grid-item">
+              <strong>Data Prevista:</strong> {{data_prevista_execucao}}
+            </div>
+            <div class="grid-item"><strong>Tipo:</strong> {{tipo}}</div>
+            <div class="grid-item">
+              <strong>Subestação:</strong> {{subestacao}}
+            </div>
+            <div class="grid-item">
+              <strong>Alimentador:</strong> {{alimentador}}
+            </div>
+            <div class="grid-item">
+              <strong>Chave Montante:</strong> {{chave_montante}}
+            </div>
+            <div class="grid-item">
+              <strong>Desligamento:</strong> {{desligamento}}
+            </div>
+            <div class="grid-item full-width">
+              <strong>Descrição do Serviço:</strong>
+              <div class="text-area">{{descricao_servico}}</div>
+            </div>
+            <div class="grid-item full-width">
+              <strong>Observações Iniciais:</strong>
+              <div class="text-area">{{observacoes}}</div>
+            </div>
           </div>
-          <div class="grid-item"><strong>ID do Serviço:</strong> {{id}}</div>
-          <div class="grid-item">
-            <strong>Data Prevista:</strong> {{data_prevista_execucao}}
-          </div>
-          <div class="grid-item"><strong>Tipo:</strong> {{tipo}}</div>
-          <div class="grid-item">
-            <strong>Subestação:</strong> {{subestacao}}
-          </div>
-          <div class="grid-item">
-            <strong>Alimentador:</strong> {{alimentador}}
-          </div>
-          <div class="grid-item">
-            <strong>Chave Montante:</strong> {{chave_montante}}
-          </div>
-          <div class="grid-item">
-            <strong>Desligamento:</strong> {{desligamento}}
-          </div>
-          <div class="grid-item full-width">
-            <strong>Descrição do Serviço:</strong>
-            <div class="text-area">{{descricao_servico}}</div>
-          </div>
-          <div class="grid-item full-width">
-            <strong>Observações Iniciais:</strong>
-            <div class="text-area">{{observacoes}}</div>
-          </div>
-        </div>
+        </section>
 
-        <h2>Equipe Responsável</h2>
-        {{lista_responsaveis}}
+        <section>
+          <h2>Equipe Responsável</h2>
+          {{lista_responsaveis}}
+        </section>
 
-        <h2>Detalhes da Finalização</h2>
-        <div class="grid-container">
-          <div class="grid-item">
-            <strong>Status Final:</strong>
-            <span class="{{status_final_classe}}">{{status_final_texto}}</span>
+        <section>
+          <h2>Detalhes da Finalização</h2>
+          <div class="grid-container">
+            <div class="grid-item">
+              <strong>Status Final:</strong>
+              <span class="{{status_final_classe}}"
+                >{{status_final_texto}}</span
+              >
+            </div>
+            <div class="grid-item">
+              <strong>Data da Finalização:</strong> {{data_finalizacao}}
+            </div>
+            <div class="grid-item full-width">
+              <strong>Responsável pela Finalização:</strong>
+              {{responsavel_finalizacao}}
+            </div>
+            {{motivo_nao_conclusao_html}}
+            <div class="grid-item full-width">
+              <strong>Observações da Conclusão:</strong>
+              <div class="text-area">{{observacoes_conclusao}}</div>
+            </div>
           </div>
-          <div class="grid-item">
-            <strong>Data da Finalização:</strong> {{data_finalizacao}}
-          </div>
-          <div class="grid-item full-width">
-            <strong>Responsável pela Finalização:</strong>
-            {{responsavel_finalizacao}}
-          </div>
-          {{motivo_nao_conclusao_html}}
-          <div class="grid-item full-width">
-            <strong>Observações da Conclusão:</strong>
-            <div class="text-area">{{observacoes_conclusao}}</div>
-          </div>
-        </div>
+        </section>
 
-        <h2>Anexos de Registro de Serviço</h2>
-        {{galeria_registro}}
+        <section>
+          <h2>Anexos Fotográficos</h2>
+          {{galeria_geral}}
+        </section>
 
-        <h2>Anexos de Registro de Finalização</h2>
-        {{galeria_finalizacao}}
-
-        <h2>Documentos Anexos (PDF)</h2>
-        {{lista_anexos_pdf}}
+        <section>
+          <h2>Documentos Anexos (PDF)</h2>
+          {{lista_anexos_pdf}}
+        </section>
       </main>
 
       <footer>
