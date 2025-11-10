@@ -38,7 +38,7 @@ async function processarImagensParaBase64(imagens) {
 
 function gerarGaleriaHtml(imagens) {
   if (!imagens || imagens.length === 0) {
-    return '<p class="no-content">Nenhuma imagem encontrada para esta seção.</p>';
+    return '<p class="no-content">Nenhuma imagem encontrada para este serviço.</p>';
   }
 
   let galleryHtml = "";
@@ -83,25 +83,15 @@ async function preencherTemplateHtml(servicoData) {
     return dataObj.toLocaleDateString("pt-BR", options);
   };
 
-  const imagensRegistro = servicoData.anexos.filter(
-    (anexo) => anexo.tipo === "imagem"
-  );
-  const imagensFinalizacao = servicoData.anexos.filter((anexo) =>
-    ["foto_conclusao", "foto_nao_conclusao"].includes(anexo.tipo)
+  const todasAsImagens = servicoData.anexos.filter((anexo) =>
+    ["imagem", "foto_conclusao", "foto_nao_conclusao"].includes(anexo.tipo)
   );
   const anexosPDF = servicoData.anexos.filter(
     (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
   );
 
-  const imagensRegistroBase64 = await processarImagensParaBase64(
-    imagensRegistro
-  );
-  const imagensFinalizacaoBase64 = await processarImagensParaBase64(
-    imagensFinalizacao
-  );
-
-  const galeriaRegistroHtml = gerarGaleriaHtml(imagensRegistroBase64);
-  const galeriaFinalizacaoHtml = gerarGaleriaHtml(imagensFinalizacaoBase64);
+  const imagensBase64 = await processarImagensParaBase64(todasAsImagens);
+  const galeriaGeralHtml = gerarGaleriaHtml(imagensBase64);
 
   const listaAnexosPdfHtml =
     anexosPDF.length > 0
@@ -138,7 +128,6 @@ async function preencherTemplateHtml(servicoData) {
   }
 
   const dadosParaTemplate = {
-    titulo_relatorio: "Relatório Final de Serviço de Redes de Distribuição",
     processo: servicoData.processo || "N/A",
     id: servicoData.id,
     tipo: servicoData.tipo || "N/A",
@@ -170,8 +159,7 @@ async function preencherTemplateHtml(servicoData) {
           }</div></div>`
         : "",
     observacoes_conclusao: servicoData.observacoes_conclusao || "Nenhuma.",
-    galeria_registro: galeriaRegistroHtml,
-    galeria_finalizacao: galeriaFinalizacaoHtml,
+    galeria_geral: galeriaGeralHtml,
     lista_anexos_pdf: listaAnexosPdfHtml,
     lista_responsaveis: listaResponsaveisHtml,
     data_geracao: new Date().toLocaleString("pt-BR"),
