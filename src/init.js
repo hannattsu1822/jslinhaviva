@@ -17,10 +17,10 @@ app.use(cors());
 app.engine("html", require("ejs").renderFile);
 app.set("view engine", "html");
 
-app.set("views", path.join(projectRootDir, "views"));
-
 const publicDir = path.join(projectRootDir, "public");
 const viewsDir = path.join(projectRootDir, "views");
+
+app.set("views", [publicDir, viewsDir]);
 
 app.use(express.static(publicDir));
 console.log(
@@ -78,6 +78,20 @@ if (!fs.existsSync(trafosReformadosAnexosDir)) {
   }
 }
 app.use("/trafos_reformados_anexos", express.static(trafosReformadosAnexosDir));
+
+// NOVO DIRETÓRIO PARA O MÓDULO DE INSPEÇÃO DE REDES
+const uploadsInspRedesDir = path.join(projectRootDir, "upload_InspDistRedes");
+if (!fs.existsSync(uploadsInspRedesDir)) {
+  try {
+    fs.mkdirSync(uploadsInspRedesDir, { recursive: true });
+  } catch (err) {
+    console.error(
+      `Falha ao criar diretório de uploads de Inspeção de Redes em ${uploadsInspRedesDir}:`,
+      err
+    );
+  }
+}
+app.use("/upload_InspDistRedes", express.static(uploadsInspRedesDir));
 
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
 if (!fs.existsSync(multerTempDir)) {

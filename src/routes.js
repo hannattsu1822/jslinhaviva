@@ -19,6 +19,9 @@ const rotasLogbox = require("./modules/logbox");
 const rotasPrv = require("./modules/prv");
 const rotasReles = require("./modules/reles");
 
+// --- NOVA LINHA ADICIONADA ---
+const rotasInspRedesDist = require("./modules/InspRedesDist");
+
 const router = express.Router();
 
 router.use("/", rotasAuth);
@@ -36,6 +39,9 @@ router.use("/", rotasSubestacoes);
 router.use("/", rotasLogbox);
 router.use("/", rotasPrv);
 router.use("/", rotasReles);
+
+// --- NOVA LINHA ADICIONADA ---
+router.use("/", rotasInspRedesDist);
 
 router.get("/", (req, res) => {
   if (req.session && req.session.user) {
