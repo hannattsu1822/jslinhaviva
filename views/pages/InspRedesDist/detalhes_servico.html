@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalhes da Inspeção</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/InspRedesDist/detalhes_servico.css"
+    />
+  </head>
+  <body>
+    <div class="container my-4">
+      <header
+        class="page-header d-flex justify-content-between align-items-center pb-3 mb-4"
+      >
+        <h1 class="page-title h2 mb-0">
+          <span class="material-icons page-icon">plagiarism</span>
+          <span id="page-title-processo">Carregando...</span>
+        </h1>
+        <div>
+          <button
+            class="btn btn-outline-primary"
+            id="btn-editar-servico-header"
+          >
+            <span class="material-icons me-1">edit</span>
+            Editar Informações Gerais
+          </button>
+          <a
+            href="/inspecoes/servicos"
+            class="btn btn-outline-secondary btn-back"
+          >
+            <span class="material-icons">arrow_back</span>
+            Voltar para Lista
+          </a>
+        </div>
+      </header>
+
+      <section class="mb-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Informações Gerais do Serviço</h5>
+          </div>
+          <div class="card-body" id="info-gerais-container">
+            <div class="text-center p-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Anexos Gerais do Serviço</h5>
+          </div>
+          <div class="card-body" id="anexos-gerais-container">
+            <p class="text-muted mb-0">Carregando anexos...</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="h4 mb-3">Pontos de Inspeção Registrados</h3>
+        <div class="accordion" id="accordion-pontos">
+          <div class="text-center p-5 bg-light rounded">
+            <p class="mb-0">Carregando pontos...</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal fade" id="modal-editar-servico" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Editar Informações Gerais</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="form-editar-servico">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="edit-processo" class="form-label">Processo</label
+                  ><input
+                    type="text"
+                    class="form-control"
+                    id="edit-processo"
+                    name="processo"
+                    required
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label for="edit-data_servico" class="form-label"
+                    >Data Prevista</label
+                  ><input
+                    type="date"
+                    class="form-control"
+                    id="edit-data_servico"
+                    name="data_servico"
+                    required
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label for="edit-tipo_ordem" class="form-label"
+                    >Tipo da Ordem</label
+                  ><select
+                    class="form-select"
+                    id="edit-tipo_ordem"
+                    name="tipo_ordem"
+                    required
+                  >
+                    <option value="ODI">ODI</option>
+                    <option value="ODS">ODS</option>
+                    <option value="ODD">ODD</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="edit-criador_matricula" class="form-label"
+                    >Criador da OS</label
+                  ><select
+                    class="form-select"
+                    id="edit-criador_matricula"
+                    name="criador_matricula"
+                    required
+                  ></select>
+                </div>
+                <div class="col-md-4">
+                  <label for="edit-subestacao" class="form-label"
+                    >Subestação</label
+                  ><input
+                    type="text"
+                    class="form-control"
+                    id="edit-subestacao"
+                    name="subestacao"
+                  />
+                </div>
+                <div class="col-md-4">
+                  <label for="edit-alimentador" class="form-label"
+                    >Alimentador</label
+                  ><input
+                    type="text"
+                    class="form-control"
+                    id="edit-alimentador"
+                    name="alimentador"
+                  />
+                </div>
+                <div class="col-md-4">
+                  <label for="edit-chave_montante" class="form-label"
+                    >Chave Montante</label
+                  ><input
+                    type="text"
+                    class="form-control"
+                    id="edit-chave_montante"
+                    name="chave_montante"
+                  />
+                </div>
+                <div class="col-12">
+                  <label for="edit-descricao" class="form-label"
+                    >Descrição</label
+                  ><textarea
+                    class="form-control"
+                    id="edit-descricao"
+                    name="descricao"
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar</button
+            ><button
+              type="submit"
+              class="btn btn-primary"
+              form="form-editar-servico"
+              id="btn-salvar-edicao-servico"
+            >
+              Salvar Alterações
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal-ponto" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modal-ponto-title">Editar Ponto</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="form-ponto">
+              <input type="hidden" id="ponto-id" name="id" />
+              <div class="mb-3">
+                <label for="id_code_tag" class="form-label"
+                  >Tag do Defeito</label
+                ><select
+                  class="form-select"
+                  id="id_code_tag"
+                  name="id_code_tag"
+                  required
+                ></select>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="coordenada_x" class="form-label"
+                    >Coordenada X</label
+                  ><input
+                    type="text"
+                    class="form-control"
+                    id="coordenada_x"
+                    name="coordenada_x"
+                    required
+                  />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="coordenada_y" class="form-label"
+                    >Coordenada Y</label
+                  ><input
+                    type="text"
+                    class="form-control"
+                    id="coordenada_y"
+                    name="coordenada_y"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="observacoes" class="form-label">Observações</label
+                ><textarea
+                  class="form-control"
+                  id="observacoes"
+                  name="observacoes"
+                  rows="3"
+                ></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar</button
+            ><button
+              type="submit"
+              class="btn btn-primary"
+              form="form-ponto"
+              id="btn-salvar-ponto"
+            >
+              Salvar Ponto
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="image-viewer-modal" tabindex="-1">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-transparent border-0">
+          <div class="modal-header border-0">
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body text-center">
+            <img
+              src=""
+              class="img-fluid"
+              id="image-viewer-img"
+              alt="Visualização Ampliada"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/InspRedesDist/detalhes_servico.js"></script>
+  </body>
+</html>

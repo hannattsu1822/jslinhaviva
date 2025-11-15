@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Inspeções</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/InspRedesDist/dashboard_inspecoes.css"
+    />
+  </head>
+  <body>
+    <div class="container-fluid py-4">
+      <header
+        class="page-header d-flex justify-content-between align-items-center pb-3 mb-4"
+      >
+        <h1 class="page-title h2 mb-0">
+          <span class="material-icons page-icon">assignment</span>
+          Dashboard de Inspeções de Redes
+        </h1>
+        <a href="/dashboard" class="btn btn-outline-secondary btn-back">
+          <span class="material-icons">arrow_back</span>
+          Voltar ao Painel Principal
+        </a>
+      </header>
+
+      <main>
+        <div class="row g-4">
+          <div class="col-md-6 col-lg-3" id="card-register-inspection">
+            <a
+              href="/inspecoes/servicos/novo"
+              class="card-link text-decoration-none"
+            >
+              <div class="card h-100 feature-card card-register">
+                <div class="card-body text-center">
+                  <div class="card-icon-wrapper">
+                    <span class="material-icons card-icon">note_add</span>
+                  </div>
+                  <h3 class="card-title h5 mt-3">Registrar Nova Inspeção</h3>
+                  <p class="card-text text-muted">
+                    Inicie o cadastro de uma nova ordem de serviço de inspeção.
+                  </p>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-md-6 col-lg-3" id="card-consult-inspections">
+            <a
+              href="/inspecoes/servicos"
+              class="card-link text-decoration-none"
+            >
+              <div class="card h-100 feature-card card-consult">
+                <div class="card-body text-center">
+                  <div class="card-icon-wrapper">
+                    <span class="material-icons card-icon">manage_search</span>
+                  </div>
+                  <h3 class="card-title h5 mt-3">Inspeções Ativas</h3>
+                  <p class="card-text text-muted">
+                    Acompanhe e gerencie todas as inspeções em andamento.
+                  </p>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-md-6 col-lg-3" id="card-completed-inspections">
+            <a
+              href="/inspecoes/servicos/concluidos"
+              class="card-link text-decoration-none"
+            >
+              <div class="card h-100 feature-card card-completed">
+                <div class="card-body text-center">
+                  <div class="card-icon-wrapper">
+                    <span class="material-icons card-icon">history</span>
+                  </div>
+                  <h3 class="card-title h5 mt-3">Inspeções Concluídas</h3>
+                  <p class="card-text text-muted">
+                    Consulte o histórico de serviços de inspeção finalizados.
+                  </p>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div
+            class="col-md-6 col-lg-3"
+            id="card-infra-codes"
+            style="display: none"
+          >
+            <a
+              href="/inspecoes/gerenciar-codigos"
+              class="card-link text-decoration-none"
+            >
+              <div class="card h-100 feature-card card-infra">
+                <div class="card-body text-center">
+                  <div class="card-icon-wrapper">
+                    <span class="material-icons card-icon">engineering</span>
+                  </div>
+                  <h3 class="card-title h5 mt-3">Infraestrutura de Códigos</h3>
+                  <p class="card-text text-muted">
+                    Gerencie os tipos e as tags de defeitos das inspeções.
+                  </p>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/InspRedesDist/dashboard_inspecoes.js"></script>
+  </body>
+</html>

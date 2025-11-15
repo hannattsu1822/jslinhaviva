@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Relatório de Inspeção - <%= processo %></title>
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 1.5cm;
+      }
+
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 10pt;
+        color: #333;
+      }
+
+      .report-container {
+        width: 100%;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #004a99;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+
+      header h1 {
+        font-size: 22pt;
+        color: #004a99;
+        margin: 0;
+        font-weight: 300;
+      }
+
+      header .meta-info {
+        text-align: right;
+        font-size: 9pt;
+        color: #555;
+      }
+
+      .section {
+        margin-bottom: 25px;
+      }
+
+      .section h2 {
+        font-size: 14pt;
+        color: #004a99;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+        font-weight: 500;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px 20px;
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+        border: 1px solid #eee;
+      }
+
+      .info-item {
+        font-size: 10pt;
+      }
+
+      .info-item strong {
+        display: block;
+        color: #555;
+        font-weight: 600;
+        margin-bottom: 3px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      thead {
+        background-color: #eaf2fa;
+        color: #004a99;
+        font-weight: 600;
+      }
+
+      tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+
+      tfoot {
+        background-color: #eaf2fa;
+        font-weight: bold;
+      }
+
+      a {
+        color: #0066cc;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .anexos-section {
+        page-break-before: always;
+      }
+
+      .ponto-anexos {
+        margin-bottom: 30px;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+      }
+
+      .ponto-anexos h3 {
+        font-size: 12pt;
+        font-weight: 500;
+        margin-bottom: 15px;
+      }
+
+      .anexos-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .anexo-item {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .anexo-item img {
+        max-width: 100%;
+        height: auto;
+        max-height: 220px;
+        object-fit: contain;
+        margin-bottom: 10px;
+      }
+
+      .anexo-item p {
+        font-size: 8pt;
+        margin: 0;
+        word-wrap: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="report-container">
+      <header>
+        <h1>Relatório de Inspeção de Redes</h1>
+        <div class="meta-info">
+          <strong>Data de Emissão:</strong> <%= new
+          Date().toLocaleDateString('pt-BR') %>
+          <br />
+          <strong>ID do Serviço:</strong> <%= id %>
+        </div>
+      </header>
+
+      <main>
+        <section class="section">
+          <h2>Informações Gerais do Serviço</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <strong>Processo:</strong>
+              <span><%= processo %></span>
+            </div>
+            <div class="info-item">
+              <strong>Data Prevista:</strong>
+              <span><%= data_servico %></span>
+            </div>
+            <div class="info-item">
+              <strong>Data de Finalização:</strong>
+              <span><%= data_finalizacao %></span>
+            </div>
+            <div class="info-item">
+              <strong>Tipo de Ordem:</strong>
+              <span><%= tipo_ordem %></span>
+            </div>
+            <div class="info-item">
+              <strong>Equipe de Execução:</strong>
+              <span>
+                <%= responsaveis_execucao.map(r => r.nome).join(', ') || 'N/A'
+                %>
+              </span>
+            </div>
+            <div class="info-item">
+              <strong>Criador da OS:</strong>
+              <span><%= nome_criador %></span>
+            </div>
+            <div class="info-item">
+              <strong>Subestação:</strong>
+              <span><%= subestacao || 'N/A' %></span>
+            </div>
+            <div class="info-item">
+              <strong>Alimentador:</strong>
+              <span><%= alimentador || 'N/A' %></span>
+            </div>
+            <div class="info-item">
+              <strong>Chave Montante:</strong>
+              <span><%= chave_montante || 'N/A' %></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Pontos de Inspeção Registrados</h2>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%">Ponto</th>
+                <th style="width: 10%">Tag</th>
+                <th style="width: 20%">Defeito</th>
+                <th style="width: 15%">Coordenadas</th>
+                <th>Observações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (pontos.length === 0) { %>
+              <tr>
+                <td colspan="5" style="text-align: center">
+                  Nenhum ponto de inspeção foi registrado para este serviço.
+                </td>
+              </tr>
+              <% } else { %> <% pontos.forEach(ponto => { %>
+              <tr>
+                <td style="text-align: center"><%= ponto.id %></td>
+                <td><%= ponto.tag_code %></td>
+                <td><%= ponto.ponto_defeito %></td>
+                <td>
+                  <a href="<%= ponto.mapsUrl %>" target="_blank"
+                    >Ver no Google Maps</a
+                  >
+                </td>
+                <td><%= ponto.observacoes || 'Nenhuma observação.' %></td>
+              </tr>
+              <% }); %> <% } %>
+            </tbody>
+            <% if (pontos.length > 0) { %>
+            <tfoot>
+              <tr>
+                <td colspan="3">
+                  <strong>Total de Pontos:</strong> <%= pontos.length %>
+                </td>
+                <td colspan="2">
+                  <a href="<%= rotaCompletaUrl %>" target="_blank"
+                    ><strong>Visualizar Rota Completa no Mapa</strong></a
+                  >
+                </td>
+              </tr>
+            </tfoot>
+            <% } %>
+          </table>
+        </section>
+
+        <% if (pontos.some(p => p.anexos.length > 0)) { %>
+        <section class="anexos-section">
+          <h2>Anexos dos Pontos de Inspeção</h2>
+          <% pontos.filter(p => p.anexos.length > 0).forEach(ponto => { %>
+          <div class="ponto-anexos">
+            <h3>Anexos do Ponto #<%= ponto.id %></h3>
+            <div class="anexos-grid">
+              <% ponto.anexos.forEach(anexo => { %>
+              <div class="anexo-item">
+                <img
+                  src="<%= anexo.base64Src %>"
+                  alt="<%= anexo.nome_original %>"
+                />
+                <p><%= anexo.nome_original %></p>
+              </div>
+              <% }); %>
+            </div>
+          </div>
+          <% }); %>
+        </section>
+        <% } %>
+      </main>
+    </div>
+  </body>
+</html>
