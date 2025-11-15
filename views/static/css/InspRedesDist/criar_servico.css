@@ -1,0 +1,211 @@
+/* --- Variáveis Globais de Estilo --- */
+:root {
+  --primary-font: "Poppins", sans-serif;
+  --background-color: #f4f7fc;
+  --card-bg-color: #ffffff;
+  --text-color: #333;
+  --header-border-color: #dee2e6;
+  --primary-blue: #0d6efd;
+  --input-border-color: #ced4da;
+  --input-focus-border-color: #86b7fe;
+  --input-focus-box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* --- Estilos Base --- */
+body {
+  font-family: var(--primary-font);
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.container {
+  max-width: 960px;
+}
+
+/* --- Cabeçalho da Página --- */
+.page-header {
+  border-bottom: 1px solid var(--header-border-color);
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.page-icon {
+  font-size: 2.2rem;
+  margin-right: 1rem;
+  color: var(--primary-blue);
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- Estilos do Formulário --- */
+.card {
+  border: none;
+  border-radius: 0.75rem;
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--input-focus-border-color);
+  box-shadow: var(--input-focus-box-shadow);
+}
+
+textarea.form-control {
+  resize: vertical;
+}
+
+/* --- NOVOS ESTILOS: Área de Upload Interativa --- */
+.upload-area {
+  border: 2px dashed var(--input-border-color);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.upload-area:hover,
+.upload-area.highlight {
+  border-color: var(--primary-blue);
+  background-color: #e9ecef;
+}
+
+.upload-area .material-icons {
+  font-size: 3rem;
+  color: #6c757d;
+}
+
+.upload-area p {
+  margin: 0.5rem 0 0;
+  color: #6c757d;
+}
+
+/* --- NOVOS ESTILOS: Área de Pré-visualização --- */
+.preview-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.preview-item {
+  position: relative;
+  border: 1px solid var(--header-border-color);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #fff;
+}
+
+.preview-thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.preview-icon {
+  font-size: 2.5rem;
+  padding: 0.75rem 0;
+  color: #6c757d;
+}
+
+.preview-info {
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+.preview-info strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-remove-preview {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  font-size: 1rem;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Estilos do Botão de Submissão --- */
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-lg .material-icons {
+  font-size: 1.25rem;
+  vertical-align: middle;
+}
+
+/* --- Estilo para feedback de carregamento no botão --- */
+.btn-primary.is-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-primary.is-loading::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: -0.75rem;
+  margin-left: -0.75rem;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: button-spinner 0.6s linear infinite;
+}
+
+@keyframes button-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}

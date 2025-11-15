@@ -1,0 +1,127 @@
+/* --- Variáveis Globais de Estilo --- */
+:root {
+  --primary-font: "Poppins", sans-serif;
+  --background-color: #f4f7fc;
+  --card-bg-color: #ffffff;
+  --text-color: #333;
+  --header-border-color: #dee2e6;
+  --primary-orange: #fd7e14;
+  --table-header-bg: #f8f9fa;
+  --table-hover-bg: #f1f3f5;
+}
+
+/* --- Estilos Base --- */
+body {
+  font-family: var(--primary-font);
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* --- Cabeçalho da Página --- */
+.page-header {
+  border-bottom: 1px solid var(--header-border-color);
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.page-icon {
+  font-size: 2.2rem;
+  margin-right: 1rem;
+  color: var(--primary-orange);
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- Estilos dos Cards e Tabelas --- */
+.card {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+  background-color: var(--table-header-bg);
+  font-weight: 500;
+}
+
+.card-header .btn-sm {
+  display: inline-flex;
+  align-items: center;
+}
+
+.table-responsive {
+  max-height: 65vh;
+}
+
+.table-sm td,
+.table-sm th {
+  padding: 0.5rem;
+  vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+  background-color: var(--table-hover-bg);
+}
+
+.btn-icon {
+  padding: 0.2rem 0.4rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon .material-icons {
+  font-size: 1.1rem;
+}
+
+/* --- Responsividade --- */
+@media (max-width: 992px) {
+  .table-responsive {
+    max-height: none;
+  }
+}
+
+/* --- Toast Notification Styles --- */
+.toast-container {
+  z-index: 1090;
+}
+
+.toast {
+  font-family: var(--primary-font);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  border: none;
+}
+
+.toast-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-weight: 500;
+}
+
+.toast.toast-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+.toast.toast-success .toast-header {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.toast.toast-error {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.toast.toast-error .toast-header {
+  background-color: rgba(0, 0, 0, 0.03);
+}

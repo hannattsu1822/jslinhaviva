@@ -1,0 +1,165 @@
+/* --- Variáveis Globais de Estilo --- */
+:root {
+  --primary-font: "Poppins", sans-serif;
+  --background-color: #f4f7fc;
+  --card-bg-color: #ffffff;
+  --text-color: #333;
+  --header-border-color: #dee2e6;
+  --primary-blue: #0d6efd;
+  --accordion-button-bg: #f8f9fa;
+  --accordion-button-hover-bg: #e9ecef;
+  --accordion-border-color: #dee2e6;
+}
+
+/* --- Estilos Base --- */
+body {
+  font-family: var(--primary-font);
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* --- Cabeçalho da Página --- */
+.page-header {
+  border-bottom: 1px solid var(--header-border-color);
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.page-icon {
+  font-size: 2.2rem;
+  margin-right: 1rem;
+  color: var(--primary-blue);
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- Card de Informações Gerais --- */
+.card-header {
+  background-color: var(--accordion-button-bg);
+  font-weight: 500;
+}
+
+.card-body strong {
+  color: #555;
+  margin-right: 8px;
+}
+
+/* --- Seção de Pontos de Inspeção (Acordeão) --- */
+.accordion-item {
+  border: 1px solid var(--accordion-border-color);
+  margin-bottom: 0.5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.accordion-button {
+  font-weight: 500;
+  background-color: var(--accordion-button-bg);
+  color: var(--text-color);
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: var(--primary-blue);
+  color: #fff;
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.accordion-button:hover {
+  background-color: var(--accordion-button-hover-bg);
+}
+
+.accordion-button:not(.collapsed):hover {
+  background-color: #0b5ed7;
+}
+
+.accordion-body p {
+  margin-bottom: 0.75rem;
+}
+
+/* --- NOVOS ESTILOS: Miniaturas de Anexos e Modal Visualizador --- */
+.anexos-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.anexo-thumbnail {
+  width: 80px;
+  height: 80px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--header-border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--text-color);
+  background-color: #f8f9fa;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+
+.anexo-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease-in-out;
+}
+
+.anexo-thumbnail:hover img {
+  transform: scale(1.1);
+}
+
+.anexo-thumbnail .material-icons {
+  font-size: 2.5rem;
+  color: #6c757d;
+}
+
+.anexo-thumbnail-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+#image-viewer-modal .modal-content {
+  box-shadow: none;
+}
+
+#image-viewer-img {
+  max-height: 90vh;
+  border-radius: 0.5rem;
+}
+
+.btn-maps {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-maps .material-icons {
+  font-size: 1rem;
+}

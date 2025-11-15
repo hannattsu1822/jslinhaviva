@@ -1,0 +1,136 @@
+/* --- Variáveis Globais de Estilo --- */
+:root {
+  --primary-font: "Poppins", sans-serif;
+  --background-color: #f4f7fc;
+  --card-bg-color: #ffffff;
+  --text-color: #333;
+  --text-muted-color: #6c757d;
+  --header-border-color: #dee2e6;
+  --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  --card-hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+
+  --color-register: #0d6efd; /* Bootstrap Primary Blue */
+  --color-consult: #198754; /* Bootstrap Success Green */
+  --color-infra: #fd7e14; /* Bootstrap Orange */
+  --color-completed: #6f42c1; /* NOVO: Bootstrap Purple para Concluídos */
+}
+
+/* --- Estilos Base --- */
+body {
+  font-family: var(--primary-font);
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* --- Cabeçalho da Página --- */
+.page-header {
+  border-bottom: 1px solid var(--header-border-color);
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.page-icon {
+  font-size: 2.2rem;
+  margin-right: 1rem;
+  color: var(--color-register);
+}
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- Estilos dos Cards --- */
+.feature-card {
+  border: none;
+  border-radius: 0.75rem;
+  background-color: var(--card-bg-color);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--card-hover-shadow);
+}
+
+.card-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.card-icon {
+  font-size: 2.5rem; /* 40px */
+  color: #fff;
+}
+
+.feature-card .card-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.feature-card .card-text {
+  color: var(--text-muted-color);
+  font-size: 0.9rem;
+}
+
+/* --- Cores Específicas dos Cards --- */
+.card-register .card-icon-wrapper {
+  background-color: var(--color-register);
+}
+.card-register:hover {
+  border-top: 4px solid var(--color-register);
+}
+
+.card-consult .card-icon-wrapper {
+  background-color: var(--color-consult);
+}
+.card-consult:hover {
+  border-top: 4px solid var(--color-consult);
+}
+
+/* NOVO: Estilos para o Card de Concluídos */
+.card-completed .card-icon-wrapper {
+  background-color: var(--color-completed);
+}
+.card-completed:hover {
+  border-top: 4px solid var(--color-completed);
+}
+
+.card-infra .card-icon-wrapper {
+  background-color: var(--color-infra);
+}
+.card-infra:hover {
+  border-top: 4px solid var(--color-infra);
+}
+
+/* --- Responsividade --- */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .page-icon {
+    font-size: 1.8rem;
+  }
+}
