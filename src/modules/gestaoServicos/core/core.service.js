@@ -277,6 +277,7 @@ async function atualizarServico(servicoId, servicoData, files) {
       ordem_obra,
       descricao_servico,
       observacoes,
+      anexosParaDeletar,
     } = servicoData;
 
     if (!processo || processo.trim() === "") {
@@ -327,6 +328,38 @@ async function atualizarServico(servicoId, servicoData, files) {
         servicoId,
       ]
     );
+
+    if (anexosParaDeletar) {
+      const anexosParaDeletarIds = JSON.parse(anexosParaDeletar);
+      if (
+        Array.isArray(anexosParaDeletarIds) &&
+        anexosParaDeletarIds.length > 0
+      ) {
+        const [anexosARemover] = await connection.query(
+          `SELECT caminho_servidor FROM processos_anexos WHERE id IN (?)`,
+          [anexosParaDeletarIds]
+        );
+
+        for (const anexo of anexosARemover) {
+          const caminhoRelativo = anexo.caminho_servidor.replace(
+            "/api/upload_arquivos/",
+            ""
+          );
+          const caminhoFisico = path.join(
+            projectRootDir,
+            "upload_arquivos",
+            caminhoRelativo
+          );
+          if (fs.existsSync(caminhoFisico)) {
+            await fsPromises.unlink(caminhoFisico);
+          }
+        }
+
+        await connection.query(`DELETE FROM processos_anexos WHERE id IN (?)`, [
+          anexosParaDeletarIds,
+        ]);
+      }
+    }
 
     if (files && files.length > 0) {
       const nomeDaPastaParaAnexos =
