@@ -1,5 +1,3 @@
-// public/scripts/frota/checklist_veiculos.js
-
 const checklistItems = [
   { id: "buzina", label: "Buzina" },
   { id: "cinto_seguranca", label: "Cinto de Segurança" },
@@ -60,7 +58,6 @@ const checklistFormEl = document.getElementById("checklistForm");
 let loadedOpenAgendamentos = [];
 
 async function carregarMotoristas() {
-  console.log("Carregando motoristas...");
   try {
     const response = await fetch("/api/motoristas");
     if (!response.ok) throw new Error("Erro ao carregar motoristas.");
@@ -75,7 +72,6 @@ async function carregarMotoristas() {
       option.textContent = `${motorista.matricula} - ${motorista.nome}`;
       matriculaSelect.appendChild(option);
     });
-    console.log("Motoristas carregados com sucesso.");
   } catch (error) {
     console.error("Erro ao carregar motoristas:", error);
     exibirMensagem("Erro ao carregar motoristas: " + error.message, "erro");
@@ -83,7 +79,6 @@ async function carregarMotoristas() {
 }
 
 async function carregarPlacas() {
-  console.log("Carregando placas...");
   try {
     const response = await fetch("/api/placas");
     if (!response.ok) throw new Error("Erro ao carregar placas.");
@@ -97,7 +92,6 @@ async function carregarPlacas() {
       option.textContent = veiculo.placa;
       placaSelect.appendChild(option);
     });
-    console.log("Placas carregadas com sucesso.");
   } catch (error) {
     console.error("Erro ao carregar placas:", error);
     exibirMensagem("Erro ao carregar placas: " + error.message, "erro");
@@ -105,7 +99,6 @@ async function carregarPlacas() {
 }
 
 function carregarItensChecklist() {
-  console.log("Carregando itens do checklist...");
   const container = document.getElementById("checklist-items");
   if (!container) return;
   container.innerHTML = "";
@@ -156,16 +149,10 @@ function carregarItensChecklist() {
 
     container.appendChild(itemDiv);
   });
-  console.log("Itens do checklist carregados.");
 }
 
 async function carregarAgendamentosAbertos() {
   const placa = placaSelect.value;
-  const data = dataInspecaoInput.value;
-
-  console.log(
-    `Tentando carregar agendamentos abertos para Placa: ${placa}, Data: ${data}`
-  );
 
   agendamentoAbertoSelect.innerHTML =
     '<option value="">Carregando agendamentos...</option>';
@@ -175,13 +162,9 @@ async function carregarAgendamentosAbertos() {
   agendamentoIdHiddenInput.value = "";
 
   placaSelect.disabled = false;
-  dataInspecaoInput.disabled = false;
   matriculaSelect.disabled = false;
 
-  if (!placa || !data) {
-    console.log(
-      "Placa ou data não selecionadas, pulando busca de agendamentos abertos."
-    );
+  if (!placa) {
     agendamentoAbertoSelect.innerHTML =
       '<option value="">Selecione um agendamento ou preencha manualmente</option>';
     agendamentoAbertoSelect.disabled = false;
@@ -190,7 +173,7 @@ async function carregarAgendamentosAbertos() {
 
   try {
     const response = await fetch(
-      `/api/agendamentos_abertos?placa=${placa}&data=${data}`,
+      `/api/agendamentos_abertos?placa=${placa}`,
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }
@@ -202,28 +185,26 @@ async function carregarAgendamentosAbertos() {
       );
     }
     loadedOpenAgendamentos = await response.json();
-    console.log("Agendamentos abertos carregados:", loadedOpenAgendamentos);
 
     agendamentoAbertoSelect.innerHTML =
       '<option value="">Selecione um agendamento ou preencha manualmente</option>';
 
     if (loadedOpenAgendamentos.length === 0) {
       agendamentoMessage.textContent =
-        "Nenhum agendamento em aberto para esta placa e data.";
+        "Nenhum agendamento em aberto para esta placa.";
       agendamentoMessage.classList.add("info");
-      console.log("Nenhum agendamento em aberto encontrado.");
     } else {
       agendamentoMessage.textContent = `${loadedOpenAgendamentos.length} agendamento(s) em aberto encontrado(s).`;
       agendamentoMessage.classList.add("success");
       loadedOpenAgendamentos.forEach((agendamento) => {
+        const dataFormatada = new Date(agendamento.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
         const option = document.createElement("option");
         option.value = agendamento.id;
-        option.textContent = `ID: ${agendamento.id} - Encarregado: ${
+        option.textContent = `ID: ${agendamento.id} - Data: ${dataFormatada} - Encarregado: ${
           agendamento.encarregado_nome || "N/A"
-        } (Status: ${agendamento.status_display})`;
+        } (${agendamento.status_display})`;
         agendamentoAbertoSelect.appendChild(option);
       });
-      console.log("Dropdown de agendamentos abertos populado.");
     }
   } catch (error) {
     console.error("Erro ao carregar agendamentos abertos:", error);
@@ -243,17 +224,11 @@ function preencherFormularioComAgendamento() {
     (ag) => String(ag.id) === selectedAgendamentoId
   );
 
-  console.log("Agendamento selecionado no dropdown:", selectedAgendamento);
-
   if (selectedAgendamento) {
     agendamentoIdHiddenInput.value = selectedAgendamento.id;
 
     placaSelect.value = selectedAgendamento.placa;
     placaSelect.disabled = true;
-
-    dataInspecaoInput.value =
-      selectedAgendamento.data_agendamento.split("T")[0];
-    dataInspecaoInput.disabled = true;
 
     exibirMensagem(
       `Agendamento ID ${selectedAgendamento.id} selecionado.`,
@@ -262,7 +237,6 @@ function preencherFormularioComAgendamento() {
   } else {
     agendamentoIdHiddenInput.value = "";
     placaSelect.disabled = false;
-    dataInspecaoInput.disabled = false;
     exibirMensagem("Modo de inspeção manual ativado.", "info");
   }
 }
@@ -272,7 +246,7 @@ async function salvarInspecao(event) {
 
   const botao = document.querySelector('#checklistForm button[type="submit"]');
   const textoOriginal = botao.innerHTML;
-  const originalBgColor = botao.style.backgroundColor; // Captura a cor original do botão
+  const originalBgColor = botao.style.backgroundColor;
   botao.disabled = true;
   botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
@@ -306,16 +280,15 @@ async function salvarInspecao(event) {
   }
 
   dados.agendamento_id = agendamentoIdHiddenInput.value || null;
-  console.log("Dados a serem enviados para salvar inspeção:", dados);
 
   if (loadedOpenAgendamentos.length > 0 && !dados.agendamento_id) {
     exibirMensagem(
-      "Existem agendamentos em aberto para esta placa e data. Por favor, selecione um agendamento ou ajuste a placa/data para realizar uma inspeção manual.",
+      "Existem agendamentos em aberto para esta placa. Por favor, selecione um agendamento para continuar.",
       "erro"
     );
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
-    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
+    botao.style.backgroundColor = originalBgColor;
     return;
   }
 
@@ -332,7 +305,7 @@ async function salvarInspecao(event) {
     );
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
-    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
+    botao.style.backgroundColor = originalBgColor;
     return;
   }
   let checklistCompleto = true;
@@ -349,12 +322,11 @@ async function salvarInspecao(event) {
     );
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
-    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
+    botao.style.backgroundColor = originalBgColor;
     return;
   }
 
   try {
-    console.log("Enviando requisição para /api/salvar_inspecao...");
     const response = await fetch("/api/salvar_inspecao", {
       method: "POST",
       headers: {
@@ -363,10 +335,8 @@ async function salvarInspecao(event) {
       },
       body: JSON.stringify(dados),
     });
-    console.log("Resposta bruta da API salvar_inspecao:", response);
 
     const resultado = await response.json();
-    console.log("Resultado JSON da API salvar_inspecao:", resultado);
 
     if (response.ok) {
       exibirMensagem(
@@ -374,21 +344,19 @@ async function salvarInspecao(event) {
         "sucesso"
       );
 
-      // Animação de sucesso no botão
       botao.innerHTML = '<i class="fas fa-check"></i> Salvo!';
-      botao.style.backgroundColor = "#28a745"; // Cor verde de sucesso
+      botao.style.backgroundColor = "#28a745";
 
       form.reset();
       carregarItensChecklist();
 
-      // Redireciona após um pequeno atraso para a animação ser visível
       setTimeout(() => {
         if (dados.agendamento_id) {
-          window.location.href = "/agendar_checklist"; // Volta para a página de gestão de agendamentos
+          window.location.href = "/agendar_checklist";
         } else {
-          window.location.href = "/frota"; // Comportamento padrão se não for de um agendamento
+          window.location.href = "/frota";
         }
-      }, 1500); // 1.5 segundos para ver a animação
+      }, 1500);
     } else {
       throw new Error(resultado.message || "Erro ao salvar inspeção");
     }
@@ -396,10 +364,9 @@ async function salvarInspecao(event) {
     console.error("Erro na requisição fetch para salvar inspeção:", error);
     exibirMensagem(error.message, "erro");
 
-    // Restaura o botão imediatamente em caso de erro
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
-    botao.style.backgroundColor = originalBgColor; // Restaura a cor original
+    botao.style.backgroundColor = originalBgColor;
   }
 }
 
@@ -422,9 +389,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (placaSelect) {
     placaSelect.addEventListener("change", carregarAgendamentosAbertos);
   }
-  if (dataInspecaoInput) {
-    dataInspecaoInput.addEventListener("change", carregarAgendamentosAbertos);
-  }
   if (agendamentoAbertoSelect) {
     agendamentoAbertoSelect.addEventListener(
       "change",
@@ -435,6 +399,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (checklistFormEl) {
     checklistFormEl.addEventListener("submit", salvarInspecao);
   }
-
-  carregarAgendamentosAbertos();
 });
