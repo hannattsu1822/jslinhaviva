@@ -152,9 +152,9 @@ async function listarAgendamentos(filtros) {
   });
 }
 
-async function listarAgendamentosAbertos(placa, data) {
-  if (!placa || !data) {
-    throw new Error("Placa e data são obrigatórias.");
+async function listarAgendamentosAbertos(placa) {
+  if (!placa) {
+    throw new Error("Placa é obrigatória.");
   }
 
   const query = `
@@ -164,10 +164,10 @@ async function listarAgendamentosAbertos(placa, data) {
     FROM agendamentos_checklist ac
     JOIN veiculos v ON ac.veiculo_id = v.id
     JOIN users u_enc ON ac.encarregado_matricula = u_enc.matricula
-    WHERE v.placa = ? AND DATE(ac.data_agendamento) = ? AND ac.status = 'Agendado'
-    ORDER BY ac.id DESC
+    WHERE v.placa = ? AND ac.status = 'Agendado'
+    ORDER BY ac.data_agendamento ASC
   `;
-  const [rows] = await promisePool.query(query, [placa, data]);
+  const [rows] = await promisePool.query(query, [placa]);
 
   return rows.map((agendamento) => {
     let statusDisplay = agendamento.status;
