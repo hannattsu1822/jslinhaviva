@@ -23,6 +23,22 @@ async function renderizarPaginaDetalhe(req, res) {
   }
 }
 
+async function renderizarPaginaRelatorios(req, res) {
+  try {
+    const [devices] = await promisePool.query(
+      "SELECT id, local_tag, serial_number FROM dispositivos_logbox WHERE ativo = 1 ORDER BY local_tag"
+    );
+    res.render("pages/logbox/relatorios.html", {
+      pageTitle: "Relatórios LogBox",
+      user: req.user,
+      devices: devices,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erro ao carregar a página de relatórios");
+  }
+}
+
 async function obterLeituras(req, res) {
   try {
     const data = await service.obterLeituras(req.params.serialNumber);
@@ -113,6 +129,7 @@ async function gerarPdfRelatorio(req, res) {
 
 module.exports = {
   renderizarPaginaDetalhe,
+  renderizarPaginaRelatorios,
   obterLeituras,
   obterStatus,
   obterUltimaLeitura,
