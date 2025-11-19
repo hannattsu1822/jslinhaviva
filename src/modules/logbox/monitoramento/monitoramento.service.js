@@ -7,6 +7,7 @@ async function getReportData(filters) {
   let deviceInfo = null;
   let startDate, endDate;
 
+  // 1. Definição de Datas
   switch (reportType) {
     case "monthly":
       startDate = new Date(`${month}-01T00:00:00`);
@@ -17,12 +18,13 @@ async function getReportData(filters) {
       startDate = new Date(`${year}-01-01T00:00:00`);
       endDate = new Date(`${year}-12-31T23:59:59`);
       break;
-    default:
+    default: // detailed
       startDate = new Date(`${date}T00:00:00`);
       endDate = new Date(`${date}T23:59:59`);
       break;
   }
 
+  // 2. Buscar Informações do Dispositivo
   const [deviceRows] = await promisePool.query(
     "SELECT * FROM dispositivos_logbox WHERE id = ?",
     [deviceId]
@@ -32,29 +34,106 @@ async function getReportData(filters) {
   }
   deviceInfo = deviceRows[0];
 
-  const [readings] = await promisePool.query(
-    "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
-    [deviceInfo.serial_number, startDate, endDate]
-  );
+  // 3. Buscar Leituras e Preparar Dados do Gráfico (ChartData)
+  let chartData = { labels: [], datasets: [] };
+  let processedReadings = [];
 
-  const processedReadings = readings.map((r) => {
-    const payload = JSON.parse(r.payload_json);
-    return {
-      temperatura_externa:
-        payload.ch_analog_1 ||
-        (payload.value_channels ? payload.value_channels[2] : null),
-      timestamp_leitura: r.timestamp_leitura,
-    };
-  });
+  if (reportType === "detailed") {
+    // Para detalhado: Busca leituras cruas
+    const [readings] = await promisePool.query(
+      "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
+      [deviceInfo.serial_number, startDate, endDate]
+    );
 
+    processedReadings = readings.map((r) => {
+      let temp = null;
+      try {
+        const payload = JSON.parse(r.payload_json);
+        temp =
+          payload.ch_analog_1 ||
+          (payload.value_channels ? payload.value_channels[2] : null);
+      } catch (e) {
+        temp = null;
+      }
+      return {
+        temperatura_externa: temp,
+        timestamp_leitura: r.timestamp_leitura,
+      };
+    });
+
+    chartData.labels = processedReadings.map((r) =>
+      new Date(r.timestamp_leitura).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+    chartData.datasets.push(
+      { label: "Min", data: [] }, // Placeholder para manter estrutura
+      {
+        label: "Temperatura",
+        data: processedReadings.map((r) => r.temperatura_externa),
+      }
+    );
+  } else {
+    // Para Mensal/Anual: Busca Agregado por Dia (Melhor performance)
+    const [aggregated] = await promisePool.query(
+      `SELECT 
+         DATE(timestamp_leitura) as data_dia, 
+         MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min_temp,
+         AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg_temp,
+         MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max_temp
+       FROM leituras_logbox 
+       WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?
+       GROUP BY DATE(timestamp_leitura)
+       ORDER BY data_dia ASC`,
+      [deviceInfo.serial_number, startDate, endDate]
+    );
+
+    chartData.labels = aggregated.map((r) =>
+      new Date(r.data_dia).toLocaleDateString("pt-BR")
+    );
+    chartData.datasets.push(
+      { label: "Mínima", data: aggregated.map((r) => r.min_temp) },
+      { label: "Média", data: aggregated.map((r) => r.avg_temp) },
+      { label: "Máxima", data: aggregated.map((r) => r.max_temp) }
+    );
+  }
+
+  // 4. Estatísticas Gerais (KPIs)
   const [stats] = await promisePool.query(
-    "SELECT MIN(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as temp_min, AVG(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as temp_avg, MAX(JSON_EXTRACT(payload_json, '$.ch_analog_1')) as temp_max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?",
+    `SELECT 
+        MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_min, 
+        AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_avg, 
+        MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_max,
+        COUNT(*) as total_count
+     FROM leituras_logbox 
+     WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?`,
     [deviceInfo.serial_number, startDate, endDate]
   );
+
+  // 5. Histórico de Ventilação (Correção: Usar serial_number)
   const [fanHistory] = await promisePool.query(
-    "SELECT * FROM historico_ventilacao WHERE dispositivo_id = ? AND timestamp_inicio >= ? AND timestamp_inicio <= ? ORDER BY timestamp_inicio DESC",
-    [deviceId, startDate, endDate]
+    "SELECT * FROM historico_ventilacao WHERE serial_number = ? AND timestamp_inicio >= ? AND timestamp_inicio <= ? ORDER BY timestamp_inicio DESC",
+    [deviceInfo.serial_number, startDate, endDate]
   );
+
+  // 6. Agregação de Ventilação (fanHistoryAgregado)
+  let fanHistoryAgregado = [];
+  if (reportType !== "detailed") {
+    // Agrupar por dia ou mês
+    const mapAgregado = {};
+    fanHistory.forEach((item) => {
+      const key = new Date(item.timestamp_inicio).toLocaleDateString("pt-BR");
+      if (!mapAgregado[key]) {
+        mapAgregado[key] = { dia: key, count: 0, total_duration: 0 };
+      }
+      mapAgregado[key].count++;
+      mapAgregado[key].total_duration += item.duracao_segundos || 0;
+    });
+    fanHistoryAgregado = Object.values(mapAgregado);
+  }
+
+  // 7. Histórico de Conexão
   const [connectionHistory] = await promisePool.query(
     "SELECT * FROM historico_conexao WHERE serial_number = ? AND timestamp_offline >= ? AND timestamp_offline <= ? ORDER BY timestamp_offline DESC",
     [deviceInfo.serial_number, startDate, endDate]
@@ -63,9 +142,11 @@ async function getReportData(filters) {
   return {
     device: deviceInfo,
     filters: { ...filters, startDate, endDate },
-    readings: processedReadings,
+    readings: processedReadings, // Usado apenas no detalhado ou PDF
+    chartData: chartData, // O Frontend precisa disso!
     stats: stats[0],
     fanHistory,
+    fanHistoryAgregado, // O Frontend precisa disso!
     connectionHistory,
   };
 }
@@ -81,11 +162,15 @@ async function obterLeituras(serialNumber) {
       new Date(r.timestamp_leitura).toLocaleString("pt-BR")
     ),
     temperaturas: reversedRows.map((r) => {
-      const payload = JSON.parse(r.payload_json);
-      return (
-        payload.ch_analog_1 ||
-        (payload.value_channels ? payload.value_channels[2] : null)
-      );
+      try {
+        const payload = JSON.parse(r.payload_json);
+        return (
+          payload.ch_analog_1 ||
+          (payload.value_channels ? payload.value_channels[2] : null)
+        );
+      } catch (e) {
+        return null;
+      }
     }),
   };
 }
@@ -98,7 +183,16 @@ async function obterStatus(serialNumber) {
   if (rows.length === 0 || !rows[0].status_json) {
     throw new Error("Status não encontrado");
   }
-  return rows[0].status_json;
+  // Garantir que retorna objeto, mesmo se salvo como string
+  let status = rows[0].status_json;
+  if (typeof status === "string") {
+    try {
+      status = JSON.parse(status);
+    } catch (e) {
+      status = {};
+    }
+  }
+  return status;
 }
 
 async function obterUltimaLeitura(serialNumber) {
@@ -162,28 +256,45 @@ async function obterHistoricoConexao(serialNumber) {
 }
 
 async function gerarPdfRelatorio(filters) {
+  // Reutiliza a lógica corrigida de getReportData
   const data = await getReportData(filters);
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: 700, height: 350 });
+
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: 800, height: 400 });
+  
+  // Configuração do gráfico para o PDF baseada no tipo de relatório
+  let datasets = [];
+  let labels = data.chartData.labels;
+
+  if (filters.reportType === 'detailed') {
+      datasets.push({
+          label: "Temperatura (°C)",
+          data: data.chartData.datasets[1].data, // Dataset 1 é a temperatura no detalhado
+          borderColor: "rgb(75, 192, 192)",
+          borderWidth: 2,
+          tension: 0.1,
+          pointRadius: 0
+      });
+  } else {
+      datasets.push({
+          label: "Média (°C)",
+          data: data.chartData.datasets[1].data,
+          borderColor: "rgb(255, 159, 64)",
+          borderWidth: 2
+      });
+  }
+
   const configuration = {
     type: "line",
     data: {
-      labels: data.readings.map((r) =>
-        new Date(r.timestamp_leitura).toLocaleDateString("pt-BR")
-      ),
-      datasets: [
-        {
-          label: "Temperatura (°C)",
-          data: data.readings.map((r) => r.temperatura_externa),
-          borderColor: "rgb(75, 192, 192)",
-          tension: 0.1,
-        },
-      ],
+      labels: labels,
+      datasets: datasets,
     },
     options: {
       scales: { y: { beginAtZero: false } },
-      animation: { duration: 0 },
+      plugins: { legend: { display: true } }
     },
   };
+
   const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
 
   const pdfDoc = await PDFDocument.create();
@@ -191,7 +302,7 @@ async function gerarPdfRelatorio(filters) {
   const { width, height } = page.getSize();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const image = await pdfDoc.embedPng(imageBuffer);
-  const imageDims = image.scale(0.5);
+  const imageDims = image.scale(0.6);
 
   page.drawText(`Relatório de Monitoramento - ${data.device.local_tag}`, {
     x: 50,
@@ -199,26 +310,22 @@ async function gerarPdfRelatorio(filters) {
     font,
     size: 18,
   });
+  
+  const periodo = `${new Date(data.filters.startDate).toLocaleDateString('pt-BR')} a ${new Date(data.filters.endDate).toLocaleDateString('pt-BR')}`;
+  page.drawText(`Período: ${periodo}`, { x: 50, y: height - 75, font, size: 12 });
+
   page.drawImage(image, {
     x: 50,
-    y: height - 100 - imageDims.height,
+    y: height - 120 - imageDims.height,
     width: imageDims.width,
     height: imageDims.height,
   });
 
-  let y = height - 120 - imageDims.height;
-  data.readings.forEach((reading) => {
-    if (y < 40) {
-      page.addPage();
-      y = height - 40;
-    }
-    page.drawText(
-      `${new Date(reading.timestamp_leitura).toLocaleString(
-        "pt-BR"
-      )}: ${reading.temperatura_externa.toFixed(1)}°C`,
-      { x: 50, y, font, size: 10 }
-    );
-    y -= 15;
+  // Adicionar resumo textual se houver espaço ou nova página
+  let y = height - 140 - imageDims.height;
+  
+  page.drawText(`Estatísticas: Mín: ${parseFloat(data.stats.temp_min).toFixed(1)}°C | Méd: ${parseFloat(data.stats.temp_avg).toFixed(1)}°C | Máx: ${parseFloat(data.stats.temp_max).toFixed(1)}°C`, {
+      x: 50, y, font, size: 10
   });
 
   const pdfBytes = await pdfDoc.save();
