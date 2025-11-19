@@ -46,11 +46,13 @@ router.get(
   autenticar,
   controller.obterHistoricoConexao
 );
+
 router.post(
-  "/api/relatorios/visual",
+  "/api/relatorios/gerar",
   autenticar,
   controller.gerarRelatorioVisual
 );
+
 router.post(
   "/api/relatorios/pdf",
   autenticar,
