@@ -8,6 +8,14 @@ router.get(
   autenticar,
   controller.renderizarPaginaDetalhe
 );
+
+router.get(
+  "/relatorios-logbox",
+  autenticar,
+  verificarNivel(2),
+  controller.renderizarPaginaRelatorios
+);
+
 router.get(
   "/api/logbox-device/:serialNumber/leituras",
   autenticar,
