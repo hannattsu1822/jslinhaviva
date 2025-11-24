@@ -194,7 +194,8 @@ async function listarProjetos(filtros, usuario, statusPermitidos) {
   }
 
   let sql = `
-        SELECT s.id, s.processo, s.tipo_ordem, s.data_servico, s.horario_inicio, s.horario_fim, s.status, u_encarregado.nome AS nome_encarregado
+        SELECT s.id, s.processo, s.tipo_ordem, s.data_servico, s.horario_inicio, s.horario_fim, s.status, s.data_conclusao, s.horario_conclusao, u_encarregado.nome AS nome_encarregado,
+        (SELECT COUNT(*) FROM anexos_servicos_fibra WHERE servico_id = s.id AND tipo_anexo = 'APR') as apr_count
         FROM servicos_fibra_optica s
         LEFT JOIN users u_encarregado ON s.encarregado_matricula = u_encarregado.matricula
     `;
@@ -376,7 +377,6 @@ async function finalizarServico(dados, files, pontosMapa, matriculaUsuario) {
       [statusConclusao, dataConclusao, horarioConclusao, servicoId]
     );
     if (pontosMapa && Array.isArray(pontosMapa) && pontosMapa.length > 0) {
-      // A função convertUtmToLatLon precisa estar disponível aqui
     }
     if (files && files.length > 0) {
       await salvarAnexosFibra(
