@@ -24,6 +24,50 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/static/css/into/dashboard_calendar.css" />
+    <style>
+      .checklist-badge {
+        background: rgba(25, 135, 84, 0.1);
+        border: 1px solid #198754;
+        color: #198754;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        display: none;
+        backdrop-filter: blur(5px);
+      }
+      .checklist-alert-pending {
+        background: rgba(255, 193, 7, 0.15);
+        border: 1px solid #ffc107;
+        color: #856404;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: none;
+        backdrop-filter: blur(5px);
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+      .checklist-alert-pending .icon-box {
+        background: #ffc107;
+        color: #000;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-right: 15px;
+      }
+      .glass-modal .modal-content {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      }
+    </style>
   </head>
 
   <body>
@@ -164,6 +208,39 @@
 
     <div class="main-content">
       <div class="container py-4">
+        <div
+          id="checklist-status-badge"
+          class="checklist-badge align-items-center"
+        >
+          <i class="fas fa-check-circle fa-2x me-3"></i>
+          <div>
+            <h5 class="mb-0 fw-bold">Checklist Diário Realizado</h5>
+            <small id="checklist-details-text"
+              >Veículo verificado e registrado no sistema.</small
+            >
+          </div>
+        </div>
+
+        <div id="checklist-pending-alert" class="checklist-alert-pending">
+          <div class="d-flex align-items-center">
+            <div class="icon-box">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div>
+              <h4 class="mb-1 fw-bold text-dark">Checklist Pendente</h4>
+              <p class="mb-0 text-dark">
+                Você ainda não realizou a inspeção veicular de hoje.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/checklist-diario"
+            class="btn btn-warning fw-bold text-dark px-4 shadow-sm"
+          >
+            <i class="fas fa-clipboard-check me-2"></i>Realizar Agora
+          </a>
+        </div>
+
         <h1 class="page-title mb-4">
           <i class="fas fa-tachometer-alt me-3"></i>Painel de Controle Principal
         </h1>
@@ -535,12 +612,46 @@
                 cardElement.style.display = "block";
               }
             }
+
+            if (userLevel >= 4) {
+              verificarChecklistDiario();
+            }
           })
           .catch((error) => {
             console.error("Erro ao buscar dados do usuário:", error);
             window.location.href = "/login";
           });
       });
+
+      async function verificarChecklistDiario() {
+        try {
+          const response = await fetch("/api/checklist/status");
+          if (response.ok) {
+            const data = await response.json();
+            const badgeSuccess = document.getElementById(
+              "checklist-status-badge"
+            );
+            const alertPending = document.getElementById(
+              "checklist-pending-alert"
+            );
+
+            if (data.realizado) {
+              badgeSuccess.style.display = "flex";
+              alertPending.style.setProperty("display", "none", "important");
+              if (data.detalhes && data.detalhes.placa_veiculo) {
+                document.getElementById(
+                  "checklist-details-text"
+                ).textContent = `Veículo ${data.detalhes.placa_veiculo} verificado hoje às ${data.detalhes.hora_registro}.`;
+              }
+            } else {
+              badgeSuccess.style.display = "none";
+              alertPending.style.setProperty("display", "flex", "important");
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao verificar checklist:", error);
+        }
+      }
     </script>
   </body>
 </html>
