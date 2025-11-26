@@ -93,6 +93,25 @@ if (!fs.existsSync(uploadsInspRedesDir)) {
 }
 app.use("/upload_InspDistRedes", express.static(uploadsInspRedesDir));
 
+const uploadsChecklistDailyDir = path.join(
+  projectRootDir,
+  "upload_checklist_diario_veiculos"
+);
+if (!fs.existsSync(uploadsChecklistDailyDir)) {
+  try {
+    fs.mkdirSync(uploadsChecklistDailyDir, { recursive: true });
+  } catch (err) {
+    console.error(
+      `Falha ao criar diretório de uploads de Checklist Diário em ${uploadsChecklistDailyDir}:`,
+      err
+    );
+  }
+}
+app.use(
+  "/upload_checklist_diario_veiculos",
+  express.static(uploadsChecklistDailyDir)
+);
+
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
 if (!fs.existsSync(multerTempDir)) {
   try {
