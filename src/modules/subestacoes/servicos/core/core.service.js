@@ -137,14 +137,13 @@ async function criarServico(dados, arquivos) {
       if (itemEscopo.temp_id)
         itemDbIdMap.set(itemEscopo.temp_id, novoItemEscopoId);
 
-      // TENTATIVA DE COPIAR ANEXOS DA INSPEÇÃO (COM PROTEÇÃO CONTRA ERRO)
       if (itemEscopo.inspecao_item_id) {
         try {
           if (itemEscopo.inspecao_especificacao_id) {
             await connection.query(
               `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho)
                SELECT ?, nome_original, caminho_servidor, tipo_mime, tamanho
-               FROM inspecoes_subestacoes_anexos
+               FROM inspecoes_anexos
                WHERE item_especificacao_id = ?`,
               [novoItemEscopoId, itemEscopo.inspecao_especificacao_id]
             );
@@ -152,15 +151,14 @@ async function criarServico(dados, arquivos) {
             await connection.query(
               `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho)
                SELECT ?, nome_original, caminho_servidor, tipo_mime, tamanho
-               FROM inspecoes_subestacoes_anexos
+               FROM inspecoes_anexos
                WHERE item_resposta_id = ? AND item_especificacao_id IS NULL`,
               [novoItemEscopoId, itemEscopo.inspecao_item_id]
             );
           }
         } catch (errAnexo) {
-          // Loga o erro no console do servidor mas NÃO para a criação do serviço
           console.error(
-            `AVISO: Falha ao copiar anexos da inspeção para o item ${novoItemEscopoId}. O serviço continuará sendo criado. Erro:`,
+            `AVISO: Falha ao copiar anexos da inspeção para o item ${novoItemEscopoId}.`,
             errAnexo.message
           );
         }
@@ -220,7 +218,6 @@ async function criarServico(dados, arquivos) {
     return { novoServicoId, connection };
   } catch (error) {
     if (connection) await connection.rollback();
-    console.error("Erro fatal ao criar serviço:", error); // Log para debug
     throw error;
   } finally {
     if (connection) connection.release();
