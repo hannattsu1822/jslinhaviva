@@ -34,6 +34,7 @@ async function criarServico(dados, arquivos) {
     itens_escopo,
     tipo_ordem,
   } = dados;
+
   if (
     !subestacao_id ||
     !processo ||
@@ -45,6 +46,7 @@ async function criarServico(dados, arquivos) {
   ) {
     throw new Error("Campos obrigatórios faltando.");
   }
+
   if (status === "CONCLUIDO" && !data_conclusao) {
     throw new Error(
       "Data de conclusão obrigatória para serviços com status CONCLUÍDO."
@@ -61,6 +63,7 @@ async function criarServico(dados, arquivos) {
       throw new Error("Formato inválido para IDs de inspeção vinculadas.");
     }
   }
+
   let parsedItensEscopo = [];
   if (itens_escopo) {
     parsedItensEscopo = JSON.parse(itens_escopo);
@@ -77,6 +80,7 @@ async function criarServico(dados, arquivos) {
 
   const connection = await promisePool.getConnection();
   let novoServicoId;
+
   try {
     await connection.beginTransaction();
     const dataConclusaoFinal = status === "CONCLUIDO" ? data_conclusao : null;
@@ -132,6 +136,26 @@ async function criarServico(dados, arquivos) {
       const novoItemEscopoId = resultItem.insertId;
       if (itemEscopo.temp_id)
         itemDbIdMap.set(itemEscopo.temp_id, novoItemEscopoId);
+
+      if (itemEscopo.inspecao_item_id) {
+        if (itemEscopo.inspecao_especificacao_id) {
+          await connection.query(
+            `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho)
+             SELECT ?, nome_original, caminho_servidor, tipo_mime, tamanho
+             FROM inspecoes_subestacoes_anexos
+             WHERE item_especificacao_id = ?`,
+            [novoItemEscopoId, itemEscopo.inspecao_especificacao_id]
+          );
+        } else {
+          await connection.query(
+            `INSERT INTO servico_item_escopo_anexos (item_escopo_id, nome_original, caminho_servidor, tipo_mime, tamanho)
+             SELECT ?, nome_original, caminho_servidor, tipo_mime, tamanho
+             FROM inspecoes_subestacoes_anexos
+             WHERE item_resposta_id = ? AND item_especificacao_id IS NULL`,
+            [novoItemEscopoId, itemEscopo.inspecao_item_id]
+          );
+        }
+      }
     }
 
     const servicoUploadDir = path.join(
@@ -147,8 +171,7 @@ async function criarServico(dados, arquivos) {
         "_"
       )}`;
       const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-      
-      // MODIFICAÇÃO: Substituído fsPromises.rename por copyFile + unlink para robustez
+
       await fsPromises.copyFile(file.path, caminhoDestino);
       await fsPromises.unlink(file.path);
 
@@ -452,8 +475,7 @@ async function atualizarServico(servicoId, dados, arquivos) {
         "_"
       )}`;
       const caminhoDestino = path.join(servicoUploadDir, nomeUnicoArquivo);
-      
-      // MODIFICAÇÃO: Substituído fsPromises.rename por copyFile + unlink para robustez
+
       await fsPromises.copyFile(file.path, caminhoDestino);
       await fsPromises.unlink(file.path);
 
