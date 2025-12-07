@@ -89,12 +89,27 @@
                                             <input type="date" id="dataServico" name="dataServico" class="form-control" value="<%= servico.data_servico ? new Date(servico.data_servico).toISOString().split('T')[0] : '' %>" />
                                         </div>
                                         <div class="col-md-4">
-                                            <label for="horarioInicio" class="form-label required">Horário Início</label>
-                                            <input type="time" id="horarioInicio" name="horarioInicio" class="form-control" required value="<%= servico.horario_inicio %>" />
+                                            <label for="horarioInicio" class="form-label">Horário Início</label>
+                                            <input type="time" id="horarioInicio" name="horarioInicio" class="form-control" value="<%= servico.horario_inicio || '' %>" />
                                         </div>
                                         <div class="col-md-4">
-                                            <label for="horarioFim" class="form-label required">Horário Fim</label>
-                                            <input type="time" id="horarioFim" name="horarioFim" class="form-control" required value="<%= servico.horario_fim %>" />
+                                            <label for="horarioFim" class="form-label">Horário Fim</label>
+                                            <input type="time" id="horarioFim" name="horarioFim" class="form-control" value="<%= servico.horario_fim || '' %>" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Novos campos para edição de conclusão -->
+                                    <div class="row g-3 mt-2 border-top pt-3">
+                                        <div class="col-12">
+                                            <h6 class="text-muted"><i class="fa-solid fa-check-double me-2"></i>Dados de Conclusão (Opcional)</h6>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="dataConclusao" class="form-label">Data Conclusão</label>
+                                            <input type="date" id="dataConclusao" name="dataConclusao" class="form-control" value="<%= servico.data_conclusao ? new Date(servico.data_conclusao).toISOString().split('T')[0] : '' %>" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="horarioConclusao" class="form-label">Horário Conclusão</label>
+                                            <input type="time" id="horarioConclusao" name="horarioConclusao" class="form-control" value="<%= servico.horario_conclusao || '' %>" />
                                         </div>
                                     </div>
                                 </div>
