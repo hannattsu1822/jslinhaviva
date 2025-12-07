@@ -98,6 +98,15 @@ async function obterDetalhesServico(req, res) {
       horario_fim_formatado: servico.horario_fim
         ? servico.horario_fim.substring(0, 5)
         : "N/A",
+      // Novos campos formatados para conclusão
+      data_conclusao_formatada: servico.data_conclusao
+        ? new Date(servico.data_conclusao).toLocaleDateString("pt-BR", {
+            timeZone: "UTC",
+          })
+        : null,
+      horario_conclusao_formatado: servico.horario_conclusao
+        ? servico.horario_conclusao.substring(0, 5)
+        : null,
     };
 
     res.render("pages/fibra_optica/servico_detalhes.html", {
