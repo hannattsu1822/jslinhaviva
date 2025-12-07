@@ -248,19 +248,50 @@ async function obterDadosParaEdicao(id) {
 }
 
 async function editarServico(id, dados, files) {
-  const {
-    processo,
-    tipoOrdem,
-    linkMaps,
-    localReferencia,
-    dataServico,
-    horarioInicio,
-    horarioFim,
-    responsavelMatricula,
-    descricao,
-    observacoes,
-    anexos_a_remover,
-  } = dados;
+  const [rows] = await promisePool.query(
+    "SELECT * FROM servicos_fibra_optica WHERE id = ?",
+    [id]
+  );
+  if (rows.length === 0) {
+    throw new Error("Serviço não encontrado.");
+  }
+  const servicoAtual = rows[0];
+
+  const processo =
+    dados.processo !== undefined ? dados.processo : servicoAtual.processo;
+  const tipoOrdem =
+    dados.tipoOrdem !== undefined ? dados.tipoOrdem : servicoAtual.tipo_ordem;
+  const linkMaps =
+    dados.linkMaps !== undefined ? dados.linkMaps : servicoAtual.link_maps;
+  const localReferencia =
+    dados.localReferencia !== undefined
+      ? dados.localReferencia
+      : servicoAtual.local_referencia;
+  const responsavelMatricula =
+    dados.responsavelMatricula !== undefined
+      ? dados.responsavelMatricula
+      : servicoAtual.responsavel_matricula;
+  const descricao =
+    dados.descricao !== undefined ? dados.descricao : servicoAtual.descricao;
+  const observacoes =
+    dados.observacoes !== undefined
+      ? dados.observacoes
+      : servicoAtual.observacoes;
+  const dataServico =
+    dados.dataServico !== undefined
+      ? dados.dataServico || null
+      : servicoAtual.data_servico;
+  const horarioInicio =
+    dados.horarioInicio !== undefined
+      ? dados.horarioInicio
+      : servicoAtual.horario_inicio;
+  const horarioFim =
+    dados.horarioFim !== undefined
+      ? dados.horarioFim
+      : servicoAtual.horario_fim;
+
+  const { anexos_a_remover } = dados;
+
   const connection = await promisePool.getConnection();
   try {
     await connection.beginTransaction();
@@ -295,7 +326,7 @@ async function editarServico(id, dados, files) {
       tipoOrdem,
       linkMaps,
       localReferencia,
-      dataServico || null,
+      dataServico,
       horarioInicio,
       horarioFim,
       responsavelMatricula,
