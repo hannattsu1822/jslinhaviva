@@ -228,9 +228,7 @@
                   >
                     <strong>Data Prevista</strong>
                     <span
-                      ><%= servico.data_servico ? new
-                      Date(servico.data_servico).toLocaleDateString('pt-BR',
-                      {timeZone: 'UTC'}) : 'A definir' %></span
+                      ><%= servico.data_servico_formatada %></span
                     >
                   </div>
                   <div
@@ -239,12 +237,27 @@
                     <strong>Horário Previsto</strong>
                     <span>
                       <% if (servico.horario_inicio && servico.horario_fim) { %>
-                        <%= servico.horario_inicio.substring(0, 5) %> - <%= servico.horario_fim.substring(0, 5) %>
+                        <%= servico.horario_inicio_formatado %> - <%= servico.horario_fim_formatado %>
                       <% } else { %>
                         N/A
                       <% } %>
                     </span>
                   </div>
+
+                  <% if (servico.data_conclusao) { %>
+                    <hr class="my-3 border-success">
+                    <div class="alert alert-success mb-0 py-2">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong><i class="fa-solid fa-check-double me-1"></i>Data Conclusão</strong>
+                        <span><%= servico.data_conclusao_formatada %></span>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-center">
+                        <strong><i class="fa-solid fa-clock me-1"></i>Horário Conclusão</strong>
+                        <span><%= servico.horario_conclusao_formatado || 'N/A' %></span>
+                      </div>
+                    </div>
+                  <% } %>
+
                 </div>
               </div>
             </div>
