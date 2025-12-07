@@ -277,17 +277,19 @@ async function editarServico(id, dados, files) {
     dados.observacoes !== undefined
       ? dados.observacoes
       : servicoAtual.observacoes;
+
+  // CORREÇÃO AQUI: Se vier string vazia "", converte para null
   const dataServico =
     dados.dataServico !== undefined
       ? dados.dataServico || null
       : servicoAtual.data_servico;
   const horarioInicio =
     dados.horarioInicio !== undefined
-      ? dados.horarioInicio
+      ? dados.horarioInicio || null
       : servicoAtual.horario_inicio;
   const horarioFim =
     dados.horarioFim !== undefined
-      ? dados.horarioFim
+      ? dados.horarioFim || null
       : servicoAtual.horario_fim;
 
   const { anexos_a_remover } = dados;
