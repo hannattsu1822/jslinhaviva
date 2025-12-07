@@ -57,11 +57,13 @@ async function registrarProjeto(dadosProjeto, files) {
     linkMaps,
     localReferencia,
     dataServico,
+    horarioInicio,
+    horarioFim,
     responsavelMatricula,
     descricao,
     observacoes,
+    programado,
   } = dadosProjeto;
-
   if (
     !tipoGeracao ||
     !tipoOrdem ||
@@ -80,9 +82,21 @@ async function registrarProjeto(dadosProjeto, files) {
       throw new Error("Número do processo é obrigatório para geração normal.");
     }
 
-    // Horários previstos removidos da lógica obrigatória, salvando como NULL
-    const horarioInicioFinal = null;
-    const horarioFimFinal = null;
+    let horarioInicioFinal = null;
+    let horarioFimFinal = null;
+
+    if (tipoGeracao === "normal" && programado === "on") {
+      if (!horarioInicio || !horarioFim) {
+        throw new Error(
+          "Horário de início e fim são obrigatórios para serviços programados."
+        );
+      }
+      horarioInicioFinal = horarioInicio;
+      horarioFimFinal = horarioFim;
+    } else if (tipoGeracao !== "emergencial") {
+      horarioInicioFinal = horarioInicio || null;
+      horarioFimFinal = horarioFim || null;
+    }
 
     const sqlInsert = `INSERT INTO servicos_fibra_optica (tipo_geracao, processo, tipo_ordem, link_maps, local_referencia, data_servico, horario_inicio, horario_fim, responsavel_matricula, descricao, observacoes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente')`;
     const values = [
@@ -243,7 +257,6 @@ async function editarServico(id, dados, files) {
   }
   const servicoAtual = rows[0];
 
-  // Mapeamento de campos com fallback para o valor atual
   const processo =
     dados.processo !== undefined ? dados.processo : servicoAtual.processo;
   const tipoOrdem =
@@ -264,28 +277,25 @@ async function editarServico(id, dados, files) {
     dados.observacoes !== undefined
       ? dados.observacoes
       : servicoAtual.observacoes;
+
   const dataServico =
     dados.dataServico !== undefined
       ? dados.dataServico || null
       : servicoAtual.data_servico;
-
-  // Campos de conclusão (permitir edição)
-  const dataConclusao =
-    dados.dataConclusao !== undefined
-      ? dados.dataConclusao || null
-      : servicoAtual.data_conclusao;
-  const horarioConclusao =
-    dados.horarioConclusao !== undefined
-      ? dados.horarioConclusao || null
-      : servicoAtual.horario_conclusao;
+  const horarioInicio =
+    dados.horarioInicio !== undefined
+      ? dados.horarioInicio || null
+      : servicoAtual.horario_inicio;
+  const horarioFim =
+    dados.horarioFim !== undefined
+      ? dados.horarioFim || null
+      : servicoAtual.horario_fim;
 
   const { anexos_a_remover } = dados;
 
   const connection = await promisePool.getConnection();
   try {
     await connection.beginTransaction();
-
-    // Lógica de remoção de anexos
     if (anexos_a_remover) {
       const idsParaRemover = anexos_a_remover.split(",").filter(Boolean);
       if (idsParaRemover.length > 0) {
@@ -311,32 +321,21 @@ async function editarServico(id, dados, files) {
         }
       }
     }
-
-    // SQL Update sem horários previstos, mas com dados de conclusão
-    const sqlUpdate = `
-      UPDATE servicos_fibra_optica 
-      SET processo = ?, tipo_ordem = ?, link_maps = ?, local_referencia = ?, 
-          data_servico = ?, responsavel_matricula = ?, descricao = ?, observacoes = ?,
-          data_conclusao = ?, horario_conclusao = ?
-      WHERE id = ?
-    `;
-
+    const sqlUpdate = `UPDATE servicos_fibra_optica SET processo = ?, tipo_ordem = ?, link_maps = ?, local_referencia = ?, data_servico = ?, horario_inicio = ?, horario_fim = ?, responsavel_matricula = ?, descricao = ?, observacoes = ? WHERE id = ?`;
     const values = [
       processo,
       tipoOrdem,
       linkMaps,
       localReferencia,
       dataServico,
+      horarioInicio,
+      horarioFim,
       responsavelMatricula,
       descricao,
       observacoes,
-      dataConclusao,
-      horarioConclusao,
       id,
     ];
-
     await connection.query(sqlUpdate, values);
-
     if (files && files.length > 0) {
       await salvarAnexosFibra(id, files, "Edicao", "Geral", connection);
     }
