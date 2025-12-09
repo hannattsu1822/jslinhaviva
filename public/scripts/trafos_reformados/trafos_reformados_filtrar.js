@@ -1,3 +1,4 @@
+// trafos_reformados_filtrar.js
 let avaliacaoModalInstance;
 let accessDeniedModalInstance;
 let developmentModalInstance;
@@ -6,8 +7,7 @@ let user = null;
 let currentPage = 1;
 const itemsPerPage = 15;
 let fileList = [];
-const MAX_FILES = 10;
-const MAX_TOTAL_SIZE_MB = 3;
+const MAX_FILES = 6;
 
 async function fazerRequisicao(url, options = {}) {
   try {
@@ -574,7 +574,6 @@ async function salvarAvaliacao() {
 
 function handleFiles(files) {
   const anexosInput = document.getElementById("anexosInput");
-  let currentTotalSize = fileList.reduce((acc, file) => acc + file.size, 0);
 
   for (const file of files) {
     if (fileList.length >= MAX_FILES) {
@@ -585,14 +584,7 @@ function handleFiles(files) {
       alert(`O arquivo "${file.name}" não é uma imagem e será ignorado.`);
       continue;
     }
-    if (currentTotalSize + file.size > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
-      alert(
-        `O arquivo "${file.name}" excede o limite total de ${MAX_TOTAL_SIZE_MB}MB e não pode ser adicionado.`
-      );
-      continue;
-    }
     fileList.push(file);
-    currentTotalSize += file.size;
   }
   anexosInput.value = "";
   renderPreviews();
