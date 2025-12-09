@@ -1,3 +1,4 @@
+// routes/trafos_reformados/checklist.routes.js
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../auth");
@@ -22,7 +23,7 @@ router.put(
   "/api/transformadores_reformados/:id/avaliar_completo",
   autenticar,
   verificarNivel(3),
-  uploadAnexoChecklist.array("anexos_imagem", 10),
+  uploadAnexoChecklist.array("anexos_imagem", 6),
   controller.avaliarCompleto
 );
 
