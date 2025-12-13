@@ -42,7 +42,6 @@ function getStatusHtml(service) {
 function aplicarOrdenacao() {
   const selectOrdenacao = document.getElementById("ordenar-por");
   
-  // Proteção caso o HTML não tenha sido atualizado
   if (!selectOrdenacao) {
     console.error("[ERRO] Elemento 'ordenar-por' não encontrado! Atualize o arquivo HTML.");
     return;
@@ -111,7 +110,7 @@ function aplicarFiltros() {
   });
 
   aplicarOrdenacao();
-  currentPage = 1; // Reseta para a página 1 ao filtrar/ordenar
+  currentPage = 1;
   renderTable();
 }
 
@@ -257,7 +256,6 @@ async function carregarServicos() {
     console.log(`[FRONTEND] Serviços carregados: ${data.length}`);
     
     allServices = data;
-    // Forçar cópia inicial para filteredServices
     filteredServices = [...allServices];
     
     aplicarFiltros();
@@ -288,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const filtroData = document.getElementById("filtro-data");
   const ordenarPor = document.getElementById("ordenar-por");
   const btnAtualizar = document.getElementById("btn-atualizar");
+  const btnGerarRelatorio = document.getElementById("btn-gerar-relatorio");
 
   if (filtroProcesso) {
     filtroProcesso.addEventListener("input", debounce(aplicarFiltros, 300));
@@ -304,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (ordenarPor) {
     ordenarPor.addEventListener("change", () => {
       console.log("[EVENT] Mudança na ordenação detectada");
-      aplicarFiltros(); // Usa aplicarFiltros que já chama aplicarOrdenacao
+      aplicarFiltros();
     });
   }
 
@@ -316,6 +315,15 @@ document.addEventListener("DOMContentLoaded", () => {
         btnAtualizar.disabled = false;
         btnAtualizar.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Atualizar';
       });
+    });
+  }
+
+  if (btnGerarRelatorio) {
+    btnGerarRelatorio.addEventListener("click", () => {
+      // Placeholder para futura implementação de relatório
+      // Exemplo: abrir uma nova aba com PDF
+      // window.open('/relatorios/construcao', '_blank');
+      alert("Botão 'Gerar Relatório' clicado! Implemente a lógica aqui."); 
     });
   }
 
