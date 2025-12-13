@@ -38,6 +38,27 @@ document.addEventListener("DOMContentLoaded", () => {
     ultimoKmRegistrado: null,
   };
 
+function normalizeKmPayload(payload) {
+  let km = payload;
+
+  if (km && typeof km === "object") {
+    km = (
+      km.chegadakm ??
+      km.ultimoKm ??
+      km.ultimo_km ??
+      km.km ??
+      km.value ??
+      null
+    );
+  }
+
+  if (km === "" || km === undefined) return null;
+
+  km = km === null ? null : Number(km);
+  return Number.isFinite(km) ? km : null;
+}
+
+
   const limparFormulario = () => {
     prvForm.reset();
     hiddenRegistroIdInput.value = "";
@@ -172,7 +193,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!statusRes.ok || !ultimoKmRes.ok || !registrosRes.ok)
         throw new Error("Falha ao carregar dados da planilha.");
       const viagemAberta = await statusRes.json();
-      const { ultimoKm } = await ultimoKmRes.json();
+      const ultimoKmPayload = await ultimoKmRes.json();
+      const ultimoKm = normalizeKmPayload(ultimoKmPayload);
       const registros = await registrosRes.json();
       currentState = {
         ...currentState,
