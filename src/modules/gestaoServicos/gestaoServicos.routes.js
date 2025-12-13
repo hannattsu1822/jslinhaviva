@@ -71,7 +71,6 @@ router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
   );
 });
 
-// Rota para a página de acompanhamento da Construção - CORRIGIDA
 router.get(
   "/acompanhamento_construcao",
   autenticar,
@@ -101,11 +100,21 @@ router.get(
   coreController.listarServicos
 );
 
-// Endpoint da API para buscar serviços por origem - CORRIGIDO
 router.get(
   "/api/servicos/origem/:origem",
   autenticar,
   verificarCargo(["Construção", "ADM", "ADMIN", "Engenheiro"]),
+  (req, res, next) => {
+    const origemOriginal = req.params.origem;
+    const origemDecoded = decodeURIComponent(origemOriginal);
+    
+    console.log(`[ROTA] Parâmetro recebido (raw): "${origemOriginal}"`);
+    console.log(`[ROTA] Parâmetro decodificado: "${origemDecoded}"`);
+    console.log(`[ROTA] Bytes do decodificado:`, Buffer.from(origemDecoded, 'utf8'));
+    
+    req.params.origem = origemDecoded;
+    next();
+  },
   queryController.listarServicosPorOrigem
 );
 
@@ -175,6 +184,7 @@ router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
       .status(404)
       .json({ success: false, message: "Arquivo não encontrado" });
   }
+
   const ext = path.extname(filename).toLowerCase();
   const mimeTypes = {
     ".jpg": "image/jpeg",
@@ -186,10 +196,13 @@ router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ".csv": "text/csv",
   };
+
   res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
+
   if (req.query.download === "true") {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   }
+
   fs.createReadStream(filePath).pipe(res);
 });
 
@@ -239,6 +252,7 @@ router.post("/api/push/subscribe", autenticar, async (req, res) => {
   try {
     const { subscription } = req.body;
     const matricula = req.user.matricula;
+
     console.log(
       `DEBUG: [Backend] Rota /api/push/subscribe foi chamada pela matrícula: ${matricula}`
     );
@@ -246,23 +260,28 @@ router.post("/api/push/subscribe", autenticar, async (req, res) => {
       "DEBUG: [Backend] Objeto de inscrição recebido do frontend:",
       subscription
     );
+
     if (!subscription || !subscription.endpoint) {
       console.error("DEBUG: [Backend] Objeto de inscrição inválido recebido.");
       return res
         .status(400)
         .json({ success: false, message: "Objeto de inscrição inválido." });
     }
+
     const subscriptionString = JSON.stringify(subscription);
     console.log(
       `DEBUG: [Backend] Salvando a string de inscrição no banco de dados para a matrícula ${matricula}...`
     );
+
     await promisePool.query(
       "UPDATE users SET push_subscription = ? WHERE matricula = ?",
       [subscriptionString, matricula]
     );
+
     console.log(
       `DEBUG: [Backend] Inscrição salva com sucesso para a matrícula ${matricula}.`
     );
+
     res.status(201).json({ success: true });
   } catch (error) {
     console.error(
