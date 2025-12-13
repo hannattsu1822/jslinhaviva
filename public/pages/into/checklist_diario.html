@@ -198,13 +198,17 @@
         border-color: #f5c2c7;
         color: #842029;
       }
+
+      .hint-small {
+        font-size: 0.85rem;
+      }
     </style>
   </head>
 
   <body>
     <div class="container">
       <div class="top-bar d-flex align-items-center">
-        <a href="/dashboard" class="btn btn-outline-primary fw-bold shadow-sm bg-white">
+        <a href="dashboard" class="btn btn-outline-primary fw-bold shadow-sm bg-white">
           <i class="fas fa-arrow-left me-2"></i>Voltar ao Dashboard
         </a>
       </div>
@@ -215,9 +219,7 @@
             <h2 class="fw-bold text-dark">
               <i class="fas fa-clipboard-check me-2 text-primary"></i>Checklist Diário
             </h2>
-            <p class="text-muted">
-              Preencha os dados abaixo para liberar o uso do veículo.
-            </p>
+            <p class="text-muted">Preencha os dados abaixo para liberar o uso do veículo.</p>
           </div>
 
           <div class="card glass-card">
@@ -227,18 +229,14 @@
 
                 <div class="row g-3 mb-2">
                   <div class="col-md-6">
-                    <label class="form-label fw-bold">Placa do Veículo</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="placa"
-                      id="placa"
-                      required
-                      placeholder="ABC-1234"
-                      style="text-transform: uppercase"
-                      autocomplete="off"
-                    />
+                    <label class="form-label fw-bold">Veículo</label>
+                    <select class="form-select" name="veiculo_id" id="veiculoSelect" required>
+                      <option value="">Carregando veículos...</option>
+                    </select>
                     <div id="statusChecklist" class="status-checklist info"></div>
+                    <div class="text-muted hint-small mt-1">
+                      Selecione o veículo para consultar se o checklist do dia já foi realizado.
+                    </div>
                   </div>
 
                   <div class="col-md-6">
@@ -249,7 +247,7 @@
                       name="km"
                       id="km"
                       required
-                      placeholder="Ex: 150000"
+                      placeholder="Ex.: 150000"
                       min="0"
                       step="1"
                     />
@@ -258,9 +256,9 @@
 
                 <div class="row g-3 mb-4">
                   <div class="col-12">
-                    <small class="text-muted">
-                      Observação: só é permitido 1 checklist por dia para a mesma placa.
-                    </small>
+                    <small class="text-muted"
+                      >Observação: é permitido 1 checklist por dia para o mesmo veículo.</small
+                    >
                   </div>
                 </div>
 
@@ -268,18 +266,18 @@
 
                 <div class="row g-3 mb-4">
                   <div class="col-md-4">
-                    <label class="form-label">Nível de óleo</label>
+                    <label class="form-label">Nível de Óleo</label>
                     <select class="form-select" name="oleo" required>
-                      <option value="OK">OK Normal</option>
+                      <option value="OK">OK / Normal</option>
                       <option value="BAIXO">Baixo</option>
                       <option value="CRITICO">Crítico</option>
                     </select>
                   </div>
 
                   <div class="col-md-4">
-                    <label class="form-label">Nível de água</label>
+                    <label class="form-label">Nível de Água</label>
                     <select class="form-select" name="agua" required>
-                      <option value="OK">OK Normal</option>
+                      <option value="OK">OK / Normal</option>
                       <option value="BAIXO">Baixo</option>
                     </select>
                   </div>
@@ -288,7 +286,7 @@
                     <label class="form-label">Pneus</label>
                     <select class="form-select" name="pneus" required>
                       <option value="OK">Calibrados</option>
-                      <option value="NAO_OK">Baixos / Murchos</option>
+                      <option value="NAOOK">Baixos / Murchos</option>
                     </select>
                   </div>
 
@@ -321,15 +319,13 @@
                         class="form-check-label fw-bold"
                         for="latariaCheck"
                         style="cursor: pointer"
+                        >Há novas avarias na lataria?</label
                       >
-                        Há novas avarias na lataria?
-                      </label>
                     </div>
                   </div>
                 </div>
 
                 <h5 class="mb-3 text-primary border-bottom pb-2">Observações</h5>
-
                 <div class="mb-4">
                   <textarea
                     class="form-control"
@@ -340,8 +336,8 @@
                 </div>
 
                 <h5 class="mb-3 text-primary border-bottom pb-2">Fotos Obrigatórias</h5>
-                <p class="text-muted small">
-                  Tire fotos do painel (KM), combustível e de eventuais avarias.
+                <p class="text-muted">
+                  <small>Tire fotos do painel (KM), combustível e de eventuais avarias.</small>
                 </p>
 
                 <div class="upload-area">
@@ -391,8 +387,8 @@
             </div>
           </div>
 
-          <div class="text-center mt-3 text-muted small">
-            Linha Viva System
+          <div class="text-center mt-3 text-muted">
+            <small>Linha Viva System</small>
           </div>
         </div>
       </div>
@@ -407,11 +403,11 @@
       const cameraInput = document.getElementById("cameraInput");
       const previewContainer = document.getElementById("previewContainer");
 
-      const placaInput = document.getElementById("placa");
+      const veiculoSelect = document.getElementById("veiculoSelect");
       const statusChecklistEl = document.getElementById("statusChecklist");
       const btnSubmit = document.getElementById("btnSubmit");
 
-      let placaStatusCache = { placa: "", realizado: false, checkedAt: 0 };
+      const veiculoStatusCache = { veiculoId: null, realizado: false, checkedAt: 0 };
 
       function getAuthHeadersIfAny() {
         const token = localStorage.getItem("token");
@@ -419,23 +415,13 @@
         return { Authorization: `Bearer ${token}` };
       }
 
-      function normalizePlaca(value) {
-        return String(value || "")
-          .trim()
-          .toUpperCase()
-          .replace(/\s+/g, "")
-          .replace(/[^A-Z0-9-]/g, "");
-      }
-
       function setStatusMessage(type, text) {
         if (!statusChecklistEl) return;
-
         if (!text) {
           statusChecklistEl.className = "status-checklist";
           statusChecklistEl.textContent = "";
           return;
         }
-
         statusChecklistEl.className = `status-checklist ${type}`;
         statusChecklistEl.textContent = text;
       }
@@ -453,77 +439,153 @@
         };
       }
 
-      async function verificarChecklistDoDiaPorPlaca(placaRaw) {
-        const placa = normalizePlaca(placaRaw);
+      function parsePositiveInt(value) {
+        const n = Number(value);
+        if (!Number.isInteger(n) || n <= 0) return null;
+        return n;
+      }
 
-        if (!placa) {
-          placaStatusCache = { placa: "", realizado: false, checkedAt: 0 };
-          setStatusMessage("info", "");
-          setSubmitEnabled(true);
-          return { realizado: false };
-        }
-
-        const now = Date.now();
-        if (placaStatusCache.placa === placa && now - placaStatusCache.checkedAt < 15000) {
-          if (placaStatusCache.realizado) {
-            setStatusMessage(
-              "error",
-              "Checklist do dia já foi realizado para esta placa. Envio bloqueado."
-            );
-            setSubmitEnabled(false);
-          } else {
-            setStatusMessage("success", "Nenhum checklist do dia encontrado para esta placa.");
-            setSubmitEnabled(true);
-          }
-          return { realizado: placaStatusCache.realizado };
-        }
-
-        setStatusMessage("info", "Verificando checklist do dia para esta placa...");
-        setSubmitEnabled(false);
-
+      async function carregarVeiculos() {
         try {
-          const response = await fetch(
-            `/api/checklist_status?placa=${encodeURIComponent(placa)}`,
-            { headers: { ...getAuthHeadersIfAny() } }
-          );
+          veiculoSelect.innerHTML = '<option value="">Carregando veículos...</option>';
+          setSubmitEnabled(false);
+
+          const response = await fetch("/api/checklist/veiculos", {
+            headers: { ...getAuthHeadersIfAny() },
+          });
 
           const data = await response.json().catch(() => null);
 
           if (!response.ok) {
-            const msg = (data && data.message) ? data.message : `Erro HTTP: ${response.status}`;
+            const msg = data && data.message ? data.message : `Erro HTTP ${response.status}`;
+            throw new Error(msg);
+          }
+
+          const veiculos = Array.isArray(data) ? data : [];
+
+          const options = [
+            '<option value="">Selecione um veículo</option>',
+            ...veiculos.map((v) => {
+              const label = [v.modelo, v.placa].filter(Boolean).join(" - ");
+              return `<option value="${String(v.id)}">${label || "Veículo " + v.id}</option>`;
+            }),
+          ];
+
+          veiculoSelect.innerHTML = options.join("");
+
+          const url = new URL(window.location.href);
+          const veiculoIdQuery =
+            url.searchParams.get("veiculoId") ||
+            url.searchParams.get("veiculo_id") ||
+            url.searchParams.get("veiculo");
+
+          const parsedQueryId = parsePositiveInt(veiculoIdQuery);
+
+          if (parsedQueryId) {
+            veiculoSelect.value = String(parsedQueryId);
+            await verificarChecklistDoDiaPorVeiculoId(parsedQueryId);
+          } else {
+            setStatusMessage("info", "Selecione um veículo para consultar o status do checklist.");
+            setSubmitEnabled(true);
+          }
+        } catch (err) {
+          console.error(err);
+          veiculoSelect.innerHTML = '<option value="">Não foi possível carregar veículos</option>';
+          setStatusMessage(
+            "info",
+            "Não foi possível carregar a lista de veículos agora. Tente novamente."
+          );
+          setSubmitEnabled(true);
+        }
+      }
+
+      async function verificarChecklistDoDiaPorVeiculoId(veiculoIdRaw) {
+        const veiculoId = parsePositiveInt(veiculoIdRaw);
+
+        if (!veiculoId) {
+          veiculoStatusCache.veiculoId = null;
+          veiculoStatusCache.realizado = false;
+          veiculoStatusCache.checkedAt = 0;
+
+          setStatusMessage("info", "Selecione um veículo para consultar o status do checklist.");
+          setSubmitEnabled(true);
+
+          return { realizado: false };
+        }
+
+        const now = Date.now();
+        if (
+          veiculoStatusCache.veiculoId === veiculoId &&
+          now - veiculoStatusCache.checkedAt < 15000
+        ) {
+          if (veiculoStatusCache.realizado) {
+            setStatusMessage(
+              "error",
+              "Checklist do dia já foi realizado para este veículo. Envio bloqueado."
+            );
+            setSubmitEnabled(false);
+          } else {
+            setStatusMessage(
+              "success",
+              "Nenhum checklist do dia encontrado para este veículo. Você pode enviar."
+            );
+            setSubmitEnabled(true);
+          }
+          return { realizado: veiculoStatusCache.realizado };
+        }
+
+        setStatusMessage("info", "Verificando checklist do dia para este veículo...");
+        setSubmitEnabled(false);
+
+        try {
+          const response = await fetch(`/api/checklist/status?veiculoId=${encodeURIComponent(veiculoId)}`, {
+            headers: { ...getAuthHeadersIfAny() },
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const msg = data && data.message ? data.message : `Erro HTTP ${response.status}`;
             throw new Error(msg);
           }
 
           const realizado = !!(data && data.realizado);
 
-          placaStatusCache = { placa, realizado, checkedAt: Date.now() };
+          veiculoStatusCache.veiculoId = veiculoId;
+          veiculoStatusCache.realizado = realizado;
+          veiculoStatusCache.checkedAt = Date.now();
 
           if (realizado) {
             setStatusMessage(
               "error",
-              "Checklist do dia já foi realizado para esta placa. Envio bloqueado."
+              "Checklist do dia já foi realizado para este veículo. Envio bloqueado."
             );
             setSubmitEnabled(false);
           } else {
-            setStatusMessage("success", "Nenhum checklist do dia encontrado para esta placa.");
+            setStatusMessage(
+              "success",
+              "Nenhum checklist do dia encontrado para este veículo. Você pode enviar."
+            );
             setSubmitEnabled(true);
           }
 
-          return { realizado };
+          return { realizado, detalhes: data && data.detalhes ? data.detalhes : null };
         } catch (err) {
-          placaStatusCache = { placa, realizado: false, checkedAt: Date.now() };
+          console.error(err);
+
+          veiculoStatusCache.veiculoId = veiculoId;
+          veiculoStatusCache.realizado = false;
+          veiculoStatusCache.checkedAt = Date.now();
+
           setStatusMessage(
             "info",
             "Não foi possível validar agora. Você ainda pode tentar enviar; o servidor validará."
           );
           setSubmitEnabled(true);
+
           return { realizado: false, error: err.message };
         }
       }
-
-      const verificarDebounced = debounce(() => {
-        verificarChecklistDoDiaPorPlaca(placaInput ? placaInput.value : "");
-      }, 400);
 
       function handleFileSelect(event) {
         const files = Array.from(event.target.files || []);
@@ -538,6 +600,7 @@
 
       function renderPreview() {
         if (!previewContainer) return;
+
         previewContainer.innerHTML = "";
 
         selectedFiles.forEach((file, index) => {
@@ -574,73 +637,83 @@
         });
       }
 
-      if (placaInput) {
-        placaInput.addEventListener("input", verificarDebounced);
-        placaInput.addEventListener("blur", () =>
-          verificarChecklistDoDiaPorPlaca(placaInput.value)
-        );
+      const verificarDebounced = debounce(() => {
+        verificarChecklistDoDiaPorVeiculoId(veiculoSelect.value);
+      }, 350);
+
+      if (veiculoSelect) {
+        veiculoSelect.addEventListener("change", () => {
+          verificarChecklistDoDiaPorVeiculoId(veiculoSelect.value);
+        });
+
+        veiculoSelect.addEventListener("input", verificarDebounced);
       }
 
-      document
-        .getElementById("checklistForm")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
+      document.getElementById("checklistForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
 
-          const placaValue = placaInput ? placaInput.value : "";
-          const check = await verificarChecklistDoDiaPorPlaca(placaValue);
+        const veiculoId = parsePositiveInt(veiculoSelect.value);
 
-          if (check && check.realizado) {
-            alert("Checklist já realizado hoje para esta placa. Envio bloqueado.");
-            return;
-          }
+        if (!veiculoId) {
+          alert("Selecione um veículo.");
+          return;
+        }
 
-          if (selectedFiles.length === 0) {
-            alert("Por favor, adicione pelo menos uma foto (ex: Painel do veículo).");
-            return;
-          }
+        const check = await verificarChecklistDoDiaPorVeiculoId(veiculoId);
+        if (check && check.realizado) {
+          alert("Checklist já realizado hoje para este veículo. Envio bloqueado.");
+          return;
+        }
 
-          const btn = this.querySelector('button[type="submit"]');
-          const originalText = btn.innerHTML;
-          btn.disabled = true;
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+        if (selectedFiles.length === 0) {
+          alert("Por favor, adicione pelo menos uma foto (ex.: painel do veículo).");
+          return;
+        }
 
-          const formData = new FormData(this);
+        const btn = this.querySelector("button[type='submit']");
+        const originalText = btn.innerHTML;
 
-          selectedFiles.forEach((file) => {
-            formData.append("fotosveiculo", file);
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+
+        const formData = new FormData(this);
+        selectedFiles.forEach((file) => formData.append("fotosveiculo", file));
+
+        if (!formData.has("lataria")) {
+          formData.append("lataria", "0");
+        } else {
+          formData.set("lataria", "1");
+        }
+
+        try {
+          const response = await fetch("/api/checklist/salvar", {
+            method: "POST",
+            headers: { ...getAuthHeadersIfAny() },
+            body: formData,
           });
 
-          if (!formData.has("lataria")) {
-            formData.append("lataria", "0");
-          } else {
-            formData.set("lataria", "1");
+          const result = await response.json().catch(() => null);
+
+          if (response.ok) {
+            alert("Checklist enviado com sucesso!");
+            window.location.href = "dashboard";
+            return;
           }
 
-          try {
-            const response = await fetch("/api/checklist/salvar", {
-              method: "POST",
-              headers: { ...getAuthHeadersIfAny() },
-              body: formData,
-            });
+          const msg = result && result.message ? result.message : "Erro desconhecido";
+          alert(`Erro ao salvar: ${msg}`);
+        } catch (error) {
+          console.error(error);
+          alert("Erro de conexão ao salvar checklist.");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      });
 
-            const result = await response.json().catch(() => ({}));
-
-            if (response.ok) {
-              alert("Checklist enviado com sucesso!");
-              window.location.href = "/dashboard";
-              return;
-            }
-
-            const msg = result && result.message ? result.message : "Erro desconhecido";
-            alert("Erro ao salvar: " + msg);
-          } catch (error) {
-            console.error(error);
-            alert("Erro de conexão ao salvar checklist.");
-          } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-          }
-        });
+      document.addEventListener("DOMContentLoaded", () => {
+        carregarVeiculos();
+      });
     </script>
   </body>
 </html>
