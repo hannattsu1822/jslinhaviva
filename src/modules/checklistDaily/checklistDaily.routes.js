@@ -1,10 +1,13 @@
 const express = require("express");
+
 const router = express.Router();
+
 const { autenticar, verificarNivel } = require("../../auth");
+
 const { upload } = require("../../init");
+
 const checklistController = require("./checklistDaily.controller");
 
-// Rota para o usuário comum (Motorista)
 router.get(
   "/checklist-diario",
   autenticar,
@@ -19,25 +22,31 @@ router.get(
   checklistController.verificarStatus
 );
 
+router.get(
+  "/api/checklist_status",
+  autenticar,
+  verificarNivel(4),
+  checklistController.verificarStatus
+);
+
 router.post(
   "/api/checklist/salvar",
   autenticar,
   verificarNivel(4),
-  upload.array("fotos_veiculo", 10),
+  upload.fields([
+    { name: "fotos_veiculo", maxCount: 10 },
+    { name: "fotosveiculo", maxCount: 10 },
+  ]),
   checklistController.salvarChecklist
 );
 
-// --- ROTAS DE GESTÃO (Nível 5+) ---
-
-// Página HTML
 router.get(
   "/gestao/checklists",
   autenticar,
-  verificarNivel(5), // Nível de Gestor
+  verificarNivel(5),
   checklistController.renderizarPaginaGestao
 );
 
-// API para popular a tabela
 router.get(
   "/api/gestao/checklists",
   autenticar,
@@ -45,7 +54,6 @@ router.get(
   checklistController.listarGestaoAPI
 );
 
-// API para pegar as fotos de um checklist
 router.get(
   "/api/gestao/checklists/:id/fotos",
   autenticar,
@@ -53,8 +61,6 @@ router.get(
   checklistController.detalhesGestaoAPI
 );
 
-// API para excluir / reenviar
-// ALTERADO DE 10 PARA 5 PARA PERMITIR QUE O GESTOR EXCLUA/REENVIE
 router.delete(
   "/api/gestao/checklists/:id",
   autenticar,
