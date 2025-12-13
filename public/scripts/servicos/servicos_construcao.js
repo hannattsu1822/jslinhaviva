@@ -229,11 +229,17 @@ async function carregarServicos() {
     }
 
     const origem = "Construção";
-    const url = `/api/servicos/origem/${encodeURIComponent(origem)}`;
-    console.log(`[FRONTEND] Chamando URL: ${url}`);
+    const origemEncoded = encodeURIComponent(origem);
+    const url = `/api/servicos/origem/${origemEncoded}`;
+    
+    console.log(`[FRONTEND] String original: "${origem}"`);
+    console.log(`[FRONTEND] String encodada: "${origemEncoded}"`);
+    console.log(`[FRONTEND] URL final: ${url}`);
+    console.log(`[FRONTEND] Chamando fetch...`);
     
     const response = await fetch(url);
     console.log(`[FRONTEND] Status HTTP: ${response.status}`);
+    console.log(`[FRONTEND] Headers da resposta:`, response.headers);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -242,11 +248,17 @@ async function carregarServicos() {
     }
 
     const data = await response.json();
-    console.log(`[FRONTEND] Total de serviços recebidos: ${data.length}`);
-    console.log(`[FRONTEND] Dados:`, data);
+    console.log(`[FRONTEND] Resposta recebida - Total: ${data.length} serviços`);
+    
+    if (data.length > 0) {
+      console.log(`[FRONTEND] Primeiro serviço:`, data[0]);
+      console.log(`[FRONTEND] Último serviço:`, data[data.length - 1]);
+    }
     
     allServices = data;
     aplicarFiltros();
+    
+    console.log(`[FRONTEND] Após aplicar filtros: ${filteredServices.length} serviços`);
   } catch (error) {
     console.error("[FRONTEND] Erro ao carregar serviços:", error);
     const tbody = document.getElementById("tabela-servicos-construcao");
