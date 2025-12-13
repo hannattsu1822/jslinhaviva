@@ -16,6 +16,13 @@ router.get(
 );
 
 router.get(
+  "/api/checklist/veiculos",
+  autenticar,
+  verificarNivel(4),
+  checklistController.listarVeiculosAPI
+);
+
+router.get(
   "/api/checklist/status",
   autenticar,
   verificarNivel(4),

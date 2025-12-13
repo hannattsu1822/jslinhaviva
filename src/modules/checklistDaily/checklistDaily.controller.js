@@ -1,5 +1,20 @@
 const path = require("path");
+
 const checklistService = require("./checklistDaily.service");
+
+function getMatriculaFromRequest(req) {
+  if (req && req.user && req.user.matricula) return req.user.matricula;
+  if (req && req.session && req.session.user && req.session.user.matricula) {
+    return req.session.user.matricula;
+  }
+  return null;
+}
+
+function parsePositiveInt(value) {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
 
 async function renderizarPagina(req, res) {
   res.sendFile(
@@ -13,20 +28,43 @@ async function renderizarPaginaGestao(req, res) {
   );
 }
 
+async function listarVeiculosAPI(req, res) {
+  try {
+    const veiculos = await checklistService.listarVeiculosAtivos();
+    res.json(veiculos);
+  } catch (error) {
+    console.error("Erro ao listar veículos do checklist:", error);
+    res.status(500).json({ message: "Erro interno ao buscar veículos." });
+  }
+}
+
 async function verificarStatus(req, res) {
   try {
+    const veiculoIdRaw =
+      req.query.veiculoId || req.query.veiculo_id || req.query.veiculo;
+
     const placaRaw = (req.query.placa || "").toString().trim();
-    if (!placaRaw) {
-      return res
-        .status(400)
-        .json({ message: "Placa obrigatória para verificar o checklist diário." });
+
+    if (!veiculoIdRaw && !placaRaw) {
+      return res.status(400).json({
+        message: "Veículo obrigatório para verificar o checklist diário.",
+      });
     }
 
-    const placa = placaRaw.toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, "");
+    if (veiculoIdRaw) {
+      const veiculoId = parsePositiveInt(veiculoIdRaw);
+      if (!veiculoId) {
+        return res.status(400).json({ message: "ID do veículo inválido." });
+      }
 
-    const status = await checklistService.verificarStatusDiario(placa);
+      const status = await checklistService.verificarStatusDiarioPorVeiculoId(
+        veiculoId
+      );
+      return res.status(200).json(status);
+    }
 
-    res.status(200).json(status);
+    const status = await checklistService.verificarStatusDiario(placaRaw);
+    return res.status(200).json(status);
   } catch (error) {
     console.error("Erro ao verificar status do checklist:", error);
     res.status(500).json({ message: "Erro interno ao verificar checklist." });
@@ -35,19 +73,42 @@ async function verificarStatus(req, res) {
 
 async function salvarChecklist(req, res) {
   try {
-    const matricula = req.user.matricula;
+    const matricula = getMatriculaFromRequest(req);
     const dados = req.body || {};
     const arquivos = req.files;
 
-    if (!dados.placa || !dados.km) {
+    const veiculoIdRaw = dados.veiculo_id || dados.veiculoId || dados.veiculo;
+    const placaRaw = dados.placa;
+
+    if ((!veiculoIdRaw && !placaRaw) || !dados.km) {
       return res.status(400).json({ message: "Dados obrigatórios faltando." });
     }
 
-    const resultado = await checklistService.processarNovoChecklist(
-      matricula,
-      dados,
-      arquivos
-    );
+    if (!matricula) {
+      return res.status(401).json({ message: "Usuário não autenticado." });
+    }
+
+    let resultado;
+
+    if (veiculoIdRaw) {
+      const veiculoId = parsePositiveInt(veiculoIdRaw);
+      if (!veiculoId) {
+        return res.status(400).json({ message: "ID do veículo inválido." });
+      }
+
+      resultado = await checklistService.processarNovoChecklistPorVeiculoId(
+        matricula,
+        veiculoId,
+        dados,
+        arquivos
+      );
+    } else {
+      resultado = await checklistService.processarNovoChecklist(
+        matricula,
+        dados,
+        arquivos
+      );
+    }
 
     res.status(201).json({
       message: "Checklist salvo com sucesso!",
@@ -58,7 +119,6 @@ async function salvarChecklist(req, res) {
 
     const msg = (error && error.message) || "";
     const lower = msg.toLowerCase();
-
     const isDuplicidade =
       lower.includes("já existe checklist") ||
       lower.includes("ja existe checklist") ||
@@ -80,10 +140,10 @@ async function listarGestaoAPI(req, res) {
       dataInicio: req.query.dataInicio,
       dataFim: req.query.dataFim,
       placa: req.query.placa,
+      veiculoId: req.query.veiculoId || req.query.veiculo_id,
     };
 
     const lista = await checklistService.obterListaGestao(filtros);
-
     res.json(lista);
   } catch (error) {
     console.error("Erro ao listar checklists:", error);
@@ -116,6 +176,7 @@ async function excluirChecklistAPI(req, res) {
 module.exports = {
   renderizarPagina,
   renderizarPaginaGestao,
+  listarVeiculosAPI,
   verificarStatus,
   salvarChecklist,
   listarGestaoAPI,

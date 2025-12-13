@@ -1,13 +1,21 @@
 const fs = require("fs");
 const path = require("path");
 
+const { promisePool } = require("../../init");
 const { projectRootDir } = require("../../shared/path.helper");
+
 const checklistQuery = require("./checklistDaily.query");
 
 const UPLOAD_BASE_DIR = path.join(projectRootDir, "upload_checklist_diario_veiculos");
 
 if (!fs.existsSync(UPLOAD_BASE_DIR)) {
   fs.mkdirSync(UPLOAD_BASE_DIR, { recursive: true });
+}
+
+function parsePositiveInt(value) {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
 }
 
 function normalizePlaca(value) {
@@ -27,22 +35,18 @@ function normalizeEnumUpper(value) {
 
 function normalizePneus(value) {
   const v = normalizeEnumUpper(value);
-
   if (v === "OK") return "OK";
   if (v === "NAOOK") return "NAO_OK";
   if (v === "NAO_OK") return "NAO_OK";
   if (v === "NAO-OK") return "NAO_OK";
   if (v === "NÃO_OK") return "NAO_OK";
-
   return v || null;
 }
 
 function normalizeLataria(value) {
   if (value === undefined || value === null) return 0;
-
   const v = String(value).trim().toLowerCase();
   if (v === "1" || v === "true" || v === "on" || v === "sim") return 1;
-
   return 0;
 }
 
@@ -62,8 +66,30 @@ function flattenMulterFiles(files) {
   return [];
 }
 
+async function listarVeiculosAtivos() {
+  const [veiculos] = await promisePool.query(
+    "SELECT id, placa, modelo FROM veiculos_frota WHERE status = 'ATIVO' ORDER BY modelo, placa"
+  );
+  return veiculos;
+}
+
+async function obterVeiculoAtivoPorId(veiculoId) {
+  const [rows] = await promisePool.query(
+    "SELECT id, placa, modelo, status FROM veiculos_frota WHERE id = ? LIMIT 1",
+    [veiculoId]
+  );
+
+  if (rows.length === 0) return null;
+
+  const veiculo = rows[0];
+  if (String(veiculo.status || "").toUpperCase() !== "ATIVO") return null;
+
+  return veiculo;
+}
+
 async function verificarStatusDiario(placaRaw) {
   const placa = normalizePlaca(placaRaw);
+
   if (!placa) {
     throw new Error("Placa obrigatória para verificar status do checklist diário.");
   }
@@ -76,13 +102,31 @@ async function verificarStatusDiario(placaRaw) {
   };
 }
 
+async function verificarStatusDiarioPorVeiculoId(veiculoIdRaw) {
+  const veiculoId = parsePositiveInt(veiculoIdRaw);
+
+  if (!veiculoId) {
+    throw new Error("ID do veículo é obrigatório para verificar status do checklist diário.");
+  }
+
+  const registro = await checklistQuery.buscarChecklistDoDiaPorVeiculoId(veiculoId);
+
+  return {
+    realizado: !!registro,
+    detalhes: registro || null,
+  };
+}
+
 async function processarNovoChecklist(matricula, dados, arquivos) {
   const placa = normalizePlaca(dados && dados.placa);
+
   if (!placa) {
     throw new Error("Placa obrigatória.");
   }
 
-  const km = dados && dados.km !== undefined && dados.km !== null ? Number(dados.km) : NaN;
+  const km =
+    dados && dados.km !== undefined && dados.km !== null ? Number(dados.km) : NaN;
+
   if (!Number.isFinite(km) || km < 0) {
     throw new Error("Quilometragem inválida.");
   }
@@ -123,7 +167,82 @@ async function processarNovoChecklist(matricula, dados, arquivos) {
       )}${extensao}`;
 
       const caminhoFinal = path.join(pastaDestino, novoNomeArquivo);
+      fs.renameSync(arquivo.path, caminhoFinal);
 
+      const caminhoRelativo = `/upload_checklist_diario_veiculos/${checklistId}/${novoNomeArquivo}`;
+
+      await checklistQuery.salvarFoto(
+        checklistId,
+        caminhoRelativo,
+        arquivo.originalname || novoNomeArquivo,
+        arquivo.size || 0
+      );
+
+      fotosSalvas.push(caminhoRelativo);
+    }
+  }
+
+  return { success: true, id: checklistId, fotos: fotosSalvas };
+}
+
+async function processarNovoChecklistPorVeiculoId(matricula, veiculoIdRaw, dados, arquivos) {
+  const veiculoId = parsePositiveInt(veiculoIdRaw);
+
+  if (!veiculoId) {
+    throw new Error("ID do veículo inválido.");
+  }
+
+  const km =
+    dados && dados.km !== undefined && dados.km !== null ? Number(dados.km) : NaN;
+
+  if (!Number.isFinite(km) || km < 0) {
+    throw new Error("Quilometragem inválida.");
+  }
+
+  const veiculo = await obterVeiculoAtivoPorId(veiculoId);
+  if (!veiculo) {
+    throw new Error("Veículo não encontrado ou inativo.");
+  }
+
+  const placa = normalizePlaca(veiculo.placa);
+
+  const pneus = normalizePneus(dados && dados.pneus);
+
+  const jaExisteHoje = await checklistQuery.buscarChecklistDoDiaPorVeiculoId(veiculoId);
+  if (jaExisteHoje) {
+    throw new Error("Já existe checklist diário registrado hoje para este veículo.");
+  }
+
+  const checklistId = await checklistQuery.inserirChecklist({
+    matricula,
+    veiculo_id: veiculoId,
+    placa,
+    km,
+    oleo: dados.oleo,
+    agua: dados.agua,
+    pneus,
+    luzes: dados.luzes,
+    freios: dados.freios,
+    lataria: normalizeLataria(dados.lataria),
+    observacoes: dados.observacoes,
+  });
+
+  const fotosSalvas = [];
+  const arquivosArray = flattenMulterFiles(arquivos);
+
+  if (arquivosArray.length > 0) {
+    const pastaDestino = path.join(UPLOAD_BASE_DIR, String(checklistId));
+    if (!fs.existsSync(pastaDestino)) {
+      fs.mkdirSync(pastaDestino, { recursive: true });
+    }
+
+    for (const arquivo of arquivosArray) {
+      const extensao = path.extname(arquivo.originalname || "");
+      const novoNomeArquivo = `foto_${checklistId}_${Date.now()}_${Math.round(
+        Math.random() * 1e9
+      )}${extensao}`;
+
+      const caminhoFinal = path.join(pastaDestino, novoNomeArquivo);
       fs.renameSync(arquivo.path, caminhoFinal);
 
       const caminhoRelativo = `/upload_checklist_diario_veiculos/${checklistId}/${novoNomeArquivo}`;
@@ -162,8 +281,11 @@ async function removerChecklist(id) {
 }
 
 module.exports = {
+  listarVeiculosAtivos,
   verificarStatusDiario,
+  verificarStatusDiarioPorVeiculoId,
   processarNovoChecklist,
+  processarNovoChecklistPorVeiculoId,
   obterListaGestao,
   obterDetalhesCompletos,
   removerChecklist,
