@@ -146,6 +146,20 @@
               Principal</a
             >
           </li>
+          <li class="nav-item" id="sidebar-prv-link" style="display: none">
+            <a href="/prv" class="nav-link"
+              ><i class="fas fa-clipboard-list fa-fw me-2"></i>Roteiro de Viagem</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-checklist-link"
+            style="display: none"
+          >
+            <a href="/checklist-diario" class="nav-link"
+              ><i class="fas fa-clipboard-check fa-fw me-2"></i>Checklist Diário</a
+            >
+          </li>
           <li
             class="nav-item"
             id="sidebar-subestacoes-link"
@@ -257,64 +271,51 @@
                 <i class="fas fa-car me-2 text-primary"></i>Checklist Diário por Veículo
               </h5>
               <div class="checklist-status-hint">
-                Informe a placa para ver se o checklist do dia já foi realizado para o veículo.
+                Selecione o veículo para ver se o checklist do dia já foi realizado.
               </div>
             </div>
 
-            <div style="min-width: 240px; max-width: 320px; width: 100%;">
-              <label for="checklist-placa-input" class="form-label fw-bold mb-1"
-                >Placa</label
-              >
-              <input
-                id="checklist-placa-input"
-                type="text"
-                class="form-control"
-                placeholder="ABC-1234"
-                autocomplete="off"
-                style="text-transform: uppercase"
-              />
-              <div id="checklist-placa-status" class="checklist-status-inline info"></div>
+            <div style="min-width: 240px; max-width: 360px; width: 100%">
+              <label for="checklist-veiculo-select" class="form-label fw-bold mb-1">Veículo</label>
+              <select id="checklist-veiculo-select" class="form-select"></select>
+              <div id="checklist-veiculo-status" class="checklist-status-inline info"></div>
             </div>
           </div>
-        </div>
 
-        <div
-          id="checklist-status-badge"
-          class="checklist-badge align-items-center"
-        >
-          <i class="fas fa-check-circle fa-2x me-3"></i>
-          <div>
-            <h5 class="mb-0 fw-bold">Checklist Diário Realizado</h5>
-            <small id="checklist-details-text"
-              >Veículo verificado e registrado no sistema.</small
-            >
-          </div>
-        </div>
-
-        <div id="checklist-pending-alert" class="checklist-alert-pending">
-          <div class="d-flex align-items-center">
-            <div class="icon-box">
-              <i class="fas fa-exclamation-triangle"></i>
-            </div>
+          <div id="checklist-status-badge" class="checklist-badge align-items-center">
+            <i class="fas fa-check-circle fa-2x me-3"></i>
             <div>
-              <h4 class="mb-1 fw-bold text-dark">Checklist Pendente</h4>
-              <p class="mb-0 text-dark">
-                O checklist do dia ainda não foi registrado para este veículo.
-              </p>
+              <h5 class="mb-0 fw-bold">Checklist Diário Realizado</h5>
+              <small id="checklist-details-text">Veículo verificado e registrado no sistema.</small>
             </div>
           </div>
-          <a
-            id="checklist-cta-link"
-            href="/checklist-diario"
-            class="btn btn-warning fw-bold text-dark px-4 shadow-sm"
-          >
-            <i class="fas fa-clipboard-check me-2"></i>Realizar Agora
-          </a>
+
+          <div id="checklist-pending-alert" class="checklist-alert-pending">
+            <div class="d-flex align-items-center">
+              <div class="icon-box">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div>
+                <h4 class="mb-1 fw-bold text-dark">Checklist Pendente</h4>
+                <p class="mb-0 text-dark">
+                  O checklist do dia ainda não foi registrado para este veículo.
+                </p>
+              </div>
+            </div>
+            <a
+              id="checklist-cta-link"
+              href="/checklist-diario"
+              class="btn btn-warning fw-bold text-dark px-4 shadow-sm"
+            >
+              <i class="fas fa-clipboard-check me-2"></i>Realizar Agora
+            </a>
+          </div>
         </div>
 
         <h1 class="page-title mb-4">
           <i class="fas fa-tachometer-alt me-3"></i>Painel de Controle Principal
         </h1>
+
         <div class="row g-4">
           <div
             id="card-subestacoes"
@@ -336,6 +337,7 @@
               </div></a
             >
           </div>
+
           <div
             id="card-transformadores"
             class="col-md-6 col-lg-3"
@@ -356,6 +358,7 @@
               </div></a
             >
           </div>
+
           <div id="card-frota" class="col-md-6 col-lg-3" style="display: none">
             <a href="/frota" class="card-link"
               ><div class="card glass-card h-100">
@@ -372,6 +375,7 @@
               </div></a
             >
           </div>
+
           <div
             id="card-gestao-servicos"
             class="col-md-6 col-lg-3"
@@ -392,6 +396,7 @@
               </div></a
             >
           </div>
+
           <div
             id="card-gestao-turmas"
             class="col-md-6 col-lg-3"
@@ -412,6 +417,7 @@
               </div></a
             >
           </div>
+
           <div
             id="card-fibra-optica"
             class="col-md-6 col-lg-3"
@@ -435,6 +441,7 @@
               </div></a
             >
           </div>
+
           <div
             id="card-inspecoes-redes"
             class="col-md-6 col-lg-3"
@@ -458,6 +465,7 @@
               </div></a
             >
           </div>
+
           <div
             id="card-avulsos"
             class="col-md-6 col-lg-3"
@@ -481,6 +489,7 @@
               </div></a
             >
           </div>
+
           <div
             id="card-monitoramento"
             class="col-md-6 col-lg-3"
@@ -504,6 +513,7 @@
               </div></a
             >
           </div>
+
           <div id="prv-card" class="col-md-6 col-lg-3" style="display: none">
             <a href="/prv" class="card-link"
               ><div class="card glass-card h-100">
@@ -523,6 +533,7 @@
               </div></a
             >
           </div>
+
           <div id="gestao-card" class="col-md-6 col-lg-3" style="display: none">
             <a href="/dashboard-gestor" class="card-link"
               ><div class="card glass-card h-100">
@@ -539,6 +550,7 @@
               </div></a
             >
           </div>
+
           <div
             id="auditoria-card"
             class="col-md-6 col-lg-3"
@@ -560,6 +572,7 @@
             >
           </div>
         </div>
+
         <div class="row mt-4">
           <div class="col-12">
             <div class="card dashboard-calendar-card">
@@ -613,6 +626,7 @@
         </div>
       </div>
     </div>
+
     <div
       id="development-modal"
       class="modal fade"
@@ -661,6 +675,8 @@
             if (!user) return;
 
             const userLevel = user.nivel || 0;
+            const userCargo = String(user.cargo || "").trim().toLowerCase();
+            const isMotorista = userCargo === "motorista";
 
             const cardPermissions = {
               "card-subestacoes": 3,
@@ -677,6 +693,63 @@
               "auditoria-card": 10,
             };
 
+            const sidebarItemIds = [
+              "sidebar-subestacoes-link",
+              "sidebar-transformadores-link",
+              "sidebar-frota-link",
+              "sidebar-gestao-servicos-link",
+              "sidebar-gestao-turmas-link",
+              "sidebar-fibra-optica-link",
+              "sidebar-inspecoes-redes-link",
+              "sidebar-avulsos-link",
+              "sidebar-monitoramento-link",
+              "sidebar-gestao-link",
+              "sidebar-auditoria-link",
+              "sidebar-prv-link",
+              "sidebar-checklist-link",
+            ];
+
+            const hideElement = (id) => {
+              const el = document.getElementById(id);
+              if (el) el.style.display = "none";
+            };
+
+            const showElement = (id, display = "block") => {
+              const el = document.getElementById(id);
+              if (el) el.style.display = display;
+            };
+
+            const hideDashboardNavItem = () => {
+              const dashboardNavItem = document.querySelector(
+                '.sidebar-nav .nav-list .nav-item a[href="/dashboard"]'
+              );
+              if (dashboardNavItem && dashboardNavItem.closest("li")) {
+                dashboardNavItem.closest("li").style.display = "none";
+              }
+            };
+
+            if (isMotorista) {
+              Object.keys(cardPermissions).forEach((id) => hideElement(id));
+              showElement("prv-card", "block");
+
+              const calendarCard = document.querySelector(".dashboard-calendar-card");
+              if (calendarCard) calendarCard.style.display = "none";
+
+              if (typeof initChecklistDiarioPorVeiculo === "function") {
+                initChecklistDiarioPorVeiculo();
+              }
+
+              const checklistCard = document.getElementById("checklist-placa-card");
+              if (checklistCard) checklistCard.style.display = "block";
+
+              sidebarItemIds.forEach((id) => hideElement(id));
+              showElement("sidebar-prv-link", "block");
+              showElement("sidebar-checklist-link", "block");
+              hideDashboardNavItem();
+
+              return;
+            }
+
             for (const cardId in cardPermissions) {
               const requiredLevel = cardPermissions[cardId];
               const cardElement = document.getElementById(cardId);
@@ -685,8 +758,18 @@
               }
             }
 
+            const prvSidebar = document.getElementById("sidebar-prv-link");
+            if (prvSidebar && userLevel >= 3) {
+              prvSidebar.style.display = "block";
+            }
+
+            const checklistSidebar = document.getElementById("sidebar-checklist-link");
+            if (checklistSidebar && userLevel >= 4) {
+              checklistSidebar.style.display = "block";
+            }
+
             if (userLevel >= 4) {
-              initChecklistDiarioPorPlaca();
+              initChecklistDiarioPorVeiculo();
             }
           })
           .catch((error) => {
@@ -694,14 +777,6 @@
             window.location.href = "/login";
           });
       });
-
-      function normalizePlaca(value) {
-        return String(value || "")
-          .trim()
-          .toUpperCase()
-          .replace(/\s+/g, "")
-          .replace(/[^A-Z0-9-]/g, "");
-      }
 
       function debounce(fn, wait) {
         let t = null;
@@ -711,16 +786,20 @@
         };
       }
 
-      function setInlineStatus(type, text) {
-        const el = document.getElementById("checklist-placa-status");
-        if (!el) return;
+      function parsePositiveInt(value) {
+        const n = Number(value);
+        if (!Number.isInteger(n) || n <= 0) return null;
+        return n;
+      }
 
+      function setInlineStatus(type, text) {
+        const el = document.getElementById("checklist-veiculo-status");
+        if (!el) return;
         if (!text) {
           el.className = "checklist-status-inline";
           el.textContent = "";
           return;
         }
-
         el.className = `checklist-status-inline ${type}`;
         el.textContent = text;
       }
@@ -733,15 +812,21 @@
         if (badgeSuccess) badgeSuccess.style.display = "flex";
         if (alertPending) alertPending.style.setProperty("display", "none", "important");
 
-        if (detailsText) {
-          if (detalhes && detalhes.placa_veiculo && detalhes.hora_registro) {
-            detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje às ${detalhes.hora_registro}.`;
-          } else if (detalhes && detalhes.placa_veiculo) {
-            detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje.`;
-          } else {
-            detailsText.textContent = "Veículo verificado e registrado no sistema.";
-          }
+        if (!detailsText) return;
+
+        if (detalhes && detalhes.placa_veiculo && detalhes.hora_registro) {
+          detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje às ${String(
+            detalhes.hora_registro
+          ).substring(0, 5)}.`;
+          return;
         }
+
+        if (detalhes && detalhes.placa_veiculo) {
+          detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje.`;
+          return;
+        }
+
+        detailsText.textContent = "Veículo verificado e registrado no sistema.";
       }
 
       function showPendente() {
@@ -760,83 +845,124 @@
         if (alertPending) alertPending.style.setProperty("display", "none", "important");
       }
 
-      function updateCtaLinkWithPlaca(placa) {
+      function updateCtaLinkWithVeiculoId(veiculoIdRaw) {
         const cta = document.getElementById("checklist-cta-link");
+        const veiculoId = parsePositiveInt(veiculoIdRaw);
+
         if (!cta) return;
 
-        const normalized = normalizePlaca(placa);
-        if (!normalized) {
+        if (!veiculoId) {
           cta.setAttribute("href", "/checklist-diario");
           return;
         }
 
-        cta.setAttribute("href", `/checklist-diario?placa=${encodeURIComponent(normalized)}`);
+        cta.setAttribute("href", `/checklist-diario?veiculoId=${encodeURIComponent(veiculoId)}`);
       }
 
-      async function verificarChecklistDiarioPorPlaca(placaRaw) {
-        const placa = normalizePlaca(placaRaw);
+      async function carregarVeiculosChecklist() {
+        const select = document.getElementById("checklist-veiculo-select");
+        if (!select) return [];
 
-        if (!placa) {
-          setInlineStatus("info", "Informe a placa para consultar o status do checklist do dia.");
-          hideStatusBlocks();
-          updateCtaLinkWithPlaca("");
-          return;
-        }
-
-        setInlineStatus("info", "Verificando checklist do dia para esta placa...");
-        updateCtaLinkWithPlaca(placa);
+        select.innerHTML = '<option value="">Carregando veículos...</option>';
 
         try {
-          const response = await fetch(
-            `/api/checklist_status?placa=${encodeURIComponent(placa)}`
-          );
-
+          const response = await fetch("/api/checklist/veiculos");
           const data = await response.json().catch(() => null);
 
           if (!response.ok) {
-            const msg = (data && data.message) ? data.message : `Erro HTTP: ${response.status}`;
+            const msg = data && data.message ? data.message : `Erro HTTP ${response.status}`;
+            throw new Error(msg);
+          }
+
+          const veiculos = Array.isArray(data) ? data : [];
+
+          const options = [
+            '<option value="">Selecione um veículo</option>',
+            ...veiculos.map((v) => {
+              const label = [v.modelo, v.placa].filter(Boolean).join(" - ");
+              return `<option value="${String(v.id)}">${label || "Veículo " + v.id}</option>`;
+            }),
+          ];
+
+          select.innerHTML = options.join("");
+          return veiculos;
+        } catch (error) {
+          console.error("Erro ao carregar veículos do checklist:", error);
+          select.innerHTML = '<option value="">Não foi possível carregar</option>';
+          return [];
+        }
+      }
+
+      async function verificarChecklistDiarioPorVeiculoId(veiculoIdRaw) {
+        const veiculoId = parsePositiveInt(veiculoIdRaw);
+
+        if (!veiculoId) {
+          setInlineStatus(
+            "info",
+            "Selecione um veículo para consultar o status do checklist do dia."
+          );
+          hideStatusBlocks();
+          updateCtaLinkWithVeiculoId(null);
+          return;
+        }
+
+        setInlineStatus("info", "Verificando checklist do dia para este veículo...");
+        updateCtaLinkWithVeiculoId(veiculoId);
+
+        try {
+          const response = await fetch(
+            `/api/checklist/status?veiculoId=${encodeURIComponent(veiculoId)}`
+          );
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const msg = data && data.message ? data.message : `Erro HTTP ${response.status}`;
             throw new Error(msg);
           }
 
           if (data && data.realizado) {
-            setInlineStatus("success", "Checklist do dia já foi realizado para esta placa.");
+            setInlineStatus("success", "Checklist do dia já foi realizado para este veículo.");
             showBadgeRealizado(data.detalhes);
-          } else {
-            setInlineStatus("error", "Checklist do dia ainda não foi realizado para esta placa.");
-            showPendente();
+            return;
           }
+
+          setInlineStatus("error", "Checklist do dia ainda não foi realizado para este veículo.");
+          showPendente();
         } catch (error) {
           console.error("Erro ao verificar checklist:", error);
-          setInlineStatus(
-            "info",
-            "Não foi possível consultar agora. Tente novamente em instantes."
-          );
+          setInlineStatus("info", "Não foi possível consultar agora. Tente novamente em instantes.");
           hideStatusBlocks();
         }
       }
 
-      function initChecklistDiarioPorPlaca() {
+      async function initChecklistDiarioPorVeiculo() {
         const card = document.getElementById("checklist-placa-card");
-        const input = document.getElementById("checklist-placa-input");
+        const select = document.getElementById("checklist-veiculo-select");
 
         if (card) card.style.display = "block";
+        if (!select) return;
 
-        if (!input) return;
+        await carregarVeiculosChecklist();
 
         const url = new URL(window.location.href);
-        const placaQuery = url.searchParams.get("placa");
-        if (placaQuery) {
-          input.value = normalizePlaca(placaQuery);
+        const veiculoIdQuery =
+          url.searchParams.get("veiculoId") ||
+          url.searchParams.get("veiculo_id") ||
+          url.searchParams.get("veiculo");
+
+        const parsedId = parsePositiveInt(veiculoIdQuery);
+        if (parsedId) {
+          select.value = String(parsedId);
         }
 
         const verificarDebounced = debounce(() => {
-          verificarChecklistDiarioPorPlaca(input.value);
+          verificarChecklistDiarioPorVeiculoId(select.value);
         }, 400);
 
-        input.addEventListener("input", verificarDebounced);
-        input.addEventListener("blur", () => verificarChecklistDiarioPorPlaca(input.value));
+        select.addEventListener("change", verificarDebounced);
+        select.addEventListener("blur", () => verificarChecklistDiarioPorVeiculoId(select.value));
 
-        verificarChecklistDiarioPorPlaca(input.value);
+        verificarChecklistDiarioPorVeiculoId(select.value);
       }
     </script>
   </body>
