@@ -228,16 +228,27 @@ async function carregarServicos() {
       `;
     }
 
-    const response = await fetch("/api/servicos/origem/Construção");
+    const origem = "Construção";
+    const url = `/api/servicos/origem/${encodeURIComponent(origem)}`;
+    console.log(`[FRONTEND] Chamando URL: ${url}`);
+    
+    const response = await fetch(url);
+    console.log(`[FRONTEND] Status HTTP: ${response.status}`);
+    
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[FRONTEND] Erro na resposta:`, errorText);
       throw new Error(`Erro HTTP: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log(`[FRONTEND] Total de serviços recebidos: ${data.length}`);
+    console.log(`[FRONTEND] Dados:`, data);
+    
     allServices = data;
     aplicarFiltros();
   } catch (error) {
-    console.error("Erro ao carregar serviços:", error);
+    console.error("[FRONTEND] Erro ao carregar serviços:", error);
     const tbody = document.getElementById("tabela-servicos-construcao");
     if (tbody) {
       tbody.innerHTML = `
