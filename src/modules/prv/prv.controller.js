@@ -13,14 +13,34 @@ async function listarVeiculos(req, res) {
 
 async function obterUltimoKm(req, res) {
   try {
-    const ultimoKm = await service.obterUltimoKm(req.query.veiculoId);
-    res.json({ ultimoKm });
+    const raw = await service.obterUltimoKm(req.query.veiculoId);
+
+    // Normaliza qualquer formato inesperado para número (ou null)
+    let km = raw;
+
+    if (km && typeof km === "object") {
+      km =
+        km.chegadakm ??
+        km.ultimoKm ??
+        km.ultimo_km ??
+        km.km ??
+        km.value ??
+        null;
+    }
+
+    if (km === "" || km === undefined) km = null;
+
+    km = km === null ? null : Number(km);
+    if (km !== null && !Number.isFinite(km)) km = null;
+
+    return res.status(200).json(km);
   } catch (error) {
-    console.error("Erro ao buscar último KM:", error);
+    console.error("Erro ao buscar último KM", error);
     const statusCode = error.message.includes("obrigatório") ? 400 : 500;
-    res.status(statusCode).json({ message: error.message });
+    return res.status(statusCode).json({ message: error.message });
   }
 }
+
 
 async function obterStatusViagem(req, res) {
   try {
