@@ -40,7 +40,16 @@ function getStatusHtml(service) {
 }
 
 function aplicarOrdenacao() {
-  const ordenacao = document.getElementById("ordenar-por").value;
+  const selectOrdenacao = document.getElementById("ordenar-por");
+  
+  // Proteção caso o HTML não tenha sido atualizado
+  if (!selectOrdenacao) {
+    console.error("[ERRO] Elemento 'ordenar-por' não encontrado! Atualize o arquivo HTML.");
+    return;
+  }
+
+  const ordenacao = selectOrdenacao.value;
+  console.log(`[JS] Ordenando por: ${ordenacao}`);
 
   filteredServices.sort((a, b) => {
     switch (ordenacao) {
@@ -49,11 +58,13 @@ function aplicarOrdenacao() {
       case "id_desc":
         return b.id - a.id;
       case "data_asc":
+        // Sem data vai para o final
         if (!a.data_conclusao && !b.data_conclusao) return 0;
         if (!a.data_conclusao) return 1;
         if (!b.data_conclusao) return -1;
         return new Date(a.data_conclusao) - new Date(b.data_conclusao);
       case "data_desc":
+        // Sem data vai para o final
         if (!a.data_conclusao && !b.data_conclusao) return 0;
         if (!a.data_conclusao) return 1;
         if (!b.data_conclusao) return -1;
@@ -65,9 +76,13 @@ function aplicarOrdenacao() {
 }
 
 function aplicarFiltros() {
-  const filtroProcesso = document.getElementById("filtro-processo").value.toLowerCase();
-  const filtroStatus = document.getElementById("filtro-status").value;
-  const filtroData = document.getElementById("filtro-data").value;
+  const elProcesso = document.getElementById("filtro-processo");
+  const elStatus = document.getElementById("filtro-status");
+  const elData = document.getElementById("filtro-data");
+
+  const filtroProcesso = elProcesso ? elProcesso.value.toLowerCase() : "";
+  const filtroStatus = elStatus ? elStatus.value : "";
+  const filtroData = elData ? elData.value : "";
 
   filteredServices = allServices.filter((service) => {
     const matchProcesso =
@@ -96,7 +111,7 @@ function aplicarFiltros() {
   });
 
   aplicarOrdenacao();
-  currentPage = 1;
+  currentPage = 1; // Reseta para a página 1 ao filtrar/ordenar
   renderTable();
 }
 
@@ -119,9 +134,8 @@ function renderTable() {
   }
 
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
-  if (currentPage > totalPages) {
-    currentPage = totalPages;
-  }
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -232,33 +246,21 @@ async function carregarServicos() {
     const origemEncoded = encodeURIComponent(origem);
     const url = `/api/servicos/origem/${origemEncoded}`;
     
-    console.log(`[FRONTEND] String original: "${origem}"`);
-    console.log(`[FRONTEND] String encodada: "${origemEncoded}"`);
-    console.log(`[FRONTEND] URL final: ${url}`);
-    console.log(`[FRONTEND] Chamando fetch...`);
+    console.log(`[FRONTEND] Buscando serviços: ${url}`);
     
     const response = await fetch(url);
-    console.log(`[FRONTEND] Status HTTP: ${response.status}`);
-    console.log(`[FRONTEND] Headers da resposta:`, response.headers);
-    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[FRONTEND] Erro na resposta:`, errorText);
       throw new Error(`Erro HTTP: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log(`[FRONTEND] Resposta recebida - Total: ${data.length} serviços`);
-    
-    if (data.length > 0) {
-      console.log(`[FRONTEND] Primeiro serviço:`, data[0]);
-      console.log(`[FRONTEND] Último serviço:`, data[data.length - 1]);
-    }
+    console.log(`[FRONTEND] Serviços carregados: ${data.length}`);
     
     allServices = data;
-    aplicarFiltros();
+    // Forçar cópia inicial para filteredServices
+    filteredServices = [...allServices];
     
-    console.log(`[FRONTEND] Após aplicar filtros: ${filteredServices.length} serviços`);
+    aplicarFiltros();
   } catch (error) {
     console.error("[FRONTEND] Erro ao carregar serviços:", error);
     const tbody = document.getElementById("tabela-servicos-construcao");
@@ -301,8 +303,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (ordenarPor) {
     ordenarPor.addEventListener("change", () => {
-      aplicarOrdenacao();
-      renderTable();
+      console.log("[EVENT] Mudança na ordenação detectada");
+      aplicarFiltros(); // Usa aplicarFiltros que já chama aplicarOrdenacao
     });
   }
 
