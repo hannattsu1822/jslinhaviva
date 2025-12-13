@@ -62,6 +62,22 @@
         display: block;
         margin-top: 2px;
       }
+      .pagination-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .pagination-info {
+        font-size: 0.9rem;
+        color: #6c757d;
+      }
+      .pagination-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
     </style>
   </head>
   <body>
@@ -149,7 +165,7 @@
         <div class="card glass-card mb-4">
           <div class="card-body">
             <div class="row g-3">
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label for="filtro-processo" class="form-label"
                   >Filtrar por ID ou Processo</label
                 >
@@ -160,7 +176,7 @@
                   placeholder="Digite para buscar..."
                 />
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label for="filtro-status" class="form-label"
                   >Filtrar por Status</label
                 >
@@ -171,11 +187,22 @@
                   <option value="nao_concluido">Não Concluído</option>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label for="filtro-data" class="form-label"
                   >Filtrar por Data de Finalização</label
                 >
                 <input type="date" class="form-control" id="filtro-data" />
+              </div>
+              <div class="col-md-3">
+                <label for="ordenar-por" class="form-label"
+                  >Ordenar por</label
+                >
+                <select class="form-select" id="ordenar-por">
+                  <option value="id_desc">ID (Mais recente)</option>
+                  <option value="id_asc">ID (Mais antigo)</option>
+                  <option value="data_desc">Data (Mais recente)</option>
+                  <option value="data_asc">Data (Mais antiga)</option>
+                </select>
               </div>
             </div>
           </div>
@@ -183,6 +210,10 @@
 
         <div class="card glass-card">
           <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">Lista de Serviços</h5>
+              <span class="badge bg-primary" id="contador-servicos">0 serviços</span>
+            </div>
             <div class="table-responsive">
               <table class="table table-hover align-middle">
                 <thead>
@@ -205,12 +236,29 @@
                 </tbody>
               </table>
             </div>
+            <div class="pagination-controls">
+              <div class="pagination-info">
+                <span id="info-paginacao">Página 1 de 1</span>
+              </div>
+              <div class="pagination-buttons">
+                <button class="btn btn-sm btn-outline-primary" id="btn-primeira-pagina">
+                  <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" id="btn-pagina-anterior">
+                  <i class="fas fa-angle-left"></i> Anterior
+                </button>
+                <button class="btn btn-sm btn-outline-primary" id="btn-proxima-pagina">
+                  Próxima <i class="fas fa-angle-right"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" id="btn-ultima-pagina">
+                  <i class="fas fa-angle-double-right"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <div class="main-content-overlay"></div>
 
     <div
       id="access-denied-modal"
@@ -222,10 +270,10 @@
         <div class="modal-content">
           <div class="modal-body text-center p-4">
             <i
-              class="fas fa-exclamation-circle text-danger mb-3"
+              class="fas fa-lock text-danger mb-3"
               style="font-size: 3rem"
             ></i>
-            <h4 class="mb-3">Acesso negado!</h4>
+            <h4 class="mb-3">Acesso Negado!</h4>
             <p>Você não tem permissão para acessar este recurso.</p>
             <button
               type="button"
@@ -238,6 +286,7 @@
         </div>
       </div>
     </div>
+
     <div
       id="development-modal"
       class="modal fade"
