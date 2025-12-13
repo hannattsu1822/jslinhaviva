@@ -39,6 +39,31 @@ function getStatusHtml(service) {
   }
 }
 
+function aplicarOrdenacao() {
+  const ordenacao = document.getElementById("ordenar-por").value;
+
+  filteredServices.sort((a, b) => {
+    switch (ordenacao) {
+      case "id_asc":
+        return a.id - b.id;
+      case "id_desc":
+        return b.id - a.id;
+      case "data_asc":
+        if (!a.data_conclusao && !b.data_conclusao) return 0;
+        if (!a.data_conclusao) return 1;
+        if (!b.data_conclusao) return -1;
+        return new Date(a.data_conclusao) - new Date(b.data_conclusao);
+      case "data_desc":
+        if (!a.data_conclusao && !b.data_conclusao) return 0;
+        if (!a.data_conclusao) return 1;
+        if (!b.data_conclusao) return -1;
+        return new Date(b.data_conclusao) - new Date(a.data_conclusao);
+      default:
+        return b.id - a.id;
+    }
+  });
+}
+
 function aplicarFiltros() {
   const filtroProcesso = document.getElementById("filtro-processo").value.toLowerCase();
   const filtroStatus = document.getElementById("filtro-status").value;
@@ -73,29 +98,6 @@ function aplicarFiltros() {
   aplicarOrdenacao();
   currentPage = 1;
   renderTable();
-}
-
-function aplicarOrdenacao() {
-  const ordenacao = document.getElementById("ordenar-por").value;
-
-  filteredServices.sort((a, b) => {
-    switch (ordenacao) {
-      case "id_asc":
-        return a.id - b.id;
-      case "id_desc":
-        return b.id - a.id;
-      case "data_asc":
-        const dataA = a.data_conclusao ? new Date(a.data_conclusao) : new Date(0);
-        const dataB = b.data_conclusao ? new Date(b.data_conclusao) : new Date(0);
-        return dataA - dataB;
-      case "data_desc":
-        const dataDescA = a.data_conclusao ? new Date(a.data_conclusao) : new Date(0);
-        const dataDescB = b.data_conclusao ? new Date(b.data_conclusao) : new Date(0);
-        return dataDescB - dataDescA;
-      default:
-        return b.id - a.id;
-    }
-  });
 }
 
 function renderTable() {
