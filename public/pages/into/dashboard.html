@@ -67,6 +67,44 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
       }
+      .checklist-placa-card {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 16px;
+        backdrop-filter: blur(6px);
+      }
+      .checklist-status-hint {
+        font-size: 0.9rem;
+        color: #6c757d;
+      }
+      .checklist-status-inline {
+        display: none;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        font-size: 0.95rem;
+      }
+      .checklist-status-inline.info {
+        display: block;
+        background: #e7f1ff;
+        border-color: #b6d4fe;
+        color: #084298;
+      }
+      .checklist-status-inline.success {
+        display: block;
+        background: #d1e7dd;
+        border-color: #badbcc;
+        color: #0f5132;
+      }
+      .checklist-status-inline.error {
+        display: block;
+        background: #f8d7da;
+        border-color: #f5c2c7;
+        color: #842029;
+      }
     </style>
   </head>
 
@@ -209,6 +247,38 @@
     <div class="main-content">
       <div class="container py-4">
         <div
+          id="checklist-placa-card"
+          class="checklist-placa-card"
+          style="display: none"
+        >
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+              <h5 class="mb-1 fw-bold text-dark">
+                <i class="fas fa-car me-2 text-primary"></i>Checklist Diário por Veículo
+              </h5>
+              <div class="checklist-status-hint">
+                Informe a placa para ver se o checklist do dia já foi realizado para o veículo.
+              </div>
+            </div>
+
+            <div style="min-width: 240px; max-width: 320px; width: 100%;">
+              <label for="checklist-placa-input" class="form-label fw-bold mb-1"
+                >Placa</label
+              >
+              <input
+                id="checklist-placa-input"
+                type="text"
+                class="form-control"
+                placeholder="ABC-1234"
+                autocomplete="off"
+                style="text-transform: uppercase"
+              />
+              <div id="checklist-placa-status" class="checklist-status-inline info"></div>
+            </div>
+          </div>
+        </div>
+
+        <div
           id="checklist-status-badge"
           class="checklist-badge align-items-center"
         >
@@ -229,11 +299,12 @@
             <div>
               <h4 class="mb-1 fw-bold text-dark">Checklist Pendente</h4>
               <p class="mb-0 text-dark">
-                Você ainda não realizou a inspeção veicular de hoje.
+                O checklist do dia ainda não foi registrado para este veículo.
               </p>
             </div>
           </div>
           <a
+            id="checklist-cta-link"
             href="/checklist-diario"
             class="btn btn-warning fw-bold text-dark px-4 shadow-sm"
           >
@@ -588,6 +659,7 @@
           })
           .then((user) => {
             if (!user) return;
+
             const userLevel = user.nivel || 0;
 
             const cardPermissions = {
@@ -614,7 +686,7 @@
             }
 
             if (userLevel >= 4) {
-              verificarChecklistDiario();
+              initChecklistDiarioPorPlaca();
             }
           })
           .catch((error) => {
@@ -623,34 +695,148 @@
           });
       });
 
-      async function verificarChecklistDiario() {
-        try {
-          const response = await fetch("/api/checklist/status");
-          if (response.ok) {
-            const data = await response.json();
-            const badgeSuccess = document.getElementById(
-              "checklist-status-badge"
-            );
-            const alertPending = document.getElementById(
-              "checklist-pending-alert"
-            );
+      function normalizePlaca(value) {
+        return String(value || "")
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, "")
+          .replace(/[^A-Z0-9-]/g, "");
+      }
 
-            if (data.realizado) {
-              badgeSuccess.style.display = "flex";
-              alertPending.style.setProperty("display", "none", "important");
-              if (data.detalhes && data.detalhes.placa_veiculo) {
-                document.getElementById(
-                  "checklist-details-text"
-                ).textContent = `Veículo ${data.detalhes.placa_veiculo} verificado hoje às ${data.detalhes.hora_registro}.`;
-              }
-            } else {
-              badgeSuccess.style.display = "none";
-              alertPending.style.setProperty("display", "flex", "important");
-            }
+      function debounce(fn, wait) {
+        let t = null;
+        return function (...args) {
+          clearTimeout(t);
+          t = setTimeout(() => fn.apply(this, args), wait);
+        };
+      }
+
+      function setInlineStatus(type, text) {
+        const el = document.getElementById("checklist-placa-status");
+        if (!el) return;
+
+        if (!text) {
+          el.className = "checklist-status-inline";
+          el.textContent = "";
+          return;
+        }
+
+        el.className = `checklist-status-inline ${type}`;
+        el.textContent = text;
+      }
+
+      function showBadgeRealizado(detalhes) {
+        const badgeSuccess = document.getElementById("checklist-status-badge");
+        const alertPending = document.getElementById("checklist-pending-alert");
+        const detailsText = document.getElementById("checklist-details-text");
+
+        if (badgeSuccess) badgeSuccess.style.display = "flex";
+        if (alertPending) alertPending.style.setProperty("display", "none", "important");
+
+        if (detailsText) {
+          if (detalhes && detalhes.placa_veiculo && detalhes.hora_registro) {
+            detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje às ${detalhes.hora_registro}.`;
+          } else if (detalhes && detalhes.placa_veiculo) {
+            detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje.`;
+          } else {
+            detailsText.textContent = "Veículo verificado e registrado no sistema.";
+          }
+        }
+      }
+
+      function showPendente() {
+        const badgeSuccess = document.getElementById("checklist-status-badge");
+        const alertPending = document.getElementById("checklist-pending-alert");
+
+        if (badgeSuccess) badgeSuccess.style.display = "none";
+        if (alertPending) alertPending.style.setProperty("display", "flex", "important");
+      }
+
+      function hideStatusBlocks() {
+        const badgeSuccess = document.getElementById("checklist-status-badge");
+        const alertPending = document.getElementById("checklist-pending-alert");
+
+        if (badgeSuccess) badgeSuccess.style.display = "none";
+        if (alertPending) alertPending.style.setProperty("display", "none", "important");
+      }
+
+      function updateCtaLinkWithPlaca(placa) {
+        const cta = document.getElementById("checklist-cta-link");
+        if (!cta) return;
+
+        const normalized = normalizePlaca(placa);
+        if (!normalized) {
+          cta.setAttribute("href", "/checklist-diario");
+          return;
+        }
+
+        cta.setAttribute("href", `/checklist-diario?placa=${encodeURIComponent(normalized)}`);
+      }
+
+      async function verificarChecklistDiarioPorPlaca(placaRaw) {
+        const placa = normalizePlaca(placaRaw);
+
+        if (!placa) {
+          setInlineStatus("info", "Informe a placa para consultar o status do checklist do dia.");
+          hideStatusBlocks();
+          updateCtaLinkWithPlaca("");
+          return;
+        }
+
+        setInlineStatus("info", "Verificando checklist do dia para esta placa...");
+        updateCtaLinkWithPlaca(placa);
+
+        try {
+          const response = await fetch(
+            `/api/checklist_status?placa=${encodeURIComponent(placa)}`
+          );
+
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const msg = (data && data.message) ? data.message : `Erro HTTP: ${response.status}`;
+            throw new Error(msg);
+          }
+
+          if (data && data.realizado) {
+            setInlineStatus("success", "Checklist do dia já foi realizado para esta placa.");
+            showBadgeRealizado(data.detalhes);
+          } else {
+            setInlineStatus("error", "Checklist do dia ainda não foi realizado para esta placa.");
+            showPendente();
           }
         } catch (error) {
           console.error("Erro ao verificar checklist:", error);
+          setInlineStatus(
+            "info",
+            "Não foi possível consultar agora. Tente novamente em instantes."
+          );
+          hideStatusBlocks();
         }
+      }
+
+      function initChecklistDiarioPorPlaca() {
+        const card = document.getElementById("checklist-placa-card");
+        const input = document.getElementById("checklist-placa-input");
+
+        if (card) card.style.display = "block";
+
+        if (!input) return;
+
+        const url = new URL(window.location.href);
+        const placaQuery = url.searchParams.get("placa");
+        if (placaQuery) {
+          input.value = normalizePlaca(placaQuery);
+        }
+
+        const verificarDebounced = debounce(() => {
+          verificarChecklistDiarioPorPlaca(input.value);
+        }, 400);
+
+        input.addEventListener("input", verificarDebounced);
+        input.addEventListener("blur", () => verificarChecklistDiarioPorPlaca(input.value));
+
+        verificarChecklistDiarioPorPlaca(input.value);
       }
     </script>
   </body>
