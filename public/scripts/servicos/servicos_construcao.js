@@ -1,9 +1,8 @@
-// public/scripts/servicos/servicos_construcao.js
-
 let allServices = [];
 let filteredServices = [];
+let currentPage = 1;
+const itemsPerPage = 8;
 
-// Função utilitária para evitar chamadas excessivas à API durante a digitação
 function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {
@@ -16,26 +15,23 @@ function debounce(func, wait) {
   };
 }
 
-// Formata a data para o padrão brasileiro
 function formatData(dateString) {
   if (!dateString) {
     return "—";
   }
   const data = new Date(dateString);
   return data.toLocaleDateString("pt-BR", {
-    timeZone: "UTC", // Garante que a data não mude por causa do fuso horário
+    timeZone: "UTC",
   });
 }
 
-// Gera o HTML para a coluna de Status/Motivo
 function getStatusHtml(service) {
   switch (service.status) {
     case "concluido":
       return '<span class="status-concluido">Concluído</span>';
     case "nao_concluido":
       const motivo = service.motivo_nao_conclusao || "Motivo não especificado.";
-      return `<span class="status-nao-concluido">Não Concluído</span>
-              <small class="motivo-nao-concluido" title="${motivo}">${motivo}</small>`;
+      return `<span class="status-nao-concluido">Não Concluído</span><span class="motivo-nao-concluido">${motivo}</span>`;
     case "ativo":
     case "em_progresso":
     default:
@@ -43,149 +39,284 @@ function getStatusHtml(service) {
   }
 }
 
-// Renderiza a tabela com os dados filtrados
+function aplicarFiltros() {
+  const filtroProcesso = document.getElementById("filtro-processo").value.toLowerCase();
+  const filtroStatus = document.getElementById("filtro-status").value;
+  const filtroData = document.getElementById("filtro-data").value;
+
+  filteredServices = allServices.filter((service) => {
+    const matchProcesso =
+      !filtroProcesso ||
+      String(service.id).includes(filtroProcesso) ||
+      (service.processo && service.processo.toLowerCase().includes(filtroProcesso));
+
+    let matchStatus = true;
+    if (filtroStatus) {
+      if (filtroStatus === "andamento") {
+        matchStatus = service.status === "ativo" || service.status === "em_progresso";
+      } else {
+        matchStatus = service.status === filtroStatus;
+      }
+    }
+
+    let matchData = true;
+    if (filtroData && service.data_conclusao) {
+      const dataFormatada = new Date(service.data_conclusao).toISOString().split("T")[0];
+      matchData = dataFormatada === filtroData;
+    } else if (filtroData && !service.data_conclusao) {
+      matchData = false;
+    }
+
+    return matchProcesso && matchStatus && matchData;
+  });
+
+  aplicarOrdenacao();
+  currentPage = 1;
+  renderTable();
+}
+
+function aplicarOrdenacao() {
+  const ordenacao = document.getElementById("ordenar-por").value;
+
+  filteredServices.sort((a, b) => {
+    switch (ordenacao) {
+      case "id_asc":
+        return a.id - b.id;
+      case "id_desc":
+        return b.id - a.id;
+      case "data_asc":
+        const dataA = a.data_conclusao ? new Date(a.data_conclusao) : new Date(0);
+        const dataB = b.data_conclusao ? new Date(b.data_conclusao) : new Date(0);
+        return dataA - dataB;
+      case "data_desc":
+        const dataDescA = a.data_conclusao ? new Date(a.data_conclusao) : new Date(0);
+        const dataDescB = b.data_conclusao ? new Date(b.data_conclusao) : new Date(0);
+        return dataDescB - dataDescA;
+      default:
+        return b.id - a.id;
+    }
+  });
+}
+
 function renderTable() {
   const tbody = document.getElementById("tabela-servicos-construcao");
   if (!tbody) return;
 
   if (filteredServices.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4">Nenhum serviço encontrado com os filtros aplicados.</td></tr>`;
-    return;
-  }
-
-  const rowsHtml = filteredServices
-    .map((service) => {
-      const statusHtml = getStatusHtml(service);
-      const dataFinalizacao = formatData(service.data_conclusao);
-
-      return `
+    tbody.innerHTML = `
       <tr>
-        <td>${service.id}</td>
-        <td>${service.processo || "N/A"}</td>
-        <td>${service.nomes_responsaveis || "Não atribuída"}</td>
-        <td>${service.alimentador || "N/A"}</td>
-        <td>${statusHtml}</td>
-        <td>${dataFinalizacao}</td>
-        <td class="text-center">
-          <button 
-            class="btn btn-sm btn-outline-info me-1" 
-            onclick="navigateTo('/detalhes_servico?id=${service.id}')" 
-            title="Ver Detalhes">
-            <i class="fas fa-eye"></i>
-          </button>
-          <button 
-            class="btn btn-sm btn-outline-secondary" 
-            onclick="window.open('/api/servicos/${
-              service.id
-            }/consolidar-pdfs', '_blank')" 
-            title="Gerar Relatório PDF">
-            <i class="fas fa-file-pdf"></i>
-          </button>
+        <td colspan="7" class="text-center py-4">
+          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+          <p class="text-muted">Nenhum serviço encontrado com os filtros aplicados.</p>
         </td>
       </tr>
     `;
-    })
-    .join("");
+    atualizarContador();
+    atualizarPaginacao();
+    return;
+  }
 
-  tbody.innerHTML = rowsHtml;
-}
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  if (currentPage > totalPages) {
+    currentPage = totalPages;
+  }
 
-// Aplica os filtros e chama a renderização da tabela
-function applyFilters() {
-  const processoFiltro = document
-    .getElementById("filtro-processo")
-    .value.toLowerCase();
-  const statusFiltro = document.getElementById("filtro-status").value;
-  const dataFiltro = document.getElementById("filtro-data").value;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const servicosPagina = filteredServices.slice(startIndex, endIndex);
 
-  filteredServices = allServices.filter((service) => {
-    const processoMatch =
-      !processoFiltro ||
-      service.processo.toLowerCase().includes(processoFiltro) ||
-      String(service.id).includes(processoFiltro);
+  tbody.innerHTML = "";
 
-    let statusMatch = true;
-    if (statusFiltro) {
-      if (statusFiltro === "andamento") {
-        statusMatch =
-          service.status === "ativo" || service.status === "em_progresso";
-      } else {
-        statusMatch = service.status === statusFiltro;
-      }
-    }
-
-    const dataMatch =
-      !dataFiltro ||
-      (service.data_conclusao && service.data_conclusao.startsWith(dataFiltro));
-
-    return processoMatch && statusMatch && dataMatch;
+  servicosPagina.forEach((service) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>#${service.id}</strong></td>
+      <td>${service.processo || "—"}</td>
+      <td>${service.nomes_responsaveis || "Sem equipe"}</td>
+      <td>${service.alimentador || "—"}</td>
+      <td>${getStatusHtml(service)}</td>
+      <td>${formatData(service.data_conclusao)}</td>
+      <td class="text-center">
+        <a href="/detalhes_servico?id=${service.id}" class="btn btn-sm btn-outline-primary" title="Ver Detalhes">
+          <i class="fas fa-eye"></i>
+        </a>
+      </td>
+    `;
+    tbody.appendChild(row);
   });
 
+  atualizarContador();
+  atualizarPaginacao();
+}
+
+function atualizarContador() {
+  const contador = document.getElementById("contador-servicos");
+  if (contador) {
+    const total = filteredServices.length;
+    contador.textContent = `${total} serviço${total !== 1 ? 's' : ''}`;
+  }
+}
+
+function atualizarPaginacao() {
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const infoPaginacao = document.getElementById("info-paginacao");
+  
+  if (infoPaginacao) {
+    if (totalPages === 0) {
+      infoPaginacao.textContent = "Nenhuma página";
+    } else {
+      const startItem = (currentPage - 1) * itemsPerPage + 1;
+      const endItem = Math.min(currentPage * itemsPerPage, filteredServices.length);
+      infoPaginacao.textContent = `Mostrando ${startItem}-${endItem} de ${filteredServices.length} | Página ${currentPage} de ${totalPages}`;
+    }
+  }
+
+  const btnPrimeira = document.getElementById("btn-primeira-pagina");
+  const btnAnterior = document.getElementById("btn-pagina-anterior");
+  const btnProxima = document.getElementById("btn-proxima-pagina");
+  const btnUltima = document.getElementById("btn-ultima-pagina");
+
+  if (btnPrimeira) btnPrimeira.disabled = currentPage === 1 || totalPages === 0;
+  if (btnAnterior) btnAnterior.disabled = currentPage === 1 || totalPages === 0;
+  if (btnProxima) btnProxima.disabled = currentPage === totalPages || totalPages === 0;
+  if (btnUltima) btnUltima.disabled = currentPage === totalPages || totalPages === 0;
+}
+
+function irParaPrimeiraPagina() {
+  currentPage = 1;
   renderTable();
 }
 
-// Busca os dados dos serviços da API
-async function fetchConstructionServices() {
-  const tbody = document.getElementById("tabela-servicos-construcao");
-  tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Carregando...</span></div> Carregando serviços...</td></tr>`;
-
-  try {
-    const response = await fetch("/api/servicos/origem/Construcao");
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message || `Erro na requisição: ${response.status}`
-      );
-    }
-    allServices = await response.json();
-    applyFilters();
-  } catch (error) {
-    console.error("Erro ao buscar serviços de construção:", error);
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger">Falha ao carregar os serviços. Por favor, tente atualizar a página.</td></tr>`;
+function irParaPaginaAnterior() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
   }
 }
 
-// Função de navegação padrão
-window.navigateTo = async function (pageNameOrUrl) {
-  let urlToNavigate = pageNameOrUrl.startsWith("/")
-    ? pageNameOrUrl
-    : `/${pageNameOrUrl}`;
-  try {
-    const response = await fetch(urlToNavigate);
-    if (response.ok) {
-      window.location.href = urlToNavigate;
-    } else if (response.status === 403) {
-      const modal = new bootstrap.Modal(
-        document.getElementById("access-denied-modal")
-      );
-      modal.show();
-    } else {
-      const modal = new bootstrap.Modal(
-        document.getElementById("development-modal")
-      );
-      modal.show();
-    }
-  } catch (error) {
-    const modal = new bootstrap.Modal(
-      document.getElementById("development-modal")
-    );
-    modal.show();
+function irParaProximaPagina() {
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderTable();
   }
-};
+}
 
-// Ponto de entrada do script
+function irParaUltimaPagina() {
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  if (totalPages > 0) {
+    currentPage = totalPages;
+    renderTable();
+  }
+}
+
+async function carregarServicos() {
+  try {
+    const tbody = document.getElementById("tabela-servicos-construcao");
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando serviços...</p>
+          </td>
+        </tr>
+      `;
+    }
+
+    const response = await fetch("/api/servicos/origem/Construção");
+    if (!response.ok) {
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+
+    const data = await response.json();
+    allServices = data;
+    aplicarFiltros();
+  } catch (error) {
+    console.error("Erro ao carregar serviços:", error);
+    const tbody = document.getElementById("tabela-servicos-construcao");
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4 text-danger">
+            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+            <p>Erro ao carregar serviços: ${error.message}</p>
+            <button class="btn btn-sm btn-primary" onclick="carregarServicos()">
+              <i class="fas fa-redo me-1"></i>Tentar Novamente
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  carregarServicos();
+
   const filtroProcesso = document.getElementById("filtro-processo");
   const filtroStatus = document.getElementById("filtro-status");
   const filtroData = document.getElementById("filtro-data");
+  const ordenarPor = document.getElementById("ordenar-por");
   const btnAtualizar = document.getElementById("btn-atualizar");
 
-  const debouncedFilter = debounce(applyFilters, 300);
+  if (filtroProcesso) {
+    filtroProcesso.addEventListener("input", debounce(aplicarFiltros, 300));
+  }
 
-  filtroProcesso.addEventListener("input", debouncedFilter);
-  filtroStatus.addEventListener("change", applyFilters);
-  filtroData.addEventListener("change", applyFilters);
-  btnAtualizar.addEventListener("click", fetchConstructionServices);
+  if (filtroStatus) {
+    filtroStatus.addEventListener("change", aplicarFiltros);
+  }
 
-  fetchConstructionServices();
+  if (filtroData) {
+    filtroData.addEventListener("change", aplicarFiltros);
+  }
+
+  if (ordenarPor) {
+    ordenarPor.addEventListener("change", () => {
+      aplicarOrdenacao();
+      renderTable();
+    });
+  }
+
+  if (btnAtualizar) {
+    btnAtualizar.addEventListener("click", () => {
+      btnAtualizar.disabled = true;
+      btnAtualizar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Atualizando...';
+      carregarServicos().finally(() => {
+        btnAtualizar.disabled = false;
+        btnAtualizar.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Atualizar';
+      });
+    });
+  }
+
+  const btnPrimeira = document.getElementById("btn-primeira-pagina");
+  const btnAnterior = document.getElementById("btn-pagina-anterior");
+  const btnProxima = document.getElementById("btn-proxima-pagina");
+  const btnUltima = document.getElementById("btn-ultima-pagina");
+
+  if (btnPrimeira) btnPrimeira.addEventListener("click", irParaPrimeiraPagina);
+  if (btnAnterior) btnAnterior.addEventListener("click", irParaPaginaAnterior);
+  if (btnProxima) btnProxima.addEventListener("click", irParaProximaPagina);
+  if (btnUltima) btnUltima.addEventListener("click", irParaUltimaPagina);
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user) {
+    const linkConstrucao = document.getElementById("sidebar-construcao-link");
+    const cargosPermitidos = ["Construção", "Engenheiro", "ADMIN", "ADM"];
+    if (linkConstrucao && cargosPermitidos.includes(user.cargo)) {
+      linkConstrucao.style.display = "block";
+    }
+  }
 });
+
+window.navigateTo = function (page) {
+  window.location.href = `/${page}`;
+};
+
+window.logout = function () {
+  localStorage.removeItem("user");
+  window.location.href = "/login";
+};
