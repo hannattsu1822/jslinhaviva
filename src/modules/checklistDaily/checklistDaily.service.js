@@ -18,9 +18,36 @@ function normalizePlaca(value) {
     .replace(/[^A-Z0-9-]/g, "");
 }
 
+function normalizeEnumUpper(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+}
+
+function normalizePneus(value) {
+  const v = normalizeEnumUpper(value);
+
+  if (v === "OK") return "OK";
+  if (v === "NAOOK") return "NAO_OK";
+  if (v === "NAO_OK") return "NAO_OK";
+  if (v === "NAO-OK") return "NAO_OK";
+  if (v === "NÃO_OK") return "NAO_OK";
+
+  return v || null;
+}
+
+function normalizeLataria(value) {
+  if (value === undefined || value === null) return 0;
+
+  const v = String(value).trim().toLowerCase();
+  if (v === "1" || v === "true" || v === "on" || v === "sim") return 1;
+
+  return 0;
+}
+
 function flattenMulterFiles(files) {
   if (!files) return [];
-
   if (Array.isArray(files)) return files;
 
   if (typeof files === "object") {
@@ -55,6 +82,13 @@ async function processarNovoChecklist(matricula, dados, arquivos) {
     throw new Error("Placa obrigatória.");
   }
 
+  const km = dados && dados.km !== undefined && dados.km !== null ? Number(dados.km) : NaN;
+  if (!Number.isFinite(km) || km < 0) {
+    throw new Error("Quilometragem inválida.");
+  }
+
+  const pneus = normalizePneus(dados && dados.pneus);
+
   const jaExisteHoje = await checklistQuery.buscarChecklistDoDiaPorPlaca(placa);
   if (jaExisteHoje) {
     throw new Error("Já existe checklist diário registrado hoje para esta placa.");
@@ -62,8 +96,15 @@ async function processarNovoChecklist(matricula, dados, arquivos) {
 
   const checklistId = await checklistQuery.inserirChecklist({
     matricula,
-    ...dados,
     placa,
+    km,
+    oleo: dados.oleo,
+    agua: dados.agua,
+    pneus,
+    luzes: dados.luzes,
+    freios: dados.freios,
+    lataria: normalizeLataria(dados.lataria),
+    observacoes: dados.observacoes,
   });
 
   const fotosSalvas = [];
@@ -71,7 +112,6 @@ async function processarNovoChecklist(matricula, dados, arquivos) {
 
   if (arquivosArray.length > 0) {
     const pastaDestino = path.join(UPLOAD_BASE_DIR, String(checklistId));
-
     if (!fs.existsSync(pastaDestino)) {
       fs.mkdirSync(pastaDestino, { recursive: true });
     }
