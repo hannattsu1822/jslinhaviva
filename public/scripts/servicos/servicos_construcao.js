@@ -57,13 +57,11 @@ function aplicarOrdenacao() {
       case "id_desc":
         return b.id - a.id;
       case "data_asc":
-        // Sem data vai para o final
         if (!a.data_conclusao && !b.data_conclusao) return 0;
         if (!a.data_conclusao) return 1;
         if (!b.data_conclusao) return -1;
         return new Date(a.data_conclusao) - new Date(b.data_conclusao);
       case "data_desc":
-        // Sem data vai para o final
         if (!a.data_conclusao && !b.data_conclusao) return 0;
         if (!a.data_conclusao) return 1;
         if (!b.data_conclusao) return -1;
@@ -152,9 +150,15 @@ function renderTable() {
       <td>${getStatusHtml(service)}</td>
       <td>${formatData(service.data_conclusao)}</td>
       <td class="text-center">
-        <a href="/detalhes_servico?id=${service.id}" class="btn btn-sm btn-outline-primary" title="Ver Detalhes">
+        <a href="/detalhes_servico?id=${service.id}" class="btn btn-sm btn-outline-primary me-1" title="Ver Detalhes">
           <i class="fas fa-eye"></i>
         </a>
+        <button 
+          class="btn btn-sm btn-outline-secondary" 
+          onclick="window.open('/api/servicos/${service.id}/consolidar-pdfs', '_blank')" 
+          title="Gerar Relatório PDF">
+          <i class="fas fa-file-pdf"></i>
+        </button>
       </td>
     `;
     tbody.appendChild(row);
@@ -286,7 +290,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const filtroData = document.getElementById("filtro-data");
   const ordenarPor = document.getElementById("ordenar-por");
   const btnAtualizar = document.getElementById("btn-atualizar");
-  const btnGerarRelatorio = document.getElementById("btn-gerar-relatorio");
 
   if (filtroProcesso) {
     filtroProcesso.addEventListener("input", debounce(aplicarFiltros, 300));
@@ -315,15 +318,6 @@ document.addEventListener("DOMContentLoaded", () => {
         btnAtualizar.disabled = false;
         btnAtualizar.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Atualizar';
       });
-    });
-  }
-
-  if (btnGerarRelatorio) {
-    btnGerarRelatorio.addEventListener("click", () => {
-      // Placeholder para futura implementação de relatório
-      // Exemplo: abrir uma nova aba com PDF
-      // window.open('/relatorios/construcao', '_blank');
-      alert("Botão 'Gerar Relatório' clicado! Implemente a lógica aqui."); 
     });
   }
 
