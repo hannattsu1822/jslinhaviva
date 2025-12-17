@@ -12,6 +12,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const reportContentArea = document.getElementById("report-content-area");
   let reportChartInstance = null;
   let currentFilters = null;
+  let dadosFiltrados = 0;
+
+  const TEMP_LIMITS = {
+    MIN_VALID: -40,
+    MAX_VALID: 85
+  };
 
   const showNotification = (message, type = "info") => {
     const notificationContainer = document.getElementById("notification-container") || createNotificationContainer();
@@ -82,6 +88,25 @@ document.addEventListener("DOMContentLoaded", () => {
         @keyframes slideOut {
           from { transform: translateX(0); opacity: 1; }
           to { transform: translateX(400px); opacity: 0; }
+        }
+        .data-quality-warning {
+          background-color: #fff3cd;
+          border-left: 4px solid #ffc107;
+          padding: 12px 16px;
+          margin-bottom: 20px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .data-quality-warning-icon {
+          font-size: 24px;
+          color: #856404;
+        }
+        .data-quality-warning-text {
+          color: #856404;
+          font-size: 14px;
+          margin: 0;
         }
       `;
       document.head.appendChild(style);
@@ -175,6 +200,42 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${horas}h ${minutos}min`;
   };
 
+  const contarDadosInvalidos = (datasets) => {
+    let count = 0;
+    datasets.forEach(dataset => {
+      if (dataset.data) {
+        dataset.data.forEach(value => {
+          if (value !== null && (value < TEMP_LIMITS.MIN_VALID || value > TEMP_LIMITS.MAX_VALID)) {
+            count++;
+          }
+        });
+      }
+    });
+    return count;
+  };
+
+  const exibirAvisoQualidadeDados = (quantidade) => {
+    const reportContent = document.querySelector("#report-content-area");
+    let avisoExistente = document.querySelector(".data-quality-warning");
+    
+    if (avisoExistente) {
+      avisoExistente.remove();
+    }
+
+    if (quantidade > 0) {
+      const aviso = document.createElement("div");
+      aviso.className = "data-quality-warning";
+      aviso.innerHTML = `
+        <span class="data-quality-warning-icon">⚠️</span>
+        <p class="data-quality-warning-text">
+          <strong>Atenção:</strong> ${quantidade} leitura(s) com temperatura inválida foram filtradas do relatório 
+          (valores fora do intervalo ${TEMP_LIMITS.MIN_VALID}°C a ${TEMP_LIMITS.MAX_VALID}°C).
+        </p>
+      `;
+      reportContent.insertBefore(aviso, reportContent.firstChild);
+    }
+  };
+
   const displayReportData = (data) => {
     document.getElementById("report-title").textContent = `Relatório de Monitoramento - ${data.device.local_tag}`;
 
@@ -186,6 +247,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("kpi-max-temp").textContent = parseFloat(data.stats.temp_max || 0).toFixed(2);
     document.getElementById("kpi-min-temp").textContent = parseFloat(data.stats.temp_min || 0).toFixed(2);
     document.getElementById("kpi-fan-count").textContent = data.stats.total_count || 0;
+
+    dadosFiltrados = contarDadosInvalidos(data.chartData.datasets);
+    exibirAvisoQualidadeDados(dadosFiltrados);
 
     if (reportChartInstance) {
       reportChartInstance.destroy();
@@ -236,6 +300,13 @@ document.addEventListener("DOMContentLoaded", () => {
         maintainAspectRatio: false,
         animation: {
           duration: 500
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            min: TEMP_LIMITS.MIN_VALID,
+            max: TEMP_LIMITS.MAX_VALID
+          }
         }
       },
     });
@@ -310,7 +381,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
       currentFilters = filters;
       displayReportData(data);
-      showNotification("Relatório gerado com sucesso!", "success");
+      
+      if (dadosFiltrados > 0) {
+        showNotification(`Relatório gerado com ${dadosFiltrados} leitura(s) filtrada(s)`, "warning");
+      } else {
+        showNotification("Relatório gerado com sucesso!", "success");
+      }
     } catch (error) {
       showNotification(error.message, "error");
       initialMessage.classList.remove("hidden");
