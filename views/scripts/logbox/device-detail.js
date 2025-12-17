@@ -79,17 +79,16 @@ async function carregarStatusInicial() {
     if (!response.ok) throw new Error("Falha ao buscar status do dispositivo");
 
     const data = await response.json();
-    atualizarPainelCompleto(data);
+    atualizarPainelCompleto(data.status);
 
     const latestReadingResponse = await fetch(`/api/logbox-device/${serialNumber}/latest`);
     if (latestReadingResponse.ok) {
       const latestData = await latestReadingResponse.json();
+      const payloadObjeto = JSON.parse(latestData.payload);
+      const tempExterna = payloadObjeto.ch_analog_1 || (payloadObjeto.value_channels ? payloadObjeto.value_channels[2] : undefined);
 
-      if (latestData.temperatura_valida && latestData.temperatura_valor !== null) {
-        const validacao = validarTemperaturaFrontend(latestData.temperatura_valor);
-        atualizarTemperaturaDisplay(latestData.temperatura_valor, validacao);
-      } else if (latestData.temperatura_aviso) {
-        mostrarAvisoTemperatura(latestData.temperatura_aviso);
+      if (tempExterna !== undefined) {
+        document.getElementById("latest-temp").textContent = tempExterna.toFixed(1);
       }
 
       document.getElementById("latest-timestamp").textContent = `Em: ${new Date(latestData.timestamp_leitura).toLocaleString("pt-BR")}`;
@@ -99,122 +98,62 @@ async function carregarStatusInicial() {
   }
 }
 
-function atualizarTemperaturaDisplay(temperatura, validacao) {
-  const tempElement = document.getElementById("latest-temp");
-  const tempCard = tempElement.closest(".kpi-card");
-
-  if (!validacao.valid) {
-    tempElement.textContent = "--";
-    tempElement.style.color = "#dc3545";
-    if (tempCard) tempCard.style.borderLeft = "4px solid #dc3545";
-  } else if (validacao.warning) {
-    tempElement.textContent = temperatura.toFixed(1);
-    tempElement.style.color = "#ffc107";
-    if (tempCard) tempCard.style.borderLeft = "4px solid #ffc107";
-  } else {
-    tempElement.textContent = temperatura.toFixed(1);
-    tempElement.style.color = "";
-    if (tempCard) tempCard.style.borderLeft = "";
-  }
-}
-
-function mostrarAvisoTemperatura(motivo) {
-  const tempElement = document.getElementById("latest-temp");
-  const timestampElement = document.getElementById("latest-timestamp");
-  
-  tempElement.textContent = "--";
-  tempElement.style.color = "#dc3545";
-  timestampElement.textContent = `Aviso: ${motivo}`;
-  timestampElement.style.color = "#dc3545";
-}
-
 function atualizarPainelCompleto(status) {
   if (!status || Object.keys(status).length === 0) return;
 
   const connectionStatusEl = document.getElementById("connection-status-text");
-  const isOnline = status.connection_status === "online";
-
-  if (isOnline) {
-    connectionStatusEl.textContent = "Online";
-    connectionStatusEl.className = "kpi-value text-success";
-    
-    if (status.minutes_since_last_reading !== null) {
-      const minutos = status.minutes_since_last_reading;
-      document.getElementById("diag-wifi-rssi").innerHTML = `RSSI: ${status.lqi || "--"} dBm<br><small>Última leitura: há ${minutos} min</small>`;
-    } else {
-      const sinalWifi = status.lqi;
-      const { text: wifiText } = getWifiStatus(sinalWifi);
-      document.getElementById("diag-wifi-rssi").textContent = `RSSI: ${sinalWifi || "--"} dBm (${wifiText})`;
-    }
-  } else {
+  if (status.connection_status === "offline") {
     connectionStatusEl.textContent = "Offline";
     connectionStatusEl.className = "kpi-value text-danger";
-    
-    if (status.connection_warning) {
-      document.getElementById("diag-wifi-rssi").textContent = status.connection_warning;
-    } else {
-      document.getElementById("diag-wifi-rssi").textContent = "Sem comunicação";
-    }
-
-    ocultarInformacoesOffline();
+  } else {
+    connectionStatusEl.textContent = "Online";
+    connectionStatusEl.className = "kpi-value text-success";
   }
+
+  const sinalWifi = status.lqi;
+  const { text: wifiText } = getWifiStatus(sinalWifi);
+  document.getElementById("diag-wifi-rssi").textContent = `RSSI: ${sinalWifi || "--"} dBm (${wifiText})`;
 
   const tensaoFonteExterna = status.ch_analog_2;
   const { text: powerText } = getPowerSourceStatus(tensaoFonteExterna);
-  document.getElementById("diag-power-source").textContent = isOnline ? powerText : "Indisponível";
+  document.getElementById("diag-power-source").textContent = powerText;
 
   const tensaoBateria = status.ch_analog_3 || status.battery;
-  document.getElementById("diag-battery-voltage").textContent = isOnline && tensaoBateria 
-    ? `Bateria: ${tensaoBateria.toFixed(2)} V` 
-    : "Bateria: --";
+  document.getElementById("diag-battery-voltage").textContent = `Bateria: ${tensaoBateria?.toFixed(2) || "--"} V`;
 
   const temperaturaInterna = status.temperature;
-  atualizarBadge("diag-internal-temp", isOnline && temperaturaInterna ? `${temperaturaInterna.toFixed(1)} °C` : "--", "text-bg-info");
-
+  atualizarBadge("diag-internal-temp", `${temperaturaInterna?.toFixed(1) || "--"} °C`, "text-bg-info");
   atualizarBadge("diag-pt100-status", "N/A via MQTT", "text-bg-secondary");
 
   const ipAddress = status.ip;
-  atualizarBadge("diag-ip-address", isOnline && ipAddress ? ipAddress : "--", "text-bg-secondary");
+  atualizarBadge("diag-ip-address", ipAddress || "--", "text-bg-secondary");
 
   const firmwareVersion = status.firmware_version;
-  atualizarBadge("diag-firmware-version", isOnline && firmwareVersion ? firmwareVersion : "--", "text-bg-secondary");
+  atualizarBadge("diag-firmware-version", firmwareVersion || "--", "text-bg-secondary");
 
-  atualizarListaAlarmes(isOnline ? status.alarms : null);
-}
-
-function ocultarInformacoesOffline() {
-  const tempElement = document.getElementById("latest-temp");
-  const timestampElement = document.getElementById("latest-timestamp");
-  
-  if (tempElement.textContent === "--" || tempElement.textContent === "") {
-    tempElement.textContent = "--";
-    tempElement.style.color = "#6c757d";
-    timestampElement.textContent = "Aguardando conexão...";
-    timestampElement.style.color = "#6c757d";
-  }
+  atualizarListaAlarmes(status.alarms);
 }
 
 function atualizarPainelLeitura(dados) {
-  if (dados.temperatura_aviso) {
-    mostrarAvisoTemperatura(dados.temperatura_aviso);
-    return;
+  const temperatura = dados.ch_analog_1;
+  if (temperatura !== undefined) {
+    document.getElementById("latest-temp").textContent = temperatura.toFixed(1);
   }
 
-  const temperatura = dados.ch_analog_1;
-  const validacao = validarTemperaturaFrontend(temperatura);
+  document.getElementById("latest-timestamp").textContent = `Em: ${new Date().toLocaleString("pt-BR")}`;
 
-  if (validacao.valid) {
-    atualizarTemperaturaDisplay(temperatura, validacao);
-    document.getElementById("latest-timestamp").textContent = `Em: ${new Date().toLocaleString("pt-BR")}`;
-    document.getElementById("latest-timestamp").style.color = "";
+  if (historicoChartInstance && temperatura !== undefined) {
+    historicoChartInstance.data.datasets[0].data.push({
+      x: new Date().getTime(),
+      y: temperatura,
+    });
 
-    if (historicoChartInstance && !validacao.warning) {
-      historicoChartInstance.data.datasets[0].data.push({
-        x: new Date(),
-        y: temperatura,
-      });
-      historicoChartInstance.update("quiet");
+    // Manter apenas últimos 90 pontos
+    if (historicoChartInstance.data.datasets[0].data.length > 90) {
+      historicoChartInstance.data.datasets[0].data.shift();
     }
+
+    historicoChartInstance.update("none");
   }
 
   const tensaoFonteExterna = dados.ch_analog_2;
@@ -241,7 +180,7 @@ function atualizarListaAlarmes(alarms) {
 
   if (!alarms) {
     alarmCountEl.textContent = "0";
-    alarmSubtextEl.textContent = "Aguardando dados...";
+    alarmSubtextEl.textContent = "Nenhum alarme no momento";
     return;
   }
 
@@ -269,26 +208,16 @@ function iniciarWebSocket() {
   const socket = new WebSocket(`ws://${window.location.host}`);
 
   socket.onopen = () => {
-    console.log("[WebSocket] Conectado com sucesso");
-    retryCount = 0;
+    console.log("WebSocket conectado");
   };
 
   socket.onclose = () => {
-    console.log("[WebSocket] Conexão fechada, tentando reconectar...");
-    
-    if (retryCount < maxRetries) {
-      const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-      console.log(`[WebSocket] Reconectando em ${delay}ms (tentativa ${retryCount + 1}/${maxRetries})`);
-      
-      setTimeout(iniciarWebSocket, delay);
-      retryCount++;
-    } else {
-      console.error("[WebSocket] Número máximo de tentativas de reconexão atingido");
-    }
+    console.log("WebSocket desconectado, reconectando...");
+    setTimeout(iniciarWebSocket, 5000);
   };
 
   socket.onerror = (error) => {
-    console.error("[WebSocket] Erro na conexão:", error);
+    console.error("Erro no WebSocket:", error);
   };
 
   socket.onmessage = function (event) {
@@ -307,7 +236,7 @@ function iniciarWebSocket() {
         atualizarPainelCompleto(message.dados);
       }
     } catch (e) {
-      console.error("[WebSocket] Erro ao processar mensagem:", e);
+      console.error("Erro ao processar mensagem WebSocket:", e);
     }
   };
 }
@@ -341,7 +270,7 @@ async function carregarEstatisticasDetalhes() {
     document.getElementById("stat-month-avg").textContent = `${stats.month.avg} °C`;
     document.getElementById("stat-month-max").textContent = `${stats.month.max} °C`;
   } catch (error) {
-    console.error("[Stats] Erro ao carregar estatísticas:", error);
+    console.error("Erro ao carregar estatísticas:", error);
   }
 }
 
@@ -350,13 +279,16 @@ function gerarGraficoHistorico(dados) {
   if (!ctxEl) return;
 
   const ctx = ctxEl.getContext("2d");
+
   const initialData = dados.labels.map((label, index) => ({
     x: new Date(label.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$2/$1/$3")).getTime(),
     y: dados.temperaturas[index],
   }));
 
+  // Destruir instância anterior
   if (historicoChartInstance) {
     historicoChartInstance.destroy();
+    historicoChartInstance = null;
   }
 
   historicoChartInstance = new Chart(ctx, {
@@ -376,27 +308,51 @@ function gerarGraficoHistorico(dados) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
       scales: {
         x: {
-          type: "realtime",
-          realtime: {
-            duration: CHART_CONFIG.DURATION_MS,
-            refresh: CHART_CONFIG.REFRESH_INTERVAL_MS,
-            delay: CHART_CONFIG.DELAY_MS,
+          type: "time",
+          time: {
+            unit: 'minute',
+            displayFormats: {
+              minute: 'HH:mm'
+            }
           },
-          grid: { display: false },
+          grid: { 
+            display: false 
+          },
+          ticks: {
+            maxRotation: 0,
+            autoSkipPadding: 20
+          }
         },
         y: {
-          title: { display: false },
-          grid: { color: "#e9ecef" },
+          title: { 
+            display: false 
+          },
+          grid: { 
+            color: "#e9ecef" 
+          },
+          beginAtZero: false
         },
       },
       plugins: {
-        legend: { display: false },
+        legend: { 
+          display: false 
+        },
         tooltip: {
           mode: 'index',
           intersect: false,
-        },
+          callbacks: {
+            title: function(context) {
+              const date = new Date(context[0].parsed.x);
+              return date.toLocaleString('pt-BR');
+            }
+          }
+        }
       },
     },
   });
