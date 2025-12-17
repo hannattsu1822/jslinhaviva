@@ -1,7 +1,6 @@
-const { promisePool } = require("./init");
+const { promisePool, logger } = require("./init");
 const bcrypt = require("bcrypt");
 
-// Função para autenticar
 function autenticar(req, res, next) {
   if (req.session.user) {
     req.user = req.session.user;
@@ -27,9 +26,9 @@ async function loginSeguro(req, res, next) {
     const usuario = rows[0];
 
     if (usuario.nivel === 0) {
-      return res
-        .status(403)
-        .json({ message: "Usuário desativado ou sem permissão de acesso." });
+      return res.status(403).json({ 
+        message: "Usuário desativado ou sem permissão de acesso." 
+      });
     }
 
     let senhaValida = false;
@@ -39,13 +38,14 @@ async function loginSeguro(req, res, next) {
       senhaValida = await bcrypt.compare(senha, usuario.senha);
     } else {
       senhaValida = senha === usuario.senha;
+      
       if (senhaValida) {
         const hash = await bcrypt.hash(senha, 10);
         await promisePool.query(
           "UPDATE users SET senha = ? WHERE matricula = ?",
           [hash, matricula]
         );
-        console.log(`Senha migrada para bcrypt (usuário ${matricula})`);
+        logger.info(`Senha migrada para bcrypt (usuário ${matricula})`);
       }
     }
 
@@ -63,7 +63,7 @@ async function loginSeguro(req, res, next) {
       user: req.session.user,
     });
   } catch (err) {
-    console.error("Erro no login:", err);
+    logger.error(`Erro no login: ${err.message}`);
     res.status(500).json({ message: "Erro interno no servidor" });
   }
 }
@@ -73,62 +73,62 @@ function verificarNivel(nivelRequerido) {
     const nivelUsuario = req.user?.nivel;
 
     if (nivelUsuario === undefined) {
-      console.log("Acesso negado! Nível do usuário não definido na sessão.");
-      return res
-        .status(403)
-        .json({ message: "Acesso negado! Nível de permissão não encontrado." });
+      logger.warn("Acesso negado: Nível do usuário não definido na sessão");
+      return res.status(403).json({ 
+        message: "Acesso negado! Nível de permissão não encontrado." 
+      });
     }
 
     if (nivelUsuario >= nivelRequerido) {
       next();
     } else {
-      console.log(
-        `Acesso negado! Nível do usuário: ${nivelUsuario}, Nível requerido: ${nivelRequerido}`
-      );
+      logger.warn(`Acesso negado: Nível do usuário: ${nivelUsuario}, Nível requerido: ${nivelRequerido}`);
       res.status(403).json({
-        message:
-          "Acesso negado! Você não tem permissão para acessar este recurso.",
+        message: "Acesso negado! Você não tem permissão para acessar este recurso.",
       });
     }
   };
 }
 
-// NOVA FUNÇÃO ADICIONADA
 function verificarCargo(cargosPermitidos) {
   return (req, res, next) => {
     const cargoUsuario = req.user?.cargo;
 
     if (!cargoUsuario) {
-      console.log("Acesso negado! Cargo do usuário não definido na sessão.");
-      return res
-        .status(403)
-        .json({ message: "Acesso negado! Cargo de permissão não encontrado." });
+      logger.warn("Acesso negado: Cargo do usuário não definido na sessão");
+      return res.status(403).json({ 
+        message: "Acesso negado! Cargo de permissão não encontrado." 
+      });
     }
 
     if (cargosPermitidos.includes(cargoUsuario)) {
       next();
     } else {
-      console.log(
-        `Acesso negado! Cargo do usuário: ${cargoUsuario}, Cargos permitidos: ${cargosPermitidos.join(
-          ", "
-        )}`
-      );
+      logger.warn(`Acesso negado: Cargo do usuário: ${cargoUsuario}, Cargos permitidos: ${cargosPermitidos.join(", ")}`);
       res.status(403).json({
-        message:
-          "Acesso negado! Você não tem permissão para acessar este recurso.",
+        message: "Acesso negado! Você não tem permissão para acessar este recurso.",
       });
     }
   };
 }
 
-async function registrarAuditoria(
-  matricula,
-  acao,
-  detalhes = null,
-  connection = null
-) {
+async function validarSessaoWebSocket(cookies) {
+  if (!cookies) {
+    return { valid: false, reason: "Sem cookies" };
+  }
+
+  const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('connect.sid='));
+  
+  if (!sessionCookie) {
+    return { valid: false, reason: "Cookie de sessão não encontrado" };
+  }
+
+  return { valid: true, sessionCookie };
+}
+
+async function registrarAuditoria(matricula, acao, detalhes = null, connection = null) {
   if (!matricula) {
-    console.error("Tentativa de registrar auditoria sem matrícula");
+    logger.error("Tentativa de registrar auditoria sem matrícula");
     throw new Error("Matrícula é obrigatória para auditoria");
   }
 
@@ -141,7 +141,7 @@ async function registrarAuditoria(
       await promisePool.query(query, [matricula, acao, detalhes]);
     }
   } catch (err) {
-    console.error("Erro ao registrar auditoria:", err);
+    logger.error(`Erro ao registrar auditoria: ${err.message}`);
     throw err;
   }
 }
@@ -158,7 +158,8 @@ module.exports = {
   autenticar,
   loginSeguro,
   verificarNivel,
-  verificarCargo, // EXPORTAÇÃO ADICIONADA
+  verificarCargo,
+  validarSessaoWebSocket,
   registrarAuditoria,
   criarHashSenha,
   verificarSenha,
