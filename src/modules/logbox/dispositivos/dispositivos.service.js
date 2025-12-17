@@ -7,24 +7,22 @@ async function listarDispositivosParaGerenciamento() {
 
   return devices.map((device) => {
     let status = {};
+    
     try {
-      status =
-        device.status_json && typeof device.status_json === "string"
-          ? JSON.parse(device.status_json)
-          : device.status_json || {};
+      status = device.status_json && typeof device.status_json === "string"
+        ? JSON.parse(device.status_json)
+        : device.status_json || {};
     } catch (e) {
-      console.error(
-        `Erro ao parsear status_json para SN ${device.serial_number}:`,
-        device.status_json
-      );
+      console.error(`Erro ao parsear status_json para SN ${device.serial_number}:`, device.status_json);
       status = {};
     }
-    const temperaturaExterna =
-      status.ch_analog_1 !== undefined
-        ? status.ch_analog_1
-        : status.value_channels
-        ? status.value_channels[2]
-        : null;
+
+    const temperaturaExterna = status.ch_analog_1 !== undefined
+      ? status.ch_analog_1
+      : status.value_channels
+      ? status.value_channels[2]
+      : null;
+
     return {
       ...device,
       temperatura_externa: temperaturaExterna,
@@ -45,14 +43,25 @@ async function obterDispositivoPorId(id) {
     "SELECT * FROM dispositivos_logbox WHERE id = ?",
     [id]
   );
+
   if (rows.length === 0) {
     throw new Error("Dispositivo não encontrado");
   }
+
   return rows[0];
 }
 
 async function salvarDispositivo(dadosDispositivo) {
   const { id, local_tag, serial_number, descricao } = dadosDispositivo;
+
+  if (!local_tag || local_tag.trim() === "") {
+    throw new Error("Local/Tag é obrigatório");
+  }
+
+  if (!serial_number || serial_number.trim() === "") {
+    throw new Error("Número de série é obrigatório");
+  }
+
   if (id) {
     await promisePool.query(
       "UPDATE dispositivos_logbox SET local_tag = ?, serial_number = ?, descricao = ? WHERE id = ?",
