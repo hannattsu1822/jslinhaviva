@@ -1,4 +1,9 @@
 const { promisePool } = require("../../../init");
+const { 
+  validarTemperatura, 
+  validarStatusDispositivo, 
+  extrairTemperaturaPayload 
+} = require("../helpers/validation.helper");
 
 async function listarDispositivosParaGerenciamento() {
   const [devices] = await promisePool.query(
@@ -17,16 +22,18 @@ async function listarDispositivosParaGerenciamento() {
       status = {};
     }
 
-    const temperaturaExterna = status.ch_analog_1 !== undefined
-      ? status.ch_analog_1
-      : status.value_channels
-      ? status.value_channels[2]
-      : null;
+    const statusValidado = validarStatusDispositivo(status, device.ultima_leitura);
+    
+    const temperaturaExterna = extrairTemperaturaPayload(status);
+    const validacaoTemp = validarTemperatura(temperaturaExterna);
 
     return {
       ...device,
-      temperatura_externa: temperaturaExterna,
-      connection_status: status.connection_status || "offline",
+      temperatura_externa: validacaoTemp.valid ? validacaoTemp.value : null,
+      temperatura_invalida: !validacaoTemp.valid,
+      connection_status: statusValidado.connection_status,
+      minutes_since_last_reading: statusValidado.minutes_since_last_reading,
+      connection_warning: statusValidado.connection_warning || null
     };
   });
 }
