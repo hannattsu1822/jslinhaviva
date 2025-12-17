@@ -1,6 +1,13 @@
 const { promisePool } = require("../../../init");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
+const { 
+  validarTemperatura, 
+  verificarConexaoAtiva,
+  extrairTemperaturaPayload,
+  filtrarLeiturasValidas,
+  validarStatusDispositivo
+} = require("../helpers/validation.helper");
 
 async function getReportData(filters) {
   const { deviceId, reportType, date, month, year } = filters;
@@ -61,20 +68,12 @@ async function getReportData(filters) {
       [deviceInfo.serial_number, startDate, endDate]
     );
 
-    processedReadings = readings.map((r) => {
-      let temp = null;
-      try {
-        const payload = JSON.parse(r.payload_json);
-        temp = payload.ch_analog_1 || (payload.value_channels ? payload.value_channels[2] : null);
-      } catch (e) {
-        temp = null;
-      }
+    const leiturasValidas = filtrarLeiturasValidas(readings);
 
-      return {
-        temperatura_externa: temp,
-        timestamp_leitura: r.timestamp_leitura,
-      };
-    });
+    processedReadings = leiturasValidas.map((r) => ({
+      temperatura_externa: r.temperatura_extraida,
+      timestamp_leitura: r.timestamp_leitura,
+    }));
 
     chartData.labels = processedReadings.map((r) =>
       new Date(r.timestamp_leitura).toLocaleTimeString("pt-BR", {
@@ -98,7 +97,9 @@ async function getReportData(filters) {
         AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg_temp,
         MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max_temp
       FROM leituras_logbox
-      WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?
+      WHERE serial_number = ? 
+        AND timestamp_leitura BETWEEN ? AND ?
+        AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) BETWEEN -40 AND 85
       GROUP BY DATE(timestamp_leitura)
       ORDER BY data_dia ASC`,
       [deviceInfo.serial_number, startDate, endDate]
@@ -122,7 +123,9 @@ async function getReportData(filters) {
       MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_max,
       COUNT(*) as total_count
     FROM leituras_logbox
-    WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?`,
+    WHERE serial_number = ? 
+      AND timestamp_leitura BETWEEN ? AND ?
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) BETWEEN -40 AND 85`,
     [deviceInfo.serial_number, startDate, endDate]
   );
 
@@ -168,26 +171,20 @@ async function obterLeituras(serialNumber) {
     [serialNumber]
   );
 
-  const reversedRows = rows.reverse();
+  const leiturasValidas = filtrarLeiturasValidas(rows);
+  const reversedRows = leiturasValidas.reverse();
 
   return {
     labels: reversedRows.map((r) =>
       new Date(r.timestamp_leitura).toLocaleString("pt-BR")
     ),
-    temperaturas: reversedRows.map((r) => {
-      try {
-        const payload = JSON.parse(r.payload_json);
-        return payload.ch_analog_1 || (payload.value_channels ? payload.value_channels[2] : null);
-      } catch (e) {
-        return null;
-      }
-    }),
+    temperaturas: reversedRows.map((r) => r.temperatura_extraida),
   };
 }
 
 async function obterStatus(serialNumber) {
   const [rows] = await promisePool.query(
-    "SELECT status_json FROM dispositivos_logbox WHERE serial_number = ?",
+    "SELECT status_json, ultima_leitura FROM dispositivos_logbox WHERE serial_number = ?",
     [serialNumber]
   );
 
@@ -204,7 +201,9 @@ async function obterStatus(serialNumber) {
     }
   }
 
-  return status;
+  const statusValidado = validarStatusDispositivo(status, rows[0].ultima_leitura);
+
+  return statusValidado;
 }
 
 async function obterUltimaLeitura(serialNumber) {
@@ -217,7 +216,16 @@ async function obterUltimaLeitura(serialNumber) {
     throw new Error("Nenhuma leitura encontrada");
   }
 
-  return latest[0];
+  const leitura = latest[0];
+  const temperatura = extrairTemperaturaPayload(leitura.payload);
+  const validacao = validarTemperatura(temperatura);
+
+  return {
+    ...leitura,
+    temperatura_valida: validacao.valid,
+    temperatura_valor: validacao.valid ? validacao.value : null,
+    temperatura_aviso: validacao.valid ? null : validacao.reason
+  };
 }
 
 async function obterEstatisticas(serialNumber) {
@@ -226,12 +234,26 @@ async function obterEstatisticas(serialNumber) {
   const month = new Date(today.getFullYear(), today.getMonth(), 1);
 
   const [[todayStats]] = await promisePool.query(
-    "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+    `SELECT 
+      MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, 
+      AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, 
+      MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max 
+    FROM leituras_logbox 
+    WHERE serial_number = ? 
+      AND timestamp_leitura >= ?
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) BETWEEN -40 AND 85`,
     [serialNumber, today]
   );
 
   const [[monthStats]] = await promisePool.query(
-    "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+    `SELECT 
+      MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, 
+      AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, 
+      MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max 
+    FROM leituras_logbox 
+    WHERE serial_number = ? 
+      AND timestamp_leitura >= ?
+      AND JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1')) BETWEEN -40 AND 85`,
     [serialNumber, month]
   );
 
