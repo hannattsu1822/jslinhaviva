@@ -10,6 +10,13 @@ const { projectRootDir } = require("./shared/path.helper");
 
 const app = express();
 
+const logger = {
+  debug: (msg) => process.env.NODE_ENV === 'development' && console.log(`[DEBUG] ${msg}`),
+  info: (msg) => console.log(`[INFO] ${msg}`),
+  warn: (msg) => console.warn(`[WARN] ${msg}`),
+  error: (msg) => console.error(`[ERROR] ${msg}`)
+};
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cors());
@@ -21,106 +28,74 @@ const publicDir = path.join(projectRootDir, "public");
 const viewsDir = path.join(projectRootDir, "views");
 
 app.set("views", [publicDir, viewsDir]);
-
 app.use(express.static(publicDir));
-console.log(
-  `[Prioridade 1] Servindo arquivos estáticos da pasta 'public': ${publicDir}`
-);
+logger.info(`Servindo arquivos estáticos da pasta 'public': ${publicDir}`);
 
 app.use(express.static(viewsDir));
-console.log(
-  `[Prioridade 2] Servindo arquivos estáticos da pasta 'views' como fallback: ${viewsDir}`
-);
+logger.info(`Servindo arquivos estáticos da pasta 'views' como fallback: ${viewsDir}`);
 
-const uploadsSubestacoesDir = path.join(
-  projectRootDir,
-  "upload_arquivos_subestacoes"
-);
-
+const uploadsSubestacoesDir = path.join(projectRootDir, "upload_arquivos_subestacoes");
 if (!fs.existsSync(uploadsSubestacoesDir)) {
   try {
     fs.mkdirSync(uploadsSubestacoesDir, { recursive: true });
+    logger.info(`Diretório criado: ${uploadsSubestacoesDir}`);
   } catch (err) {
-    console.error(
-      `Falha ao criar diretório de uploads de subestações em ${uploadsSubestacoesDir}:`,
-      err
-    );
+    logger.error(`Falha ao criar diretório de uploads de subestações em ${uploadsSubestacoesDir}: ${err.message}`);
   }
 }
 app.use("/upload_arquivos_subestacoes", express.static(uploadsSubestacoesDir));
 
 const uploadsFibraDir = path.join(projectRootDir, "upload_arquivos_fibra");
-
 if (!fs.existsSync(uploadsFibraDir)) {
   try {
     fs.mkdirSync(uploadsFibraDir, { recursive: true });
+    logger.info(`Diretório criado: ${uploadsFibraDir}`);
   } catch (err) {
-    console.error(
-      `Falha ao criar diretório de uploads de fibra em ${uploadsFibraDir}:`,
-      err
-    );
+    logger.error(`Falha ao criar diretório de uploads de fibra em ${uploadsFibraDir}: ${err.message}`);
   }
 }
 app.use("/upload_arquivos_fibra", express.static(uploadsFibraDir));
 
-const trafosReformadosAnexosDir = path.join(
-  projectRootDir,
-  "trafos_reformados_anexos"
-);
+const trafosReformadosAnexosDir = path.join(projectRootDir, "trafos_reformados_anexos");
 if (!fs.existsSync(trafosReformadosAnexosDir)) {
   try {
     fs.mkdirSync(trafosReformadosAnexosDir, { recursive: true });
+    logger.info(`Diretório criado: ${trafosReformadosAnexosDir}`);
   } catch (err) {
-    console.error(
-      `Falha ao criar diretório de anexos de trafos reformados em ${trafosReformadosAnexosDir}:`,
-      err
-    );
+    logger.error(`Falha ao criar diretório de anexos de trafos reformados em ${trafosReformadosAnexosDir}: ${err.message}`);
   }
 }
 app.use("/trafos_reformados_anexos", express.static(trafosReformadosAnexosDir));
 
-// NOVO DIRETÓRIO PARA O MÓDULO DE INSPEÇÃO DE REDES
 const uploadsInspRedesDir = path.join(projectRootDir, "upload_InspDistRedes");
 if (!fs.existsSync(uploadsInspRedesDir)) {
   try {
     fs.mkdirSync(uploadsInspRedesDir, { recursive: true });
+    logger.info(`Diretório criado: ${uploadsInspRedesDir}`);
   } catch (err) {
-    console.error(
-      `Falha ao criar diretório de uploads de Inspeção de Redes em ${uploadsInspRedesDir}:`,
-      err
-    );
+    logger.error(`Falha ao criar diretório de uploads de Inspeção de Redes em ${uploadsInspRedesDir}: ${err.message}`);
   }
 }
 app.use("/upload_InspDistRedes", express.static(uploadsInspRedesDir));
 
-const uploadsChecklistDailyDir = path.join(
-  projectRootDir,
-  "upload_checklist_diario_veiculos"
-);
+const uploadsChecklistDailyDir = path.join(projectRootDir, "upload_checklist_diario_veiculos");
 if (!fs.existsSync(uploadsChecklistDailyDir)) {
   try {
     fs.mkdirSync(uploadsChecklistDailyDir, { recursive: true });
+    logger.info(`Diretório criado: ${uploadsChecklistDailyDir}`);
   } catch (err) {
-    console.error(
-      `Falha ao criar diretório de uploads de Checklist Diário em ${uploadsChecklistDailyDir}:`,
-      err
-    );
+    logger.error(`Falha ao criar diretório de uploads de Checklist Diário em ${uploadsChecklistDailyDir}: ${err.message}`);
   }
 }
-app.use(
-  "/upload_checklist_diario_veiculos",
-  express.static(uploadsChecklistDailyDir)
-);
+app.use("/upload_checklist_diario_veiculos", express.static(uploadsChecklistDailyDir));
 
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
 if (!fs.existsSync(multerTempDir)) {
   try {
     fs.mkdirSync(multerTempDir, { recursive: true });
+    logger.info(`Diretório temporário do Multer criado: ${multerTempDir}`);
   } catch (err) {
-    console.error(
-      `Falha ao criar diretório temporário do Multer em ${multerTempDir}:`,
-      err
-    );
+    logger.error(`Falha ao criar diretório temporário do Multer em ${multerTempDir}: ${err.message}`);
   }
 }
 
@@ -151,6 +126,7 @@ const anexoStorage = multer.diskStorage({
     if (!trafoId) {
       return cb(new Error("ID do transformador não encontrado na requisição."));
     }
+
     const dir = path.join(trafosReformadosAnexosDir, String(trafoId));
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
@@ -174,19 +150,14 @@ const uploadAnexoChecklist = multer({
   storage: anexoStorage,
   fileFilter: anexoFileFilter,
   limits: {
-    fileSize: 3 * 1024 * 1024, // 3 MB
+    fileSize: 3 * 1024 * 1024,
   },
 });
 
 const sessionSecret = process.env.SESSION_SECRET;
-if (
-  !sessionSecret ||
-  typeof sessionSecret !== "string" ||
-  sessionSecret.trim() === ""
-) {
-  console.error(
-    "Erro: A variável de ambiente SESSION_SECRET não está definida ou não é uma string válida."
-  );
+
+if (!sessionSecret || typeof sessionSecret !== "string" || sessionSecret.trim() === "") {
+  logger.error("A variável de ambiente SESSION_SECRET não está definida ou não é uma string válida.");
   process.exit(1);
 }
 
@@ -213,36 +184,45 @@ const pool = mysql.createPool({
 
 const promisePool = pool.promise();
 
+pool.on('connection', (connection) => {
+  logger.debug(`Nova conexão estabelecida com o banco de dados (ID: ${connection.threadId})`);
+});
+
+pool.on('error', (err) => {
+  logger.error(`Erro no pool de conexões do MySQL: ${err.message}`);
+});
+
 async function salvarAnexos(processoId, files) {
   const anexosSalvos = [];
-  const baseUploadDirProcessos = path.join(
-    projectRootDir,
-    "upload_arquivos_processos"
-  );
+  const baseUploadDirProcessos = path.join(projectRootDir, "upload_arquivos_processos");
 
   for (const file of files) {
-    const processoUploadDir = path.join(
-      baseUploadDirProcessos,
-      String(processoId)
-    );
+    const processoUploadDir = path.join(baseUploadDirProcessos, String(processoId));
+
     if (!fs.existsSync(processoUploadDir)) {
       fs.mkdirSync(processoUploadDir, { recursive: true });
     }
+
     const fileExtension = path.extname(file.originalname).toLowerCase();
     const novoNome = `${processoId}_${Date.now()}${fileExtension}`;
     const novoPath = path.join(processoUploadDir, novoNome);
+
     fs.renameSync(file.path, novoPath);
+
     const caminhoServidor = `/upload_arquivos_processos/${processoId}/${novoNome}`;
+
     const [result] = await promisePool.query(
       `INSERT INTO anexos_processos (processo_id, nome_original, caminho_servidor, tamanho) VALUES (?, ?, ?, ?)`,
       [processoId, file.originalname, caminhoServidor, file.size]
     );
+
     anexosSalvos.push({
       id: result.insertId,
       caminho: caminhoServidor,
       nomeOriginal: file.originalname,
     });
   }
+
   return anexosSalvos;
 }
 
@@ -254,4 +234,5 @@ module.exports = {
   projectRootDir,
   uploadsSubestacoesDir,
   uploadAnexoChecklist,
+  logger,
 };
