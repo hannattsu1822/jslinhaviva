@@ -18,9 +18,8 @@ function inicializarPainel() {
             const loader = document.getElementById("loader-historico");
             if (loader) {
                 loader.innerHTML = `
-                    <div class="chart-loader">
-                        <div class="spinner"></div>
-                        <p>Erro ao carregar dados. Tente recarregar a página.</p>
+                    <div class="has-text-centered py-6">
+                        <p class="has-text-danger">Erro ao carregar dados. Tente recarregar a página.</p>
                     </div>
                 `;
             }
@@ -46,9 +45,8 @@ async function carregarLeiturasIniciais() {
         console.error("Erro ao carregar leituras:", error);
         if (loader) {
             loader.innerHTML = `
-                <div class="chart-loader">
-                    <div class="spinner"></div>
-                    <p>Erro ao carregar o gráfico.</p>
+                <div class="has-text-centered py-6">
+                    <p class="has-text-danger">Erro ao carregar o gráfico.</p>
                 </div>
             `;
         }
@@ -62,7 +60,7 @@ async function carregarStatusInicial() {
 
         const data = await response.json();
         console.log("Status recebido:", data);
-        atualizarPainelCompleto(data);
+        atualizarPainelCompleto(data.status);
 
         const latestReadingResponse = await fetch(`/api/logbox-device/${serialNumber}/latest`);
         if (latestReadingResponse.ok) {
@@ -160,11 +158,12 @@ function atualizarPainelLeitura(dados) {
         const tempElement = document.getElementById("latest-temp");
         if (tempElement) {
             tempElement.textContent = temperatura.toFixed(1);
-            const parent = tempElement.parentElement;
+            const parent = tempElement.closest(".box");
             if (parent) {
-                parent.classList.add("has-background-info-light");
+                parent.style.transition = "background-color 0.3s";
+                parent.style.backgroundColor = "#d1ecf1";
                 setTimeout(() => {
-                    parent.classList.remove("has-background-info-light");
+                    parent.style.backgroundColor = "";
                 }, 1000);
             }
         }
