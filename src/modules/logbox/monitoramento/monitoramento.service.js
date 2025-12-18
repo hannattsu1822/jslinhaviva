@@ -7,7 +7,6 @@ async function getReportData(filters) {
   let deviceInfo = null;
   let startDate, endDate;
 
-  // 1. Definição de Datas
   switch (reportType) {
     case "monthly":
       startDate = new Date(`${month}-01T00:00:00`);
@@ -18,13 +17,12 @@ async function getReportData(filters) {
       startDate = new Date(`${year}-01-01T00:00:00`);
       endDate = new Date(`${year}-12-31T23:59:59`);
       break;
-    default: // detailed
+    default:
       startDate = new Date(`${date}T00:00:00`);
       endDate = new Date(`${date}T23:59:59`);
       break;
   }
 
-  // 2. Buscar Informações do Dispositivo
   const [deviceRows] = await promisePool.query(
     "SELECT * FROM dispositivos_logbox WHERE id = ?",
     [deviceId]
@@ -36,12 +34,10 @@ async function getReportData(filters) {
 
   deviceInfo = deviceRows[0];
 
-  // 3. Buscar Leituras e Preparar Dados do Gráfico (ChartData)
   let chartData = { labels: [], datasets: [] };
   let processedReadings = [];
 
   if (reportType === "detailed") {
-    // Para detalhado: Busca leituras cruas
     const [readings] = await promisePool.query(
       "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
       [deviceInfo.serial_number, startDate, endDate]
@@ -51,9 +47,7 @@ async function getReportData(filters) {
       let temp = null;
       try {
         const payload = JSON.parse(r.payload_json);
-        temp =
-          payload.ch_analog_1 ||
-          (payload.value_channels ? payload.value_channels[2] : null);
+        temp = payload.ch_analog_1 || (payload.value_channels ? payload.value_channels[2] : null);
       } catch (e) {
         temp = null;
       }
@@ -72,14 +66,13 @@ async function getReportData(filters) {
     );
 
     chartData.datasets.push(
-      { label: "Min", data: [] }, // Placeholder para manter estrutura
+      { label: "Min", data: [] },
       {
         label: "Temperatura",
         data: processedReadings.map((r) => r.temperatura_externa),
       }
     );
   } else {
-    // Para Mensal/Anual: Busca Agregado por Dia (Melhor performance)
     const [aggregated] = await promisePool.query(
       `SELECT
         DATE(timestamp_leitura) as data_dia,
@@ -104,7 +97,6 @@ async function getReportData(filters) {
     );
   }
 
-  // 4. Estatísticas Gerais (KPIs)
   const [stats] = await promisePool.query(
     `SELECT
       MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_min,
@@ -116,16 +108,13 @@ async function getReportData(filters) {
     [deviceInfo.serial_number, startDate, endDate]
   );
 
-  // 5. Histórico de Ventilação (Correção: Usar serial_number)
   const [fanHistory] = await promisePool.query(
     "SELECT * FROM historico_ventilacao WHERE serial_number = ? AND timestamp_inicio >= ? AND timestamp_inicio <= ? ORDER BY timestamp_inicio DESC",
     [deviceInfo.serial_number, startDate, endDate]
   );
 
-  // 6. Agregação de Ventilação (fanHistoryAgregado)
   let fanHistoryAgregado = [];
   if (reportType !== "detailed") {
-    // Agrupar por dia ou mês
     const mapAgregado = {};
     fanHistory.forEach((item) => {
       const key = new Date(item.timestamp_inicio).toLocaleDateString("pt-BR");
@@ -138,7 +127,6 @@ async function getReportData(filters) {
     fanHistoryAgregado = Object.values(mapAgregado);
   }
 
-  // 7. Histórico de Conexão
   const [connectionHistory] = await promisePool.query(
     "SELECT * FROM historico_conexao WHERE serial_number = ? AND timestamp_offline >= ? AND timestamp_offline <= ? ORDER BY timestamp_offline DESC",
     [deviceInfo.serial_number, startDate, endDate]
@@ -147,11 +135,11 @@ async function getReportData(filters) {
   return {
     device: deviceInfo,
     filters: { ...filters, startDate, endDate },
-    readings: processedReadings, // Usado apenas no detalhado ou PDF
-    chartData: chartData, // O Frontend precisa disso!
+    readings: processedReadings,
+    chartData: chartData,
     stats: stats[0],
     fanHistory,
-    fanHistoryAgregado, // O Frontend precisa disso!
+    fanHistoryAgregado,
     connectionHistory,
   };
 }
@@ -182,7 +170,6 @@ async function obterLeituras(serialNumber) {
   };
 }
 
-// ✅ FUNÇÃO CORRIGIDA
 async function obterStatus(serialNumber) {
   const [rows] = await promisePool.query(
     "SELECT status_json, ultima_leitura FROM dispositivos_logbox WHERE serial_number = ?",
@@ -193,7 +180,6 @@ async function obterStatus(serialNumber) {
     throw new Error("Status não encontrado");
   }
 
-  // Garantir que retorna objeto, mesmo se salvo como string
   let status = rows[0].status_json;
   if (typeof status === "string") {
     try {
@@ -203,13 +189,11 @@ async function obterStatus(serialNumber) {
     }
   }
 
-  // CORREÇÃO: Calcular connection_status baseado na última leitura
   if (rows[0].ultima_leitura) {
     const lastTimestamp = new Date(rows[0].ultima_leitura);
     const now = new Date();
     const diffMinutes = (now - lastTimestamp) / 1000 / 60;
     
-    // Se última leitura foi há mais de 5 minutos, considera offline
     status.connection_status = diffMinutes > 5 ? 'offline' : 'online';
     status.last_seen_minutes = Math.floor(diffMinutes);
   } else {
@@ -287,18 +271,16 @@ async function obterHistoricoConexao(serialNumber) {
 }
 
 async function gerarPdfRelatorio(filters) {
-  // Reutiliza a lógica corrigida de getReportData
   const data = await getReportData(filters);
   const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: 800, height: 400 });
 
-  // Configuração do gráfico para o PDF baseada no tipo de relatório
   let datasets = [];
   let labels = data.chartData.labels;
 
   if (filters.reportType === 'detailed') {
     datasets.push({
       label: "Temperatura (°C)",
-      data: data.chartData.datasets[1].data, // Dataset 1 é a temperatura no detalhado
+      data: data.chartData.datasets[1].data,
       borderColor: "rgb(75, 192, 192)",
       borderWidth: 2,
       tension: 0.1,
@@ -350,7 +332,6 @@ async function gerarPdfRelatorio(filters) {
     height: imageDims.height,
   });
 
-  // Adicionar resumo textual se houver espaço ou nova página
   let y = height - 140 - imageDims.height;
   page.drawText(`Estatísticas: Mín: ${parseFloat(data.stats.temp_min).toFixed(1)}°C | Méd: ${parseFloat(data.stats.temp_avg).toFixed(1)}°C | Máx: ${parseFloat(data.stats.temp_max).toFixed(1)}°C`, {
     x: 50, y, font, size: 10
