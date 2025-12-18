@@ -158,7 +158,7 @@
                 </h3>
             </div>
             <div class="level-right">
-                <span class="tag is-light">Últimas 24h</span>
+                <span class="tag is-light">Tempo Real</span>
             </div>
         </div>
         
@@ -252,6 +252,9 @@
 <script>
     const serialNumber = "<%= serialNumber %>";
     let historicoChartInstance = null;
+    
+    // BUFFER LOCAL DE DADOS (O segredo para o gráfico funcionar bem)
+    let dadosGraficoBuffer = []; 
 
     console.log("Painel Iniciado para SN:", serialNumber);
 
@@ -261,21 +264,12 @@
 
     function inicializarPainel() {
         iniciarWebSocket();
-        carregarLeiturasIniciais();
+        carregarLeiturasIniciais(); // Carrega histórico do SQL
         carregarStatusInicial();
         carregarEstatisticasDetalhes();
     }
 
-    function detectarValor(dados, chavesPossiveis) {
-        if (!dados) return null;
-        for (let chave of chavesPossiveis) {
-            if (dados[chave] !== undefined && dados[chave] !== null && dados[chave] !== "") return dados[chave];
-            if (dados[chave.toLowerCase()] !== undefined) return dados[chave.toLowerCase()];
-            if (dados[chave.toUpperCase()] !== undefined) return dados[chave.toUpperCase()];
-        }
-        return null;
-    }
-
+    // --- WEBSOCKET ---
     function iniciarWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const host = window.location.host;
@@ -301,29 +295,41 @@
         socket.onclose = () => setTimeout(iniciarWebSocket, 5000);
     }
 
+    // --- API CALLS ---
     async function carregarLeiturasIniciais() {
         const loader = document.getElementById("loader-historico");
+        const chartEl = document.getElementById("graficoHistorico");
         try {
             const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
-            
-            // MESMO SE DER ERRO OU ESTIVER VAZIO, INICIA O GRÁFICO
             let data = { labels: [], temperaturas: [] };
             
             if (response.ok) {
                 data = await response.json();
-            } else {
-                console.warn("API retornou erro, iniciando gráfico vazio.");
             }
             
-            // Esconde o loader
+            // Converte dados da API para o formato do Buffer Local [timestamp, valor]
+            dadosGraficoBuffer = (data.labels || []).map((label, index) => {
+                let timestamp;
+                if (typeof label === 'string' && label.includes('/')) {
+                    const parts = label.split(/[\/\s:]/);
+                    timestamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+                } else {
+                    timestamp = new Date(label).getTime();
+                }
+                return [timestamp, data.temperaturas[index]];
+            });
+
             if (loader) loader.style.display = "none";
+            if (chartEl) chartEl.style.display = "block";
             
-            gerarGraficoHistorico(data);
+            // Inicializa o gráfico com o que veio do SQL
+            inicializarGrafico();
+            
         } catch (error) {
             console.error("Erro ao carregar leituras:", error);
             if (loader) loader.style.display = "none";
-            // Inicia gráfico vazio em caso de erro de rede
-            gerarGraficoHistorico({ labels: [], temperaturas: [] });
+            if (chartEl) chartEl.style.display = "block";
+            inicializarGrafico(); // Inicia vazio se der erro
         }
     }
 
@@ -333,7 +339,6 @@
             if (response.ok) {
                 const data = await response.json();
                 const statusData = data.status || data;
-                console.log("DEBUG - Status:", statusData);
                 atualizarPainelCompleto(statusData);
             }
             
@@ -362,6 +367,7 @@
         } catch (e) { console.error(e); }
     }
 
+    // --- ATUALIZAÇÃO UI ---
     function atualizarPainelCompleto(status) {
         if (!status) return;
 
@@ -414,10 +420,97 @@
                     box.classList.add("updated-anim");
                 }
             }
-            atualizarGraficoTempoReal(temperatura);
+            // Atualiza o gráfico com o novo dado
+            adicionarPontoGrafico(temperatura);
         }
         atualizarTexto("latest-timestamp", `Em: ${new Date().toLocaleString("pt-BR")}`);
         atualizarPainelCompleto(dados);
+    }
+
+    // --- GRÁFICO (LÓGICA ROBUSTA) ---
+    function inicializarGrafico() {
+        const container = document.getElementById("graficoHistorico");
+        if (!container) return;
+        
+        if (historicoChartInstance) historicoChartInstance.dispose();
+
+        historicoChartInstance = echarts.init(container);
+        
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderColor: '#ddd',
+                borderWidth: 1,
+                textStyle: { color: '#333' },
+                formatter: params => {
+                    if (!params[0]) return '';
+                    const d = new Date(params[0].value[0]);
+                    return `<strong>${d.toLocaleTimeString("pt-BR")}</strong><br/>Temp: <strong>${params[0].value[1].toFixed(1)} °C</strong>`;
+                }
+            },
+            grid: { left: '40', right: '20', bottom: '30', top: '30', containLabel: true },
+            xAxis: {
+                type: 'time',
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: '#ddd' } },
+                axisLabel: { color: '#666' }
+            },
+            yAxis: {
+                type: 'value',
+                splitLine: { lineStyle: { type: 'dashed', color: '#eee' } },
+                axisLabel: { formatter: '{value} °C', color: '#666' },
+                scale: true // Ajusta escala automaticamente
+            },
+            series: [{
+                name: 'Temperatura',
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                data: dadosGraficoBuffer, // Usa o buffer global
+                lineStyle: { color: '#3298dc', width: 3 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(50, 152, 220, 0.4)' },
+                        { offset: 1, color: 'rgba(50, 152, 220, 0.0)' }
+                    ])
+                }
+            }]
+        };
+        historicoChartInstance.setOption(option);
+        window.addEventListener("resize", () => historicoChartInstance && historicoChartInstance.resize());
+    }
+
+    function adicionarPontoGrafico(temperatura) {
+        if (!historicoChartInstance) return;
+        
+        const now = new Date().getTime();
+        
+        // Adiciona ao buffer local
+        dadosGraficoBuffer.push([now, temperatura]);
+        
+        // Mantém apenas os últimos 300 pontos para não pesar
+        if (dadosGraficoBuffer.length > 300) {
+            dadosGraficoBuffer.shift();
+        }
+
+        // Atualiza o gráfico com o buffer completo (mais seguro e rápido)
+        historicoChartInstance.setOption({
+            series: [{
+                data: dadosGraficoBuffer
+            }]
+        });
+    }
+
+    // --- HELPERS ---
+    function detectarValor(dados, chavesPossiveis) {
+        if (!dados) return null;
+        for (let chave of chavesPossiveis) {
+            if (dados[chave] !== undefined && dados[chave] !== null && dados[chave] !== "") return dados[chave];
+            if (dados[chave.toLowerCase()] !== undefined) return dados[chave.toLowerCase()];
+            if (dados[chave.toUpperCase()] !== undefined) return dados[chave.toUpperCase()];
+        }
+        return null;
     }
 
     function extrairTemperatura(dados) {
@@ -457,84 +550,6 @@
     function getPowerSourceStatus(voltage) {
         if (voltage === undefined || voltage === null) return { text: "Verificando..." };
         return voltage > 9 ? { text: "Rede Elétrica" } : { text: "Apenas Bateria" };
-    }
-
-    function gerarGraficoHistorico(dados) {
-        const container = document.getElementById("graficoHistorico");
-        if (!container) return;
-        
-        if (historicoChartInstance) historicoChartInstance.dispose();
-
-        // Garante que dados.labels seja um array, mesmo se vier null/undefined
-        const labels = dados.labels || [];
-        const temperaturas = dados.temperaturas || [];
-
-        const chartData = labels.map((label, index) => {
-            let timestamp;
-            if (typeof label === 'string' && label.includes('/')) {
-                const parts = label.split(/[\/\s:]/);
-                timestamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
-            } else {
-                timestamp = new Date(label).getTime();
-            }
-            return [timestamp, temperaturas[index]];
-        });
-
-        historicoChartInstance = echarts.init(container);
-        const option = {
-            tooltip: {
-                trigger: 'axis',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderColor: '#ddd',
-                borderWidth: 1,
-                textStyle: { color: '#333' },
-                formatter: params => {
-                    if (!params[0]) return '';
-                    const d = new Date(params[0].value[0]);
-                    return `<strong>${d.toLocaleTimeString("pt-BR")}</strong><br/>Temp: <strong>${params[0].value[1].toFixed(1)} °C</strong>`;
-                }
-            },
-            grid: { left: '40', right: '20', bottom: '30', top: '30', containLabel: true },
-            xAxis: {
-                type: 'time',
-                boundaryGap: false,
-                axisLine: { lineStyle: { color: '#ddd' } },
-                axisLabel: { color: '#666' }
-            },
-            yAxis: {
-                type: 'value',
-                splitLine: { lineStyle: { type: 'dashed', color: '#eee' } },
-                axisLabel: { formatter: '{value} °C', color: '#666' }
-            },
-            series: [{
-                name: 'Temperatura',
-                type: 'line',
-                smooth: true,
-                showSymbol: false,
-                data: chartData,
-                lineStyle: { color: '#3298dc', width: 3 },
-                areaStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: 'rgba(50, 152, 220, 0.4)' },
-                        { offset: 1, color: 'rgba(50, 152, 220, 0.0)' }
-                    ])
-                }
-            }]
-        };
-        historicoChartInstance.setOption(option);
-        window.addEventListener("resize", () => historicoChartInstance && historicoChartInstance.resize());
-    }
-
-    function atualizarGraficoTempoReal(temperatura) {
-        if (!historicoChartInstance) return;
-        const now = new Date().getTime();
-        const option = historicoChartInstance.getOption();
-        if (option && option.series && option.series[0]) {
-            const data = option.series[0].data;
-            data.push([now, temperatura]);
-            if (data.length > 200) data.shift();
-            historicoChartInstance.setOption({ series: [{ data: data }] });
-        }
     }
 </script>
 
