@@ -2,7 +2,7 @@ const { promisePool, logger } = require("./init");
 const bcrypt = require("bcrypt");
 
 function autenticar(req, res, next) {
-  if (req.session.user) {
+  if (req.session && req.session.user) {
     req.user = req.session.user;
     next();
   } else {
@@ -37,6 +37,7 @@ async function loginSeguro(req, res, next) {
     if (senhaJaCriptografada) {
       senhaValida = await bcrypt.compare(senha, usuario.senha);
     } else {
+      // Migração de senha legado (texto plano) para Bcrypt
       senhaValida = senha === usuario.senha;
       
       if (senhaValida) {
@@ -112,20 +113,6 @@ function verificarCargo(cargosPermitidos) {
   };
 }
 
-async function validarSessaoWebSocket(cookies) {
-  if (!cookies) {
-    return { valid: false, reason: "Sem cookies" };
-  }
-
-  const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('connect.sid='));
-  
-  if (!sessionCookie) {
-    return { valid: false, reason: "Cookie de sessão não encontrado" };
-  }
-
-  return { valid: true, sessionCookie };
-}
-
 async function registrarAuditoria(matricula, acao, detalhes = null, connection = null) {
   if (!matricula) {
     logger.error("Tentativa de registrar auditoria sem matrícula");
@@ -142,7 +129,6 @@ async function registrarAuditoria(matricula, acao, detalhes = null, connection =
     }
   } catch (err) {
     logger.error(`Erro ao registrar auditoria: ${err.message}`);
-    throw err;
   }
 }
 
@@ -159,7 +145,6 @@ module.exports = {
   loginSeguro,
   verificarNivel,
   verificarCargo,
-  validarSessaoWebSocket,
   registrarAuditoria,
   criarHashSenha,
   verificarSenha,
