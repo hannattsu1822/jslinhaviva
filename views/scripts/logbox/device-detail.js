@@ -15,7 +15,7 @@ function inicializarPainel() {
     console.error("Erro ao inicializar painel:", error);
     const loader = document.getElementById("loader-historico");
     if (loader) {
-      loader.innerHTML = "Erro ao carregar dados. Tente recarregar a página.";
+      loader.innerHTML = '<p class="has-text-danger">Erro ao carregar dados. Tente recarregar a página.</p>';
     }
   });
 }
@@ -25,7 +25,7 @@ async function carregarLeiturasIniciais() {
   const chartContainer = document.getElementById("graficoHistorico");
 
   try {
-    if (loader) loader.style.display = "flex";
+    if (loader) loader.style.display = "block";
 
     const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
     if (!response.ok) throw new Error("Falha ao buscar histórico de leituras");
@@ -37,7 +37,9 @@ async function carregarLeiturasIniciais() {
     if (chartContainer) chartContainer.style.display = "block";
   } catch (error) {
     console.error("Erro ao carregar leituras:", error);
-    if (loader) loader.innerHTML = "Erro ao carregar o gráfico.";
+    if (loader) {
+      loader.innerHTML = '<p class="has-text-danger">Erro ao carregar o gráfico.</p>';
+    }
   }
 }
 
@@ -75,19 +77,19 @@ function atualizarPainelCompleto(status) {
     return;
   }
 
-  // Status de conexão
   const connectionStatusEl = document.getElementById("connection-status-text");
   if (connectionStatusEl) {
     if (status.connection_status === "offline") {
       connectionStatusEl.textContent = "Offline";
-      connectionStatusEl.className = "kpi-value text-danger";
+      connectionStatusEl.classList.remove("has-text-success");
+      connectionStatusEl.classList.add("has-text-danger");
     } else {
       connectionStatusEl.textContent = "Online";
-      connectionStatusEl.className = "kpi-value text-success";
+      connectionStatusEl.classList.remove("has-text-danger");
+      connectionStatusEl.classList.add("has-text-success");
     }
   }
 
-  // WiFi/RSSI
   const sinalWifi = status.lqi;
   const { text: wifiText } = getWifiStatus(sinalWifi);
   const wifiEl = document.getElementById("diag-wifi-rssi");
@@ -95,7 +97,6 @@ function atualizarPainelCompleto(status) {
     wifiEl.textContent = `RSSI: ${sinalWifi || "--"} dBm (${wifiText})`;
   }
 
-  // Fonte de energia
   const tensaoFonteExterna = status.ch_analog_2;
   const { text: powerText } = getPowerSourceStatus(tensaoFonteExterna);
   const powerEl = document.getElementById("diag-power-source");
@@ -103,26 +104,22 @@ function atualizarPainelCompleto(status) {
     powerEl.textContent = powerText;
   }
 
-  // Bateria
   const tensaoBateria = status.ch_analog_3 || status.battery;
   const batteryEl = document.getElementById("diag-battery-voltage");
   if (batteryEl) {
     batteryEl.textContent = `Bateria: ${tensaoBateria?.toFixed(2) || "--"} V`;
   }
 
-  // Temperatura interna
   const temperaturaInterna = status.temperature;
-  atualizarBadge("diag-internal-temp", `${temperaturaInterna?.toFixed(1) || "--"} °C`, "text-bg-info");
-  atualizarBadge("diag-pt100-status", "N/A via MQTT", "text-bg-secondary");
+  atualizarTag("diag-internal-temp", `${temperaturaInterna?.toFixed(1) || "--"} °C`);
+  atualizarTag("diag-pt100-status", "N/A via MQTT");
 
-  // IP e Firmware
   const ipAddress = status.ip;
-  atualizarBadge("diag-ip-address", ipAddress || "--", "text-bg-secondary");
+  atualizarTag("diag-ip-address", ipAddress || "--");
 
   const firmwareVersion = status.firmware_version;
-  atualizarBadge("diag-firmware-version", firmwareVersion || "--", "text-bg-secondary");
+  atualizarTag("diag-firmware-version", firmwareVersion || "--");
 
-  // Alarmes
   atualizarListaAlarmes(status.alarms);
 }
 
@@ -134,23 +131,17 @@ function atualizarPainelLeitura(dados) {
 
   document.getElementById("latest-timestamp").textContent = `Em: ${new Date().toLocaleString("pt-BR")}`;
 
-  // Atualizar gráfico ECharts
   if (historicoChartInstance && temperatura !== undefined) {
     const now = new Date().getTime();
-    
-    // Obter dados atuais
     const option = historicoChartInstance.getOption();
     const currentData = option.series[0].data;
     
-    // Adicionar novo ponto
     currentData.push([now, temperatura]);
     
-    // Manter apenas últimos 200 pontos
     if (currentData.length > 200) {
       currentData.shift();
     }
     
-    // Atualizar gráfico
     historicoChartInstance.setOption({
       series: [{
         data: currentData
@@ -158,30 +149,32 @@ function atualizarPainelLeitura(dados) {
     });
   }
 
-  // Atualizar fonte de energia
   const tensaoFonteExterna = dados.ch_analog_2;
   const { text: powerText } = getPowerSourceStatus(tensaoFonteExterna);
-  document.getElementById("diag-power-source").textContent = powerText;
+  const powerEl = document.getElementById("diag-power-source");
+  if (powerEl) {
+    powerEl.textContent = powerText;
+  }
 
-  // Atualizar bateria
   const tensaoBateria = dados.ch_analog_3 || dados.battery;
-  document.getElementById("diag-battery-voltage").textContent = `Bateria: ${tensaoBateria?.toFixed(2) || "--"} V`;
+  const batteryEl = document.getElementById("diag-battery-voltage");
+  if (batteryEl) {
+    batteryEl.textContent = `Bateria: ${tensaoBateria?.toFixed(2) || "--"} V`;
+  }
 
-  // Recarregar estatísticas
   carregarEstatisticasDetalhes();
 }
 
-function atualizarBadge(elementId, text, className) {
+function atualizarTag(elementId, text) {
   const element = document.getElementById(elementId);
   if (element) {
     element.textContent = text;
-    element.className = `badge ${className}`;
   }
 }
 
 function atualizarListaAlarmes(alarms) {
   const alarmCountEl = document.getElementById("active-alarms-count");
-  const alarmSubtextEl = alarmCountEl?.nextElementSibling;
+  const alarmSubtextEl = document.getElementById("alarm-subtitle");
 
   if (!alarmCountEl) return;
 
@@ -286,25 +279,20 @@ async function carregarEstatisticasDetalhes() {
   }
 }
 
-// ✅ FUNÇÃO REESCRITA PARA ECHARTS
 function gerarGraficoHistorico(dados) {
   const chartContainer = document.getElementById("graficoHistorico");
   if (!chartContainer) return;
 
-  // Destruir instância anterior se existir
   if (historicoChartInstance) {
     historicoChartInstance.dispose();
     historicoChartInstance = null;
   }
 
-  // Preparar dados no formato ECharts: [[timestamp, temperatura], ...]
   const chartData = dados.labels.map((label, index) => {
-    // Converter label "dd/MM/yyyy, HH:mm:ss" para timestamp
     const timestamp = new Date(label.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$2/$1/$3")).getTime();
     return [timestamp, dados.temperaturas[index]];
   });
 
-  // Inicializar ECharts
   historicoChartInstance = echarts.init(chartContainer);
 
   const option = {
@@ -353,12 +341,12 @@ function gerarGraficoHistorico(dados) {
         symbol: 'none',
         sampling: 'lttb',
         itemStyle: {
-          color: '#0d6efd'
+          color: '#3273dc'
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(13, 110, 253, 0.3)' },
-            { offset: 1, color: 'rgba(13, 110, 253, 0.05)' }
+            { offset: 0, color: 'rgba(50, 115, 220, 0.3)' },
+            { offset: 1, color: 'rgba(50, 115, 220, 0.05)' }
           ])
         },
         data: chartData
@@ -368,7 +356,6 @@ function gerarGraficoHistorico(dados) {
 
   historicoChartInstance.setOption(option);
 
-  // Responsivo - ajustar ao redimensionar janela
   window.addEventListener('resize', function() {
     if (historicoChartInstance) {
       historicoChartInstance.resize();
