@@ -4,317 +4,337 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %></title>
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="/static/css/logbox/device-detail.css">
+    <style>
+        /* CSS direto para evitar erro de carregamento */
+        .chart-container { position: relative; height: 400px; }
+        .chart-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 400px; color: #6c757d; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0d6efd; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .kpi-card { background: #fff; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .kpi-value { font-size: 2rem; font-weight: 700; color: #212529; }
+    </style>
 </head>
 <body>
 <div class="container is-fluid">
     <section class="section">
-
+        <!-- Cabeçalho -->
         <div class="level mb-5">
             <div class="level-left">
                 <div class="level-item">
                     <div>
-                        <p class="heading">
-                            <span class="material-symbols-outlined" style="vertical-align: middle;">sensors</span>
-                        </p>
+                        <p class="heading"><span class="material-symbols-outlined" style="vertical-align: middle;">sensors</span></p>
                         <p class="title is-3"><%= device.local_tag %></p>
                     </div>
                 </div>
             </div>
-
             <div class="level-right">
                 <div class="level-item">
                     <a href="/gerenciar-dispositivos" class="button is-light">
-                        <span class="icon">
-                            <span class="material-symbols-outlined">arrow_back</span>
-                        </span>
+                        <span class="icon"><span class="material-symbols-outlined">arrow_back</span></span>
                         <span>Voltar</span>
                     </a>
                 </div>
             </div>
         </div>
 
+        <!-- KPIs -->
         <div class="columns is-multiline mb-5">
             <div class="column is-3">
-                <div class="box has-text-centered">
-                    <span class="icon is-large has-text-link">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">device_thermostat</span>
-                    </span>
+                <div class="kpi-card">
+                    <span class="icon is-large has-text-link"><span class="material-symbols-outlined" style="font-size: 48px;">device_thermostat</span></span>
                     <p class="heading mt-3">Temperatura Atual</p>
-                    <p class="title is-4">
-                        <span id="latest-temp">--</span>
-                        <span class="is-size-5">°C</span>
-                    </p>
+                    <p class="title is-4"><span id="latest-temp">--</span> <span class="is-size-5">°C</span></p>
                     <p class="help" id="latest-timestamp">Aguardando dados...</p>
                 </div>
             </div>
-
             <div class="column is-3">
-                <div class="box has-text-centered">
-                    <span class="icon is-large has-text-success">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">signal_cellular_alt</span>
-                    </span>
+                <div class="kpi-card">
+                    <span class="icon is-large has-text-success"><span class="material-symbols-outlined" style="font-size: 48px;">signal_cellular_alt</span></span>
                     <p class="heading mt-3">Status da Conexão</p>
                     <p class="title is-4" id="connection-status-text">Verificando...</p>
                     <p class="help" id="diag-wifi-rssi">RSSI --</p>
                 </div>
             </div>
-
             <div class="column is-3">
-                <div class="box has-text-centered">
-                    <span class="icon is-large has-text-warning">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">power</span>
-                    </span>
+                <div class="kpi-card">
+                    <span class="icon is-large has-text-warning"><span class="material-symbols-outlined" style="font-size: 48px;">power</span></span>
                     <p class="heading mt-3">Fonte de Energia</p>
                     <p class="title is-5" id="diag-power-source">Verificando...</p>
                     <p class="help" id="diag-battery-voltage">Bateria --</p>
                 </div>
             </div>
-
             <div class="column is-3">
-                <div class="box has-text-centered">
-                    <span class="icon is-large has-text-danger">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">warning</span>
-                    </span>
+                <div class="kpi-card">
+                    <span class="icon is-large has-text-danger"><span class="material-symbols-outlined" style="font-size: 48px;">warning</span></span>
                     <p class="heading mt-3">Alarmes Ativos</p>
                     <p class="title is-4" id="active-alarms-count">0</p>
-                    <p class="help" id="alarm-subtitle">Nenhum alarme no momento</p>
+                    <p class="help" id="alarm-subtitle">Nenhum alarme</p>
                 </div>
             </div>
         </div>
 
-        <div class="columns is-multiline mb-5">
-            <div class="column is-6">
+        <!-- Gráfico e Estatísticas -->
+        <div class="columns is-multiline">
+            <!-- Coluna Esquerda: Estatísticas -->
+            <div class="column is-3">
                 <div class="box">
-                    <div class="level mb-4">
-                        <div class="level-left">
-                            <div class="level-item">
-                                <span class="icon-text">
-                                    <span class="icon">
-                                        <span class="material-symbols-outlined">query_stats</span>
-                                    </span>
-                                    <span class="title is-5">Estatísticas</span>
-                                </span>
-                            </div>
-                        </div>
+                    <p class="title is-5 mb-4">Estatísticas (Hoje)</p>
+                    <div class="level is-mobile mb-2">
+                        <div class="level-left"><span>Mínima</span></div>
+                        <div class="level-right"><strong id="stat-today-min">-- °C</strong></div>
                     </div>
-
-                    <div class="content">
-                        <p class="subtitle is-6 mb-2">Hoje</p>
-
-                        <div class="level is-mobile">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span>Mínima</span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <strong id="stat-today-min">-- °C</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="level is-mobile">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span>Média</span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <strong id="stat-today-avg">-- °C</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="level is-mobile">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span>Máxima</span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <strong id="stat-today-max">-- °C</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <p class="subtitle is-6 mb-2">Este Mês</p>
-
-                        <div class="level is-mobile">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span>Mínima</span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <strong id="stat-month-min">-- °C</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="level is-mobile">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span>Média</span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <strong id="stat-month-avg">-- °C</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="level is-mobile">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span>Máxima</span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <strong id="stat-month-max">-- °C</strong>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="level is-mobile mb-2">
+                        <div class="level-left"><span>Média</span></div>
+                        <div class="level-right"><strong id="stat-today-avg">-- °C</strong></div>
+                    </div>
+                    <div class="level is-mobile mb-2">
+                        <div class="level-left"><span>Máxima</span></div>
+                        <div class="level-right"><strong id="stat-today-max">-- °C</strong></div>
+                    </div>
+                    <hr>
+                    <p class="title is-5 mb-4">Diagnóstico</p>
+                    <div class="tags has-addons mb-2">
+                         <span class="tag is-dark">IP</span>
+                         <span class="tag is-info" id="diag-ip-address">--</span>
+                    </div>
+                    <div class="tags has-addons">
+                         <span class="tag is-dark">Firmware</span>
+                         <span class="tag is-primary" id="diag-firmware-version">--</span>
                     </div>
                 </div>
             </div>
 
-            <div class="column is-6">
+            <!-- Coluna Direita: Gráfico -->
+            <div class="column is-9">
                 <div class="box">
                     <div class="level mb-4">
                         <div class="level-left">
-                            <div class="level-item">
-                                <span class="icon-text">
-                                    <span class="icon">
-                                        <span class="material-symbols-outlined">developer_board</span>
-                                    </span>
-                                    <span class="title is-5">Diagnóstico do Dispositivo</span>
-                                </span>
-                            </div>
+                            <span class="icon-text">
+                                <span class="icon"><span class="material-symbols-outlined">timeline</span></span>
+                                <span class="title is-5">Histórico de Temperatura</span>
+                            </span>
                         </div>
                     </div>
-
-                    <div class="content">
-                        <div class="level is-mobile mb-3">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span class="icon-text">
-                                        <span class="icon has-text-info">
-                                            <span class="material-symbols-outlined">sensors_krx</span>
-                                        </span>
-                                        <span>Status do Sensor PT100</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <span class="tag" id="diag-pt100-status">--</span>
-                                </div>
-                            </div>
+                    
+                    <!-- Container do Gráfico -->
+                    <div class="chart-container">
+                        <div id="loader-historico" class="chart-loader">
+                            <div class="spinner"></div>
+                            <p class="mt-3">Carregando dados...</p>
                         </div>
-
-                        <div class="level is-mobile mb-3">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span class="icon-text">
-                                        <span class="icon has-text-danger">
-                                            <span class="material-symbols-outlined">device_thermostat</span>
-                                        </span>
-                                        <span>Temperatura Interna</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <span class="tag" id="diag-internal-temp">--</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="level is-mobile mb-3">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span class="icon-text">
-                                        <span class="icon has-text-link">
-                                            <span class="material-symbols-outlined">public</span>
-                                        </span>
-                                        <span>Endereço IP</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <span class="tag" id="diag-ip-address">--</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="level is-mobile mb-3">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span class="icon-text">
-                                        <span class="icon">
-                                            <span class="material-symbols-outlined">memory</span>
-                                        </span>
-                                        <span>Versão do Firmware</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="level-right">
-                                <div class="level-item">
-                                    <span class="tag" id="diag-firmware-version">--</span>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- FORÇANDO DISPLAY BLOCK VIA STYLE INLINE PARA DEBUG -->
+                        <div id="graficoHistorico" style="width: 100%; height: 100%; min-height: 400px;"></div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="columns">
-            <div class="column is-12">
-                <div class="box">
-                    <div class="level mb-4">
-                        <div class="level-left">
-                            <div class="level-item">
-                                <span class="icon-text">
-                                    <span class="icon">
-                                        <span class="material-symbols-outlined">timeline</span>
-                                    </span>
-                                    <span class="title is-5">Histórico de Temperatura (últimas leituras)</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="loader-historico" class="has-text-centered py-6">
-                        <button class="button is-loading is-ghost is-large"></button>
-                        <p class="mt-3">Carregando histórico...</p>
-                    </div>
-
-                    <div id="graficoHistorico" style="width: 100%; height: 400px; display: none"></div>
-                </div>
-            </div>
-        </div>
-
     </section>
 </div>
 
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
 <script>
+    // Injeção da variável pelo Backend
     const serialNumber = "<%= serialNumber %>";
+    console.log("--> PÁGINA CARREGADA. Serial Number:", serialNumber);
+
+    // --- SCRIPT DEVICE-DETAIL EMBUTIDO ---
+    
+    let historicoChartInstance = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        console.log("--> DOMContentLoaded disparado. Iniciando script...");
+        inicializarPainel();
+    });
+
+    function inicializarPainel() {
+        console.log("--> Inicializando WebSocket e Buscas...");
+        iniciarWebSocket();
+        carregarLeiturasIniciais();
+        carregarStatusInicial();
+        carregarEstatisticasDetalhes();
+    }
+
+    async function carregarLeiturasIniciais() {
+        console.log("--> Buscando leituras iniciais...");
+        const loader = document.getElementById("loader-historico");
+        const chartDiv = document.getElementById("graficoHistorico");
+        
+        try {
+            const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
+            console.log("--> Resposta API Leituras:", response.status);
+            
+            if (!response.ok) throw new Error("Erro API Leituras: " + response.status);
+            
+            const data = await response.json();
+            console.log("--> Dados Leituras recebidos. Qtd:", data.labels ? data.labels.length : 0);
+            
+            if(loader) loader.style.display = 'none';
+            if(chartDiv) chartDiv.style.display = 'block';
+
+            gerarGraficoHistorico(data);
+        } catch (error) {
+            console.error("--> ERRO AO CARREGAR LEITURAS:", error);
+            if(loader) loader.innerHTML = `<p class="has-text-danger">Erro: ${error.message}</p>`;
+        }
+    }
+
+    function gerarGraficoHistorico(dados) {
+        const container = document.getElementById("graficoHistorico");
+        if (!container) {
+            console.error("--> ERRO: Container do gráfico não encontrado!");
+            return;
+        }
+
+        if (historicoChartInstance) {
+            historicoChartInstance.dispose();
+        }
+
+        if (!dados.labels || dados.labels.length === 0) {
+            container.innerHTML = "<div class='has-text-centered py-6'>Sem dados de histórico.</div>";
+            return;
+        }
+
+        // Converte datas
+        const chartData = dados.labels.map((label, index) => {
+            // Tenta converter "DD/MM/YYYY HH:mm:ss" ou ISO
+            let timestamp;
+            if (label.includes('/')) {
+                const parts = label.split(/[\/\s:]/); 
+                // Date(ano, mes-1, dia, hora, min, seg)
+                const d = new Date(parts[2], parts[1]-1, parts[0], parts[3]||0, parts[4]||0, parts[5]||0);
+                timestamp = d.getTime();
+            } else {
+                timestamp = new Date(label).getTime();
+            }
+            return [timestamp, dados.temperaturas[index]];
+        });
+
+        console.log("--> Iniciando ECharts...");
+        historicoChartInstance = echarts.init(container);
+
+        const option = {
+            tooltip: { 
+                trigger: 'axis',
+                formatter: params => {
+                    if(!params[0]) return '';
+                    const d = new Date(params[0].value[0]);
+                    return `${d.toLocaleString()}<br/>Temp: <b>${params[0].value[1]} °C</b>`;
+                }
+            },
+            grid: { left: 40, right: 20, top: 20, bottom: 30 },
+            xAxis: { 
+                type: 'time', 
+                boundaryGap: false,
+                axisLabel: { formatter: '{HH}:{mm}' }
+            },
+            yAxis: { 
+                type: 'value', 
+                scale: true,
+                axisLabel: { formatter: '{value} °C' }
+            },
+            series: [{
+                name: 'Temp',
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                data: chartData,
+                areaStyle: { opacity: 0.1 },
+                lineStyle: { width: 2, color: '#3298dc' }
+            }]
+        };
+
+        historicoChartInstance.setOption(option);
+        console.log("--> Gráfico renderizado com sucesso!");
+    }
+
+    async function carregarStatusInicial() {
+        try {
+            const res = await fetch(`/api/logbox-device/${serialNumber}/status`);
+            if(res.ok) {
+                const data = await res.json();
+                atualizarPainelCompleto(data.status || data);
+            }
+        } catch(e) { console.error("Erro status:", e); }
+    }
+
+    function iniciarWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const url = `${protocol}//${window.location.host}`;
+        console.log("--> Conectando WebSocket em:", url);
+        
+        const socket = new WebSocket(url);
+        
+        socket.onopen = () => console.log("--> ✅ WebSocket Conectado!");
+        socket.onerror = (e) => console.error("--> ❌ Erro WebSocket:", e);
+        
+        socket.onmessage = (event) => {
+            console.log("--> 📩 Msg WebSocket recebida");
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.dados && msg.dados.serial_number && msg.dados.serial_number !== serialNumber) return;
+                
+                if (msg.type === "nova_leitura_logbox" || msg.type === "nova_leitura") {
+                    atualizarPainelLeitura(msg.dados);
+                } else if (msg.type === "atualizacao_status") {
+                    atualizarPainelCompleto(msg.dados);
+                }
+            } catch(e) { console.error(e); }
+        };
+    }
+
+    function atualizarPainelLeitura(dados) {
+        let temp = dados.ch_analog_1;
+        if(temp === undefined && dados.value_channels) temp = dados.value_channels[2];
+        
+        if(temp !== undefined) {
+            document.getElementById("latest-temp").textContent = temp.toFixed(1);
+            document.getElementById("latest-timestamp").textContent = "Em: " + new Date().toLocaleTimeString();
+            
+            // Atualiza gráfico em tempo real
+            if(historicoChartInstance) {
+                const opt = historicoChartInstance.getOption();
+                const data = opt.series[0].data;
+                data.push([new Date().getTime(), temp]);
+                if(data.length > 200) data.shift();
+                historicoChartInstance.setOption({ series: [{ data }] });
+            }
+        }
+    }
+
+    function atualizarPainelCompleto(status) {
+        if(!status) return;
+        const connEl = document.getElementById("connection-status-text");
+        if(connEl) {
+            connEl.textContent = status.connection_status === 'offline' ? "Offline" : "Online";
+            connEl.className = status.connection_status === 'offline' ? "title is-4 has-text-danger" : "title is-4 has-text-success";
+        }
+        
+        document.getElementById("diag-wifi-rssi").textContent = `RSSI: ${status.lqi || '--'} dBm`;
+        document.getElementById("diag-battery-voltage").textContent = `Bat: ${status.ch_analog_3 || status.battery || '--'} V`;
+        
+        if(status.temperature) document.getElementById("latest-temp").textContent = status.temperature.toFixed(1);
+        
+        // Stats
+        carregarEstatisticasDetalhes();
+    }
+
+    async function carregarEstatisticasDetalhes() {
+        try {
+            const res = await fetch(`/api/logbox-device/${serialNumber}/stats-detail`);
+            if(res.ok) {
+                const stats = await res.json();
+                if(stats.today) {
+                    document.getElementById("stat-today-min").textContent = stats.today.min + " °C";
+                    document.getElementById("stat-today-avg").textContent = stats.today.avg + " °C";
+                    document.getElementById("stat-today-max").textContent = stats.today.max + " °C";
+                }
+            }
+        } catch(e){}
+    }
 </script>
-<script src="/scripts/logbox/device-detail.js"></script>
 </body>
 </html>
