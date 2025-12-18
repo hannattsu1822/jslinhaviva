@@ -1,35 +1,23 @@
 const TEMP_LIMITS = {
-  MIN_VALID: -40,
-  MAX_VALID: 85,
-  MIN_REALISTIC: -10,
-  MAX_REALISTIC: 60
+  MIN_VALID: -50,
+  MAX_VALID: 150, 
 };
 
-const CONNECTION_TIMEOUT_MS = 5 * 60 * 1000;
+const CONNECTION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
 
-function validarTemperatura(temp, strict = false) {
+function validarTemperatura(temp) {
   if (temp === null || temp === undefined || isNaN(temp)) {
-    return { valid: false, reason: "Valor inválido ou ausente" };
+    return { valid: false, reason: "Valor nulo ou não numérico" };
   }
 
   const tempNum = parseFloat(temp);
 
-  if (strict) {
-    if (tempNum < TEMP_LIMITS.MIN_REALISTIC || tempNum > TEMP_LIMITS.MAX_REALISTIC) {
-      return { 
-        valid: false, 
-        reason: `Temperatura fora do esperado (${TEMP_LIMITS.MIN_REALISTIC}°C a ${TEMP_LIMITS.MAX_REALISTIC}°C)`,
-        value: tempNum
-      };
-    }
-  } else {
-    if (tempNum < TEMP_LIMITS.MIN_VALID || tempNum > TEMP_LIMITS.MAX_VALID) {
-      return { 
-        valid: false, 
-        reason: `Temperatura inválida (${TEMP_LIMITS.MIN_VALID}°C a ${TEMP_LIMITS.MAX_VALID}°C)`,
-        value: tempNum
-      };
-    }
+  if (tempNum < TEMP_LIMITS.MIN_VALID || tempNum > TEMP_LIMITS.MAX_VALID) {
+    return { 
+      valid: false, 
+      reason: `Fora do intervalo aceitável (${TEMP_LIMITS.MIN_VALID} a ${TEMP_LIMITS.MAX_VALID})`,
+      value: tempNum
+    };
   }
 
   return { valid: true, value: tempNum };
@@ -37,7 +25,7 @@ function validarTemperatura(temp, strict = false) {
 
 function verificarConexaoAtiva(ultimaLeitura) {
   if (!ultimaLeitura) {
-    return { online: false, reason: "Nenhuma leitura registrada", offlineMinutes: null };
+    return { online: false, reason: "Nenhuma leitura registrada", minutes_offline: null };
   }
 
   const agora = new Date();
@@ -48,16 +36,14 @@ function verificarConexaoAtiva(ultimaLeitura) {
     const minutosOffline = Math.floor(diferencaMs / 60000);
     return { 
       online: false, 
-      reason: `Última leitura há ${minutosOffline} minutos`,
-      lastSeen: dataLeitura,
-      offlineMinutes: minutosOffline
+      reason: `Offline há ${minutosOffline} minutos`,
+      minutes_offline: minutosOffline
     };
   }
 
   return { 
     online: true, 
-    lastSeen: dataLeitura,
-    minutesAgo: Math.floor(diferencaMs / 60000)
+    minutes_ago: Math.floor(diferencaMs / 60000)
   };
 }
 
@@ -65,10 +51,15 @@ function extrairTemperaturaPayload(payload) {
   try {
     const dados = typeof payload === 'string' ? JSON.parse(payload) : payload;
     
+    // Tenta extrair de diferentes campos comuns do LogBox
     let temp = dados.ch_analog_1;
     
     if (temp === undefined && dados.value_channels && Array.isArray(dados.value_channels)) {
       temp = dados.value_channels[2];
+    }
+
+    if (temp === undefined) {
+      temp = dados.temperature || dados.internal_temperature || dados.temp_int;
     }
 
     return temp !== undefined ? parseFloat(temp) : null;
@@ -77,41 +68,9 @@ function extrairTemperaturaPayload(payload) {
   }
 }
 
-function validarStatusDispositivo(status, ultimaLeitura) {
-  const conexao = verificarConexaoAtiva(ultimaLeitura);
-  
-  let statusFinal = {
-    ...status,
-    connection_status: conexao.online ? "online" : "offline",
-    last_seen: conexao.lastSeen,
-    minutes_since_last_reading: conexao.minutesAgo || conexao.offlineMinutes || null
-  };
-
-  if (!conexao.online) {
-    statusFinal.connection_warning = conexao.reason;
-  }
-
-  return statusFinal;
-}
-
-function filtrarLeiturasValidas(leituras) {
-  return leituras.filter(leitura => {
-    const temp = extrairTemperaturaPayload(leitura.payload_json);
-    const validacao = validarTemperatura(temp, false);
-    return validacao.valid;
-  }).map(leitura => {
-    const temp = extrairTemperaturaPayload(leitura.payload_json);
-    return {
-      ...leitura,
-      temperatura_extraida: temp,
-      timestamp_leitura: leitura.timestamp_leitura
-    };
-  });
-}
-
 function sanitizarDadosLeitura(dados) {
-  const temperaturaExterna = extrairTemperaturaPayload(dados);
-  const validacao = validarTemperatura(temperaturaExterna);
+  const temperatura = extrairTemperaturaPayload(dados);
+  const validacao = validarTemperatura(temperatura);
 
   return {
     temperatura_valida: validacao.valid,
@@ -125,8 +84,6 @@ module.exports = {
   validarTemperatura,
   verificarConexaoAtiva,
   extrairTemperaturaPayload,
-  validarStatusDispositivo,
-  filtrarLeiturasValidas,
   sanitizarDadosLeitura,
   TEMP_LIMITS,
   CONNECTION_TIMEOUT_MS
