@@ -9,14 +9,11 @@ const http = require("http");
 const { WebSocketServer } = require("ws");
 require("dotenv").config();
 
-// Importa o helper de caminho. 
-// Certifique-se que este arquivo exporta corretamente o caminho raiz do projeto.
 const { projectRootDir } = require("./shared/path.helper");
 
 const app = express();
 const server = http.createServer(app);
 
-// --- LOGGER PADRÃO ---
 const logger = {
   debug: (msg) => process.env.NODE_ENV === 'development' && console.log(`[DEBUG] ${msg}`),
   info: (msg) => console.log(`[INFO] ${msg}`),
@@ -24,35 +21,24 @@ const logger = {
   error: (msg) => console.error(`[ERROR] ${msg}`)
 };
 
-// --- MIDDLEWARES GERAIS ---
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cors());
 
-// --- CONFIGURAÇÃO DA VIEW ENGINE ---
 app.engine("html", require("ejs").renderFile);
 app.set("view engine", "html");
 
-// Definição dos caminhos absolutos
 const publicDir = path.join(projectRootDir, "public");
 const viewsDir = path.join(projectRootDir, "views");
 
-// Configura onde o Express busca os templates (arquivos .html/.ejs)
 app.set("views", [viewsDir, publicDir]);
 
-// --- ARQUIVOS ESTÁTICOS (CORRIGIDO) ---
-// 1. Arquivos na pasta public (css, img, js globais)
 app.use(express.static(publicDir));
 logger.info(`[Static] Servindo 'public': ${publicDir}`);
 
-// 2. Scripts e Assets específicos dentro da pasta views (Logbox/Scripts)
-// Acessível via: /scripts/meu-script.js
 app.use("/scripts", express.static(path.join(viewsDir, "scripts")));
-// Acessível via: /static/minha-imagem.png
 app.use("/static", express.static(path.join(viewsDir, "static")));
 
-// --- GERENCIAMENTO DE DIRETÓRIOS DE UPLOAD ---
-// Função auxiliar para criar diretórios se não existirem (evita repetição de código)
 const ensureDirectoryExists = (dirPath, dirName) => {
   if (!fs.existsSync(dirPath)) {
     try {
@@ -64,16 +50,14 @@ const ensureDirectoryExists = (dirPath, dirName) => {
   }
 };
 
-// Definição dos caminhos de upload
 const uploadsSubestacoesDir = path.join(projectRootDir, "upload_arquivos_subestacoes");
 const uploadsFibraDir = path.join(projectRootDir, "upload_arquivos_fibra");
 const trafosReformadosAnexosDir = path.join(projectRootDir, "trafos_reformados_anexos");
 const uploadsInspRedesDir = path.join(projectRootDir, "upload_InspDistRedes");
 const uploadsChecklistDailyDir = path.join(projectRootDir, "upload_checklist_diario_veiculos");
-const uploadsProcessosDir = path.join(projectRootDir, "upload_arquivos_processos"); // Adicionado pois era usado no salvarAnexos
+const uploadsProcessosDir = path.join(projectRootDir, "upload_arquivos_processos");
 const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
 
-// Inicializa os diretórios
 ensureDirectoryExists(uploadsSubestacoesDir, "Uploads Subestações");
 ensureDirectoryExists(uploadsFibraDir, "Uploads Fibra");
 ensureDirectoryExists(trafosReformadosAnexosDir, "Anexos Trafos");
@@ -82,7 +66,6 @@ ensureDirectoryExists(uploadsChecklistDailyDir, "Checklist Diário");
 ensureDirectoryExists(uploadsProcessosDir, "Uploads Processos");
 ensureDirectoryExists(multerTempDir, "Temp Multer");
 
-// Rotas estáticas para acessar os arquivos upados
 app.use("/upload_arquivos_subestacoes", express.static(uploadsSubestacoesDir));
 app.use("/upload_arquivos_fibra", express.static(uploadsFibraDir));
 app.use("/trafos_reformados_anexos", express.static(trafosReformadosAnexosDir));
@@ -90,7 +73,6 @@ app.use("/upload_InspDistRedes", express.static(uploadsInspRedesDir));
 app.use("/upload_checklist_diario_veiculos", express.static(uploadsChecklistDailyDir));
 app.use("/upload_arquivos_processos", express.static(uploadsProcessosDir));
 
-// --- CONFIGURAÇÃO DO MULTER (UPLOAD GERAL) ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, multerTempDir);
@@ -107,10 +89,8 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, true),
 });
 
-// --- CONFIGURAÇÃO DO MULTER (ANEXOS TRAFOS) ---
 const anexoStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // ATENÇÃO: req.params.id só funciona se a rota for definida como /rota/:id
     const trafoId = req.params.id;
     if (!trafoId) {
       return cb(new Error("ID do transformador não encontrado na requisição."));
@@ -142,23 +122,21 @@ const uploadAnexoChecklist = multer({
   limits: { fileSize: 3 * 1024 * 1024 },
 });
 
-// --- SESSÃO ---
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret || typeof sessionSecret !== "string" || sessionSecret.trim() === "") {
   logger.error("A variável de ambiente SESSION_SECRET não está definida.");
   process.exit(1);
 }
 
-app.use(
-  session({
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }, // Mude para true se estiver usando HTTPS
-  })
-);
+const sessionMiddleware = session({
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false },
+});
 
-// --- BANCO DE DADOS ---
+app.use(sessionMiddleware);
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -181,13 +159,29 @@ pool.on('error', (err) => {
   logger.error(`DB: Erro no pool MySQL: ${err.message}`);
 });
 
-// --- WEBSOCKET ---
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true });
 app.set("wss", wss);
+
+server.on('upgrade', (request, socket, head) => {
+  sessionMiddleware(request, {}, () => {
+    if (!request.session || !request.session.user) {
+      logger.warn(`[WebSocket] Tentativa de conexão sem sessão válida: ${request.socket.remoteAddress}`);
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  });
+});
 
 wss.on("connection", (ws, req) => {
   const ip = req.socket.remoteAddress;
-  logger.info(`[WebSocket] Conexão de: ${ip}`);
+  const user = req.session ? req.session.user.matricula : "Desconhecido";
+  
+  logger.info(`[WebSocket] Conexão estabelecida. IP: ${ip}, Usuário: ${user}`);
 
   ws.on("message", (message) => {
     try {
@@ -201,10 +195,8 @@ wss.on("connection", (ws, req) => {
   ws.on("error", (error) => logger.error(`[WebSocket] Erro: ${error.message}`));
 });
 
-// --- FUNÇÕES AUXILIARES ---
 async function salvarAnexos(processoId, files) {
   const anexosSalvos = [];
-  // Usa a variável definida lá em cima para garantir consistência
   const processoUploadDir = path.join(uploadsProcessosDir, String(processoId));
 
   if (!fs.existsSync(processoUploadDir)) {
@@ -216,7 +208,6 @@ async function salvarAnexos(processoId, files) {
     const novoNome = `${processoId}_${Date.now()}${fileExtension}`;
     const novoPath = path.join(processoUploadDir, novoNome);
 
-    // Move do temp para a pasta final
     fs.renameSync(file.path, novoPath);
 
     const caminhoServidor = `/upload_arquivos_processos/${processoId}/${novoNome}`;
@@ -236,7 +227,6 @@ async function salvarAnexos(processoId, files) {
   return anexosSalvos;
 }
 
-// --- EXPORTS ---
 module.exports = {
   app,
   server,
