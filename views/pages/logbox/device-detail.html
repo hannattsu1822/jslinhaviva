@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %></title>
 
-    <!-- Bibliotecas Externas (CDNs confiáveis) -->
+    <!-- Bibliotecas Externas -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
-    <!-- CSS EMBUTIDO -->
+    <!-- ESTILOS CSS -->
     <style>
         .box {
             height: 100%;
@@ -38,7 +38,7 @@
             margin-bottom: 0 !important;
         }
 
-        /* Animação suave quando o valor atualiza via WebSocket */
+        /* Animação de atualização */
         @keyframes highlight {
             0% { background-color: #e3f2fd; }
             100% { background-color: transparent; }
@@ -48,7 +48,6 @@
             animation: highlight 1s ease-out;
         }
         
-        /* Ajuste para ícones */
         .material-symbols-outlined {
             vertical-align: bottom;
         }
@@ -58,7 +57,7 @@
 <div class="container is-fluid">
     <section class="section">
 
-        <!-- Cabeçalho -->
+        <!-- CABEÇALHO -->
         <div class="level mb-5">
             <div class="level-left">
                 <div class="level-item">
@@ -85,7 +84,7 @@
             </div>
         </div>
 
-        <!-- Cards de KPI (Indicadores) -->
+        <!-- CARDS DE KPI -->
         <div class="columns is-multiline mb-5">
             <!-- Temperatura -->
             <div class="column is-3">
@@ -139,7 +138,7 @@
             </div>
         </div>
 
-        <!-- Estatísticas e Diagnóstico -->
+        <!-- ESTATÍSTICAS E DIAGNÓSTICO -->
         <div class="columns is-multiline mb-5">
             <div class="column is-6">
                 <div class="box">
@@ -225,7 +224,7 @@
             </div>
         </div>
 
-        <!-- Gráfico -->
+        <!-- GRÁFICO -->
         <div class="columns">
             <div class="column is-12">
                 <div class="box">
@@ -254,9 +253,8 @@
     </section>
 </div>
 
-<!-- JAVASCRIPT EMBUTIDO -->
+<!-- LÓGICA JAVASCRIPT -->
 <script>
-    // Variáveis do Servidor (EJS)
     const serialNumber = "<%= serialNumber %>";
     let historicoChartInstance = null;
 
@@ -345,9 +343,12 @@
 
             const data = await response.json();
             const statusData = data.status || data;
+            
+            // DEBUG: Verifique no console do navegador o que está chegando aqui
+            console.log("DEBUG - Status Inicial Recebido:", statusData);
+            
             atualizarPainelCompleto(statusData);
             
-            // Busca a última leitura específica para garantir o valor mais recente
             const latestResp = await fetch(`/api/logbox-device/${serialNumber}/latest`);
             if (latestResp.ok) {
                 const latest = await latestResp.json();
@@ -381,6 +382,7 @@
     function atualizarPainelCompleto(status) {
         if (!status) return;
 
+        // 1. Status Conexão
         const connEl = document.getElementById("connection-status-text");
         if (connEl) {
             const isOnline = status.connection_status !== "offline";
@@ -388,17 +390,30 @@
             connEl.className = isOnline ? "title is-4 has-text-success" : "title is-4 has-text-danger";
         }
 
-        atualizarTexto("diag-wifi-rssi", `RSSI: ${status.lqi || "--"} dBm`);
+        // 2. Wi-Fi / RSSI (Tenta vários nomes possíveis)
+        const rssi = status.lqi || status.rssi || status.signal;
+        atualizarTexto("diag-wifi-rssi", `RSSI: ${rssi || "--"} dBm`);
         
-        const powerInfo = getPowerSourceStatus(status.ch_analog_2);
+        // 3. Fonte de Energia
+        const tensaoEntrada = status.ch_analog_2 !== undefined ? status.ch_analog_2 : status.supply_voltage;
+        const powerInfo = getPowerSourceStatus(tensaoEntrada);
         atualizarTexto("diag-power-source", powerInfo.text);
 
-        const bateria = status.ch_analog_3 || status.battery;
-        atualizarTexto("diag-battery-voltage", `Bateria: ${bateria ? bateria.toFixed(2) : "--"} V`);
+        // 4. Bateria
+        const bateria = status.ch_analog_3 !== undefined ? status.ch_analog_3 : status.battery;
+        atualizarTexto("diag-battery-voltage", `Bateria: ${bateria ? parseFloat(bateria).toFixed(2) : "--"} V`);
 
-        atualizarTexto("diag-internal-temp", `${status.temperature ? status.temperature.toFixed(1) : "--"} °C`);
-        atualizarTexto("diag-ip-address", status.ip || "--");
-        atualizarTexto("diag-firmware-version", status.firmware_version || "--");
+        // 5. Temperatura Interna (Tenta vários nomes possíveis)
+        const tempInterna = status.temperature || status.internal_temperature || status.temp_int || status.mcu_temp;
+        atualizarTexto("diag-internal-temp", `${tempInterna ? parseFloat(tempInterna).toFixed(1) : "--"} °C`);
+
+        // 6. IP (Tenta vários nomes possíveis)
+        const ip = status.ip || status.ip_address || status.IP || "--";
+        atualizarTexto("diag-ip-address", ip);
+
+        // 7. Firmware (Tenta vários nomes possíveis)
+        const fw = status.firmware_version || status.version || status.fw_version || "--";
+        atualizarTexto("diag-firmware-version", fw);
 
         atualizarListaAlarmes(status.alarms);
     }
@@ -410,11 +425,10 @@
             const tempEl = document.getElementById("latest-temp");
             if (tempEl) {
                 tempEl.textContent = temperatura.toFixed(1);
-                // Animação visual
                 const box = document.getElementById("box-temp");
                 if (box) {
                     box.classList.remove("updated-anim");
-                    void box.offsetWidth; // Trigger reflow
+                    void box.offsetWidth; 
                     box.classList.add("updated-anim");
                 }
             }
@@ -429,7 +443,7 @@
         }
     }
 
-    // --- GRÁFICOS (ECHARTS) ---
+    // --- GRÁFICOS ---
     function gerarGraficoHistorico(dados) {
         const container = document.getElementById("graficoHistorico");
         if (!container || !dados.labels || dados.labels.length === 0) {
@@ -501,7 +515,7 @@
         if (option && option.series && option.series[0]) {
             const data = option.series[0].data;
             data.push([now, temperatura]);
-            if (data.length > 200) data.shift(); // Mantém histórico limpo
+            if (data.length > 200) data.shift();
 
             historicoChartInstance.setOption({
                 series: [{ data: data }]
