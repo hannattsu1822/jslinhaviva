@@ -13,7 +13,6 @@
     <style>
         body { background-color: #f5f7fa; }
         
-        /* Cards KPI */
         .box {
             height: 100%;
             border-radius: 12px;
@@ -23,11 +22,9 @@
         }
         .box:hover { transform: translateY(-2px); }
 
-        /* Ícones */
         .material-symbols-outlined { vertical-align: bottom; }
         .kpi-icon { font-size: 48px !important; margin-bottom: 10px; }
 
-        /* Gráfico em Destaque */
         .chart-section {
             background: white;
             padding: 20px;
@@ -38,12 +35,11 @@
         }
         .chart-wrapper {
             position: relative;
-            height: 400px; /* Altura fixa para evitar bug */
+            height: 400px;
             width: 100%;
             overflow: hidden;
         }
 
-        /* Lista de Diagnóstico */
         .diag-item {
             display: flex;
             justify-content: space-between;
@@ -62,7 +58,6 @@
             font-weight: 600;
         }
 
-        /* Animação de "Ao Vivo" */
         .live-indicator {
             display: inline-block;
             width: 10px;
@@ -78,7 +73,6 @@
             100% { box-shadow: 0 0 0 0 rgba(72, 199, 116, 0); }
         }
 
-        /* Animação de atualização */
         @keyframes flashUpdate {
             0% { background-color: #e3f2fd; }
             100% { background-color: transparent; }
@@ -118,7 +112,6 @@
 
     <!-- KPI CARDS -->
     <div class="columns is-multiline mb-4">
-        <!-- Temperatura -->
         <div class="column is-3-desktop is-6-tablet">
             <div class="box has-text-centered" id="box-temp">
                 <span class="material-symbols-outlined kpi-icon has-text-link">device_thermostat</span>
@@ -129,7 +122,6 @@
                 <p class="is-size-7 has-text-grey" id="latest-timestamp">Aguardando...</p>
             </div>
         </div>
-        <!-- Conexão -->
         <div class="column is-3-desktop is-6-tablet">
             <div class="box has-text-centered">
                 <span class="material-symbols-outlined kpi-icon has-text-success">wifi</span>
@@ -138,7 +130,6 @@
                 <p class="is-size-7 has-text-grey" id="diag-wifi-rssi">RSSI: --</p>
             </div>
         </div>
-        <!-- Energia -->
         <div class="column is-3-desktop is-6-tablet">
             <div class="box has-text-centered">
                 <span class="material-symbols-outlined kpi-icon has-text-warning">bolt</span>
@@ -147,7 +138,6 @@
                 <p class="is-size-7 has-text-grey" id="diag-battery-voltage">Bateria: --</p>
             </div>
         </div>
-        <!-- Alarmes -->
         <div class="column is-3-desktop is-6-tablet">
             <div class="box has-text-centered">
                 <span class="material-symbols-outlined kpi-icon has-text-danger">notifications_active</span>
@@ -158,7 +148,7 @@
         </div>
     </div>
 
-    <!-- GRÁFICO EM EVIDÊNCIA (HERO SECTION) -->
+    <!-- GRÁFICO EM EVIDÊNCIA -->
     <div class="chart-section">
         <div class="level mb-4">
             <div class="level-left">
@@ -173,20 +163,18 @@
         </div>
         
         <div class="chart-wrapper">
-            <div id="loader-historico" class="is-flex is-justify-content-center is-align-items-center" style="height: 100%;">
+            <div id="loader-historico" class="is-flex is-justify-content-center is-align-items-center" style="height: 100%; position: absolute; width: 100%; background: white; z-index: 10;">
                 <div class="has-text-centered">
                     <span class="material-symbols-outlined is-size-1 has-text-grey-light spin">refresh</span>
                     <p class="has-text-grey mt-2">Carregando gráfico...</p>
                 </div>
             </div>
-            <!-- Importante: min-height garantido -->
-            <div id="graficoHistorico" style="width: 100%; height: 100%; min-height: 400px;"></div>
+            <div id="graficoHistorico" style="width: 100%; height: 100%;"></div>
         </div>
     </div>
 
     <!-- DETALHES TÉCNICOS E ESTATÍSTICAS -->
     <div class="columns is-multiline">
-        <!-- Estatísticas -->
         <div class="column is-4">
             <div class="box">
                 <h3 class="title is-5 mb-4">
@@ -212,7 +200,6 @@
             </div>
         </div>
 
-        <!-- Diagnóstico Completo -->
         <div class="column is-8">
             <div class="box">
                 <h3 class="title is-5 mb-4">
@@ -224,7 +211,7 @@
                 <div class="columns is-multiline">
                     <div class="column is-6">
                         <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna (MCU)</span>
+                            <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna</span>
                             <span class="diag-value" id="diag-internal-temp">--</span>
                         </div>
                         <div class="diag-item">
@@ -279,7 +266,6 @@
         carregarEstatisticasDetalhes();
     }
 
-    // --- FUNÇÃO DE BUSCA INTELIGENTE DE DADOS ---
     function detectarValor(dados, chavesPossiveis) {
         if (!dados) return null;
         for (let chave of chavesPossiveis) {
@@ -290,7 +276,6 @@
         return null;
     }
 
-    // --- WEBSOCKET ---
     function iniciarWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const host = window.location.host;
@@ -316,22 +301,29 @@
         socket.onclose = () => setTimeout(iniciarWebSocket, 5000);
     }
 
-    // --- API CALLS ---
     async function carregarLeiturasIniciais() {
         const loader = document.getElementById("loader-historico");
-        const chartEl = document.getElementById("graficoHistorico");
         try {
             const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
-            if (!response.ok) throw new Error("Erro API");
-            const data = await response.json();
             
+            // MESMO SE DER ERRO OU ESTIVER VAZIO, INICIA O GRÁFICO
+            let data = { labels: [], temperaturas: [] };
+            
+            if (response.ok) {
+                data = await response.json();
+            } else {
+                console.warn("API retornou erro, iniciando gráfico vazio.");
+            }
+            
+            // Esconde o loader
             if (loader) loader.style.display = "none";
-            if (chartEl) chartEl.style.display = "block";
             
             gerarGraficoHistorico(data);
         } catch (error) {
-            console.error(error);
-            if (loader) loader.innerHTML = `<p class="has-text-danger">Falha ao carregar gráfico</p>`;
+            console.error("Erro ao carregar leituras:", error);
+            if (loader) loader.style.display = "none";
+            // Inicia gráfico vazio em caso de erro de rede
+            gerarGraficoHistorico({ labels: [], temperaturas: [] });
         }
     }
 
@@ -370,11 +362,9 @@
         } catch (e) { console.error(e); }
     }
 
-    // --- ATUALIZAÇÃO UI ---
     function atualizarPainelCompleto(status) {
         if (!status) return;
 
-        // 1. Conexão
         const connEl = document.getElementById("connection-status-text");
         if (connEl) {
             const isOnline = status.connection_status !== "offline";
@@ -382,37 +372,29 @@
             connEl.className = isOnline ? "title is-4 has-text-weight-bold has-text-success" : "title is-4 has-text-weight-bold has-text-danger";
         }
 
-        // 2. RSSI & Wi-Fi
         const rssi = detectarValor(status, ['lqi', 'rssi', 'signal', 'wifi_signal']);
         atualizarTexto("diag-wifi-rssi", `RSSI: ${rssi || "--"} dBm`);
         atualizarTexto("diag-wifi-detail", `${rssi || "--"} dBm`);
 
-        // 3. Energia
         const tensao = detectarValor(status, ['ch_analog_2', 'supply_voltage', 'input_voltage']);
         const powerInfo = getPowerSourceStatus(tensao);
         atualizarTexto("diag-power-source", powerInfo.text);
 
-        // 4. Bateria
         const bat = detectarValor(status, ['ch_analog_3', 'battery', 'battery_voltage', 'vbat']);
         atualizarTexto("diag-battery-voltage", `Bateria: ${bat ? parseFloat(bat).toFixed(2) : "--"} V`);
 
-        // 5. Temp Interna
         const tempInt = detectarValor(status, ['temperature', 'internal_temperature', 'temp_int', 'mcu_temp']);
         atualizarTexto("diag-internal-temp", tempInt ? `${parseFloat(tempInt).toFixed(1)} °C` : "--");
 
-        // 6. IP
         const ip = detectarValor(status, ['ip', 'ip_address', 'net_ip', 'local_ip']);
         atualizarTexto("diag-ip-address", ip || "--");
 
-        // 7. Firmware
         const fw = detectarValor(status, ['firmware_version', 'version', 'fw_version', 'fw']);
         atualizarTexto("diag-firmware-version", fw || "--");
 
-        // 8. MAC Address
         const mac = detectarValor(status, ['mac', 'mac_address', 'wifi_mac', 'device_mac']);
         atualizarTexto("diag-mac-address", mac || "--");
 
-        // 9. Última Comunicação
         const ts = status.timestamp || status.ts || new Date().toISOString();
         atualizarTexto("diag-last-packet", new Date(ts).toLocaleTimeString("pt-BR"));
 
@@ -438,7 +420,6 @@
         atualizarPainelCompleto(dados);
     }
 
-    // --- HELPERS ---
     function extrairTemperatura(dados) {
         if (dados.ch_analog_1 !== undefined) return dados.ch_analog_1;
         if (dados.value_channels && Array.isArray(dados.value_channels)) return dados.value_channels[2];
@@ -478,15 +459,17 @@
         return voltage > 9 ? { text: "Rede Elétrica" } : { text: "Apenas Bateria" };
     }
 
-    // --- GRÁFICO ---
     function gerarGraficoHistorico(dados) {
         const container = document.getElementById("graficoHistorico");
         if (!container) return;
         
         if (historicoChartInstance) historicoChartInstance.dispose();
 
-        // Se não houver dados, cria um gráfico vazio mas inicializado
-        const chartData = (dados.labels || []).map((label, index) => {
+        // Garante que dados.labels seja um array, mesmo se vier null/undefined
+        const labels = dados.labels || [];
+        const temperaturas = dados.temperaturas || [];
+
+        const chartData = labels.map((label, index) => {
             let timestamp;
             if (typeof label === 'string' && label.includes('/')) {
                 const parts = label.split(/[\/\s:]/);
@@ -494,7 +477,7 @@
             } else {
                 timestamp = new Date(label).getTime();
             }
-            return [timestamp, dados.temperaturas[index]];
+            return [timestamp, temperaturas[index]];
         });
 
         historicoChartInstance = echarts.init(container);
