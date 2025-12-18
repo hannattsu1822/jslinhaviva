@@ -2,14 +2,12 @@ const mqtt = require("mqtt");
 const { promisePool, logger } = require("./init");
 const WebSocket = require('ws');
 const { 
-  validarTemperatura, 
-  extrairTemperaturaPayload,
-  sanitizarDadosLeitura
+  sanitizarDadosLeitura 
 } = require("./modules/logbox/helpers/validation.helper");
 
 async function salvarLeituraRele(dados, wss) {
   if (!dados || !dados.rele_id || !dados.dados) {
-    logger.error('[MQTT Handler] Erro: Dados recebidos do MQTT para o relé estão incompletos ou malformados.');
+    logger.error('[MQTT Handler] Erro: Dados recebidos do MQTT para o relé estão incompletos.');
     return;
   }
 
@@ -23,38 +21,29 @@ async function salvarLeituraRele(dados, wss) {
       [statusParaSalvar, rele_id]
     );
 
-    logger.info(`[MQTT Handler] Último status do relé '${device_id}' (ID: ${rele_id}) salvo no banco.`);
-
     if (wss && wss.clients) {
       const payloadWebSocket = {
         type: "nova_leitura_rele",
         dados: { rele_id, device_id, timestamp, ...dadosMedidos },
       };
 
-      let clientCount = 0;
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(payloadWebSocket));
-          clientCount++;
         }
       });
-
-      if (clientCount > 0) {
-        logger.info(`[MQTT Handler] Dados do relé enviados para ${clientCount} cliente(s) WebSocket.`);
-      }
     }
   } catch (error) {
-    logger.error(`[MQTT Handler] Erro ao processar e transmitir leitura do relé: ${error.message}`);
+    logger.error(`[MQTT Handler] Erro ao processar leitura do relé: ${error.message}`);
   }
 }
 
 async function salvarLeituraLogBox(serialNumber, dados, wss) {
-  logger.info(`[MQTT Handler] Recebida leitura do LogBox SN: ${serialNumber}`);
-  
   const dadosSanitizados = sanitizarDadosLeitura(dados);
   
   if (!dadosSanitizados.temperatura_valida) {
-    logger.warn(`[MQTT Handler] Temperatura inválida recebida do LogBox ${serialNumber}: ${dadosSanitizados.temperatura_valor}°C - Motivo: ${dadosSanitizados.temperatura_motivo_invalido}`);
+    logger.warn(`[MQTT Handler] Leitura IGNORADA (SN: ${serialNumber}): Valor inválido (${dadosSanitizados.temperatura_valor})`);
+    return;
   }
 
   let connection;
@@ -64,22 +53,15 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
 
     const payloadString = JSON.stringify(dados);
 
-    if (dadosSanitizados.temperatura_valida) {
-      await connection.query(
-        "INSERT INTO leituras_logbox (serial_number, payload_json, timestamp_leitura) VALUES (?, ?, NOW())",
-        [serialNumber, payloadString]
-      );
-      logger.info(`[MQTT Handler] Leitura histórica do LogBox ${serialNumber} salva no banco.`);
-    } else {
-      logger.warn(`[MQTT Handler] Leitura do LogBox ${serialNumber} não salva no histórico devido à temperatura inválida.`);
-    }
+    await connection.query(
+      "INSERT INTO leituras_logbox (serial_number, payload_json, timestamp_leitura) VALUES (?, ?, NOW())",
+      [serialNumber, payloadString]
+    );
 
     await connection.query(
       "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
       [payloadString, serialNumber]
     );
-
-    logger.info(`[MQTT Handler] Último status do LogBox ${serialNumber} atualizado no banco.`);
 
     await connection.commit();
 
@@ -88,33 +70,25 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
         type: 'nova_leitura_logbox',
         dados: {
           serial_number: serialNumber,
-          temperatura_valida: dadosSanitizados.temperatura_valida,
-          temperatura_aviso: dadosSanitizados.temperatura_motivo_invalido,
+          temperatura_valida: true,
           ...dados
         }
       };
 
-      let clientCount = 0;
       wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify(payloadWebSocket));
-          clientCount++;
         }
       });
-
-      if (clientCount > 0) {
-        logger.info(`[MQTT Handler] Dados do LogBox ${serialNumber} enviados para ${clientCount} cliente(s) WebSocket.`);
-      }
     }
   } catch(error) {
-    logger.error(`[MQTT Handler] Erro ao processar leitura do LogBox SN ${serialNumber}: ${error.message}`);
+    logger.error(`[MQTT Handler] Erro ao salvar LogBox SN ${serialNumber}: ${error.message}`);
     
     if (connection) {
       try {
         await connection.rollback();
-        logger.info(`[MQTT Handler] Rollback executado para LogBox SN ${serialNumber}`);
       } catch(rollbackError) {
-        logger.error(`[MQTT Handler] Erro ao executar rollback: ${rollbackError.message}`);
+        logger.error(`[MQTT Handler] Erro no rollback: ${rollbackError.message}`);
       }
     }
   } finally {
@@ -125,15 +99,11 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
 }
 
 async function salvarStatusConexao(dados, wss) {
-  logger.info(`[MQTT Handler] Recebido status de conexão para LogBox SN: ${dados.serial_number}`);
-  
   try {
     await promisePool.query(
       "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
       [JSON.stringify(dados), dados.serial_number]
     );
-
-    logger.info(`[MQTT Handler] Status de conexão do LogBox ${dados.serial_number} salvo no banco.`);
 
     if (wss && wss.clients) {
       const payloadWebSocket = {
@@ -146,11 +116,9 @@ async function salvarStatusConexao(dados, wss) {
           client.send(JSON.stringify(payloadWebSocket));
         }
       });
-
-      logger.info(`[MQTT Handler] Status de conexão do LogBox ${dados.serial_number} enviado via WebSocket.`);
     }
   } catch(error) {
-    logger.error(`[MQTT Handler] Erro ao processar status de conexão do LogBox SN ${dados.serial_number}: ${error.message}`);
+    logger.error(`[MQTT Handler] Erro ao salvar status de conexão (SN: ${dados.serial_number}): ${error.message}`);
   }
 }
 
@@ -163,23 +131,21 @@ function iniciarClienteMQTT(app) {
   const client = mqtt.connect(MQTT_BROKER_URL, options);
 
   client.on("connect", () => {
-    logger.info("[MQTT Handler] Conectado ao broker Mosquitto local com sucesso!");
+    logger.info("[MQTT Handler] Conectado ao broker MQTT.");
     
     const topicos = ["novus/+/status/channels", "novus/neighbor", "sel/reles/+/status"];
     
     client.subscribe(topicos, (err) => {
-      if (!err) {
-        logger.info(`[MQTT Handler] Inscrito com sucesso nos tópicos: "${topicos.join(", ")}"`);
+      if (err) {
+        logger.error(`[MQTT Handler] Falha ao inscrever nos tópicos: ${err.message}`);
       } else {
-        logger.error(`[MQTT Handler] Falha ao se inscrever nos tópicos: ${err.message}`);
+        logger.info(`[MQTT Handler] Inscrito nos tópicos: ${topicos.join(", ")}`);
       }
     });
   });
 
   client.on("message", (topic, message) => {
     try {
-      logger.debug(`[MQTT Handler] Mensagem recebida no tópico: ${topic}`);
-      
       const dados = JSON.parse(message.toString());
       const wss = app.get("wss");
 
@@ -192,14 +158,12 @@ function iniciarClienteMQTT(app) {
         salvarStatusConexao(dados, wss);
       }
     } catch (e) {
-      logger.error(`[MQTT Handler] Erro crítico ao processar mensagem MQTT: ${e.message}`);
-      logger.error(`[MQTT Handler] Tópico: ${topic}`);
-      logger.error(`[MQTT Handler] Mensagem Bruta: ${message.toString()}`);
+      logger.error(`[MQTT Handler] Erro ao processar mensagem do tópico ${topic}: ${e.message}`);
     }
   });
 
   client.on("error", (err) => {
-    logger.error(`[MQTT Handler] Erro no cliente MQTT: ${err.message}`);
+    logger.error(`[MQTT Handler] Erro de conexão: ${err.message}`);
   });
 }
 
