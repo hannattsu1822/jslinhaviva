@@ -1,11 +1,14 @@
 const { promisePool } = require("../../../init");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
+
+// --- CORREÇÃO AQUI ---
+// Mudamos de "./helpers..." para "../helpers..." para subir um nível e achar a pasta correta
 const { 
   validarTemperatura, 
   verificarConexaoAtiva, 
   extrairTemperaturaPayload 
-} = require("./helpers/validation.helper");
+} = require("../helpers/validation.helper");
 
 async function getReportData(filters) {
   const { deviceId, reportType, date, month, year } = filters;
@@ -71,9 +74,6 @@ async function getReportData(filters) {
       }
     );
   } else {
-    // Para relatórios agregados, filtramos no SQL se possível, ou aqui
-    // Como JSON_EXTRACT é complexo para filtrar range no WHERE, filtramos no JS se necessário
-    // Mas para simplificar, mantemos a query original assumindo que outliers não afetam tanto a média diária se forem poucos
     const [aggregated] = await promisePool.query(
       `SELECT
         DATE(timestamp_leitura) as data_dia,
@@ -146,19 +146,16 @@ async function getReportData(filters) {
 }
 
 async function obterLeituras(serialNumber) {
-  // Busca mais registros para garantir que teremos 200 válidos após o filtro
   const [rows] = await promisePool.query(
     "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 300",
     [serialNumber]
   );
 
-  // Filtra leituras inválidas (lixo antigo do banco)
   const leiturasValidas = rows.filter(r => {
     const temp = extrairTemperaturaPayload(r.payload_json);
     return validarTemperatura(temp).valid;
   });
 
-  // Pega as 200 mais recentes válidas e inverte para ordem cronológica (gráfico)
   const reversedRows = leiturasValidas.slice(0, 200).reverse();
 
   return {
@@ -188,7 +185,6 @@ async function obterStatus(serialNumber) {
     status = {};
   }
 
-  // Verifica se está online baseado na última leitura (5 min timeout)
   const conexao = verificarConexaoAtiva(rows[0].ultima_leitura);
   
   status.connection_status = conexao.online ? 'online' : 'offline';
@@ -215,10 +211,6 @@ async function obterEstatisticas(serialNumber) {
   today.setHours(0, 0, 0, 0);
   const month = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  // Nota: Para estatísticas agregadas SQL, o filtro de temperatura inválida
-  // deveria ser feito na query, mas JSON_EXTRACT torna isso lento/complexo.
-  // Assumimos que o filtro na entrada (MQTT) resolverá isso daqui para frente.
-  
   const [[todayStats]] = await promisePool.query(
     "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
     [serialNumber, today]
