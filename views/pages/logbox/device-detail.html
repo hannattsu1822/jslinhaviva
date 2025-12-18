@@ -10,247 +10,260 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
-    <!-- ESTILOS CSS -->
     <style>
+        /* Estilos Personalizados */
+        body {
+            background-color: #f5f7fa;
+        }
+        
         .box {
             height: 100%;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            border-radius: 8px;
-            box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-radius: 12px;
+            border: 1px solid #eef0f5;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
         .box:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
 
-        .chart-container {
-            position: relative;
-            width: 100%;
-            overflow: hidden;
+        .material-symbols-outlined {
+            vertical-align: bottom;
         }
 
-        .tag {
-            font-weight: 600;
+        .kpi-icon {
+            font-size: 48px !important;
+            margin-bottom: 10px;
         }
 
-        .level-item .title {
-            margin-bottom: 0 !important;
+        .diag-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
         }
 
-        /* Animação de atualização */
-        @keyframes highlight {
+        .diag-item:last-child {
+            border-bottom: none;
+        }
+
+        .diag-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .diag-value {
+            font-family: monospace;
+            font-size: 0.95rem;
+            background-color: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #333;
+        }
+
+        /* Animação de atualização de dados */
+        @keyframes flashUpdate {
             0% { background-color: #e3f2fd; }
             100% { background-color: transparent; }
         }
 
         .updated-anim {
-            animation: highlight 1s ease-out;
+            animation: flashUpdate 1.5s ease-out;
         }
-        
-        .material-symbols-outlined {
-            vertical-align: bottom;
+
+        .chart-wrapper {
+            position: relative;
+            height: 450px;
+            width: 100%;
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
-<div class="container is-fluid">
-    <section class="section">
 
-        <!-- CABEÇALHO -->
-        <div class="level mb-5">
-            <div class="level-left">
-                <div class="level-item">
-                    <div>
-                        <p class="heading">
-                            <span class="material-symbols-outlined">sensors</span>
-                            Monitoramento
-                        </p>
-                        <p class="title is-3"><%= device.local_tag %></p>
-                        <p class="subtitle is-6">SN: <strong><%= device.serial_number %></strong></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="level-right">
-                <div class="level-item">
-                    <a href="/gerenciar-dispositivos" class="button is-light">
-                        <span class="icon">
-                            <span class="material-symbols-outlined">arrow_back</span>
+<div class="container is-fluid p-5">
+    
+    <!-- CABEÇALHO -->
+    <div class="level mb-5">
+        <div class="level-left">
+            <div class="level-item">
+                <div>
+                    <p class="heading is-size-6 has-text-grey">
+                        <span class="icon-text">
+                            <span class="icon"><span class="material-symbols-outlined">router</span></span>
+                            <span>Monitoramento de Dispositivo</span>
                         </span>
-                        <span>Voltar</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- CARDS DE KPI -->
-        <div class="columns is-multiline mb-5">
-            <!-- Temperatura -->
-            <div class="column is-3">
-                <div class="box has-text-centered" id="box-temp">
-                    <span class="icon is-large has-text-link">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">device_thermostat</span>
-                    </span>
-                    <p class="heading mt-3">Temperatura Atual</p>
-                    <p class="title is-4">
-                        <span id="latest-temp">--</span>
-                        <span class="is-size-5">°C</span>
                     </p>
-                    <p class="help" id="latest-timestamp">Aguardando dados...</p>
-                </div>
-            </div>
-
-            <!-- Conexão -->
-            <div class="column is-3">
-                <div class="box has-text-centered">
-                    <span class="icon is-large has-text-success">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">signal_cellular_alt</span>
-                    </span>
-                    <p class="heading mt-3">Status da Conexão</p>
-                    <p class="title is-4" id="connection-status-text">Verificando...</p>
-                    <p class="help" id="diag-wifi-rssi">RSSI --</p>
-                </div>
-            </div>
-
-            <!-- Energia -->
-            <div class="column is-3">
-                <div class="box has-text-centered">
-                    <span class="icon is-large has-text-warning">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">power</span>
-                    </span>
-                    <p class="heading mt-3">Fonte de Energia</p>
-                    <p class="title is-5" id="diag-power-source">Verificando...</p>
-                    <p class="help" id="diag-battery-voltage">Bateria --</p>
-                </div>
-            </div>
-
-            <!-- Alarmes -->
-            <div class="column is-3">
-                <div class="box has-text-centered">
-                    <span class="icon is-large has-text-danger">
-                        <span class="material-symbols-outlined" style="font-size: 48px;">warning</span>
-                    </span>
-                    <p class="heading mt-3">Alarmes Ativos</p>
-                    <p class="title is-4" id="active-alarms-count">0</p>
-                    <p class="help" id="alarm-subtitle">Nenhum alarme</p>
+                    <h1 class="title is-3 has-text-link-dark mb-1"><%= device.local_tag %></h1>
+                    <p class="subtitle is-6">Serial Number: <strong><%= device.serial_number %></strong></p>
                 </div>
             </div>
         </div>
 
-        <!-- ESTATÍSTICAS E DIAGNÓSTICO -->
-        <div class="columns is-multiline mb-5">
-            <div class="column is-6">
-                <div class="box">
-                    <div class="level mb-4">
-                        <div class="level-left">
-                            <div class="level-item">
-                                <span class="icon-text">
-                                    <span class="icon"><span class="material-symbols-outlined">query_stats</span></span>
-                                    <span class="title is-5">Estatísticas (Hoje)</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="content">
-                        <div class="level is-mobile">
-                            <div class="level-left"><div class="level-item"><span>Mínima</span></div></div>
-                            <div class="level-right"><div class="level-item"><strong id="stat-today-min">-- °C</strong></div></div>
-                        </div>
-                        <div class="level is-mobile">
-                            <div class="level-left"><div class="level-item"><span>Média</span></div></div>
-                            <div class="level-right"><div class="level-item"><strong id="stat-today-avg">-- °C</strong></div></div>
-                        </div>
-                        <div class="level is-mobile">
-                            <div class="level-left"><div class="level-item"><span>Máxima</span></div></div>
-                            <div class="level-right"><div class="level-item"><strong id="stat-today-max">-- °C</strong></div></div>
-                        </div>
-                    </div>
-                </div>
+        <div class="level-right">
+            <div class="level-item">
+                <a href="/gerenciar-dispositivos" class="button is-white shadow-sm">
+                    <span class="icon">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </span>
+                    <span>Voltar</span>
+                </a>
             </div>
+        </div>
+    </div>
 
-            <div class="column is-6">
-                <div class="box">
-                    <div class="level mb-4">
-                        <div class="level-left">
-                            <div class="level-item">
-                                <span class="icon-text">
-                                    <span class="icon"><span class="material-symbols-outlined">developer_board</span></span>
-                                    <span class="title is-5">Diagnóstico</span>
-                                </span>
-                            </div>
-                        </div>
+    <!-- KPI CARDS (Indicadores Principais) -->
+    <div class="columns is-multiline mb-2">
+        <!-- Temperatura -->
+        <div class="column is-3-desktop is-6-tablet">
+            <div class="box has-text-centered" id="box-temp">
+                <span class="material-symbols-outlined kpi-icon has-text-link">device_thermostat</span>
+                <p class="heading mt-2">Temperatura Atual</p>
+                <p class="title is-2 has-text-weight-bold">
+                    <span id="latest-temp">--</span><span class="is-size-4">°C</span>
+                </p>
+                <p class="is-size-7 has-text-grey" id="latest-timestamp">Aguardando dados...</p>
+            </div>
+        </div>
+
+        <!-- Conexão -->
+        <div class="column is-3-desktop is-6-tablet">
+            <div class="box has-text-centered">
+                <span class="material-symbols-outlined kpi-icon has-text-success">wifi</span>
+                <p class="heading mt-2">Status da Conexão</p>
+                <p class="title is-4 has-text-weight-bold" id="connection-status-text">Verificando...</p>
+                <p class="is-size-7 has-text-grey" id="diag-wifi-rssi">RSSI: --</p>
+            </div>
+        </div>
+
+        <!-- Energia -->
+        <div class="column is-3-desktop is-6-tablet">
+            <div class="box has-text-centered">
+                <span class="material-symbols-outlined kpi-icon has-text-warning">bolt</span>
+                <p class="heading mt-2">Fonte de Energia</p>
+                <p class="title is-5 has-text-weight-bold mt-2" id="diag-power-source">Verificando...</p>
+                <p class="is-size-7 has-text-grey" id="diag-battery-voltage">Bateria: --</p>
+            </div>
+        </div>
+
+        <!-- Alarmes -->
+        <div class="column is-3-desktop is-6-tablet">
+            <div class="box has-text-centered">
+                <span class="material-symbols-outlined kpi-icon has-text-danger">notifications_active</span>
+                <p class="heading mt-2">Alarmes Ativos</p>
+                <p class="title is-2 has-text-weight-bold" id="active-alarms-count">0</p>
+                <p class="is-size-7 has-text-grey" id="alarm-subtitle">Sistema Normal</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="columns is-multiline">
+        
+        <!-- COLUNA ESQUERDA: ESTATÍSTICAS -->
+        <div class="column is-4">
+            <div class="box">
+                <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+                    <h3 class="title is-5 mb-0">
+                        <span class="icon-text">
+                            <span class="icon has-text-info"><span class="material-symbols-outlined">query_stats</span></span>
+                            <span>Estatísticas (Hoje)</span>
+                        </span>
+                    </h3>
+                </div>
+                
+                <div class="content">
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined has-text-info">arrow_downward</span> Mínima</span>
+                        <span class="diag-value has-text-weight-bold" id="stat-today-min">-- °C</span>
                     </div>
-
-                    <div class="content">
-                        <div class="level is-mobile mb-3">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span class="icon-text">
-                                        <span class="icon has-text-danger"><span class="material-symbols-outlined">device_thermostat</span></span>
-                                        <span>Temp. Interna</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="level-right"><div class="level-item"><span class="tag" id="diag-internal-temp">--</span></div></div>
-                        </div>
-
-                        <div class="level is-mobile mb-3">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span class="icon-text">
-                                        <span class="icon has-text-link"><span class="material-symbols-outlined">public</span></span>
-                                        <span>IP</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="level-right"><div class="level-item"><span class="tag" id="diag-ip-address">--</span></div></div>
-                        </div>
-
-                        <div class="level is-mobile mb-3">
-                            <div class="level-left">
-                                <div class="level-item">
-                                    <span class="icon-text">
-                                        <span class="icon"><span class="material-symbols-outlined">memory</span></span>
-                                        <span>Firmware</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="level-right"><div class="level-item"><span class="tag" id="diag-firmware-version">--</span></div></div>
-                        </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined has-text-info">functions</span> Média</span>
+                        <span class="diag-value has-text-weight-bold" id="stat-today-avg">-- °C</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined has-text-info">arrow_upward</span> Máxima</span>
+                        <span class="diag-value has-text-weight-bold" id="stat-today-max">-- °C</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- GRÁFICO -->
-        <div class="columns">
-            <div class="column is-12">
-                <div class="box">
-                    <div class="level mb-4">
-                        <div class="level-left">
-                            <div class="level-item">
-                                <span class="icon-text">
-                                    <span class="icon"><span class="material-symbols-outlined">timeline</span></span>
-                                    <span class="title is-5">Histórico de Temperatura</span>
-                                </span>
-                            </div>
+        <!-- COLUNA DIREITA: DIAGNÓSTICO TÉCNICO -->
+        <div class="column is-8">
+            <div class="box">
+                <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+                    <h3 class="title is-5 mb-0">
+                        <span class="icon-text">
+                            <span class="icon has-text-primary"><span class="material-symbols-outlined">developer_board</span></span>
+                            <span>Diagnóstico Técnico</span>
+                        </span>
+                    </h3>
+                </div>
+
+                <div class="columns is-multiline">
+                    <div class="column is-6">
+                        <div class="diag-item">
+                            <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna (MCU)</span>
+                            <span class="diag-value" id="diag-internal-temp">--</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label"><span class="material-symbols-outlined">lan</span> Endereço IP</span>
+                            <span class="diag-value" id="diag-ip-address">--</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label"><span class="material-symbols-outlined">memory</span> Firmware</span>
+                            <span class="diag-value" id="diag-firmware-version">--</span>
                         </div>
                     </div>
-
-                    <div class="chart-container" style="position: relative; height: 400px; min-height: 400px;">
-                        <div id="loader-historico" class="has-text-centered py-6" style="position: absolute; width: 100%; top: 40%;">
-                            <button class="button is-loading is-ghost is-large"></button>
-                            <p class="mt-3">Carregando histórico...</p>
+                    <div class="column is-6">
+                        <div class="diag-item">
+                            <span class="diag-label"><span class="material-symbols-outlined">fingerprint</span> Device ID (Banco)</span>
+                            <span class="diag-value"><%= device.id %></span>
                         </div>
-                        <div id="graficoHistorico" style="width: 100%; height: 100%; min-height: 400px; display: none;"></div>
+                        <div class="diag-item">
+                            <span class="diag-label"><span class="material-symbols-outlined">qr_code_2</span> MAC Address</span>
+                            <span class="diag-value" id="diag-mac-address">--</span>
+                        </div>
+                        <div class="diag-item">
+                            <span class="diag-label"><span class="material-symbols-outlined">update</span> Último Pacote</span>
+                            <span class="diag-value" id="diag-last-packet">--</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-    </section>
+    <!-- GRÁFICO -->
+    <div class="columns">
+        <div class="column is-12">
+            <div class="box">
+                <h3 class="title is-5 mb-4">
+                    <span class="icon-text">
+                        <span class="icon has-text-link"><span class="material-symbols-outlined">timeline</span></span>
+                        <span>Histórico de Temperatura</span>
+                    </span>
+                </h3>
+                
+                <div class="chart-wrapper">
+                    <div id="loader-historico" class="is-flex is-justify-content-center is-align-items-center" style="height: 100%;">
+                        <div class="has-text-centered">
+                            <span class="material-symbols-outlined is-size-1 has-text-grey-light spin">refresh</span>
+                            <p class="has-text-grey mt-2">Carregando dados...</p>
+                        </div>
+                    </div>
+                    <div id="graficoHistorico" style="width: 100%; height: 100%; display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- LÓGICA JAVASCRIPT -->
@@ -271,27 +284,38 @@
         carregarEstatisticasDetalhes();
     }
 
+    // --- FUNÇÃO INTELIGENTE PARA ENCONTRAR DADOS ---
+    // Procura por várias chaves possíveis dentro do objeto de dados
+    function detectarValor(dados, chavesPossiveis) {
+        if (!dados) return null;
+        for (let chave of chavesPossiveis) {
+            // Verifica se a chave existe diretamente
+            if (dados[chave] !== undefined && dados[chave] !== null && dados[chave] !== "") {
+                return dados[chave];
+            }
+            // Verifica se existe em minúsculo ou maiúsculo
+            const lowerKey = chave.toLowerCase();
+            const upperKey = chave.toUpperCase();
+            if (dados[lowerKey] !== undefined) return dados[lowerKey];
+            if (dados[upperKey] !== undefined) return dados[upperKey];
+        }
+        return null;
+    }
+
     // --- WEBSOCKET ---
     function iniciarWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const host = window.location.host;
         const wsUrl = `${protocol}//${host}`;
 
-        console.log(`Tentando conectar WebSocket em: ${wsUrl}`);
         const socket = new WebSocket(wsUrl);
 
-        socket.onopen = () => {
-            console.log("✅ WebSocket conectado com sucesso!");
-        };
+        socket.onopen = () => console.log("✅ WebSocket conectado!");
 
         socket.onmessage = (event) => {
             try {
                 const msg = JSON.parse(event.data);
-                
-                // Filtra mensagens para garantir que é deste dispositivo
-                if (msg.dados && msg.dados.serial_number && msg.dados.serial_number !== serialNumber) {
-                    return;
-                }
+                if (msg.dados && msg.dados.serial_number && msg.dados.serial_number !== serialNumber) return;
 
                 if (msg.type === "nova_leitura_logbox" || msg.type === "nova_leitura") {
                     atualizarPainelLeitura(msg.dados);
@@ -299,55 +323,43 @@
                     atualizarPainelCompleto(msg.dados);
                 }
             } catch (e) {
-                console.error("Erro ao processar mensagem WS:", e);
+                console.error("Erro WS:", e);
             }
         };
 
-        socket.onclose = (event) => {
-            console.warn("WebSocket desconectado. Tentando reconectar em 5s...", event.code);
-            setTimeout(iniciarWebSocket, 5000);
-        };
-
-        socket.onerror = (err) => {
-            console.error("Erro no WebSocket:", err);
-        };
+        socket.onclose = () => setTimeout(iniciarWebSocket, 5000);
     }
 
-    // --- CARREGAMENTO DE DADOS (API) ---
+    // --- API CALLS ---
     async function carregarLeiturasIniciais() {
         const loader = document.getElementById("loader-historico");
         const chartContainer = document.getElementById("graficoHistorico");
 
         try {
-            if (loader) loader.style.display = "block";
-            if (chartContainer) chartContainer.style.display = "none";
-
             const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
-            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-
+            if (!response.ok) throw new Error("Erro API Leituras");
             const data = await response.json();
             gerarGraficoHistorico(data);
-
             if (loader) loader.style.display = "none";
             if (chartContainer) chartContainer.style.display = "block";
         } catch (error) {
-            console.error("Erro ao carregar leituras:", error);
-            if (loader) loader.innerHTML = `<p class="has-text-danger">Erro ao carregar gráfico.</p>`;
+            console.error(error);
+            if (loader) loader.innerHTML = `<p class="has-text-danger">Falha ao carregar gráfico</p>`;
         }
     }
 
     async function carregarStatusInicial() {
         try {
             const response = await fetch(`/api/logbox-device/${serialNumber}/status`);
-            if (!response.ok) throw new Error("Falha ao buscar status");
-
-            const data = await response.json();
-            const statusData = data.status || data;
-            
-            // DEBUG: Verifique no console do navegador o que está chegando aqui
-            console.log("DEBUG - Status Inicial Recebido:", statusData);
-            
-            atualizarPainelCompleto(statusData);
+            if (response.ok) {
+                const data = await response.json();
+                const statusData = data.status || data;
+                
+                // DEBUG: Ajuda a ver quais campos estão vindo
+                console.log("DEBUG - Dados Recebidos:", statusData);
+                
+                atualizarPainelCompleto(statusData);
+            }
             
             const latestResp = await fetch(`/api/logbox-device/${serialNumber}/latest`);
             if (latestResp.ok) {
@@ -359,9 +371,7 @@
                     atualizarTexto("latest-timestamp", `Em: ${new Date(latest.timestamp_leitura).toLocaleString("pt-BR")}`);
                 }
             }
-        } catch (error) {
-            console.error("Erro ao carregar status:", error);
-        }
+        } catch (e) { console.error(e); }
     }
 
     async function carregarEstatisticasDetalhes() {
@@ -373,54 +383,60 @@
                 atualizarTexto("stat-today-avg", `${stats.today.avg} °C`);
                 atualizarTexto("stat-today-max", `${stats.today.max} °C`);
             }
-        } catch (e) {
-            console.error("Erro stats:", e);
-        }
+        } catch (e) { console.error(e); }
     }
 
-    // --- ATUALIZAÇÃO DA UI ---
+    // --- ATUALIZAÇÃO UI ---
     function atualizarPainelCompleto(status) {
         if (!status) return;
 
-        // 1. Status Conexão
+        // 1. Conexão
         const connEl = document.getElementById("connection-status-text");
         if (connEl) {
             const isOnline = status.connection_status !== "offline";
             connEl.textContent = isOnline ? "Online" : "Offline";
-            connEl.className = isOnline ? "title is-4 has-text-success" : "title is-4 has-text-danger";
+            connEl.className = isOnline ? "title is-4 has-text-weight-bold has-text-success" : "title is-4 has-text-weight-bold has-text-danger";
         }
 
-        // 2. Wi-Fi / RSSI (Tenta vários nomes possíveis)
-        const rssi = status.lqi || status.rssi || status.signal;
+        // 2. RSSI
+        const rssi = detectarValor(status, ['lqi', 'rssi', 'signal', 'wifi_signal']);
         atualizarTexto("diag-wifi-rssi", `RSSI: ${rssi || "--"} dBm`);
-        
-        // 3. Fonte de Energia
-        const tensaoEntrada = status.ch_analog_2 !== undefined ? status.ch_analog_2 : status.supply_voltage;
-        const powerInfo = getPowerSourceStatus(tensaoEntrada);
+
+        // 3. Energia
+        const tensao = detectarValor(status, ['ch_analog_2', 'supply_voltage', 'input_voltage']);
+        const powerInfo = getPowerSourceStatus(tensao);
         atualizarTexto("diag-power-source", powerInfo.text);
 
         // 4. Bateria
-        const bateria = status.ch_analog_3 !== undefined ? status.ch_analog_3 : status.battery;
-        atualizarTexto("diag-battery-voltage", `Bateria: ${bateria ? parseFloat(bateria).toFixed(2) : "--"} V`);
+        const bat = detectarValor(status, ['ch_analog_3', 'battery', 'battery_voltage', 'vbat']);
+        atualizarTexto("diag-battery-voltage", `Bateria: ${bat ? parseFloat(bat).toFixed(2) : "--"} V`);
 
-        // 5. Temperatura Interna (Tenta vários nomes possíveis)
-        const tempInterna = status.temperature || status.internal_temperature || status.temp_int || status.mcu_temp;
-        atualizarTexto("diag-internal-temp", `${tempInterna ? parseFloat(tempInterna).toFixed(1) : "--"} °C`);
+        // 5. Temp Interna (MCU)
+        const tempInt = detectarValor(status, ['temperature', 'internal_temperature', 'temp_int', 'mcu_temp', 'cpu_temp']);
+        atualizarTexto("diag-internal-temp", tempInt ? `${parseFloat(tempInt).toFixed(1)} °C` : "--");
 
-        // 6. IP (Tenta vários nomes possíveis)
-        const ip = status.ip || status.ip_address || status.IP || "--";
-        atualizarTexto("diag-ip-address", ip);
+        // 6. IP
+        const ip = detectarValor(status, ['ip', 'ip_address', 'net_ip', 'wifi_ip', 'local_ip']);
+        atualizarTexto("diag-ip-address", ip || "--");
 
-        // 7. Firmware (Tenta vários nomes possíveis)
-        const fw = status.firmware_version || status.version || status.fw_version || "--";
-        atualizarTexto("diag-firmware-version", fw);
+        // 7. Firmware
+        const fw = detectarValor(status, ['firmware_version', 'version', 'fw_version', 'fw', 'sw_version']);
+        atualizarTexto("diag-firmware-version", fw || "--");
+
+        // 8. MAC Address (Novo)
+        const mac = detectarValor(status, ['mac', 'mac_address', 'wifi_mac', 'device_mac']);
+        atualizarTexto("diag-mac-address", mac || "--");
+
+        // 9. Último Pacote (Novo)
+        const timestamp = status.timestamp || status.ts || new Date().toISOString();
+        const horaFormatada = new Date(timestamp).toLocaleTimeString("pt-BR");
+        atualizarTexto("diag-last-packet", horaFormatada);
 
         atualizarListaAlarmes(status.alarms);
     }
 
     function atualizarPainelLeitura(dados) {
         const temperatura = extrairTemperatura(dados);
-
         if (temperatura !== undefined && temperatura !== null) {
             const tempEl = document.getElementById("latest-temp");
             if (tempEl) {
@@ -428,102 +444,19 @@
                 const box = document.getElementById("box-temp");
                 if (box) {
                     box.classList.remove("updated-anim");
-                    void box.offsetWidth; 
+                    void box.offsetWidth;
                     box.classList.add("updated-anim");
                 }
             }
             atualizarGraficoTempoReal(temperatura);
         }
-
         atualizarTexto("latest-timestamp", `Em: ${new Date().toLocaleString("pt-BR")}`);
-
-        if (dados.ch_analog_2 !== undefined) {
-            const powerInfo = getPowerSourceStatus(dados.ch_analog_2);
-            atualizarTexto("diag-power-source", powerInfo.text);
-        }
+        
+        // Atualiza diagnósticos se vierem no pacote de leitura
+        atualizarPainelCompleto(dados);
     }
 
-    // --- GRÁFICOS ---
-    function gerarGraficoHistorico(dados) {
-        const container = document.getElementById("graficoHistorico");
-        if (!container || !dados.labels || dados.labels.length === 0) {
-            if (container) container.innerHTML = '<p class="has-text-centered py-6">Sem dados históricos disponíveis.</p>';
-            return;
-        }
-
-        if (historicoChartInstance) {
-            historicoChartInstance.dispose();
-        }
-
-        const chartData = dados.labels.map((label, index) => {
-            return [parseDataBr(label), dados.temperaturas[index]];
-        });
-
-        historicoChartInstance = echarts.init(container);
-
-        const option = {
-            tooltip: {
-                trigger: 'axis',
-                formatter: params => {
-                    if (!params[0]) return '';
-                    const d = new Date(params[0].value[0]);
-                    return `${d.toLocaleString("pt-BR")}<br/>Temp: <strong>${params[0].value[1].toFixed(1)} °C</strong>`;
-                }
-            },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: {
-                type: 'time',
-                boundaryGap: false,
-                axisLabel: {
-                    formatter: value => {
-                        const date = new Date(value);
-                        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-                    }
-                }
-            },
-            yAxis: {
-                type: 'value',
-                axisLabel: { formatter: '{value} °C' },
-                scale: true
-            },
-            series: [{
-                name: 'Temperatura',
-                type: 'line',
-                smooth: true,
-                showSymbol: false,
-                data: chartData,
-                lineStyle: { color: '#3273dc', width: 2 },
-                areaStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: 'rgba(50, 115, 220, 0.3)' },
-                        { offset: 1, color: 'rgba(50, 115, 220, 0.05)' }
-                    ])
-                }
-            }]
-        };
-
-        historicoChartInstance.setOption(option);
-        window.addEventListener("resize", () => historicoChartInstance && historicoChartInstance.resize());
-    }
-
-    function atualizarGraficoTempoReal(temperatura) {
-        if (!historicoChartInstance) return;
-
-        const now = new Date().getTime();
-        const option = historicoChartInstance.getOption();
-
-        if (option && option.series && option.series[0]) {
-            const data = option.series[0].data;
-            data.push([now, temperatura]);
-            if (data.length > 200) data.shift();
-
-            historicoChartInstance.setOption({
-                series: [{ data: data }]
-            });
-        }
-    }
-
-    // --- UTILITÁRIOS ---
+    // --- HELPERS ---
     function extrairTemperatura(dados) {
         if (dados.ch_analog_1 !== undefined) return dados.ch_analog_1;
         if (dados.value_channels && Array.isArray(dados.value_channels)) return dados.value_channels[2];
@@ -539,16 +472,24 @@
         const countEl = document.getElementById("active-alarms-count");
         const subEl = document.getElementById("alarm-subtitle");
         if (!countEl) return;
-
         let activeCount = 0;
         if (alarms) {
             activeCount = Array.isArray(alarms) 
                 ? alarms.filter(a => a === 1).length 
                 : Object.values(alarms).filter(v => v === true).length;
         }
-
         countEl.textContent = activeCount;
-        if (subEl) subEl.textContent = activeCount > 0 ? `${activeCount} alarme(s)` : "Nenhum alarme";
+        if (subEl) subEl.textContent = activeCount > 0 ? `${activeCount} Alarme(s)` : "Sistema Normal";
+        
+        // Muda cor do card se tiver alarme
+        const box = countEl.closest('.box');
+        if(activeCount > 0) {
+            box.style.border = "2px solid #f14668";
+            countEl.classList.add("has-text-danger");
+        } else {
+            box.style.border = "1px solid #eef0f5";
+            countEl.classList.remove("has-text-danger");
+        }
     }
 
     function getPowerSourceStatus(voltage) {
@@ -556,13 +497,84 @@
         return voltage > 9 ? { text: "Rede Elétrica" } : { text: "Apenas Bateria" };
     }
 
-    function parseDataBr(dataString) {
-        if (typeof dataString === 'string' && dataString.includes('/')) {
-            const parts = dataString.split(/[\/\s:]/);
-            return new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+    // --- GRÁFICO ---
+    function gerarGraficoHistorico(dados) {
+        const container = document.getElementById("graficoHistorico");
+        if (!container || !dados.labels || dados.labels.length === 0) {
+            if (container) container.innerHTML = '<p class="has-text-centered py-6 has-text-grey">Sem dados históricos disponíveis.</p>';
+            return;
         }
-        return new Date(dataString).getTime();
+        if (historicoChartInstance) historicoChartInstance.dispose();
+
+        const chartData = dados.labels.map((label, index) => {
+            // Parse data BR
+            let timestamp;
+            if (typeof label === 'string' && label.includes('/')) {
+                const parts = label.split(/[\/\s:]/);
+                timestamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+            } else {
+                timestamp = new Date(label).getTime();
+            }
+            return [timestamp, dados.temperaturas[index]];
+        });
+
+        historicoChartInstance = echarts.init(container);
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderColor: '#ccc',
+                borderWidth: 1,
+                textStyle: { color: '#333' },
+                formatter: params => {
+                    if (!params[0]) return '';
+                    const d = new Date(params[0].value[0]);
+                    return `<strong>${d.toLocaleTimeString("pt-BR")}</strong><br/>Temp: <strong>${params[0].value[1].toFixed(1)} °C</strong>`;
+                }
+            },
+            grid: { left: '40', right: '20', bottom: '30', top: '30', containLabel: true },
+            xAxis: {
+                type: 'time',
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: '#ccc' } },
+                axisLabel: { color: '#666' }
+            },
+            yAxis: {
+                type: 'value',
+                splitLine: { lineStyle: { type: 'dashed', color: '#eee' } },
+                axisLabel: { formatter: '{value} °C', color: '#666' }
+            },
+            series: [{
+                name: 'Temperatura',
+                type: 'line',
+                smooth: true,
+                showSymbol: false,
+                data: chartData,
+                lineStyle: { color: '#3298dc', width: 3 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(50, 152, 220, 0.4)' },
+                        { offset: 1, color: 'rgba(50, 152, 220, 0.0)' }
+                    ])
+                }
+            }]
+        };
+        historicoChartInstance.setOption(option);
+        window.addEventListener("resize", () => historicoChartInstance && historicoChartInstance.resize());
+    }
+
+    function atualizarGraficoTempoReal(temperatura) {
+        if (!historicoChartInstance) return;
+        const now = new Date().getTime();
+        const option = historicoChartInstance.getOption();
+        if (option && option.series && option.series[0]) {
+            const data = option.series[0].data;
+            data.push([now, temperatura]);
+            if (data.length > 200) data.shift();
+            historicoChartInstance.setOption({ series: [{ data: data }] });
+        }
     }
 </script>
+
 </body>
 </html>
