@@ -10,6 +10,10 @@ const port = process.env.TCP_SERVER_PORT || 4000;
 const pollInterval = 120000;
 const keepaliveInterval = 120000;
 
+// Configuração de Delays para evitar Loop de Sessão
+const INITIAL_CONNECTION_DELAY = 3000; // 3 segundos antes de mandar o primeiro comando
+const SHUTDOWN_DELAY = 1000; // Tempo para o comando QUIT ser enviado antes de matar o processo
+
 const dbConfig = {
   host: '127.0.0.1',
   user: process.env.DB_USER,
@@ -118,15 +122,23 @@ async function handleSocketData(socket) {
                 if (deviceInfo) {
                     socket.rele_id_db = deviceInfo.rele_id_db;
                     socket.deviceId = deviceInfo.deviceId;
-                    console.log(`[TCP Service] Dispositivo identificado (via cache) como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Iniciando login.`);
-                    socket.state = 'AWAITING_PASSWORD_PROMPT';
-                    socket.write("ACC\r\n");
+                    console.log(`[TCP Service] Dispositivo identificado (via cache) como '${socket.deviceId}' (ID: ${socket.rele_id_db}). Aguardando delay de estabilização.`);
+                    
+                    // Delay para evitar conflito de sessão
+                    setTimeout(() => {
+                        console.log(`[TCP Service] [${socket.deviceId}] Enviando ACC após delay.`);
+                        socket.state = 'AWAITING_PASSWORD_PROMPT';
+                        socket.write("\r\n"); // Limpa buffer
+                        setTimeout(() => socket.write("ACC\r\n"), 500);
+                    }, INITIAL_CONNECTION_DELAY);
+
                 } else {
                     console.log(`[TCP Service] Dispositivo com ID HEX '${deviceIdHex}' não encontrado no cache.`);
                     socket.end();
                     return;
                 }
-                continue;
+                // Sai do loop para aguardar o timeout
+                break;
             }
 
             if (socket.state === 'AWAITING_PASSWORD_PROMPT') {
@@ -253,16 +265,20 @@ function createLegacyServer(listenPort) {
             return;
         }
 
-        console.log(`[TCP Service - Porta ${listenPort}] Nova conexão de ${remoteAddress}. Identificado como '${deviceInfo.deviceId}'.`);
+        console.log(`[TCP Service - Porta ${listenPort}] Nova conexão de ${remoteAddress}. Identificado como '${deviceInfo.deviceId}'. Aguardando delay de estabilização.`);
         
         socket.rele_id_db = deviceInfo.rele_id_db;
         socket.deviceId = deviceInfo.deviceId;
         
         setupSocketLogic(socket);
         
-        console.log(`[TCP Service] [${socket.deviceId}] Iniciando login (enviando ACC).`);
-        socket.state = 'AWAITING_PASSWORD_PROMPT';
-        socket.write("ACC\r\n");
+        // Delay estratégico para evitar "Session Busy" ou Loop
+        setTimeout(() => {
+            console.log(`[TCP Service] [${socket.deviceId}] Enviando ACC após delay de ${INITIAL_CONNECTION_DELAY}ms.`);
+            socket.state = 'AWAITING_PASSWORD_PROMPT';
+            socket.write("\r\n"); // Limpa qualquer lixo no buffer do relé
+            setTimeout(() => socket.write("ACC\r\n"), 500);
+        }, INITIAL_CONNECTION_DELAY);
     });
 
     legacyServer.listen(listenPort, '0.0.0.0', () => {
@@ -290,32 +306,41 @@ async function startServer() {
 }
 
 process.on('SIGINT', async () => {
-    console.log('[Shutdown] Recebido sinal SIGINT. Encerrando conexões de forma organizada...');
+    console.log('[Shutdown] Recebido sinal SIGINT. Tentando logout gracioso dos relés...');
 
     for (const socket of activeSockets) {
-        console.log(`[Shutdown] Encerrando conexão com ${socket.deviceId || socket.remoteAddress}...`);
-        socket.end();
+        if (socket.writable) {
+            console.log(`[Shutdown] Enviando QUIT para ${socket.deviceId || socket.remoteAddress}...`);
+            socket.write("QUIT\r\n"); // Tenta fechar a sessão Telnet no dispositivo
+            socket.write("EXIT\r\n"); // Redundância
+        }
     }
 
-    mainServer.close(() => {
-        console.log('[Shutdown] Servidor principal fechado.');
-    });
-    legacyServers.forEach(server => {
-        server.close(() => {
-            const address = server.address();
-            if (address) {
-                console.log(`[Shutdown] Servidor legado na porta ${address.port} fechado.`);
-            }
+    // Aguarda um momento para o comando QUIT chegar antes de destruir a conexão
+    setTimeout(async () => {
+        for (const socket of activeSockets) {
+            socket.end();
+            socket.destroy();
+        }
+
+        mainServer.close(() => {
+            console.log('[Shutdown] Servidor principal fechado.');
         });
-    });
+        legacyServers.forEach(server => {
+            server.close(() => {
+                const address = server.address();
+                if (address) {
+                    console.log(`[Shutdown] Servidor legado na porta ${address.port} fechado.`);
+                }
+            });
+        });
 
-    mqttClient.end();
+        mqttClient.end();
+        await promisePool.end();
 
-    await promisePool.end();
-
-    console.log('[Shutdown] Todas as conexões foram encerradas. Saindo.');
-    
-    setTimeout(() => process.exit(0), 1500);
+        console.log('[Shutdown] Todas as conexões foram encerradas. Saindo.');
+        process.exit(0);
+    }, SHUTDOWN_DELAY);
 });
 
 startServer();
