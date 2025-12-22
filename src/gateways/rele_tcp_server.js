@@ -89,7 +89,7 @@ function parseData(metResponse, tempResponse) {
         data.temperatura_ambiente = getValue(/AMBT \(deg\. C\)\s*:\s*([\d\.]+)/, tempResponse);
         data.temperatura_enrolamento = getValue(/TOILC \(deg\. C\)\s*:\s*([\d\.]+)/, tempResponse);
     } catch (error) { 
-        // Silencioso, erro de parse não é critico no log limpo
+        // Silencioso
     }
     return data;
 }
@@ -102,7 +102,12 @@ async function processAndPublish(socket) {
         const payload = JSON.stringify({ rele_id: socket.rele_id_db, device_id: socket.deviceId, timestamp: new Date().toISOString(), dados: parsedData });
         
         mqttClient.publish(topic, payload, (err) => {
-            if (err) console.error(`[MQTT] Erro pub ${socket.deviceId}:`, err);
+            if (err) {
+                console.error(`[MQTT] Erro pub ${socket.deviceId}:`, err);
+            } else {
+                // LOG SOLICITADO
+                console.log(`[MQTT] ${socket.deviceId} - PUBLICADO`);
+            }
         });
 
         try {
@@ -276,6 +281,7 @@ function createLegacyServer(listenPort) {
         
         // --- LÓGICA ESPECIAL PARA PORTA 5001 ---
         if (listenPort === 5001) {
+            console.log(`[TCP] ${deviceInfo.deviceId} (Porta 5001) - Modo Direto Iniciado.`);
             // Modo Direto: Sem login, sem ACC, apenas MET após delay
             setTimeout(() => {
                 socket.state = 'IDLE';
