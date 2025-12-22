@@ -156,9 +156,7 @@ async function obterLeituras(serialNumber) {
   const reversedRows = leiturasValidas.slice(0, 200).reverse();
 
   return {
-    labels: reversedRows.map((r) =>
-      new Date(r.timestamp_leitura).toLocaleString("pt-BR")
-    ),
+    labels: reversedRows.map((r) => r.timestamp_leitura),
     temperaturas: reversedRows.map((r) => extrairTemperaturaPayload(r.payload_json)),
   };
 }
@@ -182,10 +180,9 @@ async function obterStatus(serialNumber) {
     status = {};
   }
 
-  // Validação extra: Se o status atual salvo no banco for inválido, tenta limpar a temperatura
   const temp = extrairTemperaturaPayload(status);
   if (!validarTemperatura(temp).valid) {
-      status.ch_analog_1 = null; // Anula a temperatura inválida para não mostrar na tela
+      status.ch_analog_1 = null;
       status.temperature_error = "Valor inválido no banco de dados";
   }
 
@@ -198,9 +195,6 @@ async function obterStatus(serialNumber) {
 }
 
 async function obterUltimaLeitura(serialNumber) {
-  // --- CORREÇÃO AQUI ---
-  // Busca as últimas 50 leituras em vez de apenas 1.
-  // Isso permite encontrar a última VÁLIDA caso as últimas 10 sejam lixo.
   const [rows] = await promisePool.query(
     "SELECT payload_json as payload, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 50",
     [serialNumber]
@@ -210,15 +204,12 @@ async function obterUltimaLeitura(serialNumber) {
     throw new Error("Nenhuma leitura encontrada");
   }
 
-  // Encontra a primeira leitura (mais recente) que tenha temperatura válida
   const ultimaValida = rows.find(row => {
     const temp = extrairTemperaturaPayload(row.payload);
     return validarTemperatura(temp).valid;
   });
 
   if (!ultimaValida) {
-    // Se todas as 50 forem inválidas, retorna a primeira mesmo (ou lança erro)
-    // Retornamos a primeira mas o front vai tratar como inválido se for muito absurdo
     return rows[0];
   }
 
@@ -230,9 +221,6 @@ async function obterEstatisticas(serialNumber) {
   today.setHours(0, 0, 0, 0);
   const month = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  // Nota: O filtro de temperatura inválida no SQL é complexo com JSON.
-  // Idealmente, rode o script de limpeza SQL fornecido para corrigir as estatísticas.
-  
   const [[todayStats]] = await promisePool.query(
     "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
     [serialNumber, today]
