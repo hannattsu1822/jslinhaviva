@@ -273,17 +273,24 @@
         socket.onmessage = (event) => {
             try {
                 const msg = JSON.parse(event.data);
+                
                 if (msg.dados && msg.dados.serial_number && msg.dados.serial_number !== serialNumber) return;
 
                 if (msg.type === "nova_leitura_logbox" || msg.type === "nova_leitura") {
-                    atualizarPainelLeitura(msg.dados);
+                    console.log("📡 Nova leitura recebida. Sincronizando com banco...");
+                    // Ao receber WS, chama a API para garantir dados fiéis do banco
+                    carregarUltimaLeitura(); 
+                    atualizarPainelCompleto(msg.dados);
                 } else if (msg.type === "atualizacao_status") {
                     atualizarPainelCompleto(msg.dados);
                 }
             } catch (e) { console.error("Erro WS:", e); }
         };
 
-        socket.onclose = () => setTimeout(iniciarWebSocket, 5000);
+        socket.onclose = () => {
+            console.warn("WebSocket desconectado. Reconectando...");
+            setTimeout(iniciarWebSocket, 5000);
+        };
     }
 
     async function carregarLeiturasIniciais() {
@@ -322,18 +329,44 @@
                 const statusData = data.status || data;
                 atualizarPainelCompleto(statusData);
             }
-            
-            const latestResp = await fetch(`/api/logbox-device/${serialNumber}/latest`);
-            if (latestResp.ok) {
-                const latest = await latestResp.json();
-                if (latest && latest.payload) {
-                    const payload = JSON.parse(latest.payload);
+            carregarUltimaLeitura();
+        } catch (e) { console.error(e); }
+    }
+
+    // Função central que busca o dado mais recente E as últimas 5 leituras do banco
+    async function carregarUltimaLeitura() {
+        try {
+            const response = await fetch(`/api/logbox-device/${serialNumber}/latest`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                // 1. Atualiza o Card com a última leitura válida
+                if (data.latest && data.latest.payload) {
+                    const payload = typeof data.latest.payload === 'string' 
+                        ? JSON.parse(data.latest.payload) 
+                        : data.latest.payload;
+                        
                     const temp = extrairTemperatura(payload);
-                    if (temp !== null) atualizarTexto("latest-temp", temp.toFixed(1));
-                    atualizarTexto("latest-timestamp", `Em: ${new Date(latest.timestamp_leitura).toLocaleString("pt-BR")}`);
+                    if (temp !== null) {
+                        atualizarTexto("latest-temp", temp.toFixed(1));
+                        const box = document.getElementById("box-temp");
+                        if (box) {
+                            box.classList.remove("updated-anim");
+                            void box.offsetWidth;
+                            box.classList.add("updated-anim");
+                        }
+                    }
+                    atualizarTexto("latest-timestamp", `Em: ${new Date(data.latest.timestamp_leitura).toLocaleString("pt-BR")}`);
+                }
+
+                // 2. Atualiza o Gráfico com as últimas 5 leituras REAIS do banco
+                if (data.recent_readings && Array.isArray(data.recent_readings)) {
+                    atualizarGraficoComHistorico(data.recent_readings);
                 }
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error("Erro ao carregar última leitura:", e);
+        }
     }
 
     async function carregarEstatisticasDetalhes() {
@@ -385,25 +418,6 @@
         atualizarTexto("diag-last-packet", new Date(ts).toLocaleTimeString("pt-BR"));
 
         atualizarListaAlarmes(status.alarms);
-    }
-
-    function atualizarPainelLeitura(dados) {
-        const temperatura = extrairTemperatura(dados);
-        if (temperatura !== undefined && temperatura !== null) {
-            const tempEl = document.getElementById("latest-temp");
-            if (tempEl) {
-                tempEl.textContent = temperatura.toFixed(1);
-                const box = document.getElementById("box-temp");
-                if (box) {
-                    box.classList.remove("updated-anim");
-                    void box.offsetWidth;
-                    box.classList.add("updated-anim");
-                }
-            }
-            adicionarPontoGrafico(temperatura);
-        }
-        atualizarTexto("latest-timestamp", `Em: ${new Date().toLocaleString("pt-BR")}`);
-        atualizarPainelCompleto(dados);
     }
 
     function inicializarGrafico() {
@@ -459,15 +473,27 @@
         window.addEventListener("resize", () => historicoChartInstance && historicoChartInstance.resize());
     }
 
-    function adicionarPontoGrafico(temperatura) {
-        if (!historicoChartInstance) return;
-        
-        const now = new Date().getTime();
-        
-        dadosGraficoBuffer.push([now, temperatura]);
-        
+    function atualizarGraficoComHistorico(novosPontos) {
+        if (!historicoChartInstance || !novosPontos) return;
+
+        // Mescla os novos pontos do banco com o buffer local
+        novosPontos.forEach(ponto => {
+            const timestamp = new Date(ponto.timestamp).getTime();
+            const valor = ponto.valor;
+
+            // Verifica se já existe para evitar duplicatas
+            const existe = dadosGraficoBuffer.some(d => d[0] === timestamp);
+            if (!existe) {
+                dadosGraficoBuffer.push([timestamp, valor]);
+            }
+        });
+
+        // Ordena por tempo (garantia de integridade)
+        dadosGraficoBuffer.sort((a, b) => a[0] - b[0]);
+
+        // Mantém tamanho saudável
         if (dadosGraficoBuffer.length > 300) {
-            dadosGraficoBuffer.shift();
+            dadosGraficoBuffer = dadosGraficoBuffer.slice(dadosGraficoBuffer.length - 300);
         }
 
         historicoChartInstance.setOption({
@@ -490,6 +516,9 @@
     function extrairTemperatura(dados) {
         if (dados.ch_analog_1 !== undefined) return dados.ch_analog_1;
         if (dados.value_channels && Array.isArray(dados.value_channels)) return dados.value_channels[2];
+        if (dados.temperature !== undefined) return dados.temperature;
+        if (dados.temp_int !== undefined) return dados.temp_int;
+        if (dados.internal_temperature !== undefined) return dados.internal_temperature;
         return null;
     }
 
