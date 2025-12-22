@@ -128,17 +128,24 @@ async function handleSocketData(socket) {
                 }
                 continue;
             }
+
             if (socket.state === 'AWAITING_PASSWORD_PROMPT') {
                 const passIndex = socket.textBuffer.indexOf('Password:');
+                const promptIndexCheck = socket.textBuffer.indexOf('=>');
+
                 if (passIndex !== -1) {
                     console.log(`[TCP Service] [${socket.deviceId}] Prompt de senha recebido. Enviando senha OTTER.`);
-                    socket.textBuffer = socket.textBuffer.substring(passIndex + 'Password:'.length);
+                    socket.textBuffer = socket.textBuffer.substring(passIndex + 9);
                     socket.state = 'LOGGING_IN_OTTER';
                     socket.write("OTTER\r\n");
+                } else if (promptIndexCheck !== -1) {
+                    console.log(`[TCP Service] [${socket.deviceId}] Prompt '=>' detectado sem senha. Pulando etapa de login.`);
+                    socket.state = 'LOGGING_IN_OTTER';
                 } else {
                     break; 
                 }
             }
+
             const promptIndex = socket.textBuffer.indexOf('=>');
             if (promptIndex === -1) break;
             const completeMessage = socket.textBuffer.substring(0, promptIndex + 2);
