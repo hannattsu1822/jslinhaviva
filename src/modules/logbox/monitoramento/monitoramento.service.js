@@ -4,8 +4,11 @@ const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
 const { 
   validarTemperatura, 
   verificarConexaoAtiva, 
-  extrairTemperaturaPayload 
+  extrairTemperaturaPayload,
+  FAN_CONFIG
 } = require("../helpers/validation.helper");
+
+const MAX_FAN_RUNTIME_MS = 4 * 60 * 60 * 1000;
 
 async function getReportData(filters) {
   const { deviceId, reportType, date, month, year } = filters;
@@ -106,15 +109,16 @@ async function getReportData(filters) {
     [deviceInfo.serial_number, startDate, endDate]
   );
 
-  const [fanHistory] = await promisePool.query(
-    "SELECT * FROM historico_ventilacao WHERE serial_number = ? AND timestamp_inicio >= ? AND timestamp_inicio <= ? ORDER BY timestamp_inicio DESC",
-    [deviceInfo.serial_number, startDate, endDate]
-  );
+  const fanHistory = await obterHistoricoVentilacao(deviceInfo.serial_number);
+  const fanHistoryFiltrado = fanHistory.filter(h => {
+      const dataInicio = new Date(h.timestamp_inicio);
+      return dataInicio >= startDate && dataInicio <= endDate;
+  });
 
   let fanHistoryAgregado = [];
   if (reportType !== "detailed") {
     const mapAgregado = {};
-    fanHistory.forEach((item) => {
+    fanHistoryFiltrado.forEach((item) => {
       const key = new Date(item.timestamp_inicio).toLocaleDateString("pt-BR");
       if (!mapAgregado[key]) {
         mapAgregado[key] = { dia: key, count: 0, total_duration: 0 };
@@ -136,7 +140,7 @@ async function getReportData(filters) {
     readings: processedReadings,
     chartData: chartData,
     stats: stats[0],
-    fanHistory,
+    fanHistory: fanHistoryFiltrado,
     fanHistoryAgregado,
     connectionHistory,
   };
@@ -190,6 +194,16 @@ async function obterStatus(serialNumber) {
   
   status.connection_status = conexao.online ? 'online' : 'offline';
   status.last_seen_minutes = conexao.minutes_ago || conexao.minutes_offline;
+
+  if (temp !== null) {
+      status.fan_status = temp >= FAN_CONFIG.TEMP_ON ? 'ON' : (temp <= FAN_CONFIG.TEMP_OFF ? 'OFF' : 'HOLD');
+  }
+
+  const [[fanCount]] = await promisePool.query(
+    "SELECT COUNT(*) as count FROM historico_ventilacao WHERE serial_number = ? AND timestamp_inicio >= CURDATE()",
+    [serialNumber]
+  );
+  status.fan_daily_count = fanCount ? fanCount.count : 0;
 
   return status;
 }
@@ -248,13 +262,59 @@ async function obterEstatisticas(serialNumber) {
   return { today: format(todayStats), month: format(monthStats) };
 }
 
+async function obterEstatisticasVentilacao(serialNumber) {
+  const [rows] = await promisePool.query(
+    `SELECT 
+      COUNT(*) as total_count,
+      MIN(duracao_segundos) as min_duration,
+      MAX(duracao_segundos) as max_duration,
+      AVG(duracao_segundos) as avg_duration
+     FROM historico_ventilacao 
+     WHERE serial_number = ? AND duracao_segundos IS NOT NULL`,
+    [serialNumber]
+  );
+
+  const stats = rows[0];
+
+  return {
+    total_count: stats.total_count || 0,
+    min_duration: stats.min_duration ? Math.round(stats.min_duration) : 0,
+    max_duration: stats.max_duration ? Math.round(stats.max_duration) : 0,
+    avg_duration: stats.avg_duration ? Math.round(stats.avg_duration) : 0
+  };
+}
+
 async function obterHistoricoVentilacao(serialNumber) {
   const [history] = await promisePool.query(
     "SELECT timestamp_inicio, timestamp_fim, duracao_segundos FROM historico_ventilacao WHERE serial_number = ? ORDER BY timestamp_inicio DESC LIMIT 50",
     [serialNumber]
   );
 
-  return history;
+  const now = new Date();
+
+  const historyTratado = history.map(item => {
+      if (item.timestamp_fim) return item;
+
+      const inicio = new Date(item.timestamp_inicio);
+      const diff = now - inicio;
+
+      if (diff > MAX_FAN_RUNTIME_MS) {
+          return {
+              ...item,
+              timestamp_fim: new Date(inicio.getTime() + MAX_FAN_RUNTIME_MS),
+              duracao_segundos: (MAX_FAN_RUNTIME_MS / 1000),
+              status: "Erro: Tempo Excedido"
+          };
+      }
+
+      return {
+          ...item,
+          duracao_segundos: Math.floor(diff / 1000),
+          status: "Em andamento"
+      };
+  });
+
+  return historyTratado;
 }
 
 async function obterHistoricoConexao(serialNumber) {
@@ -354,6 +414,7 @@ module.exports = {
   obterStatus,
   obterUltimaLeitura,
   obterEstatisticas,
+  obterEstatisticasVentilacao,
   obterHistoricoVentilacao,
   obterHistoricoConexao,
   gerarPdfRelatorio,
