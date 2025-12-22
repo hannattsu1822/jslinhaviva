@@ -7,12 +7,13 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
-const pollInterval = 120000;
-const keepaliveInterval = 120000;
 
-// --- CONFIGURAÇÕES DE TEMPO ---
+// --- CONFIGURAÇÕES ---
+const pollInterval = 300000; // 5 Minutos
+const keepaliveInterval = 120000;
 const INITIAL_CONNECTION_DELAY = 3000; 
-const POST_LOGIN_DELAY = 10000; // AUMENTADO PARA 10 SEGUNDOS (para relés lentos)
+const STARTUP_DELAY_5001 = 10000; // 10s de delay inicial para o 5001
+const POST_LOGIN_DELAY = 4000;         
 const SHUTDOWN_DELAY = 1000;
 
 const dbConfig = {
@@ -32,7 +33,7 @@ const activeSockets = new Set();
 
 async function loadDeviceCaches() {
     try {
-        console.log('[Cache] Carregando dispositivos do banco de dados...');
+        console.log('[Cache] Carregando dispositivos...');
         const [rows] = await promisePool.query('SELECT id, nome_rele, custom_id, listen_port FROM dispositivos_reles WHERE ativo = 1');
         
         deviceCache.clear();
@@ -51,17 +52,15 @@ async function loadDeviceCaches() {
                 portToDeviceMap.set(device.listen_port, deviceInfo);
             }
         }
-        console.log(`[Cache] ${deviceCache.size} dispositivos com custom_id (reg packet) carregados.`);
-        console.log(`[Cache] ${portToDeviceMap.size} dispositivos com porta dedicada (legacy) carregados.`);
+        console.log(`[Cache] ${deviceCache.size} Smart (ID) | ${portToDeviceMap.size} Legacy (Porta).`);
     } catch (error) {
-        console.error('[Cache] Falha ao carregar dispositivos.', error);
+        console.error('[Cache] Erro:', error);
     }
 }
 
 function extractDeviceIdFromBinary(data) {
     const buffer = Buffer.from(data);
-    const hexId = buffer.toString('hex');
-    return hexId;
+    return buffer.toString('hex');
 }
 
 function parseData(metResponse, tempResponse) {
@@ -89,7 +88,9 @@ function parseData(metResponse, tempResponse) {
         data.temperatura_dispositivo = getValue(/AMBT \(deg\. C\)\s*:\s*([\d\.]+)/, tempResponse);
         data.temperatura_ambiente = getValue(/AMBT \(deg\. C\)\s*:\s*([\d\.]+)/, tempResponse);
         data.temperatura_enrolamento = getValue(/TOILC \(deg\. C\)\s*:\s*([\d\.]+)/, tempResponse);
-    } catch (error) { console.error("[Parser] Erro ao processar dados:", error); }
+    } catch (error) { 
+        // Silencioso, erro de parse não é critico no log limpo
+    }
     return data;
 }
 
@@ -101,8 +102,7 @@ async function processAndPublish(socket) {
         const payload = JSON.stringify({ rele_id: socket.rele_id_db, device_id: socket.deviceId, timestamp: new Date().toISOString(), dados: parsedData });
         
         mqttClient.publish(topic, payload, (err) => {
-            if (err) { console.error(`[MQTT] [${socket.deviceId}] Erro ao publicar:`, err); }
-            else { console.log(`[MQTT] [${socket.deviceId}] Dados publicados no tópico: ${topic}`); }
+            if (err) console.error(`[MQTT] Erro pub ${socket.deviceId}:`, err);
         });
 
         try {
@@ -112,7 +112,7 @@ async function processAndPublish(socket) {
             await conn.query(sqlQuery, values);
             await conn.query('UPDATE dispositivos_reles SET ultima_leitura = NOW() WHERE id = ?', [socket.rele_id_db]);
             conn.release();
-        } catch (dbError) { console.error(`[Database] [${socket.deviceId}] Erro ao salvar no banco:`, dbError); }
+        } catch (dbError) { console.error(`[DB] Erro ${socket.deviceId}:`, dbError.message); }
     }
 }
 
@@ -121,6 +121,7 @@ async function handleSocketData(socket) {
     socket.processing = true;
     try {
         while (true) {
+            // 1. Identificação (apenas Main Server)
             if (socket.state === 'AWAITING_IDENTITY') {
                 if (socket.binaryBuffer.length === 0) break;
                 const deviceIdHex = extractDeviceIdFromBinary(socket.binaryBuffer);
@@ -129,40 +130,37 @@ async function handleSocketData(socket) {
                 if (deviceInfo) {
                     socket.rele_id_db = deviceInfo.rele_id_db;
                     socket.deviceId = deviceInfo.deviceId;
-                    console.log(`[TCP Service] Dispositivo identificado (via cache) como '${socket.deviceId}'. Aguardando delay.`);
                     
                     setTimeout(() => {
-                        console.log(`[TCP Service] [${socket.deviceId}] Enviando ACC.`);
                         socket.state = 'AWAITING_PASSWORD_PROMPT';
                         socket.write("\r\n"); 
                         setTimeout(() => socket.write("ACC\r\n"), 500);
                     }, INITIAL_CONNECTION_DELAY);
 
                 } else {
-                    console.log(`[TCP Service] ID HEX '${deviceIdHex}' desconhecido.`);
                     socket.end();
                     return;
                 }
                 break;
             }
 
+            // 2. Login (Apenas para dispositivos normais, o 5001 pula isso)
             if (socket.state === 'AWAITING_PASSWORD_PROMPT') {
                 const passIndex = socket.textBuffer.indexOf('Password:');
                 const promptIndexCheck = socket.textBuffer.indexOf('=>');
 
                 if (passIndex !== -1) {
-                    console.log(`[TCP Service] [${socket.deviceId}] Pediu senha. Enviando OTTER.`);
                     socket.textBuffer = socket.textBuffer.substring(passIndex + 9);
                     socket.state = 'LOGGING_IN_OTTER';
                     socket.write("OTTER\r\n");
                 } else if (promptIndexCheck !== -1) {
-                    console.log(`[TCP Service] [${socket.deviceId}] Prompt '=>' detectado sem senha.`);
                     socket.state = 'LOGGING_IN_OTTER';
                 } else {
                     break; 
                 }
             }
 
+            // 3. Processamento de Comandos
             const promptIndex = socket.textBuffer.indexOf('=>');
             if (promptIndex === -1) break;
             
@@ -175,30 +173,25 @@ async function handleSocketData(socket) {
                     loginSuccessful = true;
                     break;
                 case 'AWAITING_MET':
-                    if (completeMessage.includes("Enter at least three letters") || completeMessage.includes("unknown")) {
-                        console.log(`[Polling WARN] [${socket.deviceId}] Relé reclamou de comando anterior. Ignorando.`);
-                        socket.state = 'IDLE'; 
-                    } else {
+                    // Ignora erros de comando, tenta seguir
+                    if (!completeMessage.includes("unknown") && !completeMessage.includes("Enter at least")) {
                         socket.metData = completeMessage;
-                        console.log(`[Polling] [${socket.deviceId}] MET recebido. Enviando THE.`);
                         socket.state = 'AWAITING_THE';
                         socket.write("THE\r\n");
+                    } else {
+                        socket.state = 'IDLE'; // Reseta se der erro
                     }
                     break;
                 case 'AWAITING_THE':
                     socket.tempData = completeMessage;
-                    console.log(`[Polling] [${socket.deviceId}] THE recebido. Processando.`);
                     await processAndPublish(socket);
                     socket.state = 'IDLE';
                     break;
             }
 
             if (loginSuccessful) {
-                console.log(`[TCP Service] [${socket.deviceId}] Login OK. Limpando buffer e aguardando ${POST_LOGIN_DELAY}ms.`);
                 socket.state = 'IDLE';
-                
-                socket.write("\r\n");
-
+                socket.write("\r\n"); // Limpeza
                 setTimeout(() => {
                     socket.startPollingCycle();
                     if (socket.pollTimer) clearInterval(socket.pollTimer);
@@ -208,7 +201,7 @@ async function handleSocketData(socket) {
             }
         }
     } catch (err) {
-        console.error(`[Handler] Erro fatal socket ${socket.deviceId}:`, err);
+        console.error(`[Handler] Erro ${socket.deviceId}:`, err.message);
         socket.end();
     } finally {
         socket.processing = false;
@@ -223,7 +216,6 @@ function setupSocketLogic(socket) {
 
     socket.startPollingCycle = () => {
         if (socket.state === 'IDLE') {
-            console.log(`[Polling] [${socket.deviceId}] Enviando comando MET.`);
             socket.state = 'AWAITING_MET';
             socket.write("MET\r\n"); 
             
@@ -244,11 +236,6 @@ function setupSocketLogic(socket) {
     };
 
     socket.on('data', (data) => {
-        if (socket.deviceId === 'TBB-02T1' || socket.deviceId === 'TBB-02T2') {
-             const debugText = data.toString('latin1').replace(/\r/g, '\\r').replace(/\n/g, '\\n');
-             console.log(`[DEBUG RAW] [${socket.deviceId}] Recebeu: "${debugText}"`);
-        }
-
         if (socket.state === 'AWAITING_IDENTITY') {
             socket.binaryBuffer = Buffer.concat([socket.binaryBuffer, data]);
         } else {
@@ -261,49 +248,55 @@ function setupSocketLogic(socket) {
         activeSockets.delete(socket);
         if (socket.pollTimer) clearInterval(socket.pollTimer);
         if (socket.keepaliveTimer) clearInterval(socket.keepaliveTimer);
-        console.log(`[TCP Service] Conexão fechada: ${socket.deviceId || socket.remoteAddress}`);
     });
 
     socket.on("error", (err) => {
-        console.error(`[TCP Service] Erro socket ${socket.remoteAddress}:`, err.message);
+        console.error(`[Socket] Erro:`, err.message);
     });
 }
 
 const mainServer = net.createServer((socket) => {
-    const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
-    console.log(`[TCP Service - Main] Conexão de ${remoteAddress}.`);
     socket.state = 'AWAITING_IDENTITY';
     setupSocketLogic(socket);
 });
 
 function createLegacyServer(listenPort) {
     const legacyServer = net.createServer((socket) => {
-        const remoteAddress = `${socket.remoteAddress}:${socket.remotePort}`;
         const deviceInfo = portToDeviceMap.get(listenPort);
 
         if (!deviceInfo) {
             socket.end();
             return;
         }
-
-        console.log(`[TCP Service - Porta ${listenPort}] Conexão de ${remoteAddress} (${deviceInfo.deviceId}).`);
         
         socket.rele_id_db = deviceInfo.rele_id_db;
         socket.deviceId = deviceInfo.deviceId;
         
         setupSocketLogic(socket);
         
-        setTimeout(() => {
-            console.log(`[TCP Service] [${socket.deviceId}] Iniciando handshake (ACC).`);
-            socket.state = 'AWAITING_PASSWORD_PROMPT';
-            socket.write("\r\n");
-            setTimeout(() => socket.write("ACC\r\n"), 500);
-        }, INITIAL_CONNECTION_DELAY);
+        // --- LÓGICA ESPECIAL PARA PORTA 5001 ---
+        if (listenPort === 5001) {
+            // Modo Direto: Sem login, sem ACC, apenas MET após delay
+            setTimeout(() => {
+                socket.state = 'IDLE';
+                socket.startPollingCycle(); // Manda MET direto
+                
+                if (socket.pollTimer) clearInterval(socket.pollTimer);
+                socket.pollTimer = setInterval(socket.startPollingCycle, pollInterval);
+                socket.startKeepalive();
+            }, STARTUP_DELAY_5001); // 10 segundos
+        } else {
+            // Modo Padrão: Com Login
+            setTimeout(() => {
+                socket.state = 'AWAITING_PASSWORD_PROMPT';
+                socket.write("\r\n");
+                setTimeout(() => socket.write("ACC\r\n"), 500);
+            }, INITIAL_CONNECTION_DELAY);
+        }
     });
 
     legacyServer.listen(listenPort, '0.0.0.0', () => {
-        const deviceInfo = portToDeviceMap.get(listenPort);
-        console.log(`[TCP Service] Servidor dedicado para '${deviceInfo.deviceId}' na porta ${listenPort}`);
+        console.log(`[TCP] Porta ${listenPort} aberta para ${portToDeviceMap.get(listenPort).deviceId}`);
     });
 
     legacyServers.push(legacyServer);
@@ -313,7 +306,7 @@ async function startServer() {
     await loadDeviceCaches();
 
     mainServer.listen(port, '0.0.0.0', () => {
-        console.log(`[TCP Service] Servidor principal na porta ${port}`);
+        console.log(`[TCP] Main Server na porta ${port}`);
     });
 
     for (const listenPort of portToDeviceMap.keys()) {
