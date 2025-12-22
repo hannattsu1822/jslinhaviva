@@ -12,7 +12,7 @@ const keepaliveInterval = 120000;
 
 // --- CONFIGURAÇÕES DE TEMPO ---
 const INITIAL_CONNECTION_DELAY = 3000; 
-const POST_LOGIN_DELAY = 2000;         
+const POST_LOGIN_DELAY = 10000; // AUMENTADO PARA 10 SEGUNDOS (para relés lentos)
 const SHUTDOWN_DELAY = 1000;
 
 const dbConfig = {
@@ -113,9 +113,6 @@ async function processAndPublish(socket) {
             await conn.query('UPDATE dispositivos_reles SET ultima_leitura = NOW() WHERE id = ?', [socket.rele_id_db]);
             conn.release();
         } catch (dbError) { console.error(`[Database] [${socket.deviceId}] Erro ao salvar no banco:`, dbError); }
-    } else {
-        // Log discreto se falhar, para não poluir se for apenas um erro pontual
-        // console.log(`[Parser WARN] [${socket.deviceId}] Dados vazios.`);
     }
 }
 
@@ -178,9 +175,8 @@ async function handleSocketData(socket) {
                     loginSuccessful = true;
                     break;
                 case 'AWAITING_MET':
-                    // Verificação de segurança: Se o relé reclamou do comando, não avance
-                    if (completeMessage.includes("Enter at least three letters")) {
-                        console.log(`[Polling WARN] [${socket.deviceId}] Relé reclamou de comando inválido. Tentando novamente no próximo ciclo.`);
+                    if (completeMessage.includes("Enter at least three letters") || completeMessage.includes("unknown")) {
+                        console.log(`[Polling WARN] [${socket.deviceId}] Relé reclamou de comando anterior. Ignorando.`);
                         socket.state = 'IDLE'; 
                     } else {
                         socket.metData = completeMessage;
@@ -198,9 +194,11 @@ async function handleSocketData(socket) {
             }
 
             if (loginSuccessful) {
-                console.log(`[TCP Service] [${socket.deviceId}] Login OK. Aguardando ${POST_LOGIN_DELAY}ms para iniciar coleta.`);
+                console.log(`[TCP Service] [${socket.deviceId}] Login OK. Limpando buffer e aguardando ${POST_LOGIN_DELAY}ms.`);
                 socket.state = 'IDLE';
                 
+                socket.write("\r\n");
+
                 setTimeout(() => {
                     socket.startPollingCycle();
                     if (socket.pollTimer) clearInterval(socket.pollTimer);
@@ -227,7 +225,6 @@ function setupSocketLogic(socket) {
         if (socket.state === 'IDLE') {
             console.log(`[Polling] [${socket.deviceId}] Enviando comando MET.`);
             socket.state = 'AWAITING_MET';
-            // CORREÇÃO: Removido o \r\n antes do MET para evitar erro "Enter at least three letters"
             socket.write("MET\r\n"); 
             
             if (socket.keepaliveTimer) {
