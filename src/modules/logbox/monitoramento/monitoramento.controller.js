@@ -81,6 +81,16 @@ async function obterEstatisticas(req, res) {
   }
 }
 
+async function obterEstatisticasVentilacao(req, res) {
+  try {
+    const stats = await service.obterEstatisticasVentilacao(req.params.serialNumber);
+    res.json(stats);
+  } catch (error) {
+    console.error("Erro ao buscar estatísticas de ventilação:", error);
+    res.status(500).json({ message: "Erro ao buscar estatísticas de ventilação" });
+  }
+}
+
 async function obterHistoricoVentilacao(req, res) {
   try {
     const history = await service.obterHistoricoVentilacao(
@@ -134,6 +144,7 @@ module.exports = {
   obterStatus,
   obterUltimaLeitura,
   obterEstatisticas,
+  obterEstatisticasVentilacao,
   obterHistoricoVentilacao,
   obterHistoricoConexao,
   gerarRelatorioVisual,
