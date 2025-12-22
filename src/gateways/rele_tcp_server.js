@@ -10,9 +10,8 @@ const port = process.env.TCP_SERVER_PORT || 4000;
 const pollInterval = 120000;
 const keepaliveInterval = 120000;
 
-// --- CONFIGURAÇÕES DE TEMPO ---
-const INITIAL_CONNECTION_DELAY = 3000; // Tempo antes de mandar ACC
-const POST_LOGIN_DELAY = 2000;         // NOVO: Tempo de espera entre Login e primeiro MET
+const INITIAL_CONNECTION_DELAY = 3000;
+const POST_LOGIN_DELAY = 2000;
 const SHUTDOWN_DELAY = 1000;
 
 const dbConfig = {
@@ -75,7 +74,7 @@ function parseData(metResponse, tempResponse) {
              const match = text.match(regex);
              return match ? match.slice(1).map(parseFloat) : [];
         };
-        // Regex ajustados para serem mais flexíveis com espaços
+        
         const currents = getValues(/Current Magnitude \(A\)\s+([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)/, metResponse);
         if (currents.length === 3) { data.corrente_r = currents[0]; data.corrente_s = currents[1]; data.corrente_t = currents[2]; }
         
@@ -96,12 +95,6 @@ function parseData(metResponse, tempResponse) {
 async function processAndPublish(socket) {
     const parsedData = parseData(socket.metData, socket.tempData);
     
-    // Log de segurança para ver se o parser falhou
-    if (Object.keys(parsedData).length === 0) {
-        console.log(`[Parser WARN] [${socket.deviceId}] Dados recebidos mas o parser retornou vazio. Verifique o formato do MET.`);
-        // console.log(`[DEBUG MET] ${socket.metData}`); // Descomente se precisar ver o dado cru
-    }
-
     if (Object.keys(parsedData).length > 0) {
         const topic = `sel/reles/${socket.deviceId}/status`;
         const payload = JSON.stringify({ rele_id: socket.rele_id_db, device_id: socket.deviceId, timestamp: new Date().toISOString(), dados: parsedData });
@@ -119,6 +112,8 @@ async function processAndPublish(socket) {
             await conn.query('UPDATE dispositivos_reles SET ultima_leitura = NOW() WHERE id = ?', [socket.rele_id_db]);
             conn.release();
         } catch (dbError) { console.error(`[Database] [${socket.deviceId}] Erro ao salvar no banco:`, dbError); }
+    } else {
+        console.log(`[Parser WARN] [${socket.deviceId}] Dados recebidos mas o parser retornou vazio.`);
     }
 }
 
@@ -198,7 +193,6 @@ async function handleSocketData(socket) {
                 console.log(`[TCP Service] [${socket.deviceId}] Login OK. Aguardando ${POST_LOGIN_DELAY}ms para iniciar coleta.`);
                 socket.state = 'IDLE';
                 
-                // NOVO: Delay antes de começar a bombardear o relé com comandos
                 setTimeout(() => {
                     socket.startPollingCycle();
                     if (socket.pollTimer) clearInterval(socket.pollTimer);
@@ -223,9 +217,10 @@ function setupSocketLogic(socket) {
 
     socket.startPollingCycle = () => {
         if (socket.state === 'IDLE') {
-            console.log(`[Polling] [${socket.deviceId}] Enviando comando MET.`);
+            console.log(`[Polling] [${socket.deviceId}] Enviando comando MET (com limpeza).`);
             socket.state = 'AWAITING_MET';
-            socket.write("MET\r\n");
+            socket.write("\r\nMET\r\n"); 
+            
             if (socket.keepaliveTimer) {
                 clearInterval(socket.keepaliveTimer);
                 socket.keepaliveTimer = null;
@@ -237,20 +232,16 @@ function setupSocketLogic(socket) {
         if (socket.keepaliveTimer) { clearInterval(socket.keepaliveTimer); }
         socket.keepaliveTimer = setInterval(() => {
             if (socket.state === 'IDLE') {
-                // Keepalive silencioso
                 socket.write(Buffer.from([0x00])); 
             }
         }, keepaliveInterval);
     };
 
     socket.on('data', (data) => {
-        // --- DEBUG RAW: Isso vai mostrar o que o relé está respondendo ---
-        // Se o TBB-02T1 estiver travado, veremos se ele manda algo aqui.
         if (socket.deviceId === 'TBB-02T1' || socket.deviceId === 'TBB-02T2') {
              const debugText = data.toString('latin1').replace(/\r/g, '\\r').replace(/\n/g, '\\n');
              console.log(`[DEBUG RAW] [${socket.deviceId}] Recebeu: "${debugText}"`);
         }
-        // ----------------------------------------------------------------
 
         if (socket.state === 'AWAITING_IDENTITY') {
             socket.binaryBuffer = Buffer.concat([socket.binaryBuffer, data]);
