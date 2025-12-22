@@ -1,9 +1,14 @@
 const TEMP_LIMITS = {
   MIN_VALID: -50,
-  MAX_VALID: 150, 
+  MAX_VALID: 150,
 };
 
-const CONNECTION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
+const FAN_CONFIG = {
+  TEMP_ON: 60.0,
+  TEMP_OFF: 58.5,
+};
+
+const CONNECTION_TIMEOUT_MS = 5 * 60 * 1000;
 
 function validarTemperatura(temp) {
   if (temp === null || temp === undefined || isNaN(temp)) {
@@ -13,8 +18,8 @@ function validarTemperatura(temp) {
   const tempNum = parseFloat(temp);
 
   if (tempNum < TEMP_LIMITS.MIN_VALID || tempNum > TEMP_LIMITS.MAX_VALID) {
-    return { 
-      valid: false, 
+    return {
+      valid: false,
       reason: `Fora do intervalo aceitável (${TEMP_LIMITS.MIN_VALID} a ${TEMP_LIMITS.MAX_VALID})`,
       value: tempNum
     };
@@ -34,15 +39,15 @@ function verificarConexaoAtiva(ultimaLeitura) {
 
   if (diferencaMs > CONNECTION_TIMEOUT_MS) {
     const minutosOffline = Math.floor(diferencaMs / 60000);
-    return { 
-      online: false, 
+    return {
+      online: false,
       reason: `Offline há ${minutosOffline} minutos`,
       minutes_offline: minutosOffline
     };
   }
 
-  return { 
-    online: true, 
+  return {
+    online: true,
     minutes_ago: Math.floor(diferencaMs / 60000)
   };
 }
@@ -50,10 +55,9 @@ function verificarConexaoAtiva(ultimaLeitura) {
 function extrairTemperaturaPayload(payload) {
   try {
     const dados = typeof payload === 'string' ? JSON.parse(payload) : payload;
-    
-    // Tenta extrair de diferentes campos comuns do LogBox
+
     let temp = dados.ch_analog_1;
-    
+
     if (temp === undefined && dados.value_channels && Array.isArray(dados.value_channels)) {
       temp = dados.value_channels[2];
     }
@@ -80,11 +84,51 @@ function sanitizarDadosLeitura(dados) {
   };
 }
 
+function analisarEstadoVentilacao(temperatura, estadoAtual) {
+  const validacao = validarTemperatura(temperatura);
+
+  if (!validacao.valid) {
+    return {
+      novoEstado: estadoAtual,
+      mudou: false,
+      motivo: "Temperatura inválida"
+    };
+  }
+
+  const temp = validacao.value;
+
+  if (estadoAtual) {
+    if (temp <= FAN_CONFIG.TEMP_OFF) {
+      return {
+        novoEstado: false,
+        mudou: true,
+        motivo: `Temperatura (${temp}) baixou do limite de desligamento (${FAN_CONFIG.TEMP_OFF})`
+      };
+    }
+  } else {
+    if (temp >= FAN_CONFIG.TEMP_ON) {
+      return {
+        novoEstado: true,
+        mudou: true,
+        motivo: `Temperatura (${temp}) atingiu limite de acionamento (${FAN_CONFIG.TEMP_ON})`
+      };
+    }
+  }
+
+  return {
+    novoEstado: estadoAtual,
+    mudou: false,
+    motivo: "Histerese mantida"
+  };
+}
+
 module.exports = {
   validarTemperatura,
   verificarConexaoAtiva,
   extrairTemperaturaPayload,
   sanitizarDadosLeitura,
+  analisarEstadoVentilacao,
   TEMP_LIMITS,
+  FAN_CONFIG,
   CONNECTION_TIMEOUT_MS
 };
