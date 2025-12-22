@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %></title>
 
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <!-- ApexCharts -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <style>
@@ -29,8 +26,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
         }
         .diag-item:last-child { border-bottom: none; }
         
@@ -45,7 +43,7 @@
         .diag-value { 
             font-family: monospace; 
             background-color: #e9ecef; 
-            padding: 4px 10px; 
+            padding: 2px 8px; 
             border-radius: 6px; 
             color: #212529; 
             font-weight: 600;
@@ -74,13 +72,30 @@
         .updated-anim { animation: flashUpdate 1s ease-out; }
         
         .material-symbols-outlined { vertical-align: middle; }
+
+        .fan-stat-box {
+            text-align: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .fan-stat-value {
+            font-weight: bold;
+            color: #0d6efd;
+            font-size: 1.1rem;
+        }
+        .fan-stat-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
 
 <div class="container-fluid p-4">
     
-    <!-- CABEÇALHO -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <div class="d-flex align-items-center gap-2 text-muted mb-1">
@@ -95,9 +110,7 @@
         </a>
     </div>
 
-    <!-- KPI CARDS -->
     <div class="row g-4 mb-4">
-        <!-- Temperatura -->
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 text-center" id="box-temp">
                 <div class="card-body">
@@ -111,7 +124,6 @@
             </div>
         </div>
 
-        <!-- Conexão -->
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 text-center">
                 <div class="card-body">
@@ -123,7 +135,6 @@
             </div>
         </div>
 
-        <!-- Energia -->
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 text-center">
                 <div class="card-body">
@@ -135,20 +146,24 @@
             </div>
         </div>
 
-        <!-- Alarmes -->
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 text-center" id="box-alarm">
-                <div class="card-body">
+                <div class="card-body pb-0">
                     <span class="material-symbols-outlined kpi-icon text-danger">notifications_active</span>
                     <h6 class="text-muted text-uppercase">Alarmes</h6>
                     <h2 class="display-5 fw-bold my-2" id="active-alarms-count">0</h2>
                     <small class="text-muted" id="alarm-subtitle">Normal</small>
                 </div>
+                <div class="card-footer bg-white border-top-0 pt-0 pb-3">
+                    <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                        <small class="text-muted">Acionamentos Hoje:</small>
+                        <span class="badge bg-secondary rounded-pill" id="fan-daily-count">0</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- GRÁFICO APEXCHARTS -->
     <div class="card mb-4">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h5 class="card-title mb-0 d-flex align-items-center">
@@ -166,15 +181,13 @@
         </div>
     </div>
 
-    <!-- DETALHES E ESTATÍSTICAS -->
     <div class="row g-4">
-        <!-- Estatísticas -->
         <div class="col-lg-4">
             <div class="card h-100">
                 <div class="card-header bg-white py-3">
                     <h5 class="card-title mb-0 d-flex align-items-center gap-2">
                         <span class="material-symbols-outlined text-info">query_stats</span>
-                        Estatísticas (Hoje)
+                        Temp. Estatísticas (Hoje)
                     </h5>
                 </div>
                 <div class="card-body">
@@ -194,49 +207,70 @@
             </div>
         </div>
 
-        <!-- Diagnóstico Técnico -->
-        <div class="col-lg-8">
+        <div class="col-lg-4">
             <div class="card h-100">
                 <div class="card-header bg-white py-3">
                     <h5 class="card-title mb-0 d-flex align-items-center gap-2">
-                        <span class="material-symbols-outlined text-primary">developer_board</span>
+                        <span class="material-symbols-outlined text-primary">cyclone</span>
+                        Ventilação (Histórico)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="fan-stat-box">
+                                <div class="fan-stat-value" id="fan-min-duration">--</div>
+                                <div class="fan-stat-label">Tempo Mín.</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fan-stat-box">
+                                <div class="fan-stat-value" id="fan-max-duration">--</div>
+                                <div class="fan-stat-label">Tempo Máx.</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="fan-stat-box">
+                                <div class="fan-stat-value" id="fan-avg-duration">--</div>
+                                <div class="fan-stat-label">Tempo Médio de Ativação</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">Total Registrado: <strong id="fan-total-count">--</strong></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary">developer_board</span>
                         Diagnóstico Técnico
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="diag-item">
-                                <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna</span>
-                                <span class="diag-value" id="diag-internal-temp">--</span>
-                            </div>
-                            <div class="diag-item">
-                                <span class="diag-label"><span class="material-symbols-outlined">lan</span> Endereço IP</span>
-                                <span class="diag-value" id="diag-ip-address">--</span>
-                            </div>
-                            <div class="diag-item">
-                                <span class="diag-label"><span class="material-symbols-outlined">memory</span> Firmware</span>
-                                <span class="diag-value" id="diag-firmware-version">--</span>
-                            </div>
-                            <div class="diag-item">
-                                <span class="diag-label"><span class="material-symbols-outlined">update</span> Última Comunicação</span>
-                                <span class="diag-value" id="diag-last-packet">--</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="diag-item">
-                                <span class="diag-label"><span class="material-symbols-outlined">fingerprint</span> Device ID</span>
-                                <span class="diag-value"><%= device.id %></span>
-                            </div>
-                            <div class="diag-item">
-                                <span class="diag-label"><span class="material-symbols-outlined">qr_code_2</span> MAC Address</span>
-                                <span class="diag-value" id="diag-mac-address">--</span>
-                            </div>
-                            <div class="diag-item">
-                                <span class="diag-label"><span class="material-symbols-outlined">signal_wifi_4_bar</span> Sinal Wi-Fi</span>
-                                <span class="diag-value" id="diag-wifi-detail">--</span>
-                            </div>
-                        </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna</span>
+                        <span class="diag-value" id="diag-internal-temp">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">lan</span> IP</span>
+                        <span class="diag-value" id="diag-ip-address">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">memory</span> Firmware</span>
+                        <span class="diag-value" id="diag-firmware-version">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">update</span> Última Com.</span>
+                        <span class="diag-value" id="diag-last-packet">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">signal_wifi_4_bar</span> Sinal</span>
+                        <span class="diag-value" id="diag-wifi-detail">--</span>
                     </div>
                 </div>
             </div>
@@ -245,12 +279,11 @@
 
 </div>
 
-<!-- Bootstrap Bundle JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     const serialNumber = "<%= serialNumber %>";
-    let chart = null; // Instância do ApexCharts
+    let chart = null;
     let dadosGraficoBuffer = []; 
 
     console.log("Painel Iniciado para SN:", serialNumber);
@@ -264,6 +297,7 @@
         carregarLeiturasIniciais();
         carregarStatusInicial();
         carregarEstatisticasDetalhes();
+        carregarEstatisticasVentilacao();
     }
 
     function iniciarWebSocket() {
@@ -378,6 +412,19 @@
         } catch (e) { console.error(e); }
     }
 
+    async function carregarEstatisticasVentilacao() {
+        try {
+            const res = await fetch(`/api/logbox-device/${serialNumber}/fan-stats`);
+            if (res.ok) {
+                const stats = await res.json();
+                atualizarTexto("fan-total-count", stats.total_count);
+                atualizarTexto("fan-min-duration", formatarDuracao(stats.min_duration));
+                atualizarTexto("fan-max-duration", formatarDuracao(stats.max_duration));
+                atualizarTexto("fan-avg-duration", formatarDuracao(stats.avg_duration));
+            }
+        } catch (e) { console.error("Erro ao carregar stats ventilação:", e); }
+    }
+
     function atualizarPainelCompleto(status) {
         if (!status) return;
 
@@ -408,16 +455,16 @@
         const fw = detectarValor(status, ['firmware_version', 'version', 'fw_version', 'fw']);
         atualizarTexto("diag-firmware-version", fw || "--");
 
-        const mac = detectarValor(status, ['mac', 'mac_address', 'wifi_mac', 'device_mac']);
-        atualizarTexto("diag-mac-address", mac || "--");
-
         const ts = status.timestamp || status.ts || new Date().toISOString();
         atualizarTexto("diag-last-packet", new Date(ts).toLocaleTimeString("pt-BR"));
+
+        if (status.fan_daily_count !== undefined) {
+            atualizarTexto("fan-daily-count", status.fan_daily_count);
+        }
 
         atualizarListaAlarmes(status.alarms);
     }
 
-    // --- CONFIGURAÇÃO APEXCHARTS ---
     function inicializarGrafico() {
         const container = document.querySelector("#graficoHistorico");
         if (!container) return;
@@ -457,12 +504,12 @@
                     stops: [0, 90, 100]
                 }
             },
-            colors: ['#0d6efd'], // Bootstrap Primary Blue
+            colors: ['#0d6efd'],
             xaxis: {
                 type: 'datetime',
                 tooltip: { enabled: false },
                 labels: {
-                    datetimeUTC: false, // <--- CORREÇÃO: Força o uso da hora local do navegador
+                    datetimeUTC: false,
                     datetimeFormatter: {
                         year: 'yyyy',
                         month: 'MMM \'yy',
@@ -561,6 +608,13 @@
     function getPowerSourceStatus(voltage) {
         if (voltage === undefined || voltage === null) return { text: "Verificando..." };
         return voltage > 9 ? { text: "Rede Elétrica" } : { text: "Apenas Bateria" };
+    }
+
+    function formatarDuracao(segundos) {
+        if (!segundos) return "0s";
+        if (segundos < 60) return `${segundos}s`;
+        if (segundos < 3600) return `${Math.floor(segundos / 60)}m ${segundos % 60}s`;
+        return `${Math.floor(segundos / 3600)}h ${Math.floor((segundos % 3600) / 60)}m`;
     }
 </script>
 
