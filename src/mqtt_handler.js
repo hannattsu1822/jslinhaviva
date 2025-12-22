@@ -1,15 +1,22 @@
 const mqtt = require("mqtt");
-const { promisePool, logger } = require("./init");
+const { logger } = require("./init"); // Removi promisePool pois o service já cuida do banco
 const WebSocket = require('ws');
 const { 
   sanitizarDadosLeitura 
 } = require("./modules/logbox/helpers/validation.helper");
 
+// Importamos o novo serviço inteligente
+const ingestaoService = require("./modules/logbox/ingestao.service");
+
 async function salvarLeituraRele(dados, wss) {
+  // Mantive a lógica do Relé inalterada pois o foco é o LogBox
+  // Se tiver um service para relé, pode substituir aqui também
   if (!dados || !dados.rele_id || !dados.dados) {
     logger.error('[MQTT Handler] Erro: Dados recebidos do MQTT para o relé estão incompletos.');
     return;
   }
+
+  const { promisePool } = require("./init"); // Importação local se necessário ou manter no topo
 
   const { rele_id, device_id, timestamp, dados: dadosMedidos } = dados;
 
@@ -39,6 +46,7 @@ async function salvarLeituraRele(dados, wss) {
 }
 
 async function salvarLeituraLogBox(serialNumber, dados, wss) {
+  // 1. Validação rápida apenas para Log (O service valida de novo para o banco)
   const dadosSanitizados = sanitizarDadosLeitura(dados);
   
   if (!dadosSanitizados.temperatura_valida) {
@@ -46,25 +54,12 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
     return;
   }
 
-  let connection;
   try {
-    connection = await promisePool.getConnection();
-    await connection.beginTransaction();
+    // 2. CHAMADA AO NOVO SERVIÇO INTELIGENTE
+    // Ele salva no banco, atualiza status e calcula a ventoinha (ON/OFF)
+    await ingestaoService.processarNovaLeitura(serialNumber, dados);
 
-    const payloadString = JSON.stringify(dados);
-
-    await connection.query(
-      "INSERT INTO leituras_logbox (serial_number, payload_json, timestamp_leitura) VALUES (?, ?, NOW())",
-      [serialNumber, payloadString]
-    );
-
-    await connection.query(
-      "UPDATE dispositivos_logbox SET status_json = ?, ultima_leitura = NOW() WHERE serial_number = ?",
-      [payloadString, serialNumber]
-    );
-
-    await connection.commit();
-
+    // 3. Atualiza o Front-end via WebSocket
     if (wss && wss.clients) {
       const payloadWebSocket = {
         type: 'nova_leitura_logbox',
@@ -82,23 +77,12 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
       });
     }
   } catch(error) {
-    logger.error(`[MQTT Handler] Erro ao salvar LogBox SN ${serialNumber}: ${error.message}`);
-    
-    if (connection) {
-      try {
-        await connection.rollback();
-      } catch(rollbackError) {
-        logger.error(`[MQTT Handler] Erro no rollback: ${rollbackError.message}`);
-      }
-    }
-  } finally {
-    if (connection) {
-      connection.release();
-    }
+    logger.error(`[MQTT Handler] Erro ao processar LogBox SN ${serialNumber}: ${error.message}`);
   }
 }
 
 async function salvarStatusConexao(dados, wss) {
+  const { promisePool } = require("./init");
   try {
     await promisePool.query(
       "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
