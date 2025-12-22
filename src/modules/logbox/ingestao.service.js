@@ -1,9 +1,12 @@
-const { promisePool } = require("../../../init");
+// CORREÇÃO AQUI: Apenas dois níveis para voltar para 'src'
+const { promisePool } = require("../../init"); 
+
+// CORREÇÃO AQUI: ./helpers pois a pasta helpers está dentro de logbox
 const { 
   extrairTemperaturaPayload, 
   analisarEstadoVentilacao,
   validarTemperatura 
-} = require("../helpers/validation.helper");
+} = require("./helpers/validation.helper");
 
 async function processarNovaLeitura(serialNumber, payload) {
   try {
