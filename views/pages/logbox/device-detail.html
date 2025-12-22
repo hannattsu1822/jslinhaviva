@@ -5,55 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %></title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <style>
-        body { background-color: #f5f7fa; }
+        body { background-color: #f8f9fa; }
         
-        .box {
-            height: 100%;
+        .card {
+            border: none;
             border-radius: 12px;
-            border: 1px solid #eef0f5;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            transition: transform 0.2s ease-in-out;
         }
-        .box:hover { transform: translateY(-2px); }
+        .card:hover { transform: translateY(-3px); }
 
-        .material-symbols-outlined { vertical-align: bottom; }
-        .kpi-icon { font-size: 48px !important; margin-bottom: 10px; }
-
-        .chart-section {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #eef0f5;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-        }
-        .chart-wrapper {
-            position: relative;
-            height: 400px;
-            width: 100%;
-            overflow: hidden;
-        }
-
+        .kpi-icon { font-size: 42px !important; margin-bottom: 8px; }
+        
         .diag-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
         }
         .diag-item:last-child { border-bottom: none; }
-        .diag-label { display: flex; align-items: center; gap: 8px; color: #555; font-weight: 500; }
+        
+        .diag-label { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            color: #6c757d; 
+            font-weight: 500; 
+        }
+        
         .diag-value { 
             font-family: monospace; 
-            background-color: #f8f9fa; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            color: #333; 
+            background-color: #e9ecef; 
+            padding: 4px 10px; 
+            border-radius: 6px; 
+            color: #212529; 
             font-weight: 600;
         }
 
@@ -61,179 +55,187 @@
             display: inline-block;
             width: 10px;
             height: 10px;
-            background-color: #48c774;
+            background-color: #198754;
             border-radius: 50%;
-            margin-right: 5px;
+            margin-right: 8px;
             animation: pulse 2s infinite;
         }
+
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(72, 199, 116, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(72, 199, 116, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(72, 199, 116, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
         }
 
         @keyframes flashUpdate {
-            0% { background-color: #e3f2fd; }
-            100% { background-color: transparent; }
+            0% { background-color: #cfe2ff; }
+            100% { background-color: white; }
         }
         .updated-anim { animation: flashUpdate 1s ease-out; }
+        
+        .material-symbols-outlined { vertical-align: middle; }
     </style>
 </head>
 <body>
 
-<div class="container is-fluid p-5">
+<div class="container-fluid p-4">
     
-    <div class="level mb-5">
-        <div class="level-left">
-            <div class="level-item">
-                <div>
-                    <p class="heading is-size-6 has-text-grey">
-                        <span class="icon-text">
-                            <span class="icon"><span class="material-symbols-outlined">router</span></span>
-                            <span>Monitoramento em Tempo Real</span>
-                        </span>
-                    </p>
-                    <h1 class="title is-3 has-text-link-dark mb-1"><%= device.local_tag %></h1>
-                    <p class="subtitle is-6">Serial Number: <strong><%= device.serial_number %></strong></p>
+    <!-- CABEÇALHO -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 text-muted mb-1">
+                <span class="material-symbols-outlined">router</span>
+                <small class="text-uppercase fw-bold">Monitoramento em Tempo Real</small>
+            </div>
+            <h1 class="h3 text-primary fw-bold mb-0"><%= device.local_tag %></h1>
+            <p class="text-muted mb-0">Serial Number: <strong><%= device.serial_number %></strong></p>
+        </div>
+        <a href="/gerenciar-dispositivos" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">arrow_back</span> Voltar
+        </a>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="row g-4 mb-4">
+        <!-- Temperatura -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center" id="box-temp">
+                <div class="card-body">
+                    <span class="material-symbols-outlined kpi-icon text-primary">device_thermostat</span>
+                    <h6 class="text-muted text-uppercase">Temperatura</h6>
+                    <h2 class="display-5 fw-bold my-2">
+                        <span id="latest-temp">--</span><small class="fs-4 text-muted">°C</small>
+                    </h2>
+                    <small class="text-muted" id="latest-timestamp">Aguardando...</small>
                 </div>
             </div>
         </div>
-        <div class="level-right">
-            <div class="level-item">
-                <a href="/gerenciar-dispositivos" class="button is-white shadow-sm">
-                    <span class="icon"><span class="material-symbols-outlined">arrow_back</span></span>
-                    <span>Voltar</span>
-                </a>
-            </div>
-        </div>
-    </div>
 
-    <div class="columns is-multiline mb-4">
-        <div class="column is-3-desktop is-6-tablet">
-            <div class="box has-text-centered" id="box-temp">
-                <span class="material-symbols-outlined kpi-icon has-text-link">device_thermostat</span>
-                <p class="heading mt-2">Temperatura</p>
-                <p class="title is-2 has-text-weight-bold">
-                    <span id="latest-temp">--</span><span class="is-size-4">°C</span>
-                </p>
-                <p class="is-size-7 has-text-grey" id="latest-timestamp">Aguardando...</p>
-            </div>
-        </div>
-        <div class="column is-3-desktop is-6-tablet">
-            <div class="box has-text-centered">
-                <span class="material-symbols-outlined kpi-icon has-text-success">wifi</span>
-                <p class="heading mt-2">Conexão</p>
-                <p class="title is-4 has-text-weight-bold" id="connection-status-text">Verificando...</p>
-                <p class="is-size-7 has-text-grey" id="diag-wifi-rssi">RSSI: --</p>
-            </div>
-        </div>
-        <div class="column is-3-desktop is-6-tablet">
-            <div class="box has-text-centered">
-                <span class="material-symbols-outlined kpi-icon has-text-warning">bolt</span>
-                <p class="heading mt-2">Energia</p>
-                <p class="title is-5 has-text-weight-bold mt-2" id="diag-power-source">Verificando...</p>
-                <p class="is-size-7 has-text-grey" id="diag-battery-voltage">Bateria: --</p>
-            </div>
-        </div>
-        <div class="column is-3-desktop is-6-tablet">
-            <div class="box has-text-centered">
-                <span class="material-symbols-outlined kpi-icon has-text-danger">notifications_active</span>
-                <p class="heading mt-2">Alarmes</p>
-                <p class="title is-2 has-text-weight-bold" id="active-alarms-count">0</p>
-                <p class="is-size-7 has-text-grey" id="alarm-subtitle">Normal</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="chart-section">
-        <div class="level mb-4">
-            <div class="level-left">
-                <h3 class="title is-5 mb-0">
-                    <span class="live-indicator"></span>
-                    Histórico de Temperatura
-                </h3>
-            </div>
-            <div class="level-right">
-                <span class="tag is-light">Tempo Real</span>
-            </div>
-        </div>
-        
-        <div class="chart-wrapper">
-            <div id="loader-historico" class="is-flex is-justify-content-center is-align-items-center" style="height: 100%; position: absolute; width: 100%; background: white; z-index: 10;">
-                <div class="has-text-centered">
-                    <span class="material-symbols-outlined is-size-1 has-text-grey-light spin">refresh</span>
-                    <p class="has-text-grey mt-2">Carregando gráfico...</p>
+        <!-- Conexão -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <span class="material-symbols-outlined kpi-icon text-success">wifi</span>
+                    <h6 class="text-muted text-uppercase">Conexão</h6>
+                    <h3 class="fw-bold my-3" id="connection-status-text">Verificando...</h3>
+                    <small class="text-muted" id="diag-wifi-rssi">RSSI: --</small>
                 </div>
             </div>
-            <div id="graficoHistorico" style="width: 100%; height: 100%;"></div>
+        </div>
+
+        <!-- Energia -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <span class="material-symbols-outlined kpi-icon text-warning">bolt</span>
+                    <h6 class="text-muted text-uppercase">Energia</h6>
+                    <h4 class="fw-bold my-3" id="diag-power-source">Verificando...</h4>
+                    <small class="text-muted" id="diag-battery-voltage">Bateria: --</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alarmes -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center" id="box-alarm">
+                <div class="card-body">
+                    <span class="material-symbols-outlined kpi-icon text-danger">notifications_active</span>
+                    <h6 class="text-muted text-uppercase">Alarmes</h6>
+                    <h2 class="display-5 fw-bold my-2" id="active-alarms-count">0</h2>
+                    <small class="text-muted" id="alarm-subtitle">Normal</small>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="columns is-multiline">
-        <div class="column is-4">
-            <div class="box">
-                <h3 class="title is-5 mb-4">
-                    <span class="icon-text">
-                        <span class="icon has-text-info"><span class="material-symbols-outlined">query_stats</span></span>
-                        <span>Estatísticas (Hoje)</span>
-                    </span>
-                </h3>
-                <div class="content">
+    <!-- GRÁFICO APEXCHARTS -->
+    <div class="card mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="card-title mb-0 d-flex align-items-center">
+                <span class="live-indicator"></span> Histórico de Temperatura
+            </h5>
+            <span class="badge bg-light text-dark border">Tempo Real</span>
+        </div>
+        <div class="card-body p-0">
+            <div id="loader-historico" class="d-flex justify-content-center align-items-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+            </div>
+            <div id="graficoHistorico" style="min-height: 350px;"></div>
+        </div>
+    </div>
+
+    <!-- DETALHES E ESTATÍSTICAS -->
+    <div class="row g-4">
+        <!-- Estatísticas -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined text-info">query_stats</span>
+                        Estatísticas (Hoje)
+                    </h5>
+                </div>
+                <div class="card-body">
                     <div class="diag-item">
-                        <span class="diag-label"><span class="material-symbols-outlined has-text-info">arrow_downward</span> Mínima</span>
+                        <span class="diag-label"><span class="material-symbols-outlined text-info">arrow_downward</span> Mínima</span>
                         <span class="diag-value" id="stat-today-min">-- °C</span>
                     </div>
                     <div class="diag-item">
-                        <span class="diag-label"><span class="material-symbols-outlined has-text-info">functions</span> Média</span>
+                        <span class="diag-label"><span class="material-symbols-outlined text-info">functions</span> Média</span>
                         <span class="diag-value" id="stat-today-avg">-- °C</span>
                     </div>
                     <div class="diag-item">
-                        <span class="diag-label"><span class="material-symbols-outlined has-text-info">arrow_upward</span> Máxima</span>
+                        <span class="diag-label"><span class="material-symbols-outlined text-info">arrow_upward</span> Máxima</span>
                         <span class="diag-value" id="stat-today-max">-- °C</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="column is-8">
-            <div class="box">
-                <h3 class="title is-5 mb-4">
-                    <span class="icon-text">
-                        <span class="icon has-text-primary"><span class="material-symbols-outlined">developer_board</span></span>
-                        <span>Diagnóstico Técnico</span>
-                    </span>
-                </h3>
-                <div class="columns is-multiline">
-                    <div class="column is-6">
-                        <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna</span>
-                            <span class="diag-value" id="diag-internal-temp">--</span>
+        <!-- Diagnóstico Técnico -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">developer_board</span>
+                        Diagnóstico Técnico
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="diag-item">
+                                <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna</span>
+                                <span class="diag-value" id="diag-internal-temp">--</span>
+                            </div>
+                            <div class="diag-item">
+                                <span class="diag-label"><span class="material-symbols-outlined">lan</span> Endereço IP</span>
+                                <span class="diag-value" id="diag-ip-address">--</span>
+                            </div>
+                            <div class="diag-item">
+                                <span class="diag-label"><span class="material-symbols-outlined">memory</span> Firmware</span>
+                                <span class="diag-value" id="diag-firmware-version">--</span>
+                            </div>
+                            <div class="diag-item">
+                                <span class="diag-label"><span class="material-symbols-outlined">update</span> Última Comunicação</span>
+                                <span class="diag-value" id="diag-last-packet">--</span>
+                            </div>
                         </div>
-                        <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">lan</span> Endereço IP</span>
-                            <span class="diag-value" id="diag-ip-address">--</span>
-                        </div>
-                        <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">memory</span> Firmware</span>
-                            <span class="diag-value" id="diag-firmware-version">--</span>
-                        </div>
-                        <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">update</span> Última Comunicação</span>
-                            <span class="diag-value" id="diag-last-packet">--</span>
-                        </div>
-                    </div>
-                    <div class="column is-6">
-                        <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">fingerprint</span> Device ID</span>
-                            <span class="diag-value"><%= device.id %></span>
-                        </div>
-                        <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">qr_code_2</span> MAC Address</span>
-                            <span class="diag-value" id="diag-mac-address">--</span>
-                        </div>
-                        <div class="diag-item">
-                            <span class="diag-label"><span class="material-symbols-outlined">signal_wifi_4_bar</span> Sinal Wi-Fi</span>
-                            <span class="diag-value" id="diag-wifi-detail">--</span>
+                        <div class="col-md-6">
+                            <div class="diag-item">
+                                <span class="diag-label"><span class="material-symbols-outlined">fingerprint</span> Device ID</span>
+                                <span class="diag-value"><%= device.id %></span>
+                            </div>
+                            <div class="diag-item">
+                                <span class="diag-label"><span class="material-symbols-outlined">qr_code_2</span> MAC Address</span>
+                                <span class="diag-value" id="diag-mac-address">--</span>
+                            </div>
+                            <div class="diag-item">
+                                <span class="diag-label"><span class="material-symbols-outlined">signal_wifi_4_bar</span> Sinal Wi-Fi</span>
+                                <span class="diag-value" id="diag-wifi-detail">--</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -243,9 +245,12 @@
 
 </div>
 
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     const serialNumber = "<%= serialNumber %>";
-    let historicoChartInstance = null;
+    let chart = null; // Instância do ApexCharts
     let dadosGraficoBuffer = []; 
 
     console.log("Painel Iniciado para SN:", serialNumber);
@@ -277,8 +282,7 @@
                 if (msg.dados && msg.dados.serial_number && msg.dados.serial_number !== serialNumber) return;
 
                 if (msg.type === "nova_leitura_logbox" || msg.type === "nova_leitura") {
-                    console.log("📡 Nova leitura recebida. Sincronizando com banco...");
-                    // Ao receber WS, chama a API para garantir dados fiéis do banco
+                    console.log("📡 Nova leitura recebida. Sincronizando...");
                     carregarUltimaLeitura(); 
                     atualizarPainelCompleto(msg.dados);
                 } else if (msg.type === "atualizacao_status") {
@@ -295,7 +299,6 @@
 
     async function carregarLeiturasIniciais() {
         const loader = document.getElementById("loader-historico");
-        const chartEl = document.getElementById("graficoHistorico");
         try {
             const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
             let data = { labels: [], temperaturas: [] };
@@ -309,14 +312,11 @@
             });
 
             if (loader) loader.style.display = "none";
-            if (chartEl) chartEl.style.display = "block";
-            
             inicializarGrafico();
             
         } catch (error) {
             console.error("Erro ao carregar leituras:", error);
             if (loader) loader.style.display = "none";
-            if (chartEl) chartEl.style.display = "block";
             inicializarGrafico(); 
         }
     }
@@ -333,14 +333,12 @@
         } catch (e) { console.error(e); }
     }
 
-    // Função central que busca o dado mais recente E as últimas 5 leituras do banco
     async function carregarUltimaLeitura() {
         try {
             const response = await fetch(`/api/logbox-device/${serialNumber}/latest`);
             if (response.ok) {
                 const data = await response.json();
                 
-                // 1. Atualiza o Card com a última leitura válida
                 if (data.latest && data.latest.payload) {
                     const payload = typeof data.latest.payload === 'string' 
                         ? JSON.parse(data.latest.payload) 
@@ -359,7 +357,6 @@
                     atualizarTexto("latest-timestamp", `Em: ${new Date(data.latest.timestamp_leitura).toLocaleString("pt-BR")}`);
                 }
 
-                // 2. Atualiza o Gráfico com as últimas 5 leituras REAIS do banco
                 if (data.recent_readings && Array.isArray(data.recent_readings)) {
                     atualizarGraficoComHistorico(data.recent_readings);
                 }
@@ -388,7 +385,7 @@
         if (connEl) {
             const isOnline = status.connection_status !== "offline";
             connEl.textContent = isOnline ? "Online" : "Offline";
-            connEl.className = isOnline ? "title is-4 has-text-weight-bold has-text-success" : "title is-4 has-text-weight-bold has-text-danger";
+            connEl.className = isOnline ? "fw-bold text-success" : "fw-bold text-danger";
         }
 
         const rssi = detectarValor(status, ['lqi', 'rssi', 'signal', 'wifi_signal']);
@@ -420,87 +417,97 @@
         atualizarListaAlarmes(status.alarms);
     }
 
+    // --- CONFIGURAÇÃO APEXCHARTS ---
     function inicializarGrafico() {
-        const container = document.getElementById("graficoHistorico");
+        const container = document.querySelector("#graficoHistorico");
         if (!container) return;
-        
-        if (historicoChartInstance) historicoChartInstance.dispose();
 
-        historicoChartInstance = echarts.init(container);
-        
-        const option = {
-            tooltip: {
-                trigger: 'axis',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderColor: '#ddd',
-                borderWidth: 1,
-                textStyle: { color: '#333' },
-                formatter: params => {
-                    if (!params[0]) return '';
-                    const d = new Date(params[0].value[0]);
-                    return `<strong>${d.toLocaleTimeString("pt-BR")}</strong><br/>Temp: <strong>${params[0].value[1].toFixed(1)} °C</strong>`;
-                }
-            },
-            grid: { left: '40', right: '20', bottom: '30', top: '30', containLabel: true },
-            xAxis: {
-                type: 'time',
-                boundaryGap: false,
-                axisLine: { lineStyle: { color: '#ddd' } },
-                axisLabel: { color: '#666' }
-            },
-            yAxis: {
-                type: 'value',
-                splitLine: { lineStyle: { type: 'dashed', color: '#eee' } },
-                axisLabel: { formatter: '{value} °C', color: '#666' },
-                scale: true
-            },
+        if (chart) chart.destroy();
+
+        const options = {
             series: [{
                 name: 'Temperatura',
-                type: 'line',
-                smooth: true,
-                showSymbol: false,
-                data: dadosGraficoBuffer,
-                lineStyle: { color: '#3298dc', width: 3 },
-                areaStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: 'rgba(50, 152, 220, 0.4)' },
-                        { offset: 1, color: 'rgba(50, 152, 220, 0.0)' }
-                    ])
+                data: dadosGraficoBuffer
+            }],
+            chart: {
+                id: 'realtime',
+                height: 350,
+                type: 'area',
+                animations: {
+                    enabled: true,
+                    easing: 'linear',
+                    dynamicAnimation: {
+                        speed: 1000
+                    }
+                },
+                toolbar: { show: false },
+                zoom: { enabled: false }
+            },
+            dataLabels: { enabled: false },
+            stroke: {
+                curve: 'smooth',
+                width: 2
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.7,
+                    opacityTo: 0.1,
+                    stops: [0, 90, 100]
                 }
-            }]
+            },
+            colors: ['#0d6efd'], // Bootstrap Primary Blue
+            xaxis: {
+                type: 'datetime',
+                tooltip: { enabled: false },
+                labels: {
+                    datetimeFormatter: {
+                        year: 'yyyy',
+                        month: 'MMM \'yy',
+                        day: 'dd MMM',
+                        hour: 'HH:mm'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    formatter: (val) => val.toFixed(1) + " °C"
+                }
+            },
+            tooltip: {
+                x: { format: 'dd/MM/yy HH:mm:ss' }
+            },
+            grid: {
+                borderColor: '#f1f1f1',
+            }
         };
-        historicoChartInstance.setOption(option);
-        window.addEventListener("resize", () => historicoChartInstance && historicoChartInstance.resize());
+
+        chart = new ApexCharts(container, options);
+        chart.render();
     }
 
     function atualizarGraficoComHistorico(novosPontos) {
-        if (!historicoChartInstance || !novosPontos) return;
+        if (!chart || !novosPontos) return;
 
-        // Mescla os novos pontos do banco com o buffer local
         novosPontos.forEach(ponto => {
             const timestamp = new Date(ponto.timestamp).getTime();
             const valor = ponto.valor;
-
-            // Verifica se já existe para evitar duplicatas
             const existe = dadosGraficoBuffer.some(d => d[0] === timestamp);
             if (!existe) {
                 dadosGraficoBuffer.push([timestamp, valor]);
             }
         });
 
-        // Ordena por tempo (garantia de integridade)
         dadosGraficoBuffer.sort((a, b) => a[0] - b[0]);
 
-        // Mantém tamanho saudável
         if (dadosGraficoBuffer.length > 300) {
             dadosGraficoBuffer = dadosGraficoBuffer.slice(dadosGraficoBuffer.length - 300);
         }
 
-        historicoChartInstance.setOption({
-            series: [{
-                data: dadosGraficoBuffer
-            }]
-        });
+        chart.updateSeries([{
+            data: dadosGraficoBuffer
+        }]);
     }
 
     function detectarValor(dados, chavesPossiveis) {
@@ -540,13 +547,13 @@
         countEl.textContent = activeCount;
         if (subEl) subEl.textContent = activeCount > 0 ? `${activeCount} Alarme(s)` : "Sistema Normal";
         
-        const box = countEl.closest('.box');
+        const box = document.getElementById("box-alarm");
         if(activeCount > 0) {
-            box.style.border = "2px solid #f14668";
-            countEl.classList.add("has-text-danger");
+            box.classList.add("border-danger");
+            countEl.classList.add("text-danger");
         } else {
-            box.style.border = "1px solid #eef0f5";
-            countEl.classList.remove("has-text-danger");
+            box.classList.remove("border-danger");
+            countEl.classList.remove("text-danger");
         }
     }
 
