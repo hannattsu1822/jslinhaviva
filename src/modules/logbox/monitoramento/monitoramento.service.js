@@ -195,8 +195,9 @@ async function obterStatus(serialNumber) {
 }
 
 async function obterUltimaLeitura(serialNumber) {
+  // Busca as últimas 10 leituras para garantir que temos dados suficientes
   const [rows] = await promisePool.query(
-    "SELECT payload_json as payload, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 50",
+    "SELECT payload_json as payload, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 10",
     [serialNumber]
   );
 
@@ -204,16 +205,27 @@ async function obterUltimaLeitura(serialNumber) {
     throw new Error("Nenhuma leitura encontrada");
   }
 
+  // Encontra a mais recente válida para exibir no Card
   const ultimaValida = rows.find(row => {
     const temp = extrairTemperaturaPayload(row.payload);
     return validarTemperatura(temp).valid;
   });
 
-  if (!ultimaValida) {
-    return rows[0];
-  }
+  // Prepara as últimas 5 leituras válidas para o Gráfico (ordem cronológica)
+  const ultimas5Validas = rows
+    .map(row => ({
+      timestamp: row.timestamp_leitura,
+      valor: extrairTemperaturaPayload(row.payload)
+    }))
+    .filter(item => validarTemperatura(item.valor).valid)
+    .slice(0, 5)
+    .reverse();
 
-  return ultimaValida;
+  // Retorna estrutura enriquecida
+  return {
+    latest: ultimaValida || rows[0],
+    recent_readings: ultimas5Validas
+  };
 }
 
 async function obterEstatisticas(serialNumber) {
