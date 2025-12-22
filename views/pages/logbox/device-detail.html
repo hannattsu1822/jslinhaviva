@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %></title>
 
-    <!-- Bibliotecas Externas -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
@@ -84,7 +83,6 @@
 
 <div class="container is-fluid p-5">
     
-    <!-- CABEÇALHO -->
     <div class="level mb-5">
         <div class="level-left">
             <div class="level-item">
@@ -110,7 +108,6 @@
         </div>
     </div>
 
-    <!-- KPI CARDS -->
     <div class="columns is-multiline mb-4">
         <div class="column is-3-desktop is-6-tablet">
             <div class="box has-text-centered" id="box-temp">
@@ -148,7 +145,6 @@
         </div>
     </div>
 
-    <!-- GRÁFICO EM EVIDÊNCIA -->
     <div class="chart-section">
         <div class="level mb-4">
             <div class="level-left">
@@ -173,7 +169,6 @@
         </div>
     </div>
 
-    <!-- DETALHES TÉCNICOS E ESTATÍSTICAS -->
     <div class="columns is-multiline">
         <div class="column is-4">
             <div class="box">
@@ -248,12 +243,9 @@
 
 </div>
 
-<!-- LÓGICA JAVASCRIPT -->
 <script>
     const serialNumber = "<%= serialNumber %>";
     let historicoChartInstance = null;
-    
-    // BUFFER LOCAL DE DADOS (O segredo para o gráfico funcionar bem)
     let dadosGraficoBuffer = []; 
 
     console.log("Painel Iniciado para SN:", serialNumber);
@@ -264,12 +256,11 @@
 
     function inicializarPainel() {
         iniciarWebSocket();
-        carregarLeiturasIniciais(); // Carrega histórico do SQL
+        carregarLeiturasIniciais();
         carregarStatusInicial();
         carregarEstatisticasDetalhes();
     }
 
-    // --- WEBSOCKET ---
     function iniciarWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const host = window.location.host;
@@ -295,7 +286,6 @@
         socket.onclose = () => setTimeout(iniciarWebSocket, 5000);
     }
 
-    // --- API CALLS ---
     async function carregarLeiturasIniciais() {
         const loader = document.getElementById("loader-historico");
         const chartEl = document.getElementById("graficoHistorico");
@@ -307,29 +297,20 @@
                 data = await response.json();
             }
             
-            // Converte dados da API para o formato do Buffer Local [timestamp, valor]
             dadosGraficoBuffer = (data.labels || []).map((label, index) => {
-                let timestamp;
-                if (typeof label === 'string' && label.includes('/')) {
-                    const parts = label.split(/[\/\s:]/);
-                    timestamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
-                } else {
-                    timestamp = new Date(label).getTime();
-                }
-                return [timestamp, data.temperaturas[index]];
+                return [new Date(label).getTime(), data.temperaturas[index]];
             });
 
             if (loader) loader.style.display = "none";
             if (chartEl) chartEl.style.display = "block";
             
-            // Inicializa o gráfico com o que veio do SQL
             inicializarGrafico();
             
         } catch (error) {
             console.error("Erro ao carregar leituras:", error);
             if (loader) loader.style.display = "none";
             if (chartEl) chartEl.style.display = "block";
-            inicializarGrafico(); // Inicia vazio se der erro
+            inicializarGrafico(); 
         }
     }
 
@@ -367,7 +348,6 @@
         } catch (e) { console.error(e); }
     }
 
-    // --- ATUALIZAÇÃO UI ---
     function atualizarPainelCompleto(status) {
         if (!status) return;
 
@@ -420,14 +400,12 @@
                     box.classList.add("updated-anim");
                 }
             }
-            // Atualiza o gráfico com o novo dado
             adicionarPontoGrafico(temperatura);
         }
         atualizarTexto("latest-timestamp", `Em: ${new Date().toLocaleString("pt-BR")}`);
         atualizarPainelCompleto(dados);
     }
 
-    // --- GRÁFICO (LÓGICA ROBUSTA) ---
     function inicializarGrafico() {
         const container = document.getElementById("graficoHistorico");
         if (!container) return;
@@ -460,14 +438,14 @@
                 type: 'value',
                 splitLine: { lineStyle: { type: 'dashed', color: '#eee' } },
                 axisLabel: { formatter: '{value} °C', color: '#666' },
-                scale: true // Ajusta escala automaticamente
+                scale: true
             },
             series: [{
                 name: 'Temperatura',
                 type: 'line',
                 smooth: true,
                 showSymbol: false,
-                data: dadosGraficoBuffer, // Usa o buffer global
+                data: dadosGraficoBuffer,
                 lineStyle: { color: '#3298dc', width: 3 },
                 areaStyle: {
                     color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -486,15 +464,12 @@
         
         const now = new Date().getTime();
         
-        // Adiciona ao buffer local
         dadosGraficoBuffer.push([now, temperatura]);
         
-        // Mantém apenas os últimos 300 pontos para não pesar
         if (dadosGraficoBuffer.length > 300) {
             dadosGraficoBuffer.shift();
         }
 
-        // Atualiza o gráfico com o buffer completo (mais seguro e rápido)
         historicoChartInstance.setOption({
             series: [{
                 data: dadosGraficoBuffer
@@ -502,7 +477,6 @@
         });
     }
 
-    // --- HELPERS ---
     function detectarValor(dados, chavesPossiveis) {
         if (!dados) return null;
         for (let chave of chavesPossiveis) {
