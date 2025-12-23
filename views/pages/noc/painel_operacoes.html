@@ -53,10 +53,9 @@
             flex-direction: column;
             justify-content: space-between;
             min-height: 180px; 
-            text-decoration: none; /* Remove sublinhado pois agora pode ser link */
+            text-decoration: none;
         }
 
-        /* Torna o card clicável visualmente */
         .device-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.4);
@@ -150,13 +149,13 @@
         </div>
         <div class="d-flex align-items-center gap-4">
             <div class="d-flex gap-3 text-small">
-                <span class="d-flex align-items-center"><span class="status-dot" style="background:#198754"></span> Normal</span>
-                <span class="d-flex align-items-center"><span class="status-dot" style="background:#ffc107"></span> Atenção (>55°C)</span>
-                <span class="d-flex align-items-center"><span class="status-dot" style="background:#dc3545"></span> Crítico (>60°C)</span>
+                <!-- LEGENDA ATUALIZADA AQUI -->
+                <span class="d-flex align-items-center"><span class="status-dot" style="background:#198754"></span> Normal (&lt;60°C)</span>
+                <span class="d-flex align-items-center"><span class="status-dot" style="background:#ffc107"></span> Atenção (60-70°C)</span>
+                <span class="d-flex align-items-center"><span class="status-dot" style="background:#dc3545"></span> Crítico (&gt;70°C)</span>
             </div>
             <div class="clock" id="clock">--:--:--</div>
             
-            <!-- BOTÃO DE RELATÓRIOS ADICIONADO AQUI -->
             <a href="/relatorios-logbox" class="btn btn-outline-info btn-sm d-flex align-items-center gap-2">
                 <span class="material-symbols-outlined fs-6">assessment</span> Relatórios
             </a>
@@ -169,7 +168,6 @@
         
         <div class="dashboard-grid" id="devices-grid">
             
-            <!-- LOGBOXES (Agora envoltos em <a> para ir ao detalhe ao clicar) -->
             <% logboxes.forEach(device => { %>
             <a href="/logbox-device/<%= device.serial_number %>" class="text-decoration-none">
                 <div class="device-card status-offline" id="card-logbox-<%= device.serial_number %>" data-type="logbox" data-id="<%= device.serial_number %>">
@@ -188,7 +186,6 @@
             </a>
             <% }); %>
 
-            <!-- RELÉS (Agora envoltos em <a> para ir ao detalhe ao clicar) -->
             <% reles.forEach(rele => { %>
             <a href="/visualizar-reles/<%= rele.id %>" class="text-decoration-none">
                 <div class="device-card status-offline" id="card-rele-<%= rele.id %>" data-type="rele" data-id="<%= rele.id %>">
