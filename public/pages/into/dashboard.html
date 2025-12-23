@@ -146,6 +146,12 @@
               Principal</a
             >
           </li>
+          <!-- Link do NOC na sidebar (visível para COD) -->
+          <li class="nav-item" id="sidebar-noc-link" style="display: none">
+            <a href="/centro-operacoes" class="nav-link"
+              ><i class="fas fa-desktop fa-fw me-2"></i>Centro de Operações</a
+            >
+          </li>
           <li class="nav-item" id="sidebar-prv-link" style="display: none">
             <a href="/prv" class="nav-link"
               ><i class="fas fa-clipboard-list fa-fw me-2"></i>Roteiro de Viagem</a
@@ -317,6 +323,30 @@
         </h1>
 
         <div class="row g-4">
+          
+          <!-- NOVO CARD: CENTRO DE OPERAÇÕES (NOC) -->
+          <div
+            id="card-noc"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/centro-operacoes" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-dark mx-auto mb-2">
+                      <i class="fas fa-desktop"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Centro de Operações</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+          <!-- FIM NOVO CARD -->
+
           <div
             id="card-subestacoes"
             class="col-md-6 col-lg-3"
@@ -677,6 +707,7 @@
             const userLevel = user.nivel || 0;
             const userCargo = String(user.cargo || "").trim().toLowerCase();
             const isMotorista = userCargo === "motorista";
+            const isCOD = userCargo === "cod"; // Verifica se é COD
 
             const cardPermissions = {
               "card-subestacoes": 3,
@@ -691,6 +722,7 @@
               "prv-card": 3,
               "gestao-card": 5,
               "auditoria-card": 10,
+              "card-noc": 1, // NOC requer nível 1 (mas será tratado especial para COD)
             };
 
             const sidebarItemIds = [
@@ -707,6 +739,7 @@
               "sidebar-auditoria-link",
               "sidebar-prv-link",
               "sidebar-checklist-link",
+              "sidebar-noc-link"
             ];
 
             const hideElement = (id) => {
@@ -728,6 +761,33 @@
               }
             };
 
+            // --- LÓGICA PARA COD ---
+            if (isCOD) {
+              // Esconde todos os cards padrão
+              Object.keys(cardPermissions).forEach((id) => hideElement(id));
+              
+              // Mostra apenas o NOC
+              showElement("card-noc", "block");
+
+              // Esconde calendário
+              const calendarCard = document.querySelector(".dashboard-calendar-card");
+              if (calendarCard) calendarCard.style.display = "none";
+
+              // Esconde checklist
+              const checklistCard = document.getElementById("checklist-placa-card");
+              if (checklistCard) checklistCard.style.display = "none";
+
+              // Limpa sidebar e deixa só o NOC
+              sidebarItemIds.forEach((id) => hideElement(id));
+              showElement("sidebar-noc-link", "block");
+              
+              // Esconde link do dashboard principal pois ele só usa o NOC
+              hideDashboardNavItem();
+
+              return; // Encerra aqui para COD
+            }
+
+            // --- LÓGICA PARA MOTORISTA ---
             if (isMotorista) {
               Object.keys(cardPermissions).forEach((id) => hideElement(id));
               showElement("prv-card", "block");
@@ -750,9 +810,13 @@
               return;
             }
 
+            // --- LÓGICA PADRÃO (OUTROS CARGOS) ---
             for (const cardId in cardPermissions) {
               const requiredLevel = cardPermissions[cardId];
               const cardElement = document.getElementById(cardId);
+              
+              // NOC geralmente não aparece no dashboard comum, a menos que seja nível muito alto ou específico
+              // Aqui deixei visível se tiver nível, mas você pode remover o 'card-noc' do loop se quiser que só COD veja
               if (cardElement && userLevel >= requiredLevel) {
                 cardElement.style.display = "block";
               }
@@ -766,6 +830,11 @@
             const checklistSidebar = document.getElementById("sidebar-checklist-link");
             if (checklistSidebar && userLevel >= 4) {
               checklistSidebar.style.display = "block";
+            }
+            
+            const nocSidebar = document.getElementById("sidebar-noc-link");
+            if (nocSidebar && userLevel >= 1) { // Permite acesso via sidebar se tiver nível
+                 nocSidebar.style.display = "block";
             }
 
             if (userLevel >= 4) {
