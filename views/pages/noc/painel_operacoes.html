@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR" data-bs-theme="dark">
 <head>
@@ -35,40 +34,56 @@
             font-family: monospace;
         }
 
+        /* --- MUDANÇA AQUI: GRID INTELIGENTE --- */
+        .dashboard-grid {
+            display: grid;
+            /* Isso cria colunas automáticas. 
+               minmax(300px, 1fr) diz: "O card deve ter no mínimo 300px. 
+               Se sobrar espaço, divida igualmente (1fr), mas não estique demais." */
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px; /* Espaço entre os cards */
+            padding-bottom: 40px;
+        }
+
         /* Estilo dos Cards */
         .device-card {
             background-color: #1e1e1e;
             border: 1px solid #333;
             border-radius: 8px;
-            padding: 15px;
+            padding: 20px; /* Aumentei um pouco o padding interno */
             position: relative;
             transition: all 0.3s ease;
             height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            /* Garante que o card não fique gigante verticalmente */
+            min-height: 180px; 
         }
 
         .device-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            border-color: #444;
         }
 
         .device-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .device-name {
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 1.1rem;
+            font-weight: 700;
             color: #adb5bd;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 85%;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .device-type-icon {
@@ -76,44 +91,50 @@
         }
 
         .main-value {
-            font-size: 2.5rem;
+            font-size: 3rem; /* Aumentei para destacar bem na TV */
             font-weight: 700;
             text-align: center;
             margin: 10px 0;
             color: #fff;
+            line-height: 1;
         }
 
         .unit {
-            font-size: 1rem;
+            font-size: 1.2rem;
             color: #6c757d;
             font-weight: 400;
+            margin-left: 5px;
         }
 
         .footer-info {
             display: flex;
             justify-content: space-between;
-            font-size: 0.8rem;
+            align-items: center;
+            font-size: 0.85rem;
             color: #6c757d;
             border-top: 1px solid #333;
-            padding-top: 8px;
+            padding-top: 12px;
+            margin-top: 10px;
         }
 
         /* Estados de Alerta (Cores Semafóricas) */
-        .status-normal { border-left: 4px solid #198754; } /* Verde */
-        .status-warning { border-left: 4px solid #ffc107; background-color: #2c2500; } /* Amarelo */
-        .status-critical { border-left: 4px solid #dc3545; background-color: #2c0b0e; } /* Vermelho */
-        .status-offline { border-left: 4px solid #6c757d; opacity: 0.6; } /* Cinza */
+        .status-normal { border-left: 5px solid #198754; } 
+        .status-warning { border-left: 5px solid #ffc107; background-color: rgba(255, 193, 7, 0.05); } 
+        .status-critical { border-left: 5px solid #dc3545; background-color: rgba(220, 53, 69, 0.1); } 
+        .status-offline { border-left: 5px solid #6c757d; opacity: 0.7; } 
 
         .status-dot {
             height: 10px;
             width: 10px;
             border-radius: 50%;
             display: inline-block;
+            margin-right: 6px;
         }
-        .bg-online { background-color: #198754; box-shadow: 0 0 5px #198754; }
+        .bg-online { background-color: #198754; box-shadow: 0 0 8px #198754; }
         .bg-offline { background-color: #6c757d; }
+        .bg-warning { background-color: #ffc107; box-shadow: 0 0 8px #ffc107; }
+        .bg-danger { background-color: #dc3545; box-shadow: 0 0 8px #dc3545; }
 
-        /* Animação de atualização */
         @keyframes flash {
             0% { background-color: #2c3e50; }
             100% { background-color: #1e1e1e; }
@@ -125,7 +146,7 @@
 
     <div class="noc-header">
         <div class="d-flex align-items-center gap-3">
-            <span class="material-symbols-outlined fs-2 text-primary">hub</span>
+            <span class="material-symbols-outlined fs-1 text-primary">hub</span>
             <div>
                 <h4 class="m-0 fw-bold">Centro de Operações</h4>
                 <small class="text-muted">Monitoramento Unificado de Transformadores</small>
@@ -133,9 +154,9 @@
         </div>
         <div class="d-flex align-items-center gap-4">
             <div class="d-flex gap-3 text-small">
-                <span class="d-flex align-items-center gap-1"><span class="status-dot" style="background:#198754"></span> Normal</span>
-                <span class="d-flex align-items-center gap-1"><span class="status-dot" style="background:#ffc107"></span> Atenção (>55°C)</span>
-                <span class="d-flex align-items-center gap-1"><span class="status-dot" style="background:#dc3545"></span> Crítico (>60°C)</span>
+                <span class="d-flex align-items-center"><span class="status-dot" style="background:#198754"></span> Normal</span>
+                <span class="d-flex align-items-center"><span class="status-dot" style="background:#ffc107"></span> Atenção (>55°C)</span>
+                <span class="d-flex align-items-center"><span class="status-dot" style="background:#dc3545"></span> Crítico (>60°C)</span>
             </div>
             <div class="clock" id="clock">--:--:--</div>
             <a href="/monitoramento-hub" class="btn btn-outline-secondary btn-sm">Sair</a>
@@ -143,45 +164,41 @@
     </div>
 
     <div class="container-fluid px-4">
-        <!-- GRID DE DISPOSITIVOS -->
-        <!-- row-cols-xxl-6 = 6 cards por linha em telas gigantes (TVs 4K) -->
-        <!-- row-cols-xl-5 = 5 cards por linha em monitores grandes -->
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 row-cols-xxl-6 g-3" id="devices-grid">
+        
+        <!-- MUDANÇA AQUI: Removemos as classes 'row' e 'col' do Bootstrap -->
+        <!-- Usamos nossa classe .dashboard-grid -->
+        <div class="dashboard-grid" id="devices-grid">
             
             <!-- LOGBOXES -->
             <% logboxes.forEach(device => { %>
-            <div class="col">
-                <div class="device-card status-offline" id="card-logbox-<%= device.serial_number %>" data-type="logbox" data-id="<%= device.serial_number %>">
-                    <div class="device-header">
-                        <span class="device-name" title="<%= device.local_tag %>"><%= device.local_tag %></span>
-                        <span class="material-symbols-outlined device-type-icon" title="LogBox">router</span>
-                    </div>
-                    <div class="main-value">
-                        <span id="val-logbox-<%= device.serial_number %>">--</span><span class="unit">°C</span>
-                    </div>
-                    <div class="footer-info">
-                        <span class="status-text"><span class="status-dot bg-offline"></span> <span id="status-logbox-<%= device.serial_number %>">Offline</span></span>
-                        <span id="time-logbox-<%= device.serial_number %>">--:--</span>
-                    </div>
+            <div class="device-card status-offline" id="card-logbox-<%= device.serial_number %>" data-type="logbox" data-id="<%= device.serial_number %>">
+                <div class="device-header">
+                    <span class="device-name" title="<%= device.local_tag %>"><%= device.local_tag %></span>
+                    <span class="material-symbols-outlined device-type-icon" title="LogBox">router</span>
+                </div>
+                <div class="main-value">
+                    <span id="val-logbox-<%= device.serial_number %>">--</span><span class="unit">°C</span>
+                </div>
+                <div class="footer-info">
+                    <span class="status-text d-flex align-items-center"><span class="status-dot bg-offline"></span> <span id="status-logbox-<%= device.serial_number %>">Offline</span></span>
+                    <span id="time-logbox-<%= device.serial_number %>">--:--</span>
                 </div>
             </div>
             <% }); %>
 
             <!-- RELÉS -->
             <% reles.forEach(rele => { %>
-            <div class="col">
-                <div class="device-card status-offline" id="card-rele-<%= rele.id %>" data-type="rele" data-id="<%= rele.id %>">
-                    <div class="device-header">
-                        <span class="device-name" title="<%= rele.nome_rele %>"><%= rele.nome_rele %></span>
-                        <span class="material-symbols-outlined device-type-icon" title="Relé TCP">electrical_services</span>
-                    </div>
-                    <div class="main-value">
-                        <span id="val-rele-<%= rele.id %>">--</span><span class="unit">°C</span>
-                    </div>
-                    <div class="footer-info">
-                        <span class="status-text"><span class="status-dot bg-offline"></span> <span id="status-rele-<%= rele.id %>">Offline</span></span>
-                        <span id="time-rele-<%= rele.id %>">--:--</span>
-                    </div>
+            <div class="device-card status-offline" id="card-rele-<%= rele.id %>" data-type="rele" data-id="<%= rele.id %>">
+                <div class="device-header">
+                    <span class="device-name" title="<%= rele.nome_rele %>"><%= rele.nome_rele %></span>
+                    <span class="material-symbols-outlined device-type-icon" title="Relé TCP">electrical_services</span>
+                </div>
+                <div class="main-value">
+                    <span id="val-rele-<%= rele.id %>">--</span><span class="unit">°C</span>
+                </div>
+                <div class="footer-info">
+                    <span class="status-text d-flex align-items-center"><span class="status-dot bg-offline"></span> <span id="status-rele-<%= rele.id %>">Offline</span></span>
+                    <span id="time-rele-<%= rele.id %>">--:--</span>
                 </div>
             </div>
             <% }); %>
