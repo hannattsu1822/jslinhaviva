@@ -1,3 +1,4 @@
+// Verifique se os arquivos abaixo existem nestes caminhos exatos:
 const logboxService = require("../logbox/dispositivos.service");
 const relesService = require("../reles/reles.service");
 
