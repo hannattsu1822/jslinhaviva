@@ -1,5 +1,5 @@
-// Verifique se os arquivos abaixo existem nestes caminhos exatos:
-const logboxService = require("../logbox/dispositivos.service");
+// CORREÇÃO AQUI: Adicionei a subpasta /dispositivos/ no caminho
+const logboxService = require("../logbox/dispositivos/dispositivos.service");
 const relesService = require("../reles/reles.service");
 
 async function renderizarPainelNOC(req, res) {
@@ -18,7 +18,7 @@ async function renderizarPainelNOC(req, res) {
       user: req.user,
       logboxes: logboxes,
       reles: relesAtivos,
-      layout: false // Geralmente NOC não usa o layout padrão com menu lateral
+      layout: false // NOC não usa o layout padrão com menu lateral
     });
   } catch (err) {
     console.error("Erro ao carregar NOC:", err);
