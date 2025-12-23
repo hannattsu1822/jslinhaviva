@@ -5,10 +5,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("clock").textContent = now.toLocaleTimeString("pt-BR");
     }, 1000);
 
-    // Configurações de Limite
+    // --- CONFIGURAÇÃO DE LIMITES ATUALIZADA ---
     const LIMITS = {
-        WARNING: 55.0,
-        CRITICAL: 60.0
+        WARNING: 60.0,  // Atenção começa em 60
+        CRITICAL: 70.0  // Crítico começa em 70
     };
 
     // Timers para detectar offline
@@ -40,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const card = document.getElementById(`card-logbox-${id}`);
         if (!card) return;
 
-        // Extrair temperatura (usando lógica simplificada aqui, mas idealmente igual ao helper)
         let temp = dados.ch_analog_1;
         if (temp === undefined && dados.value_channels) temp = dados.value_channels[2];
         if (temp === undefined) temp = dados.temperature;
@@ -55,7 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const card = document.getElementById(`card-rele-${id}`);
         if (!card) return;
 
-        // Prioridade: Temperatura do Enrolamento > Dispositivo > Ambiente
         let temp = dados.temperatura_enrolamento;
         if (temp === undefined || temp === null) temp = dados.temperatura_dispositivo;
         if (temp === undefined || temp === null) temp = dados.temperatura_ambiente;
@@ -70,40 +68,40 @@ document.addEventListener("DOMContentLoaded", () => {
         const statusEl = document.getElementById(`status-${tipo}-${id}`);
         const timeEl = document.getElementById(`time-${tipo}-${id}`);
 
-        // Atualiza Valor
         valEl.textContent = parseFloat(valor).toFixed(1);
 
-        // Atualiza Hora
         const now = new Date();
         timeEl.textContent = now.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-        // Atualiza Status Visual (Cores)
-        card.className = "device-card"; // Reset classes
+        // Reset classes
+        card.className = "device-card"; 
         
+        // --- LÓGICA DE CORES ATUALIZADA ---
         if (valor >= LIMITS.CRITICAL) {
+            // Maior ou igual a 70
             card.classList.add("status-critical");
             statusEl.innerHTML = '<span class="status-dot bg-danger"></span> Crítico';
         } else if (valor >= LIMITS.WARNING) {
+            // Entre 60 e 69.9
             card.classList.add("status-warning");
             statusEl.innerHTML = '<span class="status-dot bg-warning"></span> Atenção';
         } else {
+            // Menor que 60
             card.classList.add("status-normal");
             statusEl.innerHTML = '<span class="status-dot bg-online"></span> Online';
         }
 
-        // Animação de Flash
         card.classList.remove("updated");
-        void card.offsetWidth; // Trigger reflow
+        void card.offsetWidth; 
         card.classList.add("updated");
 
-        // Watchdog (Offline detection)
         if (watchdog[`${tipo}-${id}`]) clearTimeout(watchdog[`${tipo}-${id}`]);
         
         watchdog[`${tipo}-${id}`] = setTimeout(() => {
             card.className = "device-card status-offline";
             statusEl.innerHTML = '<span class="status-dot bg-offline"></span> Offline';
             valEl.textContent = "--";
-        }, 180000); // 3 minutos sem dados = Offline
+        }, 180000); 
     }
 
     conectarWebSocket();
