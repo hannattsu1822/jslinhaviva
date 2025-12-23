@@ -20,6 +20,9 @@ const rotasPrv = require("./modules/prv");
 const rotasReles = require("./modules/reles");
 const rotasInspRedesDist = require("./modules/InspRedesDist");
 
+// --- ADICIONE AQUI O IMPORT DO NOC ---
+const rotasNoc = require("./modules/noc/noc.routes"); 
+
 const rotasChecklistDaily = require("./modules/checklistDaily/checklistDaily.routes");
 
 const router = express.Router();
@@ -40,6 +43,9 @@ router.use("/", rotasLogbox);
 router.use("/", rotasPrv);
 router.use("/", rotasReles);
 router.use("/", rotasInspRedesDist);
+
+// --- ADICIONE AQUI O USO DA ROTA ---
+router.use("/", rotasNoc);
 
 router.use("/", rotasChecklistDaily);
 
