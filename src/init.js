@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
@@ -7,7 +8,8 @@ const multer = require("multer");
 const fs = require("fs");
 const http = require("http");
 const { WebSocketServer } = require("ws");
-require("dotenv").config();
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 const { projectRootDir } = require("./shared/path.helper");
 
@@ -15,21 +17,51 @@ const app = express();
 const server = http.createServer(app);
 
 const logger = {
-  debug: (msg) => process.env.NODE_ENV === 'development' && console.log(`[DEBUG] ${msg}`),
-  info: (msg) => console.log(`[INFO] ${msg}`),
-  warn: (msg) => console.warn(`[WARN] ${msg}`),
-  error: (msg) => console.error(`[ERROR] ${msg}`)
+  debug: (msg) => process.env.NODE_ENV === "development" && console.log(`[DEBUG] ${msg}`),
+  info:  (msg) => console.log(`[INFO] ${msg}`),
+  warn:  (msg) => console.warn(`[WARN] ${msg}`),
+  error: (msg) => console.error(`[ERROR] ${msg}`),
 };
 
+// ─── Segurança HTTP headers ───────────────────────────────────────────────────
+app.use(
+  helmet({
+    contentSecurityPolicy: false,      // frontend usa inline scripts/styles
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+// ─── CORS restrito ao domínio da aplicação ────────────────────────────────────
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "https://sulgipelinhaviva.online",
+    credentials: true,
+  })
+);
+
+// ─── Rate limit global: 200 req / 15 min por IP ───────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Muitas requisições. Tente novamente em alguns minutos.",
+  },
+});
+app.use(limiter);
+
+// ─── Body parsers ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-app.use(cors());
 
+// ─── View engine ─────────────────────────────────────────────────────────────
 app.engine("html", require("ejs").renderFile);
 app.set("view engine", "html");
 
 const publicDir = path.join(projectRootDir, "public");
-const viewsDir = path.join(projectRootDir, "views");
+const viewsDir  = path.join(projectRootDir, "views");
 
 app.set("views", [viewsDir, publicDir]);
 
@@ -37,8 +69,9 @@ app.use(express.static(publicDir));
 logger.info(`[Static] Servindo 'public': ${publicDir}`);
 
 app.use("/scripts", express.static(path.join(viewsDir, "scripts")));
-app.use("/static", express.static(path.join(viewsDir, "static")));
+app.use("/static",  express.static(path.join(viewsDir, "static")));
 
+// ─── Criação de diretórios de upload ─────────────────────────────────────────
 const ensureDirectoryExists = (dirPath, dirName) => {
   if (!fs.existsSync(dirPath)) {
     try {
@@ -50,33 +83,32 @@ const ensureDirectoryExists = (dirPath, dirName) => {
   }
 };
 
-const uploadsSubestacoesDir = path.join(projectRootDir, "upload_arquivos_subestacoes");
-const uploadsFibraDir = path.join(projectRootDir, "upload_arquivos_fibra");
-const trafosReformadosAnexosDir = path.join(projectRootDir, "trafos_reformados_anexos");
-const uploadsInspRedesDir = path.join(projectRootDir, "upload_InspDistRedes");
-const uploadsChecklistDailyDir = path.join(projectRootDir, "upload_checklist_diario_veiculos");
-const uploadsProcessosDir = path.join(projectRootDir, "upload_arquivos_processos");
-const multerTempDir = path.join(projectRootDir, "upload_temp_multer");
+const uploadsSubestacoesDir      = path.join(projectRootDir, "upload_arquivos_subestacoes");
+const uploadsFibraDir            = path.join(projectRootDir, "upload_arquivos_fibra");
+const trafosReformadosAnexosDir  = path.join(projectRootDir, "trafos_reformados_anexos");
+const uploadsInspRedesDir        = path.join(projectRootDir, "upload_InspDistRedes");
+const uploadsChecklistDailyDir   = path.join(projectRootDir, "upload_checklist_diario_veiculos");
+const uploadsProcessosDir        = path.join(projectRootDir, "upload_arquivos_processos");
+const multerTempDir              = path.join(projectRootDir, "upload_temp_multer");
 
-ensureDirectoryExists(uploadsSubestacoesDir, "Uploads Subestações");
-ensureDirectoryExists(uploadsFibraDir, "Uploads Fibra");
+ensureDirectoryExists(uploadsSubestacoesDir,     "Uploads Subestações");
+ensureDirectoryExists(uploadsFibraDir,           "Uploads Fibra");
 ensureDirectoryExists(trafosReformadosAnexosDir, "Anexos Trafos");
-ensureDirectoryExists(uploadsInspRedesDir, "Inspeção Redes");
-ensureDirectoryExists(uploadsChecklistDailyDir, "Checklist Diário");
-ensureDirectoryExists(uploadsProcessosDir, "Uploads Processos");
-ensureDirectoryExists(multerTempDir, "Temp Multer");
+ensureDirectoryExists(uploadsInspRedesDir,       "Inspeção Redes");
+ensureDirectoryExists(uploadsChecklistDailyDir,  "Checklist Diário");
+ensureDirectoryExists(uploadsProcessosDir,       "Uploads Processos");
+ensureDirectoryExists(multerTempDir,             "Temp Multer");
 
-app.use("/upload_arquivos_subestacoes", express.static(uploadsSubestacoesDir));
-app.use("/upload_arquivos_fibra", express.static(uploadsFibraDir));
-app.use("/trafos_reformados_anexos", express.static(trafosReformadosAnexosDir));
-app.use("/upload_InspDistRedes", express.static(uploadsInspRedesDir));
-app.use("/upload_checklist_diario_veiculos", express.static(uploadsChecklistDailyDir));
-app.use("/upload_arquivos_processos", express.static(uploadsProcessosDir));
+app.use("/upload_arquivos_subestacoes",        express.static(uploadsSubestacoesDir));
+app.use("/upload_arquivos_fibra",              express.static(uploadsFibraDir));
+app.use("/trafos_reformados_anexos",           express.static(trafosReformadosAnexosDir));
+app.use("/upload_InspDistRedes",               express.static(uploadsInspRedesDir));
+app.use("/upload_checklist_diario_veiculos",   express.static(uploadsChecklistDailyDir));
+app.use("/upload_arquivos_processos",          express.static(uploadsProcessosDir));
 
+// ─── Multer — upload geral ────────────────────────────────────────────────────
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, multerTempDir);
-  },
+  destination: (req, file, cb) => cb(null, multerTempDir),
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, "temp_" + uniqueSuffix + path.extname(file.originalname));
@@ -84,27 +116,23 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({
-  storage: storage,
+  storage,
   limits: { fileSize: 50 * 1024 * 1024, files: 25 },
   fileFilter: (req, file, cb) => cb(null, true),
 });
 
+// ─── Multer — anexos checklist ────────────────────────────────────────────────
 const anexoStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: (req, file, cb) => {
     const trafoId = req.params.id;
-    if (!trafoId) {
-      return cb(new Error("ID do transformador não encontrado na requisição."));
-    }
+    if (!trafoId) return cb(new Error("ID do transformador não encontrado na requisição."));
     const dir = path.join(trafosReformadosAnexosDir, String(trafoId));
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
-  filename: function (req, file, cb) {
+  filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const extension = path.extname(file.originalname);
-    cb(null, `anexo-${uniqueSuffix}${extension}`);
+    cb(null, `anexo-${uniqueSuffix}${path.extname(file.originalname)}`);
   },
 });
 
@@ -122,6 +150,7 @@ const uploadAnexoChecklist = multer({
   limits: { fileSize: 3 * 1024 * 1024 },
 });
 
+// ─── Sessão ───────────────────────────────────────────────────────────────────
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret || typeof sessionSecret !== "string" || sessionSecret.trim() === "") {
   logger.error("A variável de ambiente SESSION_SECRET não está definida.");
@@ -131,56 +160,57 @@ if (!sessionSecret || typeof sessionSecret !== "string" || sessionSecret.trim() 
 const sessionMiddleware = session({
   secret: sessionSecret,
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: { secure: false },
 });
 
 app.use(sessionMiddleware);
 
+// ─── Pool MySQL ───────────────────────────────────────────────────────────────
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host:             process.env.DB_HOST,
+  port:             process.env.DB_PORT,
+  user:             process.env.DB_USER,
+  password:         process.env.DB_PASSWORD,
+  database:         process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  timezone: "local",
+  connectionLimit:  10,
+  queueLimit:       0,
+  timezone:         "local",
 });
 
 const promisePool = pool.promise();
 
-pool.on('connection', (connection) => {
-  logger.debug(`DB: Nova conexão (ID: ${connection.threadId})`);
-});
+pool.on("connection", (connection) =>
+  logger.debug(`DB: Nova conexão (ID: ${connection.threadId})`)
+);
+pool.on("error", (err) =>
+  logger.error(`DB: Erro no pool MySQL: ${err.message}`)
+);
 
-pool.on('error', (err) => {
-  logger.error(`DB: Erro no pool MySQL: ${err.message}`);
-});
-
+// ─── WebSocket ────────────────────────────────────────────────────────────────
 const wss = new WebSocketServer({ noServer: true });
 app.set("wss", wss);
 
-server.on('upgrade', (request, socket, head) => {
+server.on("upgrade", (request, socket, head) => {
   sessionMiddleware(request, {}, () => {
     if (!request.session || !request.session.user) {
-      logger.warn(`[WebSocket] Tentativa de conexão sem sessão válida: ${request.socket.remoteAddress}`);
-      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      logger.warn(
+        `[WebSocket] Tentativa de conexão sem sessão válida: ${request.socket.remoteAddress}`
+      );
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
       socket.destroy();
       return;
     }
-
     wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
+      wss.emit("connection", ws, request);
     });
   });
 });
 
 wss.on("connection", (ws, req) => {
-  const ip = req.socket.remoteAddress;
+  const ip   = req.socket.remoteAddress;
   const user = req.session ? req.session.user.matricula : "Desconhecido";
-  
   logger.info(`[WebSocket] Conexão estabelecida. IP: ${ip}, Usuário: ${user}`);
 
   ws.on("message", (message) => {
@@ -195,6 +225,7 @@ wss.on("connection", (ws, req) => {
   ws.on("error", (error) => logger.error(`[WebSocket] Erro: ${error.message}`));
 });
 
+// ─── Helper: salvar anexos de processos ──────────────────────────────────────
 async function salvarAnexos(processoId, files) {
   const anexosSalvos = [];
   const processoUploadDir = path.join(uploadsProcessosDir, String(processoId));
@@ -218,8 +249,8 @@ async function salvarAnexos(processoId, files) {
     );
 
     anexosSalvos.push({
-      id: result.insertId,
-      caminho: caminhoServidor,
+      id:           result.insertId,
+      caminho:      caminhoServidor,
       nomeOriginal: file.originalname,
     });
   }
@@ -227,6 +258,7 @@ async function salvarAnexos(processoId, files) {
   return anexosSalvos;
 }
 
+// ─── Exports ──────────────────────────────────────────────────────────────────
 module.exports = {
   app,
   server,
