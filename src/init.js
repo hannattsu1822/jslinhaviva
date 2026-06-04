@@ -26,7 +26,7 @@ const logger = {
 // ─── Segurança HTTP headers ───────────────────────────────────────────────────
 app.use(
   helmet({
-    contentSecurityPolicy: false,      // frontend usa inline scripts/styles
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -157,11 +157,18 @@ if (!sessionSecret || typeof sessionSecret !== "string" || sessionSecret.trim() 
   process.exit(1);
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const sessionMiddleware = session({
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false },
+  cookie: {
+    httpOnly: true,                          // JS do browser NÃO acessa o cookie
+    secure: isProduction,                    // true em produção (HTTPS), false em dev (HTTP)
+    sameSite: isProduction ? "strict" : "lax", // bloqueia CSRF em produção
+    maxAge: 8 * 60 * 60 * 1000,             // sessão expira em 8 horas
+  },
 });
 
 app.use(sessionMiddleware);
