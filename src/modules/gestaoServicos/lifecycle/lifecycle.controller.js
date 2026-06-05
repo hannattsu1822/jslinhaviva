@@ -4,30 +4,24 @@ const { registrarAuditoria } = require("../../../auth");
 async function atualizarStatusParteServico(req, res) {
   try {
     const { id: servicoId } = req.params;
-    const matricula = req.user?.matricula;
+    const matricula = req.session?.user?.matricula;
     const { status_final } = req.body;
+
+    if (!matricula) {
+      return res.status(401).json({ success: false, message: "Sessão inválida ou expirada." });
+    }
 
     let resultado;
     let acaoAuditoria;
 
     if (status_final === "concluido") {
-      resultado = await service.concluirParteServico(
-        servicoId,
-        req.body,
-        matricula
-      );
+      resultado = await service.concluirParteServico(servicoId, req.body, matricula);
       acaoAuditoria = "Conclusão de Parte do Serviço";
     } else if (status_final === "nao_concluido") {
-      resultado = await service.naoConcluirParteServico(
-        servicoId,
-        req.body,
-        matricula
-      );
+      resultado = await service.naoConcluirParteServico(servicoId, req.body, matricula);
       acaoAuditoria = "Não Conclusão de Parte do Serviço";
     } else {
-      return res
-        .status(400)
-        .json({ success: false, message: "Status final inválido." });
+      return res.status(400).json({ success: false, message: "Status final inválido." });
     }
 
     await registrarAuditoria(matricula, acaoAuditoria, resultado.auditMessage);
@@ -50,7 +44,7 @@ async function reativarServico(req, res) {
   try {
     await service.reativarServico(req.params.id);
     await registrarAuditoria(
-      req.user.matricula,
+      req.session?.user?.matricula,
       "Reativação de Serviço",
       `Serviço ${req.params.id} retornado para ativo.`
     );
@@ -58,9 +52,7 @@ async function reativarServico(req, res) {
   } catch (error) {
     console.error("Erro ao reativar serviço:", error);
     const statusCode = error.message === "Serviço não encontrado" ? 404 : 500;
-    res
-      .status(statusCode)
-      .json({ message: error.message || "Erro ao reativar serviço" });
+    res.status(statusCode).json({ message: error.message || "Erro ao reativar serviço" });
   }
 }
 
@@ -76,7 +68,7 @@ async function atribuirResponsavel(req, res) {
     }
     await service.atribuirResponsavel(id, responsaveis);
     await registrarAuditoria(
-      req.user.matricula,
+      req.session?.user?.matricula,
       "Atribuição de Responsáveis",
       `Serviço ID ${id} atribuído a: ${responsaveis.join(", ")}`
     );
@@ -86,9 +78,7 @@ async function atribuirResponsavel(req, res) {
     });
   } catch (error) {
     console.error("Erro ao atualizar responsáveis:", error);
-    const statusCode = error.message.includes("Serviço não encontrado")
-      ? 404
-      : 500;
+    const statusCode = error.message.includes("Serviço não encontrado") ? 404 : 500;
     res.status(statusCode).json({
       success: false,
       message: error.message || "Erro ao atualizar responsáveis",
