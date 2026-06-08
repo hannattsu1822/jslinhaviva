@@ -107,11 +107,6 @@ router.get(
   (req, res, next) => {
     const origemOriginal = req.params.origem;
     const origemDecoded = decodeURIComponent(origemOriginal);
-    
-    console.log(`[ROTA] Parâmetro recebido (raw): "${origemOriginal}"`);
-    console.log(`[ROTA] Parâmetro decodificado: "${origemDecoded}"`);
-    console.log(`[ROTA] Bytes do decodificado:`, Buffer.from(origemDecoded, 'utf8'));
-    
     req.params.origem = origemDecoded;
     next();
   },
@@ -148,11 +143,20 @@ router.delete(
   coreController.deletarServico
 );
 
+// Rota original — encarregado conclui/não-conclui sua própria parte
 router.post(
   "/api/servicos/:id/concluir",
   autenticar,
   verificarNivel(3),
   lifecycleController.atualizarStatusParteServico
+);
+
+// ─── NOVA ROTA: Gerente/Engenheiro/ADM força conclusão total do serviço ───────
+router.post(
+  "/api/servicos/:id/forcar-conclusao",
+  autenticar,
+  verificarNivel(3), // middleware base; a verificação de cargo/nível gestor é feita dentro do controller
+  lifecycleController.forcarConclusaoServico
 );
 
 router.post(
@@ -234,11 +238,20 @@ router.get(
   queryController.listarSubestacoes
 );
 
+// Rota existente — substitui TODA a lista de responsáveis
 router.patch(
   "/api/servicos/:id/responsavel",
   autenticar,
   verificarNivel(3),
   lifecycleController.atribuirResponsavel
+);
+
+// ─── NOVA ROTA: Remove apenas UM encarregado específico ──────────────────────
+router.delete(
+  "/api/servicos/:id/responsavel/:matricula",
+  autenticar,
+  verificarNivel(3),
+  lifecycleController.removerResponsavelUnico
 );
 
 router.get(
@@ -253,41 +266,21 @@ router.post("/api/push/subscribe", autenticar, async (req, res) => {
     const { subscription } = req.body;
     const matricula = req.user.matricula;
 
-    console.log(
-      `DEBUG: [Backend] Rota /api/push/subscribe foi chamada pela matrícula: ${matricula}`
-    );
-    console.log(
-      "DEBUG: [Backend] Objeto de inscrição recebido do frontend:",
-      subscription
-    );
-
     if (!subscription || !subscription.endpoint) {
-      console.error("DEBUG: [Backend] Objeto de inscrição inválido recebido.");
       return res
         .status(400)
         .json({ success: false, message: "Objeto de inscrição inválido." });
     }
 
     const subscriptionString = JSON.stringify(subscription);
-    console.log(
-      `DEBUG: [Backend] Salvando a string de inscrição no banco de dados para a matrícula ${matricula}...`
-    );
-
     await promisePool.query(
       "UPDATE users SET push_subscription = ? WHERE matricula = ?",
       [subscriptionString, matricula]
     );
 
-    console.log(
-      `DEBUG: [Backend] Inscrição salva com sucesso para a matrícula ${matricula}.`
-    );
-
     res.status(201).json({ success: true });
   } catch (error) {
-    console.error(
-      "DEBUG: [Backend] Erro ao salvar a inscrição no banco de dados:",
-      error
-    );
+    console.error("Erro ao salvar a inscrição push:", error);
     res
       .status(500)
       .json({ success: false, message: "Erro interno do servidor." });
