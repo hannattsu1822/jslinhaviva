@@ -20,6 +20,7 @@ let aprUploadModalInstance;
 let accessDeniedModalInstance;
 let developmentModalInstance;
 let user = null;
+let selectedFiles = [];
 
 function showToast(message, type = "success") {
   const toastLiveEl = document.getElementById("liveToast");
@@ -40,13 +41,114 @@ function usarDataAtual() {
   const pad = (n) => String(n).padStart(2, "0");
   const localDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const localTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  document.getElementById("dataConclusao").value = localDate;
-  document.getElementById("horaConclusao").value = localTime;
+  const dataConclusaoEl = document.getElementById("dataConclusao");
+  const horaConclusaoEl = document.getElementById("horaConclusao");
+  if (dataConclusaoEl) dataConclusaoEl.value = localDate;
+  if (horaConclusaoEl) horaConclusaoEl.value = localTime;
 }
 
 function ehNivel5Plus() {
   return user && user.nivel >= 5;
 }
+
+// ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // Carrega usuário da sessão
+  try {
+    const resUser = await fetch("/api/me");
+    if (resUser.ok) {
+      user = await resUser.json();
+    }
+  } catch (e) {
+    console.warn("Não foi possível carregar dados do usuário:", e.message);
+  }
+
+  // Inicializa modais Bootstrap
+  const confirmModalEl = document.getElementById("confirmModal");
+  if (confirmModalEl) confirmModalInstance = new bootstrap.Modal(confirmModalEl);
+
+  const concluirModalEl = document.getElementById("concluirModal");
+  if (concluirModalEl) concluirModalInstance = new bootstrap.Modal(concluirModalEl);
+
+  const modalResponsavelEl = document.getElementById("modalResponsavel");
+  if (modalResponsavelEl) modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
+
+  const aprUploadModalEl = document.getElementById("aprUploadModal");
+  if (aprUploadModalEl) aprUploadModalInstance = new bootstrap.Modal(aprUploadModalEl);
+
+  const accessDeniedModalEl = document.getElementById("access-denied-modal");
+  if (accessDeniedModalEl) accessDeniedModalInstance = new bootstrap.Modal(accessDeniedModalEl);
+
+  const developmentModalEl = document.getElementById("development-modal");
+  if (developmentModalEl) developmentModalInstance = new bootstrap.Modal(developmentModalEl);
+
+  // Evento: salvar finalização
+  const btnSalvar = document.getElementById("btnSalvarFinalizacao");
+  if (btnSalvar) {
+    btnSalvar.addEventListener("click", salvarFinalizacao);
+  }
+
+  // Evento: botão tirar foto
+  const btnTirarFoto = document.getElementById("btnTirarFoto");
+  const fotoCamera = document.getElementById("fotoCamera");
+  if (btnTirarFoto && fotoCamera) {
+    btnTirarFoto.addEventListener("click", () => fotoCamera.click());
+    fotoCamera.addEventListener("change", (e) => adicionarArquivos(e.target.files));
+  }
+
+  // Evento: adicionar fotos da galeria
+  const btnAdicionarFotos = document.getElementById("btnAdicionarFotos");
+  const fotosConclusao = document.getElementById("fotosConclusao");
+  if (btnAdicionarFotos && fotosConclusao) {
+    btnAdicionarFotos.addEventListener("click", () => fotosConclusao.click());
+    fotosConclusao.addEventListener("change", (e) => adicionarArquivos(e.target.files));
+  }
+
+  // Evento: mudança no status final (concluido / nao_concluido)
+  const statusFinalServico = document.getElementById("statusFinalServico");
+  if (statusFinalServico) {
+    statusFinalServico.addEventListener("change", () => {
+      const camposSomente = document.getElementById("camposSomenteConcluido");
+      if (camposSomente) {
+        camposSomente.style.display =
+          statusFinalServico.value === "nao_concluido" ? "none" : "block";
+      }
+    });
+  }
+
+  // Evento: confirmar exclusão
+  const confirmDeleteBtn = document.getElementById("confirmDelete");
+  if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener("click", async () => {
+      if (!currentServicoId) return;
+      await deletarServico(currentServicoId);
+      if (confirmModalInstance) confirmModalInstance.hide();
+    });
+  }
+
+  // Evento: upload APR
+  const btnConfirmarUploadAPR = document.getElementById("btnConfirmarUploadAPR");
+  if (btnConfirmarUploadAPR) {
+    btnConfirmarUploadAPR.addEventListener("click", confirmarUploadAPR);
+  }
+
+  // Filtros com debounce
+  const filtroProcesso = document.getElementById("filtroProcesso");
+  if (filtroProcesso) {
+    filtroProcesso.addEventListener("input", debounce(atualizarTabela, 300));
+  }
+
+  ["filtroSubestacao", "filtroEncarregado", "filtroData", "ordenarPor"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", atualizarTabela);
+  });
+
+  // Carrega dados iniciais
+  await carregarDadosIniciais();
+});
+
+// ─── DADOS ────────────────────────────────────────────────────────────────────
 
 async function carregarDadosIniciais() {
   try {
@@ -58,16 +160,20 @@ async function carregarDadosIniciais() {
     if (subestacoesRes.ok) {
       const subestacoes = await subestacoesRes.json();
       const select = document.getElementById("filtroSubestacao");
-      subestacoes.forEach((sub) => {
-        select.add(new Option(sub.nome, sub.nome));
-      });
+      if (select) {
+        subestacoes.forEach((sub) => {
+          select.add(new Option(sub.nome, sub.nome));
+        });
+      }
     }
     if (encarregadosRes.ok) {
       const encarregados = await encarregadosRes.json();
       const select = document.getElementById("filtroEncarregado");
-      encarregados.forEach((enc) => {
-        select.add(new Option(enc.nome, enc.matricula));
-      });
+      if (select) {
+        encarregados.forEach((enc) => {
+          select.add(new Option(enc.nome, enc.matricula));
+        });
+      }
     }
   } catch (error) {
     showToast("Erro ao carregar dados iniciais: " + error.message, "danger");
@@ -85,19 +191,25 @@ async function carregarServicosAtivos() {
     atualizarTabela();
   } catch (error) {
     showToast("Erro ao carregar serviços ativos: " + error.message, "danger");
-    document.getElementById("tabela-servicos").innerHTML = `<tr><td colspan="10" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
+    const tbody = document.getElementById("tabela-servicos");
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
+    }
   }
 }
 
+// ─── TABELA ───────────────────────────────────────────────────────────────────
+
 function atualizarTabela() {
   const tbody = document.getElementById("tabela-servicos");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
-  const filtroTermo = document.getElementById("filtroProcesso").value.toLowerCase();
-  const filtroSubestacao = document.getElementById("filtroSubestacao").value;
-  const filtroEncarregado = document.getElementById("filtroEncarregado").value;
-  const filtroData = document.getElementById("filtroData").value;
-  const ordenarPor = document.getElementById("ordenarPor").value;
+  const filtroTermo = (document.getElementById("filtroProcesso")?.value || "").toLowerCase();
+  const filtroSubestacao = document.getElementById("filtroSubestacao")?.value || "";
+  const filtroEncarregado = document.getElementById("filtroEncarregado")?.value || "";
+  const filtroData = document.getElementById("filtroData")?.value || "";
+  const ordenarPor = document.getElementById("ordenarPor")?.value || "data_desc";
 
   let servicosFiltrados = servicosData.filter((servico) => {
     const termoMatch =
@@ -149,26 +261,4 @@ function atualizarTabela() {
       }
     }
 
-    let aprButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR"><span class="material-symbols-outlined">attach_file</span> Anexar</button>`;
-    if (servico.caminho_apr_anexo) {
-      aprButtonHtml = `
-        <div class="d-flex flex-column align-items-center">
-          <a href="${servico.caminho_apr_anexo}?download=true" target="_blank" class="btn btn-sm glass-btn btn-outline-success w-100 mb-1" title="Baixar APR"><span class="material-symbols-outlined">download</span> APR</a>
-          <button class="btn btn-sm glass-btn btn-outline-warning w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Substituir APR"><span class="material-symbols-outlined">sync</span> Trocar</button>
-        </div>`;
-    }
-
-    tr.innerHTML = `
-      <td>${servico.id}</td>
-      <td>${servico.processo || "—"}</td>
-      <td>${servico.subestacao || "—"}</td>
-      <td>${servico.alimentador || "—"}</td>
-      <td>${servico.tipo_processo || "—"}</td>
-      <td>${servico.data_prevista_execucao ? new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(servico.data_prevista_execucao)) : "—"}</td>
-      <td>${equipeHtml}</td>
-      <td>${aprButtonHtml}</td>
-      <td>
-        <div class="d-flex flex-wrap gap-1 justify-content-center">
-          <button class="btn btn-sm glass-btn btn-outline-info" onclick="navigateTo('/pages/servicos/detalhes_servico.html?id=${servico.id}')" title="Ver Detalhes"><span class="material-symbols-outlined">info</span></button>
-          <button class="btn btn-sm glass-btn btn-success" onclick="abrirModalFinalizacao(${servico.id})" title="Finalizar Minha Parte"><span class="material-symbols-outlined">task_alt</span></button>
-          <button class="btn btn-sm glass-btn btn-danger" onclick="co
+    let aprButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR"><span class="material-symbols-outlined">attach_file</span> Anexar</b
