@@ -4,7 +4,6 @@ const fs = require("fs");
 const { upload, promisePool } = require("../../init");
 const { autenticar, verificarNivel, verificarCargo } = require("../../auth");
 const { projectRootDir } = require("../../shared/path.helper");
-
 const coreController = require("./core/core.controller");
 const anexoController = require("./anexo/anexo.controller");
 const lifecycleController = require("./lifecycle/lifecycle.controller");
@@ -15,19 +14,19 @@ const router = express.Router();
 
 router.get("/gestao-servicos", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/gestao_servico.html")
+    path.join(projectRootDir, "public/pages/servicos/gestao_servico.html"),
   );
 });
 
 router.get("/registro_servicos", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/registro_servicos.html")
+    path.join(projectRootDir, "public/pages/servicos/registro_servicos.html"),
   );
 });
 
 router.get("/servicos_ativos", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/servicos_ativos.html")
+    path.join(projectRootDir, "public/pages/servicos/servicos_ativos.html"),
   );
 });
 
@@ -39,15 +38,15 @@ router.get(
     res.sendFile(
       path.join(
         projectRootDir,
-        "public/pages/servicos/servicos_concluidos.html"
-      )
+        "public/pages/servicos/servicos_concluidos.html",
+      ),
     );
-  }
+  },
 );
 
 router.get("/detalhes_servico", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/detalhes_servico.html")
+    path.join(projectRootDir, "public/pages/servicos/detalhes_servico.html"),
   );
 });
 
@@ -59,15 +58,15 @@ router.get(
     res.sendFile(
       path.join(
         projectRootDir,
-        "public/pages/servicos/servicos_atribuidos.html"
-      )
+        "public/pages/servicos/servicos_atribuidos.html",
+      ),
     );
-  }
+  },
 );
 
 router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/editar_servico.html")
+    path.join(projectRootDir, "public/pages/servicos/editar_servico.html"),
   );
 });
 
@@ -79,10 +78,10 @@ router.get(
     res.sendFile(
       path.join(
         projectRootDir,
-        "public/pages/servicos/servicos_construcao.html"
-      )
+        "public/pages/servicos/servicos_construcao.html",
+      ),
     );
-  }
+  },
 );
 
 router.post(
@@ -90,14 +89,14 @@ router.post(
   autenticar,
   verificarNivel(4),
   upload.array("anexos", 5),
-  coreController.criarServico
+  coreController.criarServico,
 );
 
 router.get(
   "/api/servicos",
   autenticar,
   verificarNivel(2),
-  coreController.listarServicos
+  coreController.listarServicos,
 );
 
 router.get(
@@ -110,14 +109,14 @@ router.get(
     req.params.origem = origemDecoded;
     next();
   },
-  queryController.listarServicosPorOrigem
+  queryController.listarServicosPorOrigem,
 );
 
 router.get(
   "/api/servicos/:id",
   autenticar,
   verificarNivel(2),
-  coreController.obterDetalhesServico
+  coreController.obterDetalhesServico,
 );
 
 router.put(
@@ -125,7 +124,7 @@ router.put(
   autenticar,
   verificarNivel(4),
   upload.array("anexos", 5),
-  coreController.atualizarServico
+  coreController.atualizarServico,
 );
 
 router.post(
@@ -133,30 +132,35 @@ router.post(
   autenticar,
   verificarNivel(3),
   upload.single("apr_file"),
-  anexoController.anexarAPR
+  anexoController.anexarAPR,
 );
 
 router.delete(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(4),
-  coreController.deletarServico
+  verificarNivel(7),
+  coreController.deletarServico,
 );
 
-// Rota original — encarregado conclui/não-conclui sua própria parte
 router.post(
   "/api/servicos/:id/concluir",
   autenticar,
   verificarNivel(3),
-  lifecycleController.atualizarStatusParteServico
+  lifecycleController.atualizarStatusParteServico,
 );
 
-// ─── NOVA ROTA: Gerente/Engenheiro/ADM força conclusão total do serviço ───────
 router.post(
   "/api/servicos/:id/forcar-conclusao",
   autenticar,
-  verificarNivel(3), // middleware base; a verificação de cargo/nível gestor é feita dentro do controller
-  lifecycleController.forcarConclusaoServico
+  verificarNivel(3),
+  lifecycleController.forcarConclusaoServico,
+);
+
+router.post(
+  "/api/servicos/:id/concluir-admin",
+  autenticar,
+  verificarNivel(3),
+  lifecycleController.concluirServicoAdministrativo,
 );
 
 router.post(
@@ -164,14 +168,14 @@ router.post(
   autenticar,
   verificarNivel(3),
   upload.single("foto_conclusao"),
-  anexoController.uploadFotoConclusao
+  anexoController.uploadFotoConclusao,
 );
 
 router.patch(
   "/api/servicos/:id/reativar",
   autenticar,
   verificarNivel(4),
-  lifecycleController.reativarServico
+  lifecycleController.reativarServico,
 );
 
 router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
@@ -180,15 +184,13 @@ router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
     projectRootDir,
     "upload_arquivos",
     identificador,
-    filename
+    filename,
   );
-
   if (!fs.existsSync(filePath)) {
     return res
       .status(404)
       .json({ success: false, message: "Arquivo não encontrado" });
   }
-
   const ext = path.extname(filename).toLowerCase();
   const mimeTypes = {
     ".jpg": "image/jpeg",
@@ -200,13 +202,10 @@ router.get("/api/upload_arquivos/:identificador/:filename", (req, res) => {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ".csv": "text/csv",
   };
-
   res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
-
   if (req.query.download === "true") {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   }
-
   fs.createReadStream(filePath).pipe(res);
 });
 
@@ -214,70 +213,65 @@ router.delete(
   "/api/servicos/:servicoId/anexos/:anexoId",
   autenticar,
   verificarNivel(4),
-  anexoController.deletarAnexo
+  anexoController.deletarAnexo,
 );
 
 router.get(
   "/api/servicos/contador",
   autenticar,
   verificarNivel(3),
-  queryController.contarServicos
+  queryController.contarServicos,
 );
 
 router.get(
   "/api/encarregados",
   autenticar,
   verificarNivel(3),
-  queryController.listarEncarregados
+  queryController.listarEncarregados,
 );
 
 router.get(
   "/api/subestacoes",
   autenticar,
   verificarNivel(3),
-  queryController.listarSubestacoes
+  queryController.listarSubestacoes,
 );
 
-// Rota existente — substitui TODA a lista de responsáveis
 router.patch(
   "/api/servicos/:id/responsavel",
   autenticar,
   verificarNivel(3),
-  lifecycleController.atribuirResponsavel
+  lifecycleController.atribuirResponsavel,
 );
 
-// ─── NOVA ROTA: Remove apenas UM encarregado específico ──────────────────────
 router.delete(
   "/api/servicos/:id/responsavel/:matricula",
   autenticar,
   verificarNivel(3),
-  lifecycleController.removerResponsavelUnico
+  lifecycleController.removerResponsavelUnico,
 );
 
 router.get(
   "/api/servicos/:id/consolidar-pdfs",
   autenticar,
   verificarNivel(2),
-  relatorioController.gerarPdfConsolidado
+  relatorioController.gerarPdfConsolidado,
 );
 
 router.post("/api/push/subscribe", autenticar, async (req, res) => {
   try {
     const { subscription } = req.body;
     const matricula = req.user.matricula;
-
     if (!subscription || !subscription.endpoint) {
       return res
         .status(400)
         .json({ success: false, message: "Objeto de inscrição inválido." });
     }
-
     const subscriptionString = JSON.stringify(subscription);
     await promisePool.query(
       "UPDATE users SET push_subscription = ? WHERE matricula = ?",
-      [subscriptionString, matricula]
+      [subscriptionString, matricula],
     );
-
     res.status(201).json({ success: true });
   } catch (error) {
     console.error("Erro ao salvar a inscrição push:", error);
