@@ -48,15 +48,19 @@ async function forcarConclusaoServico(req, res) {
     const { id: servicoId } = req.params;
     const matriculaGestor = req.session?.user?.matricula;
     const nivel = req.session?.user?.nivel ?? 0;
+    const cargo = req.session?.user?.cargo?.toUpperCase() || "";
 
     if (!matriculaGestor) {
       return res.status(401).json({ success: false, message: "Sessão inválida ou expirada." });
     }
 
-    if (nivel < 5) {
+    const cargosPermitidos = ['ADMIN', 'TÉCNICO', 'ADM', 'ENGENHEIRO', 'GERENTE'];
+    const podeForcar = nivel >= 8 || cargosPermitidos.includes(cargo);
+
+    if (!podeForcar) {
       return res.status(403).json({
         success: false,
-        message: "Apenas usuários com nível 5 ou superior podem forçar a conclusão.",
+        message: "Apenas usuários com nível 8 ou superior, ou cargos autorizados, podem forçar a conclusão.",
       });
     }
 
