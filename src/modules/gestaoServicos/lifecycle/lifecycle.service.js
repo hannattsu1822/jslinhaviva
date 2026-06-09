@@ -1,8 +1,5 @@
 const { promisePool, logger } = require("../../../init");
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: aceita camelCase (frontend) e snake_case (legado)
-// ─────────────────────────────────────────────────────────────────────────────
 function extrairCampos(body) {
   return {
     data_conclusao: body.data_conclusao || body.dataConclusao,
@@ -12,12 +9,8 @@ function extrairCampos(body) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Conclui a parte individual do encarregado logado (nível 3)
-// ─────────────────────────────────────────────────────────────────────────────
-async function concluirParteServico(servicoId, body, matricula) {
-  const { data_conclusao, hora_conclusao, observacoes_conclusao } =
-    extrairCampos(body);
+async function concluirParteServico(servicoId, body, matricula, isNivel5Plus = false) {
+  const { data_conclusao, hora_conclusao, observacoes_conclusao } = extrairCampos(body);
 
   if (!data_conclusao || !hora_conclusao) {
     throw new Error("Data e hora de conclusão são obrigatórias.");
@@ -29,41 +22,72 @@ async function concluirParteServico(servicoId, body, matricula) {
   try {
     await connection.beginTransaction();
 
+    if (isNivel5Plus) {
+      const [[servico]] = await connection.query(
+        `SELECT id, status
+         FROM processos
+         WHERE id = ?`,
+        [servicoId]
+      );
+
+      if (!servico) {
+        throw new Error("Serviço não encontrado.");
+      }
+
+      if (servico.status === "concluido" || servico.status === "nao_concluido") {
+        throw new Error("Este serviço já está finalizado.");
+      }
+
+      await connection.query(
+        `UPDATE processos
+         SET status = 'concluido',
+             data_conclusao = ?,
+             observacoes_conclusao = ?
+         WHERE id = ?`,
+        [dataHora, observacoes_conclusao || null, servicoId]
+      );
+
+      await connection.commit();
+
+      return {
+        auditMessage: `Serviço ID ${servicoId} — concluído por usuário nível 5+ ${matricula}`,
+      };
+    }
+
     const [result] = await connection.query(
       `UPDATE servicos_responsaveis
-          SET status_individual = 'concluido',
-              data_conclusao_individual = ?
-        WHERE servico_id = ? AND responsavel_matricula = ?`,
-      [dataHora, servicoId, matricula],
+       SET status_individual = 'concluido',
+           data_conclusao_individual = ?
+       WHERE servico_id = ? AND responsavel_matricula = ?`,
+      [dataHora, servicoId, matricula]
     );
 
     if (result.affectedRows === 0) {
-      throw new Error(
-        "Você não está atribuído como encarregado deste serviço.",
-      );
+      throw new Error("Você não está atribuído como encarregado deste serviço.");
     }
 
     const [[{ pendentes }]] = await connection.query(
       `SELECT COUNT(*) AS pendentes
-         FROM servicos_responsaveis
-        WHERE servico_id = ? AND status_individual = 'pendente'`,
-      [servicoId],
+       FROM servicos_responsaveis
+       WHERE servico_id = ? AND status_individual = 'pendente'`,
+      [servicoId]
     );
 
     if (pendentes === 0) {
       await connection.query(
         `UPDATE processos
-            SET status = 'concluido',
-                data_conclusao = ?,
-                observacoes_conclusao = ?
-          WHERE id = ?`,
-        [dataHora, observacoes_conclusao || null, servicoId],
+         SET status = 'concluido',
+             data_conclusao = ?,
+             observacoes_conclusao = ?
+         WHERE id = ?`,
+        [dataHora, observacoes_conclusao || null, servicoId]
       );
     } else {
       await connection.query(
-        `UPDATE processos SET status = 'em_progresso'
-          WHERE id = ? AND status = 'ativo'`,
-        [servicoId],
+        `UPDATE processos
+         SET status = 'em_progresso'
+         WHERE id = ? AND status = 'ativo'`,
+        [servicoId]
       );
     }
 
@@ -75,7 +99,7 @@ async function concluirParteServico(servicoId, body, matricula) {
   } catch (err) {
     await connection.rollback();
     logger.error(
-      `[Lifecycle] Erro em concluirParteServico (ID ${servicoId}): ${err.message}`,
+      `[Lifecycle] Erro em concluirParteServico (ID ${servicoId}): ${err.message}`
     );
     throw err;
   } finally {
@@ -83,10 +107,7 @@ async function concluirParteServico(servicoId, body, matricula) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Registra não-conclusão da parte do encarregado logado (nível 3)
-// ─────────────────────────────────────────────────────────────────────────────
-async function naoConcluirParteServico(servicoId, body, matricula) {
+async function naoConcluirParteServico(servicoId, body, matricula, isNivel5Plus = false) {
   const {
     data_conclusao,
     hora_conclusao,
@@ -104,33 +125,69 @@ async function naoConcluirParteServico(servicoId, body, matricula) {
   try {
     await connection.beginTransaction();
 
+    if (isNivel5Plus) {
+      const [[servico]] = await connection.query(
+        `SELECT id, status
+         FROM processos
+         WHERE id = ?`,
+        [servicoId]
+      );
+
+      if (!servico) {
+        throw new Error("Serviço não encontrado.");
+      }
+
+      if (servico.status === "concluido" || servico.status === "nao_concluido") {
+        throw new Error("Este serviço já está finalizado.");
+      }
+
+      await connection.query(
+        `UPDATE processos
+         SET status = 'nao_concluido',
+             data_conclusao = ?,
+             motivo_nao_conclusao = ?,
+             observacoes_conclusao = ?
+         WHERE id = ?`,
+        [
+          dataHora,
+          motivo_nao_conclusao || null,
+          observacoes_conclusao || null,
+          servicoId,
+        ]
+      );
+
+      await connection.commit();
+
+      return {
+        auditMessage: `Serviço ID ${servicoId} — não concluído por usuário nível 5+ ${matricula}`,
+      };
+    }
+
     const [result] = await connection.query(
       `UPDATE servicos_responsaveis
-          SET status_individual = 'nao_concluido',
-              data_conclusao_individual = ?
-        WHERE servico_id = ? AND responsavel_matricula = ?`,
-      [dataHora, servicoId, matricula],
+       SET status_individual = 'nao_concluido',
+           data_conclusao_individual = ?
+       WHERE servico_id = ? AND responsavel_matricula = ?`,
+      [dataHora, servicoId, matricula]
     );
 
     if (result.affectedRows === 0) {
-      throw new Error(
-        "Você não está atribuído como encarregado deste serviço.",
-      );
+      throw new Error("Você não está atribuído como encarregado deste serviço.");
     }
 
     await connection.query(
       `UPDATE processos
-          SET status = 'nao_concluido',
-              data_conclusao = ?,
-              motivo_nao_conclusao = ?,
-              observacoes_conclusao = ?
-        WHERE id = ?`,
+       SET status = 'nao_concluido',
+           data_conclusao = ?,
+           motivo_nao_conclusao = ?,
+           observacoes_conclusao = ?
+       WHERE id = ?`,
       [
         dataHora,
         motivo_nao_conclusao || null,
         observacoes_conclusao || null,
         servicoId,
-      ],
+      ]
     );
 
     await connection.commit();
@@ -141,7 +198,7 @@ async function naoConcluirParteServico(servicoId, body, matricula) {
   } catch (err) {
     await connection.rollback();
     logger.error(
-      `[Lifecycle] Erro em naoConcluirParteServico (ID ${servicoId}): ${err.message}`,
+      `[Lifecycle] Erro em naoConcluirParteServico (ID ${servicoId}): ${err.message}`
     );
     throw err;
   } finally {
@@ -149,20 +206,16 @@ async function naoConcluirParteServico(servicoId, body, matricula) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Força conclusão ou não-conclusão — nível 4+ sem verificar encarregado
-// ─────────────────────────────────────────────────────────────────────────────
 async function forcarConclusaoServico(
   servicoId,
-  { dataConclusao, horaConclusao, observacoes, matriculaGestor, status_final },
+  { dataConclusao, horaConclusao, observacoes, matriculaGestor, status_final }
 ) {
   if (!dataConclusao || !horaConclusao) {
     throw new Error("Data e hora de conclusão são obrigatórias.");
   }
 
   const dataHora = `${dataConclusao} ${horaConclusao}:00`;
-  const statusFinal =
-    status_final === "nao_concluido" ? "nao_concluido" : "concluido";
+  const statusFinal = status_final === "nao_concluido" ? "nao_concluido" : "concluido";
   const connection = await promisePool.getConnection();
 
   try {
@@ -170,10 +223,12 @@ async function forcarConclusaoServico(
 
     const [[servico]] = await connection.query(
       "SELECT id, status FROM processos WHERE id = ?",
-      [servicoId],
+      [servicoId]
     );
 
-    if (!servico) throw new Error("Serviço não encontrado.");
+    if (!servico) {
+      throw new Error("Serviço não encontrado.");
+    }
 
     if (servico.status === "concluido" || servico.status === "nao_concluido") {
       throw new Error("Este serviço já está finalizado.");
@@ -181,35 +236,35 @@ async function forcarConclusaoServico(
 
     await connection.query(
       `UPDATE processos
-          SET status = ?,
-              data_conclusao = ?,
-              observacoes_conclusao = ?,
-              motivo_nao_conclusao = ?
-        WHERE id = ?`,
+       SET status = ?,
+           data_conclusao = ?,
+           observacoes_conclusao = ?,
+           motivo_nao_conclusao = ?
+       WHERE id = ?`,
       [
         statusFinal,
         dataHora,
         observacoes || `Finalizado administrativamente por ${matriculaGestor}`,
         statusFinal === "nao_concluido" ? observacoes || null : null,
         servicoId,
-      ],
+      ]
     );
 
-    // Sincroniza todos os responsáveis com o mesmo status
     await connection.query(
       `UPDATE servicos_responsaveis
-          SET status_individual = ?,
-              data_conclusao_individual = ?
-        WHERE servico_id = ?`,
-      [statusFinal, dataHora, servicoId],
+       SET status_individual = ?,
+           data_conclusao_individual = ?
+       WHERE servico_id = ?`,
+      [statusFinal, dataHora, servicoId]
     );
 
     await connection.commit();
+
     return { success: true };
   } catch (err) {
     await connection.rollback();
     logger.error(
-      `[Lifecycle] Erro em forcarConclusaoServico (ID ${servicoId}): ${err.message}`,
+      `[Lifecycle] Erro em forcarConclusaoServico (ID ${servicoId}): ${err.message}`
     );
     throw err;
   } finally {
@@ -217,36 +272,32 @@ async function forcarConclusaoServico(
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reativa um serviço finalizado
-// ─────────────────────────────────────────────────────────────────────────────
 async function reativarServico(servicoId) {
   const [result] = await promisePool.query(
     `UPDATE processos
-        SET status = 'ativo',
-            data_conclusao = NULL,
-            observacoes_conclusao = NULL,
-            motivo_nao_conclusao = NULL
-      WHERE id = ?`,
-    [servicoId],
+     SET status = 'ativo',
+         data_conclusao = NULL,
+         observacoes_conclusao = NULL,
+         motivo_nao_conclusao = NULL
+     WHERE id = ?`,
+    [servicoId]
   );
 
-  if (result.affectedRows === 0) throw new Error("Serviço não encontrado");
+  if (result.affectedRows === 0) {
+    throw new Error("Serviço não encontrado");
+  }
 
   await promisePool.query(
     `UPDATE servicos_responsaveis
-        SET status_individual = 'pendente',
-            data_conclusao_individual = NULL
-      WHERE servico_id = ?`,
-    [servicoId],
+     SET status_individual = 'pendente',
+         data_conclusao_individual = NULL
+     WHERE servico_id = ?`,
+    [servicoId]
   );
 
   return { success: true };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Substitui toda a lista de responsáveis de um serviço
-// ─────────────────────────────────────────────────────────────────────────────
 async function atribuirResponsavel(servicoId, responsaveis) {
   const connection = await promisePool.getConnection();
 
@@ -255,14 +306,16 @@ async function atribuirResponsavel(servicoId, responsaveis) {
 
     const [[servico]] = await connection.query(
       "SELECT id FROM processos WHERE id = ?",
-      [servicoId],
+      [servicoId]
     );
 
-    if (!servico) throw new Error("Serviço não encontrado");
+    if (!servico) {
+      throw new Error("Serviço não encontrado");
+    }
 
     await connection.query(
       "DELETE FROM servicos_responsaveis WHERE servico_id = ?",
-      [servicoId],
+      [servicoId]
     );
 
     if (Array.isArray(responsaveis) && responsaveis.length > 0) {
@@ -271,18 +324,20 @@ async function atribuirResponsavel(servicoId, responsaveis) {
         matricula,
         "pendente",
       ]);
+
       await connection.query(
         "INSERT INTO servicos_responsaveis (servico_id, responsavel_matricula, status_individual) VALUES ?",
-        [valores],
+        [valores]
       );
     }
 
     await connection.commit();
+
     return { success: true };
   } catch (err) {
     await connection.rollback();
     logger.error(
-      `[Lifecycle] Erro em atribuirResponsavel (ID ${servicoId}): ${err.message}`,
+      `[Lifecycle] Erro em atribuirResponsavel (ID ${servicoId}): ${err.message}`
     );
     throw err;
   } finally {
@@ -290,14 +345,11 @@ async function atribuirResponsavel(servicoId, responsaveis) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Remove apenas UM encarregado de um serviço
-// ─────────────────────────────────────────────────────────────────────────────
 async function removerResponsavelUnico(servicoId, matriculaRemover) {
   const [result] = await promisePool.query(
     `DELETE FROM servicos_responsaveis
-      WHERE servico_id = ? AND responsavel_matricula = ?`,
-    [servicoId, matriculaRemover],
+     WHERE servico_id = ? AND responsavel_matricula = ?`,
+    [servicoId, matriculaRemover]
   );
 
   if (result.affectedRows === 0) {
