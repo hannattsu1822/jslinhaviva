@@ -45,6 +45,7 @@ async function concluirParteServico(servicoId, body, matricula) {
       await connection.query(
         `UPDATE processos
          SET status = 'concluido',
+             status_geral = 'concluido',
              data_conclusao = ?,
              observacoes_conclusao = ?
          WHERE id = ?`,
@@ -53,7 +54,8 @@ async function concluirParteServico(servicoId, body, matricula) {
     } else {
       await connection.query(
         `UPDATE processos
-         SET status = 'em_progresso'
+         SET status = 'em_progresso',
+             status_geral = 'em_progresso'
          WHERE id = ? AND status = 'ativo'`,
         [servicoId]
       );
@@ -106,6 +108,7 @@ async function naoConcluirParteServico(servicoId, body, matricula) {
     await connection.query(
       `UPDATE processos
        SET status = 'nao_concluido',
+           status_geral = 'nao_concluido',
            data_conclusao = ?,
            motivo_nao_conclusao = ?,
            observacoes_conclusao = ?
@@ -163,11 +166,13 @@ async function forcarConclusaoServico(
     await connection.query(
       `UPDATE processos
        SET status = ?,
+           status_geral = ?,
            data_conclusao = ?,
            observacoes_conclusao = ?,
            motivo_nao_conclusao = ?
        WHERE id = ?`,
       [
+        statusFinal,
         statusFinal,
         dataHora,
         observacoes || `Finalizado administrativamente por ${matriculaGestor}`,
@@ -200,6 +205,7 @@ async function reativarServico(servicoId) {
   const [result] = await promisePool.query(
     `UPDATE processos
      SET status = 'ativo',
+         status_geral = 'ativo',
          data_conclusao = NULL,
          observacoes_conclusao = NULL,
          motivo_nao_conclusao = NULL
