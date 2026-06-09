@@ -47,22 +47,24 @@ function usarDataAtual() {
   if (horaConclusaoEl) horaConclusaoEl.value = localTime;
 }
 
-function podeForcarConclusao() {
-  if (!user) return false;
-  if (user.nivel >= 8) return true;
-  const cargosPermitidos = ['ADMIN', 'TÉCNICO', 'ADM', 'ENGENHEIRO', 'GERENTE'];
-  if (user.cargo && cargosPermitidos.includes(user.cargo.toUpperCase())) return true;
-  return false;
+function ehNivel5Plus() {
+  return user && user.nivel >= 5;
 }
 
+// ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────────
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // Carrega usuário da sessão
   try {
     const resUser = await fetch("/api/me");
     if (resUser.ok) {
       user = await resUser.json();
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn("Não foi possível carregar dados do usuário:", e.message);
+  }
 
+  // Inicializa modais Bootstrap
   const confirmModalEl = document.getElementById("confirmModal");
   if (confirmModalEl) confirmModalInstance = new bootstrap.Modal(confirmModalEl);
 
@@ -72,6 +74,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const modalResponsavelEl = document.getElementById("modalResponsavel");
   if (modalResponsavelEl) {
     modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
+
+    // Binds dentro do modal responsável — só depois de instanciar o modal
     modalResponsavelEl.addEventListener("shown.bs.modal", () => {
       const buscaInput = document.getElementById("buscaResponsavel");
       if (buscaInput) {
@@ -91,11 +95,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const developmentModalEl = document.getElementById("development-modal");
   if (developmentModalEl) developmentModalInstance = new bootstrap.Modal(developmentModalEl);
 
+  // Evento: salvar finalização
   const btnSalvar = document.getElementById("btnSalvarFinalizacao");
   if (btnSalvar) {
     btnSalvar.addEventListener("click", salvarFinalizacao);
   }
 
+  // Evento: botão tirar foto
   const btnTirarFoto = document.getElementById("btnTirarFoto");
   const fotoCamera = document.getElementById("fotoCamera");
   if (btnTirarFoto && fotoCamera) {
@@ -103,6 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     fotoCamera.addEventListener("change", (e) => adicionarArquivos(e.target.files));
   }
 
+  // Evento: adicionar fotos da galeria
   const btnAdicionarFotos = document.getElementById("btnAdicionarFotos");
   const fotosConclusao = document.getElementById("fotosConclusao");
   if (btnAdicionarFotos && fotosConclusao) {
@@ -110,16 +117,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     fotosConclusao.addEventListener("change", (e) => adicionarArquivos(e.target.files));
   }
 
+  // Evento: mudança no status final (concluido / nao_concluido)
   const statusFinalServico = document.getElementById("statusFinalServico");
   if (statusFinalServico) {
     statusFinalServico.addEventListener("change", () => {
       const camposSomente = document.getElementById("camposSomenteConcluido");
       if (camposSomente) {
-        camposSomente.style.display = statusFinalServico.value === "nao_concluido" ? "none" : "block";
+        camposSomente.style.display =
+          statusFinalServico.value === "nao_concluido" ? "none" : "block";
       }
     });
   }
 
+  // Evento: confirmar exclusão
   const confirmDeleteBtn = document.getElementById("confirmDelete");
   if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener("click", async () => {
@@ -129,11 +139,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Evento: upload APR
   const btnConfirmarUploadAPR = document.getElementById("btnConfirmarUploadAPR");
   if (btnConfirmarUploadAPR) {
     btnConfirmarUploadAPR.addEventListener("click", confirmarUploadAPR);
   }
 
+  // Filtros com debounce
   const filtroProcesso = document.getElementById("filtroProcesso");
   if (filtroProcesso) {
     filtroProcesso.addEventListener("input", debounce(atualizarTabela, 300));
@@ -144,8 +156,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (el) el.addEventListener("change", atualizarTabela);
   });
 
+  // Carrega dados iniciais
   await carregarDadosIniciais();
 });
+
+// ─── DADOS ────────────────────────────────────────────────────────────────────
 
 async function carregarDadosIniciais() {
   try {
@@ -194,6 +209,8 @@ async function carregarServicosAtivos() {
     }
   }
 }
+
+// ─── TABELA ───────────────────────────────────────────────────────────────────
 
 function atualizarTabela() {
   const tbody = document.getElementById("tabela-servicos");
@@ -260,9 +277,10 @@ function atualizarTabela() {
       ? new Date(servico.data_prevista_execucao + "T00:00:00").toLocaleDateString("pt-BR")
       : "—";
 
-    const nivelGestor = podeForcarConclusao();
+    const nivel5Plus = ehNivel5Plus();
 
-    const btnConcluir = nivelGestor
+    // Botão concluir: nivel5+ chama abrirConcluirNivel5, senão abrirModalConcluir normal
+    const btnConcluir = nivel5Plus
       ? `<button class="btn btn-sm btn-success w-100 mb-1" onclick="abrirConcluirNivel5(${servico.id})">
            <span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir
          </button>`
@@ -285,9 +303,13 @@ function atualizarTabela() {
       </td>
       <td>
         ${btnConcluir}
+        ${nivel5Plus ? `
         <button class="btn btn-sm btn-outline-secondary w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})">
           <span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe
-        </button>
+        </button>` : `
+        <button class="btn btn-sm btn-outline-secondary w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})">
+          <span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe
+        </button>`}
         <button class="btn btn-sm btn-outline-danger w-100" onclick="confirmarExclusao(${servico.id})">
           <span class="material-symbols-outlined" style="font-size:16px">delete</span> Excluir
         </button>
@@ -296,10 +318,13 @@ function atualizarTabela() {
     tbody.appendChild(tr);
   });
 
+  // Reativa tooltips Bootstrap
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
     new bootstrap.Tooltip(el, { trigger: "hover" });
   });
 }
+
+// ─── MODAL CONCLUIR (nível < 5) ───────────────────────────────────────────────
 
 function abrirModalConcluir(servicoId) {
   currentServicoId = servicoId;
@@ -313,11 +338,15 @@ function abrirModalConcluir(servicoId) {
   if (concluirModalInstance) concluirModalInstance.show();
 }
 
+// ─── MODAL CONCLUIR NÍVEL 5+ (SEM EXIGIR ENCARREGADO) ────────────────────────
+
 function abrirConcluirNivel5(servicoId) {
   currentServicoId = servicoId;
 
+  // Preenche dados básicos do serviço no modal
   const servico = servicosData.find((s) => s.id === servicoId);
 
+  // Reutiliza o concluirModal mas adapta o conteúdo
   const infoEl = document.getElementById("infoServicoNivel5");
   if (infoEl && servico) {
     const dataPrevista = servico.data_prevista_execucao
@@ -332,6 +361,7 @@ function abrirConcluirNivel5(servicoId) {
       </div>`;
   }
 
+  // Oculta campo de encarregado se existir
   const campoEncarregado = document.getElementById("campoEncarregado");
   if (campoEncarregado) campoEncarregado.style.display = "none";
   const selectEncarregado = document.getElementById("encarregadoSelect");
@@ -347,12 +377,16 @@ function abrirConcluirNivel5(servicoId) {
   if (concluirModalInstance) concluirModalInstance.show();
 }
 
+// ─── SALVAR FINALIZAÇÃO ────────────────────────────────────────────────────────
+
 async function salvarFinalizacao() {
   if (!currentServicoId) return;
 
   const statusFinal = document.getElementById("statusFinalServico")?.value;
   const dataConclusao = document.getElementById("dataConclusao")?.value;
   const horaConclusao = document.getElementById("horaConclusao")?.value;
+  
+  // CORREÇÃO: O ID correto no HTML é observacoesFinalizacao
   const observacoes = document.getElementById("observacoesFinalizacao")?.value || "";
 
   if (!statusFinal || !dataConclusao || !horaConclusao) {
@@ -367,6 +401,7 @@ async function salvarFinalizacao() {
   }
 
   try {
+    // ── Upload de fotos (se houver) ──
     if (selectedFiles.length > 0) {
       const formDataFotos = new FormData();
       selectedFiles.forEach((f) => formDataFotos.append("foto_conclusao", f));
@@ -376,9 +411,9 @@ async function salvarFinalizacao() {
       });
     }
 
-    const isGestor = podeForcarConclusao();
-    const rota = isGestor
-      ? `/api/servicos/${currentServicoId}/forcar-conclusao`
+    // ── Decide qual rota usar conforme o nível ──
+    const rota = ehNivel5Plus()
+      ? `/api/servicos/${currentServicoId}/concluir`
       : `/api/servicos/${currentServicoId}/concluir`;
 
     const res = await fetch(rota, {
@@ -389,9 +424,6 @@ async function salvarFinalizacao() {
         data_conclusao: dataConclusao,
         hora_conclusao: horaConclusao,
         observacoes_conclusao: observacoes,
-        dataConclusao: dataConclusao,
-        horaConclusao: horaConclusao,
-        observacoes: observacoes
       }),
     });
 
@@ -404,6 +436,7 @@ async function salvarFinalizacao() {
     showToast("Serviço finalizado com sucesso!", "success");
     if (concluirModalInstance) concluirModalInstance.hide();
 
+    // Remove da tabela local sem recarregar página
     servicosData = servicosData.filter((s) => s.id != currentServicoId);
     atualizarTabela();
     currentServicoId = null;
@@ -413,10 +446,12 @@ async function salvarFinalizacao() {
   } finally {
     if (btnSalvar) {
       btnSalvar.disabled = false;
-      btnSalvar.textContent = "Salvar Finalização";
+      btnSalvar.textContent = "Salvar";
     }
   }
 }
+
+// ─── MODAL RESPONSÁVEL / EQUIPE ───────────────────────────────────────────────
 
 let todosEncarregados = [];
 let responsaveisSelecionados = [];
@@ -520,6 +555,8 @@ async function salvarResponsaveis() {
   }
 }
 
+// ─── EXCLUSÃO ─────────────────────────────────────────────────────────────────
+
 function confirmarExclusao(servicoId) {
   currentServicoId = servicoId;
   if (confirmModalInstance) confirmModalInstance.show();
@@ -538,6 +575,8 @@ async function deletarServico(servicoId) {
     showToast("Erro ao excluir: " + err.message, "danger");
   }
 }
+
+// ─── UPLOAD APR ───────────────────────────────────────────────────────────────
 
 let aprServicoId = null;
 
@@ -573,6 +612,8 @@ async function confirmarUploadAPR() {
   }
 }
 
+// ─── FOTOS CONCLUSÃO ──────────────────────────────────────────────────────────
+
 function adicionarArquivos(files) {
   Array.from(files).forEach((f) => {
     if (!selectedFiles.find((sf) => sf.name === f.name)) {
@@ -589,17 +630,4 @@ function renderizarPreviewFotos() {
 
   selectedFiles.forEach((f, i) => {
     const div = document.createElement("div");
-    div.className = "position-relative d-inline-block me-2 mb-2";
-    const url = URL.createObjectURL(f);
-    div.innerHTML = `
-      <img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;" alt="foto">
-      <button type="button" class="btn-close position-absolute top-0 end-0 bg-white rounded-circle"
-        style="transform:scale(0.7);" onclick="removerFoto(${i})"></button>`;
-    container.appendChild(div);
-  });
-}
-
-function removerFoto(index) {
-  selectedFiles.splice(index, 1);
-  renderizarPreviewFotos();
-}
+    div.className = "position-relative d-inline-block
