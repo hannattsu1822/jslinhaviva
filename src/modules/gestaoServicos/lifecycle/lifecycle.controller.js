@@ -5,20 +5,23 @@ async function atualizarStatusParteServico(req, res) {
   try {
     const { id: servicoId } = req.params;
     const matricula = req.session?.user?.matricula;
+    const nivel = req.session?.user?.nivel ?? 0;
     const { status_final } = req.body;
 
     if (!matricula) {
       return res.status(401).json({ success: false, message: "Sessão inválida ou expirada." });
     }
 
+    const isNivel5Plus = nivel >= 5;
+
     let resultado;
     let acaoAuditoria;
 
     if (status_final === "concluido") {
-      resultado = await service.concluirParteServico(servicoId, req.body, matricula);
+      resultado = await service.concluirParteServico(servicoId, req.body, matricula, isNivel5Plus);
       acaoAuditoria = "Conclusão de Parte do Serviço";
     } else if (status_final === "nao_concluido") {
-      resultado = await service.naoConcluirParteServico(servicoId, req.body, matricula);
+      resultado = await service.naoConcluirParteServico(servicoId, req.body, matricula, isNivel5Plus);
       acaoAuditoria = "Não Conclusão de Parte do Serviço";
     } else {
       return res.status(400).json({ success: false, message: "Status final inválido." });
@@ -28,7 +31,7 @@ async function atualizarStatusParteServico(req, res) {
 
     res.status(200).json({
       success: true,
-      message: `Sua parte do serviço foi atualizada com sucesso.`,
+      message: "Sua parte do serviço foi atualizada com sucesso.",
     });
   } catch (error) {
     console.error("Erro ao processar status da parte do serviço:", error);
