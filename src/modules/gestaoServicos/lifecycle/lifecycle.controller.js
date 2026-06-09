@@ -5,23 +5,20 @@ async function atualizarStatusParteServico(req, res) {
   try {
     const { id: servicoId } = req.params;
     const matricula = req.session?.user?.matricula;
-    const nivel = req.session?.user?.nivel ?? 0;
     const { status_final } = req.body;
 
     if (!matricula) {
       return res.status(401).json({ success: false, message: "Sessão inválida ou expirada." });
     }
 
-    const isNivel5Plus = nivel >= 5;
-
     let resultado;
     let acaoAuditoria;
 
     if (status_final === "concluido") {
-      resultado = await service.concluirParteServico(servicoId, req.body, matricula, isNivel5Plus);
+      resultado = await service.concluirParteServico(servicoId, req.body, matricula);
       acaoAuditoria = "Conclusão de Parte do Serviço";
     } else if (status_final === "nao_concluido") {
-      resultado = await service.naoConcluirParteServico(servicoId, req.body, matricula, isNivel5Plus);
+      resultado = await service.naoConcluirParteServico(servicoId, req.body, matricula);
       acaoAuditoria = "Não Conclusão de Parte do Serviço";
     } else {
       return res.status(400).json({ success: false, message: "Status final inválido." });
@@ -37,7 +34,7 @@ async function atualizarStatusParteServico(req, res) {
     console.error("Erro ao processar status da parte do serviço:", error);
     return res.status(500).json({
       success: false,
-      message: "Erro interno ao processar sua parte do serviço",
+      message: error.message || "Erro interno ao processar sua parte do serviço",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
