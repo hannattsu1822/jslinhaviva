@@ -14,6 +14,11 @@ const rateLimit = require("express-rate-limit");
 const { projectRootDir } = require("./shared/path.helper");
 
 const app = express();
+
+// ─── CONFIANÇA NO PROXY (resolve erro do rate-limit com X-Forwarded-For) ──────
+// Deve ser chamado ANTES de qualquer middleware que dependa de IP/headers
+app.set('trust proxy', 1);  // 1 = confia no primeiro proxy (NGINX/Cloudflare)
+
 const server = http.createServer(app);
 
 const logger = {
@@ -164,10 +169,10 @@ const sessionMiddleware = session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    httpOnly: true,                          // JS do browser NÃO acessa o cookie
-    secure: isProduction,                    // true em produção (HTTPS), false em dev (HTTP)
-    sameSite: isProduction ? "strict" : "lax", // bloqueia CSRF em produção
-    maxAge: 8 * 60 * 60 * 1000,             // sessão expira em 8 horas
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "strict" : "lax",
+    maxAge: 8 * 60 * 60 * 1000,
   },
 });
 
@@ -200,6 +205,7 @@ const wss = new WebSocketServer({ noServer: true });
 app.set("wss", wss);
 
 server.on("upgrade", (request, socket, head) => {
+  // Importante: o trust proxy também afeta o IP que chega aqui, mas a sessão é lida via cookie
   sessionMiddleware(request, {}, () => {
     if (!request.session || !request.session.user) {
       logger.warn(
@@ -209,6 +215,7 @@ server.on("upgrade", (request, socket, head) => {
       socket.destroy();
       return;
     }
+    logger.info(`[WebSocket] Upgrade autorizado para usuário: ${request.session.user.matricula}`);
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, request);
     });
