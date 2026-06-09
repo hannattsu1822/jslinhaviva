@@ -160,7 +160,9 @@ async function criarServico(servicoData, files) {
 async function listarServicos(status, user) {
   let query = `
     SELECT 
-        p.id, p.processo, p.data_prevista_execucao, p.desligamento, 
+        p.id, p.processo, 
+        DATE_FORMAT(p.data_prevista_execucao, '%Y-%m-%d') as data_prevista_execucao,
+        p.desligamento, 
         p.subestacao, p.alimentador, p.chave_montante, 
         p.maps, p.status_geral as status, p.data_conclusao, 
         p.observacoes_conclusao, p.motivo_nao_conclusao,
