@@ -135,9 +135,37 @@ async function atribuirResponsavel(req, res) {
   }
 }
 
+async function removerResponsavelUnico(req, res) {
+  try {
+    const { id: servicoId, matricula } = req.params;
+
+    await service.removerResponsavelUnico(servicoId, matricula);
+
+    await registrarAuditoria(
+      req.session?.user?.matricula,
+      "Remoção de Responsável",
+      `Responsável ${matricula} removido do serviço ID ${servicoId}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Responsável removido com sucesso.",
+    });
+  } catch (error) {
+    console.error("Erro ao remover responsável do serviço:", error);
+    const statusCode = error.message.includes("não encontrado") ? 404 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Erro ao remover responsável do serviço",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+}
+
 module.exports = {
   atualizarStatusParteServico,
   forcarConclusaoServico,
   reativarServico,
   atribuirResponsavel,
+  removerResponsavelUnico,
 };
