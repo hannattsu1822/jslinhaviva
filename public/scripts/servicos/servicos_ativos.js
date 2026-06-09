@@ -71,18 +71,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const concluirModalEl = document.getElementById("concluirModal");
   if (concluirModalEl) concluirModalInstance = new bootstrap.Modal(concluirModalEl);
 
-  const modalResponsavelEl = document.getElementById("modalResponsavel");
+const modalResponsavelEl = document.getElementById("modalResponsavel");
   if (modalResponsavelEl) {
     modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
+  }
 
-    // Binds dentro do modal responsável — só depois de instanciar o modal
-    modalResponsavelEl.addEventListener("shown.bs.modal", () => {
-      const buscaInput = document.getElementById("buscaResponsavel");
-      if (buscaInput) {
-        buscaInput.oninput = debounce(function () {
-          filtrarResponsaveis(this.value);
-        }, 300);
-      }
+  // Coloque o evento fora da abertura do modal e use addEventListener
+  const buscaInput = document.getElementById("buscaResponsavel");
+  if (buscaInput) {
+    buscaInput.addEventListener("input", debounce(function () {
+      filtrarResponsaveis(this.value);
+    }, 300));
+  }
     });
   }
 
