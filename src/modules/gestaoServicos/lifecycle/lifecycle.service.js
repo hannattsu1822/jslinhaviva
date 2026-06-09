@@ -9,7 +9,7 @@ function extrairCampos(body) {
   };
 }
 
-async function concluirParteServico(servicoId, body, matricula, isNivel5Plus = false) {
+async function concluirParteServico(servicoId, body, matricula) {
   const { data_conclusao, hora_conclusao, observacoes_conclusao } = extrairCampos(body);
 
   if (!data_conclusao || !hora_conclusao) {
@@ -21,38 +21,6 @@ async function concluirParteServico(servicoId, body, matricula, isNivel5Plus = f
 
   try {
     await connection.beginTransaction();
-
-    if (isNivel5Plus) {
-      const [[servico]] = await connection.query(
-        `SELECT id, status
-         FROM processos
-         WHERE id = ?`,
-        [servicoId]
-      );
-
-      if (!servico) {
-        throw new Error("Serviço não encontrado.");
-      }
-
-      if (servico.status === "concluido" || servico.status === "nao_concluido") {
-        throw new Error("Este serviço já está finalizado.");
-      }
-
-      await connection.query(
-        `UPDATE processos
-         SET status = 'concluido',
-             data_conclusao = ?,
-             observacoes_conclusao = ?
-         WHERE id = ?`,
-        [dataHora, observacoes_conclusao || null, servicoId]
-      );
-
-      await connection.commit();
-
-      return {
-        auditMessage: `Serviço ID ${servicoId} — concluído por usuário nível 5+ ${matricula}`,
-      };
-    }
 
     const [result] = await connection.query(
       `UPDATE servicos_responsaveis
@@ -98,16 +66,14 @@ async function concluirParteServico(servicoId, body, matricula, isNivel5Plus = f
     };
   } catch (err) {
     await connection.rollback();
-    logger.error(
-      `[Lifecycle] Erro em concluirParteServico (ID ${servicoId}): ${err.message}`
-    );
+    logger.error(`[Lifecycle] Erro em concluirParteServico (ID ${servicoId}): ${err.message}`);
     throw err;
   } finally {
     connection.release();
   }
 }
 
-async function naoConcluirParteServico(servicoId, body, matricula, isNivel5Plus = false) {
+async function naoConcluirParteServico(servicoId, body, matricula) {
   const {
     data_conclusao,
     hora_conclusao,
@@ -124,44 +90,6 @@ async function naoConcluirParteServico(servicoId, body, matricula, isNivel5Plus 
 
   try {
     await connection.beginTransaction();
-
-    if (isNivel5Plus) {
-      const [[servico]] = await connection.query(
-        `SELECT id, status
-         FROM processos
-         WHERE id = ?`,
-        [servicoId]
-      );
-
-      if (!servico) {
-        throw new Error("Serviço não encontrado.");
-      }
-
-      if (servico.status === "concluido" || servico.status === "nao_concluido") {
-        throw new Error("Este serviço já está finalizado.");
-      }
-
-      await connection.query(
-        `UPDATE processos
-         SET status = 'nao_concluido',
-             data_conclusao = ?,
-             motivo_nao_conclusao = ?,
-             observacoes_conclusao = ?
-         WHERE id = ?`,
-        [
-          dataHora,
-          motivo_nao_conclusao || null,
-          observacoes_conclusao || null,
-          servicoId,
-        ]
-      );
-
-      await connection.commit();
-
-      return {
-        auditMessage: `Serviço ID ${servicoId} — não concluído por usuário nível 5+ ${matricula}`,
-      };
-    }
 
     const [result] = await connection.query(
       `UPDATE servicos_responsaveis
@@ -197,9 +125,7 @@ async function naoConcluirParteServico(servicoId, body, matricula, isNivel5Plus 
     };
   } catch (err) {
     await connection.rollback();
-    logger.error(
-      `[Lifecycle] Erro em naoConcluirParteServico (ID ${servicoId}): ${err.message}`
-    );
+    logger.error(`[Lifecycle] Erro em naoConcluirParteServico (ID ${servicoId}): ${err.message}`);
     throw err;
   } finally {
     connection.release();
@@ -263,9 +189,7 @@ async function forcarConclusaoServico(
     return { success: true };
   } catch (err) {
     await connection.rollback();
-    logger.error(
-      `[Lifecycle] Erro em forcarConclusaoServico (ID ${servicoId}): ${err.message}`
-    );
+    logger.error(`[Lifecycle] Erro em forcarConclusaoServico (ID ${servicoId}): ${err.message}`);
     throw err;
   } finally {
     connection.release();
@@ -336,9 +260,7 @@ async function atribuirResponsavel(servicoId, responsaveis) {
     return { success: true };
   } catch (err) {
     await connection.rollback();
-    logger.error(
-      `[Lifecycle] Erro em atribuirResponsavel (ID ${servicoId}): ${err.message}`
-    );
+    logger.error(`[Lifecycle] Erro em atribuirResponsavel (ID ${servicoId}): ${err.message}`);
     throw err;
   } finally {
     connection.release();
