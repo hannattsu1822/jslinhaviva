@@ -72,7 +72,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (concluirModalEl) concluirModalInstance = new bootstrap.Modal(concluirModalEl);
 
   const modalResponsavelEl = document.getElementById("modalResponsavel");
-  if (modalResponsavelEl) modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
+  if (modalResponsavelEl) {
+    modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
+
+    // Binds dentro do modal responsável — só depois de instanciar o modal
+    modalResponsavelEl.addEventListener("shown.bs.modal", () => {
+      const buscaInput = document.getElementById("buscaResponsavel");
+      if (buscaInput) {
+        buscaInput.oninput = debounce(function () {
+          filtrarResponsaveis(this.value);
+        }, 300);
+      }
+    });
+  }
 
   const aprUploadModalEl = document.getElementById("aprUploadModal");
   if (aprUploadModalEl) aprUploadModalInstance = new bootstrap.Modal(aprUploadModalEl);
@@ -261,4 +273,372 @@ function atualizarTabela() {
       }
     }
 
-    let aprButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR"><span class="material-symbols-outlined">attach_file</span> Anexar</b
+    const dataPrevista = servico.data_prevista_execucao
+      ? new Date(servico.data_prevista_execucao + "T00:00:00").toLocaleDateString("pt-BR")
+      : "—";
+
+    const nivel5Plus = ehNivel5Plus();
+
+    // Botão concluir: nivel5+ chama abrirConcluirNivel5, senão abrirModalConcluir normal
+    const btnConcluir = nivel5Plus
+      ? `<button class="btn btn-sm btn-success w-100 mb-1" onclick="abrirConcluirNivel5(${servico.id})">
+           <span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir
+         </button>`
+      : `<button class="btn btn-sm btn-success w-100 mb-1" onclick="abrirModalConcluir(${servico.id})">
+           <span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir
+         </button>`;
+
+    tr.innerHTML = `
+      <td>${servico.id}</td>
+      <td>${servico.processo || "—"}</td>
+      <td>${servico.subestacao || "—"}</td>
+      <td>${servico.alimentador || "—"}</td>
+      <td>${servico.tipo_processo || "—"}</td>
+      <td>${dataPrevista}</td>
+      <td>${equipeHtml}</td>
+      <td>
+        <button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR">
+          <span class="material-symbols-outlined">attach_file</span> Anexar
+        </button>
+      </td>
+      <td>
+        ${btnConcluir}
+        ${nivel5Plus ? `
+        <button class="btn btn-sm btn-outline-secondary w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})">
+          <span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe
+        </button>` : `
+        <button class="btn btn-sm btn-outline-secondary w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})">
+          <span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe
+        </button>`}
+        <button class="btn btn-sm btn-outline-danger w-100" onclick="confirmarExclusao(${servico.id})">
+          <span class="material-symbols-outlined" style="font-size:16px">delete</span> Excluir
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Reativa tooltips Bootstrap
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+    new bootstrap.Tooltip(el, { trigger: "hover" });
+  });
+}
+
+// ─── MODAL CONCLUIR (nível < 5) ───────────────────────────────────────────────
+
+function abrirModalConcluir(servicoId) {
+  currentServicoId = servicoId;
+  usarDataAtual();
+  const statusEl = document.getElementById("statusFinalServico");
+  if (statusEl) statusEl.value = "concluido";
+  const camposSomente = document.getElementById("camposSomenteConcluido");
+  if (camposSomente) camposSomente.style.display = "block";
+  selectedFiles = [];
+  renderizarPreviewFotos();
+  if (concluirModalInstance) concluirModalInstance.show();
+}
+
+// ─── MODAL CONCLUIR NÍVEL 5+ (SEM EXIGIR ENCARREGADO) ────────────────────────
+
+function abrirConcluirNivel5(servicoId) {
+  currentServicoId = servicoId;
+
+  // Preenche dados básicos do serviço no modal
+  const servico = servicosData.find((s) => s.id === servicoId);
+
+  // Reutiliza o concluirModal mas adapta o conteúdo
+  const infoEl = document.getElementById("infoServicoNivel5");
+  if (infoEl && servico) {
+    const dataPrevista = servico.data_prevista_execucao
+      ? new Date(servico.data_prevista_execucao + "T00:00:00").toLocaleDateString("pt-BR")
+      : "—";
+    infoEl.innerHTML = `
+      <div class="alert alert-info py-2 mb-3">
+        <strong>Processo:</strong> ${servico.processo || "—"} &nbsp;|&nbsp;
+        <strong>Subestação:</strong> ${servico.subestacao || "—"} &nbsp;|&nbsp;
+        <strong>Alimentador:</strong> ${servico.alimentador || "—"} &nbsp;|&nbsp;
+        <strong>Data Prevista:</strong> ${dataPrevista}
+      </div>`;
+  }
+
+  // Oculta campo de encarregado se existir
+  const campoEncarregado = document.getElementById("campoEncarregado");
+  if (campoEncarregado) campoEncarregado.style.display = "none";
+  const selectEncarregado = document.getElementById("encarregadoSelect");
+  if (selectEncarregado) selectEncarregado.required = false;
+
+  usarDataAtual();
+  const statusEl = document.getElementById("statusFinalServico");
+  if (statusEl) statusEl.value = "concluido";
+  const camposSomente = document.getElementById("camposSomenteConcluido");
+  if (camposSomente) camposSomente.style.display = "block";
+  selectedFiles = [];
+  renderizarPreviewFotos();
+  if (concluirModalInstance) concluirModalInstance.show();
+}
+
+// ─── SALVAR FINALIZAÇÃO ────────────────────────────────────────────────────────
+
+async function salvarFinalizacao() {
+  if (!currentServicoId) return;
+
+  const statusFinal = document.getElementById("statusFinalServico")?.value;
+  const dataConclusao = document.getElementById("dataConclusao")?.value;
+  const horaConclusao = document.getElementById("horaConclusao")?.value;
+  const observacoes = document.getElementById("observacoesConclusao")?.value || "";
+
+  if (!statusFinal || !dataConclusao || !horaConclusao) {
+    showToast("Preencha data, hora e status final.", "warning");
+    return;
+  }
+
+  const btnSalvar = document.getElementById("btnSalvarFinalizacao");
+  if (btnSalvar) {
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = "Salvando...";
+  }
+
+  try {
+    // ── Upload de fotos (se houver) ──
+    if (selectedFiles.length > 0) {
+      const formDataFotos = new FormData();
+      selectedFiles.forEach((f) => formDataFotos.append("foto_conclusao", f));
+      await fetch(`/api/servicos/${currentServicoId}/upload-foto-conclusao`, {
+        method: "POST",
+        body: formDataFotos,
+      });
+    }
+
+    // ── Decide qual rota usar conforme o nível ──
+    const rota = ehNivel5Plus()
+      ? `/api/servicos/${currentServicoId}/concluir`
+      : `/api/servicos/${currentServicoId}/concluir`;
+
+    const res = await fetch(rota, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status_final: statusFinal,
+        data_conclusao: dataConclusao,
+        hora_conclusao: horaConclusao,
+        observacoes_conclusao: observacoes,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || `Erro ${res.status}`);
+    }
+
+    showToast("Serviço finalizado com sucesso!", "success");
+    if (concluirModalInstance) concluirModalInstance.hide();
+
+    // Remove da tabela local sem recarregar página
+    servicosData = servicosData.filter((s) => s.id != currentServicoId);
+    atualizarTabela();
+    currentServicoId = null;
+
+  } catch (err) {
+    showToast("Erro ao finalizar: " + err.message, "danger");
+  } finally {
+    if (btnSalvar) {
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = "Salvar";
+    }
+  }
+}
+
+// ─── MODAL RESPONSÁVEL / EQUIPE ───────────────────────────────────────────────
+
+let todosEncarregados = [];
+let responsaveisSelecionados = [];
+
+async function abrirModalResponsavel(servicoId) {
+  currentServicoId = servicoId;
+
+  const modalEl = document.getElementById("modalResponsavel");
+  if (!modalEl) {
+    showToast("Modal de equipe não encontrado.", "danger");
+    return;
+  }
+
+  try {
+    const [encRes, servRes] = await Promise.all([
+      fetch("/api/encarregados"),
+      fetch(`/api/servicos/${servicoId}`),
+    ]);
+
+    if (encRes.ok) todosEncarregados = await encRes.json();
+    if (servRes.ok) {
+      const servico = await servRes.json();
+      responsaveisSelecionados = (servico.responsaveis || []).map((r) =>
+        typeof r === "object" ? r.matricula : r
+      );
+    }
+  } catch (e) {
+    todosEncarregados = [];
+    responsaveisSelecionados = [];
+  }
+
+  renderizarListaEncarregados(todosEncarregados);
+
+  if (modalResponsavelInstance) modalResponsavelInstance.show();
+}
+
+function filtrarResponsaveis(termo) {
+  const termoLower = (termo || "").toLowerCase();
+  const filtrados = todosEncarregados.filter(
+    (e) =>
+      e.nome.toLowerCase().includes(termoLower) ||
+      String(e.matricula).includes(termoLower)
+  );
+  renderizarListaEncarregados(filtrados);
+}
+
+function renderizarListaEncarregados(lista) {
+  const container = document.getElementById("listaEncarregados");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!lista || lista.length === 0) {
+    container.innerHTML = `<p class="text-muted text-center py-3">Nenhum encarregado encontrado.</p>`;
+    return;
+  }
+
+  lista.forEach((enc) => {
+    const selecionado = responsaveisSelecionados.includes(enc.matricula);
+    const div = document.createElement("div");
+    div.className = `d-flex align-items-center justify-content-between p-2 mb-1 rounded ${selecionado ? "bg-success bg-opacity-10 border border-success" : "bg-light border"}`;
+    div.innerHTML = `
+      <div>
+        <strong>${enc.nome}</strong><br>
+        <small class="text-muted">Mat: ${enc.matricula} — ${enc.cargo || ""}</small>
+      </div>
+      <button class="btn btn-sm ${selecionado ? "btn-danger" : "btn-success"}"
+        onclick="toggleResponsavel('${enc.matricula}')">
+        ${selecionado ? "Remover" : "Adicionar"}
+      </button>`;
+    container.appendChild(div);
+  });
+}
+
+function toggleResponsavel(matricula) {
+  if (responsaveisSelecionados.includes(matricula)) {
+    responsaveisSelecionados = responsaveisSelecionados.filter((m) => m !== matricula);
+  } else {
+    responsaveisSelecionados.push(matricula);
+  }
+  renderizarListaEncarregados(todosEncarregados);
+}
+
+async function salvarResponsaveis() {
+  if (!currentServicoId) return;
+
+  try {
+    const res = await fetch(`/api/servicos/${currentServicoId}/responsavel`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ responsaveis: responsaveisSelecionados }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || `Erro ${res.status}`);
+
+    showToast("Equipe atualizada com sucesso!", "success");
+    if (modalResponsavelInstance) modalResponsavelInstance.hide();
+    await carregarServicosAtivos();
+  } catch (err) {
+    showToast("Erro ao salvar equipe: " + err.message, "danger");
+  }
+}
+
+// ─── EXCLUSÃO ─────────────────────────────────────────────────────────────────
+
+function confirmarExclusao(servicoId) {
+  currentServicoId = servicoId;
+  if (confirmModalInstance) confirmModalInstance.show();
+}
+
+async function deletarServico(servicoId) {
+  try {
+    const res = await fetch(`/api/servicos/${servicoId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || `Erro ${res.status}`);
+    showToast("Serviço excluído com sucesso!", "success");
+    servicosData = servicosData.filter((s) => s.id != servicoId);
+    atualizarTabela();
+    currentServicoId = null;
+  } catch (err) {
+    showToast("Erro ao excluir: " + err.message, "danger");
+  }
+}
+
+// ─── UPLOAD APR ───────────────────────────────────────────────────────────────
+
+let aprServicoId = null;
+
+function abrirModalUploadAPR(servicoId) {
+  aprServicoId = servicoId;
+  const inputAPR = document.getElementById("arquivoAPR");
+  if (inputAPR) inputAPR.value = "";
+  if (aprUploadModalInstance) aprUploadModalInstance.show();
+}
+
+async function confirmarUploadAPR() {
+  if (!aprServicoId) return;
+  const inputAPR = document.getElementById("arquivoAPR");
+  if (!inputAPR || !inputAPR.files[0]) {
+    showToast("Selecione um arquivo APR.", "warning");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("apr_file", inputAPR.files[0]);
+
+  try {
+    const res = await fetch(`/api/servicos/${aprServicoId}/upload-apr`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || `Erro ${res.status}`);
+    showToast("APR anexada com sucesso!", "success");
+    if (aprUploadModalInstance) aprUploadModalInstance.hide();
+  } catch (err) {
+    showToast("Erro ao anexar APR: " + err.message, "danger");
+  }
+}
+
+// ─── FOTOS CONCLUSÃO ──────────────────────────────────────────────────────────
+
+function adicionarArquivos(files) {
+  Array.from(files).forEach((f) => {
+    if (!selectedFiles.find((sf) => sf.name === f.name)) {
+      selectedFiles.push(f);
+    }
+  });
+  renderizarPreviewFotos();
+}
+
+function renderizarPreviewFotos() {
+  const container = document.getElementById("previewFotos");
+  if (!container) return;
+  container.innerHTML = "";
+
+  selectedFiles.forEach((f, i) => {
+    const div = document.createElement("div");
+    div.className = "position-relative d-inline-block me-2 mb-2";
+    const url = URL.createObjectURL(f);
+    div.innerHTML = `
+      <img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;" alt="foto">
+      <button type="button" class="btn-close position-absolute top-0 end-0 bg-white rounded-circle"
+        style="transform:scale(0.7);" onclick="removerFoto(${i})"></button>`;
+    container.appendChild(div);
+  });
+}
+
+function removerFoto(index) {
+  selectedFiles.splice(index, 1);
+  renderizarPreviewFotos();
+}
