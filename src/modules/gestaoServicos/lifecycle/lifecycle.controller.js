@@ -106,6 +106,18 @@ async function atribuirResponsavel(req, res) {
   try {
     const { id } = req.params;
     const { responsaveis } = req.body;
+    const nivel = req.session?.user?.nivel ?? 0;
+    const cargo = req.session?.user?.cargo?.toUpperCase() || "";
+
+    const cargosPermitidos = ['ADMIN', 'TÉCNICO', 'ADM', 'ENGENHEIRO', 'GERENTE'];
+    const podeAtribuir = nivel >= 6 || cargosPermitidos.includes(cargo);
+
+    if (!podeAtribuir) {
+      return res.status(403).json({
+        success: false,
+        message: "Apenas usuários com nível 6 ou superior, ou cargos autorizados, podem atribuir responsáveis.",
+      });
+    }
 
     if (!responsaveis || !Array.isArray(responsaveis)) {
       return res.status(400).json({
@@ -139,6 +151,18 @@ async function atribuirResponsavel(req, res) {
 async function removerResponsavelUnico(req, res) {
   try {
     const { id: servicoId, matricula } = req.params;
+    const nivel = req.session?.user?.nivel ?? 0;
+    const cargo = req.session?.user?.cargo?.toUpperCase() || "";
+
+    const cargosPermitidos = ['ADMIN', 'TÉCNICO', 'ADM', 'ENGENHEIRO', 'GERENTE'];
+    const podeRemover = nivel >= 6 || cargosPermitidos.includes(cargo);
+
+    if (!podeRemover) {
+      return res.status(403).json({
+        success: false,
+        message: "Apenas usuários com nível 6 ou superior, ou cargos autorizados, podem remover responsáveis.",
+      });
+    }
 
     await service.removerResponsavelUnico(servicoId, matricula);
 
