@@ -9,6 +9,7 @@ function debounce(func, wait) {
     timeout = setTimeout(later, wait);
   };
 }
+
 let servicosData = [];
 let currentServicoId = null;
 let confirmModalInstance;
@@ -16,8 +17,10 @@ let concluirModalInstance;
 let liveToastInstance;
 let modalResponsavelInstance;
 let aprUploadModalInstance;
+let concluirAdminModalInstance;
 let user = null;
 let selectedFiles = [];
+let adminSelectedFiles = [];
 let todosEncarregados = [];
 let responsaveisSelecionados = [];
 
@@ -38,8 +41,12 @@ function usarDataAtual() {
   const localTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const dataConclusaoEl = document.getElementById("dataConclusao");
   const horaConclusaoEl = document.getElementById("horaConclusao");
+  const adminDataEl = document.getElementById("adminDataConclusao");
+  const adminHoraEl = document.getElementById("adminHoraConclusao");
   if (dataConclusaoEl) dataConclusaoEl.value = localDate;
   if (horaConclusaoEl) horaConclusaoEl.value = localTime;
+  if (adminDataEl) adminDataEl.value = localDate;
+  if (adminHoraEl) adminHoraEl.value = localTime;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -49,63 +56,126 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (e) {
     console.warn("Erro ao carregar usuário:", e.message);
   }
-  const confirmModalEl = document.getElementById("confirmModal");
-  if (confirmModalEl) confirmModalInstance = new bootstrap.Modal(confirmModalEl);
-  const concluirModalEl = document.getElementById("concluirModal");
-  if (concluirModalEl) concluirModalInstance = new bootstrap.Modal(concluirModalEl);
+
+  confirmModalInstance = new bootstrap.Modal(
+    document.getElementById("confirmModal"),
+  );
+  concluirModalInstance = new bootstrap.Modal(
+    document.getElementById("concluirModal"),
+  );
+  concluirAdminModalInstance = new bootstrap.Modal(
+    document.getElementById("concluirAdminModal"),
+  );
+
   const modalResponsavelEl = document.getElementById("modalResponsavel");
   if (modalResponsavelEl) {
     modalResponsavelInstance = new bootstrap.Modal(modalResponsavelEl);
     modalResponsavelEl.addEventListener("shown.bs.modal", () => {
       const buscaInput = document.getElementById("buscaResponsavel");
-      if (buscaInput) {
+      if (buscaInput)
         buscaInput.oninput = debounce(function () {
           filtrarResponsaveis(this.value);
         }, 300);
-      }
     });
   }
-  const aprUploadModalEl = document.getElementById("aprUploadModal");
-  if (aprUploadModalEl) aprUploadModalInstance = new bootstrap.Modal(aprUploadModalEl);
-  const btnSalvar = document.getElementById("btnSalvarFinalizacao");
-  if (btnSalvar) btnSalvar.addEventListener("click", salvarFinalizacao);
-  const btnTirarFoto = document.getElementById("btnTirarFoto");
-  const fotoCamera = document.getElementById("fotoCamera");
-  if (btnTirarFoto && fotoCamera) {
-    btnTirarFoto.addEventListener("click", () => fotoCamera.click());
-    fotoCamera.addEventListener("change", (e) => adicionarArquivos(e.target.files));
-  }
-  const btnAdicionarFotos = document.getElementById("btnAdicionarFotos");
-  const fotosConclusao = document.getElementById("fotosConclusao");
-  if (btnAdicionarFotos && fotosConclusao) {
-    btnAdicionarFotos.addEventListener("click", () => fotosConclusao.click());
-    fotosConclusao.addEventListener("change", (e) => adicionarArquivos(e.target.files));
-  }
-  const statusFinalServico = document.getElementById("statusFinalServico");
-  if (statusFinalServico) {
-    statusFinalServico.addEventListener("change", () => {
+
+  aprUploadModalInstance = new bootstrap.Modal(
+    document.getElementById("aprUploadModal"),
+  );
+
+  document
+    .getElementById("btnSalvarFinalizacao")
+    ?.addEventListener("click", salvarFinalizacao);
+  document
+    .getElementById("btnSalvarConclusaoAdmin")
+    ?.addEventListener("click", salvarConclusaoAdmin);
+
+  document
+    .getElementById("btnTirarFoto")
+    ?.addEventListener("click", () =>
+      document.getElementById("fotoCamera")?.click(),
+    );
+  document
+    .getElementById("fotoCamera")
+    ?.addEventListener("change", (e) => adicionarArquivos(e.target.files));
+  document
+    .getElementById("btnAdicionarFotos")
+    ?.addEventListener("click", () =>
+      document.getElementById("fotosConclusao")?.click(),
+    );
+  document
+    .getElementById("fotosConclusao")
+    ?.addEventListener("change", (e) => adicionarArquivos(e.target.files));
+
+  document
+    .getElementById("adminBtnTirarFoto")
+    ?.addEventListener("click", () =>
+      document.getElementById("adminFotoCamera")?.click(),
+    );
+  document
+    .getElementById("adminFotoCamera")
+    ?.addEventListener("change", (e) => adicionarArquivosAdmin(e.target.files));
+  document
+    .getElementById("adminBtnAdicionarFotos")
+    ?.addEventListener("click", () =>
+      document.getElementById("adminFotosConclusao")?.click(),
+    );
+  document
+    .getElementById("adminFotosConclusao")
+    ?.addEventListener("change", (e) => adicionarArquivosAdmin(e.target.files));
+
+  document
+    .getElementById("statusFinalServico")
+    ?.addEventListener("change", () => {
       const camposSomente = document.getElementById("camposSomenteConcluido");
-      if (camposSomente) {
-        camposSomente.style.display = statusFinalServico.value === "nao_concluido" ? "none" : "block";
+      if (camposSomente)
+        camposSomente.style.display =
+          document.getElementById("statusFinalServico").value ===
+          "nao_concluido"
+            ? "none"
+            : "block";
+    });
+
+  document
+    .getElementById("adminStatusFinal")
+    ?.addEventListener("change", () => {
+      const camposSomente = document.getElementById(
+        "adminCamposSomenteConcluido",
+      );
+      if (camposSomente)
+        camposSomente.style.display =
+          document.getElementById("adminStatusFinal").value === "nao_concluido"
+            ? "none"
+            : "block";
+      const motivoLabel = document.querySelector('label[for="adminMotivo"]');
+      if (motivoLabel) {
+        motivoLabel.innerHTML =
+          document.getElementById("adminStatusFinal").value === "nao_concluido"
+            ? '<strong class="text-danger"><i class="fas fa-asterisk me-1"></i>Motivo da Não Conclusão *</strong>'
+            : '<strong class="text-danger"><i class="fas fa-asterisk me-1"></i>Motivo da Conclusão Administrativa *</strong>';
       }
     });
-  }
-  const confirmDeleteBtn = document.getElementById("confirmDelete");
-  if (confirmDeleteBtn) {
-    confirmDeleteBtn.addEventListener("click", async () => {
+
+  document
+    .getElementById("confirmDelete")
+    ?.addEventListener("click", async () => {
       if (!currentServicoId) return;
       await deletarServico(currentServicoId);
-      if (confirmModalInstance) confirmModalInstance.hide();
+      confirmModalInstance?.hide();
     });
-  }
-  const btnConfirmarUploadAPR = document.getElementById("btnConfirmarUploadAPR");
-  if (btnConfirmarUploadAPR) btnConfirmarUploadAPR.addEventListener("click", confirmarUploadAPR);
-  const filtroProcesso = document.getElementById("filtroProcesso");
-  if (filtroProcesso) filtroProcesso.addEventListener("input", debounce(atualizarTabela, 300));
-  ["filtroSubestacao", "filtroEncarregado", "filtroData", "ordenarPor"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("change", atualizarTabela);
-  });
+
+  document
+    .getElementById("btnConfirmarUploadAPR")
+    ?.addEventListener("click", confirmarUploadAPR);
+  document
+    .getElementById("filtroProcesso")
+    ?.addEventListener("input", debounce(atualizarTabela, 300));
+  ["filtroSubestacao", "filtroEncarregado", "filtroData", "ordenarPor"].forEach(
+    (id) => {
+      document.getElementById(id)?.addEventListener("change", atualizarTabela);
+    },
+  );
+
   await carregarDadosIniciais();
 });
 
@@ -119,12 +189,18 @@ async function carregarDadosIniciais() {
     if (subestacoesRes.ok) {
       const subestacoes = await subestacoesRes.json();
       const select = document.getElementById("filtroSubestacao");
-      if (select) subestacoes.forEach(sub => select.add(new Option(sub.nome, sub.nome)));
+      if (select)
+        subestacoes.forEach((sub) =>
+          select.add(new Option(sub.nome, sub.nome)),
+        );
     }
     if (encarregadosRes.ok) {
       const encarregados = await encarregadosRes.json();
       const select = document.getElementById("filtroEncarregado");
-      if (select) encarregados.forEach(enc => select.add(new Option(enc.nome, enc.matricula)));
+      if (select)
+        encarregados.forEach((enc) =>
+          select.add(new Option(enc.nome, enc.matricula)),
+        );
     }
   } catch (error) {
     showToast("Erro ao carregar dados iniciais: " + error.message, "danger");
@@ -140,7 +216,8 @@ async function carregarServicosAtivos() {
   } catch (error) {
     showToast("Erro ao carregar serviços ativos: " + error.message, "danger");
     const tbody = document.getElementById("tabela-servicos");
-    if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
+    if (tbody)
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
   }
 }
 
@@ -152,35 +229,91 @@ function atualizarTabela() {
   const tbody = document.getElementById("tabela-servicos");
   if (!tbody) return;
   tbody.innerHTML = "";
-  const filtroTermo = (document.getElementById("filtroProcesso")?.value || "").toLowerCase();
-  const filtroSubestacao = document.getElementById("filtroSubestacao")?.value || "";
-  const filtroEncarregado = document.getElementById("filtroEncarregado")?.value || "";
+
+  const filtroTermo = (
+    document.getElementById("filtroProcesso")?.value || ""
+  ).toLowerCase();
+  const filtroSubestacao =
+    document.getElementById("filtroSubestacao")?.value || "";
+  const filtroEncarregado =
+    document.getElementById("filtroEncarregado")?.value || "";
   const filtroData = document.getElementById("filtroData")?.value || "";
-  const ordenarPor = document.getElementById("ordenarPor")?.value || "data_desc";
-  let servicosFiltrados = servicosData.filter(servico => {
-    const termoMatch = !filtroTermo || String(servico.id).includes(filtroTermo) || (servico.processo && String(servico.processo).toLowerCase().includes(filtroTermo));
-    const subestacaoMatch = !filtroSubestacao || servico.subestacao === filtroSubestacao;
-    const encarregadoMatch = !filtroEncarregado || (servico.nomes_responsaveis && servico.nomes_responsaveis.toLowerCase().includes(filtroEncarregado.toLowerCase()));
-    const dataMatch = !filtroData || (servico.data_prevista_execucao && servico.data_prevista_execucao.startsWith(filtroData));
+  const ordenarPor =
+    document.getElementById("ordenarPor")?.value || "data_desc";
+
+  let servicosFiltrados = servicosData.filter((servico) => {
+    const termoMatch =
+      !filtroTermo ||
+      String(servico.id).includes(filtroTermo) ||
+      (servico.processo &&
+        String(servico.processo).toLowerCase().includes(filtroTermo));
+    const subestacaoMatch =
+      !filtroSubestacao || servico.subestacao === filtroSubestacao;
+    const encarregadoMatch =
+      !filtroEncarregado ||
+      (servico.nomes_responsaveis &&
+        servico.nomes_responsaveis
+          .toLowerCase()
+          .includes(filtroEncarregado.toLowerCase()));
+    const dataMatch =
+      !filtroData ||
+      (servico.data_prevista_execucao &&
+        servico.data_prevista_execucao.startsWith(filtroData));
     return termoMatch && subestacaoMatch && encarregadoMatch && dataMatch;
   });
+
   servicosFiltrados.sort((a, b) => {
     switch (ordenarPor) {
-      case "id_asc": return a.id - b.id;
-      case "id_desc": return b.id - a.id;
-      case "data_asc": return new Date(a.data_prevista_execucao) - new Date(b.data_prevista_execucao);
-      default: return new Date(b.data_prevista_execucao) - new Date(a.data_prevista_execucao);
+      case "id_asc":
+        return a.id - b.id;
+      case "id_desc":
+        return b.id - a.id;
+      case "data_asc":
+        return (
+          new Date(a.data_prevista_execucao) -
+          new Date(b.data_prevista_execucao)
+        );
+      default:
+        return (
+          new Date(b.data_prevista_execucao) -
+          new Date(a.data_prevista_execucao)
+        );
     }
   });
+
   if (servicosFiltrados.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Nenhum serviço ativo encontrado.</td></tr>`;
     return;
   }
-  const podeAtribuirEquipe = (user && (user.nivel >= 6 || ['ADMIN','TÉCNICO','ADM','ENGENHEIRO','GERENTE'].includes(user.cargo?.toUpperCase()))) || false;
-  servicosFiltrados.forEach(servico => {
+
+  const podeAtribuirEquipe =
+    (user &&
+      (user.nivel >= 6 ||
+        ["ADMIN", "TÉCNICO", "ADM", "ENGENHEIRO", "GERENTE"].includes(
+          user.cargo?.toUpperCase(),
+        ))) ||
+    false;
+  const podeConcluirAdmin =
+    (user &&
+      (user.nivel >= 7 ||
+        ["ADMIN", "TÉCNICO", "ADM", "ENGENHEIRO", "GERENTE"].includes(
+          user.cargo?.toUpperCase(),
+        ))) ||
+    false;
+  const podeExcluir =
+    (user &&
+      (user.nivel >= 7 ||
+        ["ADMIN", "TÉCNICO", "ADM", "ENGENHEIRO", "GERENTE"].includes(
+          user.cargo?.toUpperCase(),
+        ))) ||
+    false;
+
+  servicosFiltrados.forEach((servico) => {
     const tr = document.createElement("tr");
-    tr.className = servico.tipo_processo === "Emergencial" ? "emergency-row" : "glass-table-row";
+    tr.className =
+      servico.tipo_processo === "Emergencial" ? "emergency-row" : "";
     tr.dataset.id = servico.id;
+
     let equipeHtml = '<span class="badge bg-warning text-dark">Pendente</span>';
     if (servico.total_responsaveis > 0) {
       const nomes = servico.nomes_responsaveis || "Equipe não informada";
@@ -190,29 +323,45 @@ function atualizarTabela() {
         equipeHtml = `<span data-bs-toggle="tooltip" title="${nomes}">${nomes.substring(0, 30)}${nomes.length > 30 ? "..." : ""}</span>`;
       }
     }
-    const dataPrevista = servico.data_prevista_execucao ? new Date(servico.data_prevista_execucao + "T00:00:00").toLocaleDateString("pt-BR") : "—";
-    const botoesEquipe = podeAtribuirEquipe 
-      ? `<button class="btn btn-sm btn-outline-secondary w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe</button>`
-      : '';
+
+    const dataPrevista = servico.data_prevista_execucao
+      ? new Date(
+          servico.data_prevista_execucao + "T00:00:00",
+        ).toLocaleDateString("pt-BR")
+      : "—";
+    const botoesEquipe = podeAtribuirEquipe
+      ? `<button class="btn btn-sm btn-equipe w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe</button>`
+      : "";
+    const botaoConcluirAdmin = podeConcluirAdmin
+      ? `<button class="btn btn-sm btn-admin w-100 mb-1" onclick="abrirModalConcluirAdmin(${servico.id})" data-bs-toggle="tooltip" title="Conclusão Administrativa (Sem Equipe)"><span class="material-symbols-outlined" style="font-size:16px">admin_panel_settings</span> Admin</button>`
+      : "";
+    const botaoExcluir = podeExcluir
+      ? `<button class="btn btn-sm btn-excluir w-100" onclick="confirmarExclusao(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">delete</span> Excluir</button>`
+      : "";
+
     tr.innerHTML = `
-      <td>${servico.id}</td>
-      <td>${servico.processo || "—"}</td>
-      <td>${servico.subestacao || "—"}</td>
-      <td>${servico.alimentador || "—"}</td>
-      <td>${servico.tipo_processo || "—"}</td>
-      <td>${dataPrevista}</td>
-      <td>${equipeHtml}</td>
-      <td><button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button></td>
-      <td>
-        <button class="btn btn-sm btn-info w-100 mb-1" onclick="abrirDetalhes(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">visibility</span> Detalhes</button>
-        <button class="btn btn-sm btn-success w-100 mb-1" onclick="abrirModalConcluir(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir</button>
-        ${botoesEquipe}
-        <button class="btn btn-sm btn-outline-danger w-100" onclick="confirmarExclusao(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">delete</span> Excluir</button>
-      </td>
-    `;
+            <td>${servico.id}</td>
+            <td>${servico.processo || "—"}</td>
+            <td>${servico.subestacao || "—"}</td>
+            <td>${servico.alimentador || "—"}</td>
+            <td>${servico.tipo_processo || "—"}</td>
+            <td>${dataPrevista}</td>
+            <td>${equipeHtml}</td>
+            <td><button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button></td>
+            <td>
+                <button class="btn btn-sm btn-detalhes w-100 mb-1" onclick="abrirDetalhes(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">visibility</span> Detalhes</button>
+                <button class="btn btn-sm btn-concluir w-100 mb-1" onclick="abrirModalConcluir(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir</button>
+                ${botoesEquipe}
+                ${botaoConcluirAdmin}
+                ${botaoExcluir}
+            </td>
+        `;
     tbody.appendChild(tr);
   });
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el, { trigger: "hover" }));
+
+  document
+    .querySelectorAll('[data-bs-toggle="tooltip"]')
+    .forEach((el) => new bootstrap.Tooltip(el, { trigger: "hover" }));
 }
 
 function abrirModalConcluir(servicoId) {
@@ -227,26 +376,125 @@ function abrirModalConcluir(servicoId) {
   if (concluirModalInstance) concluirModalInstance.show();
 }
 
+function abrirModalConcluirAdmin(servicoId) {
+  currentServicoId = servicoId;
+  usarDataAtual();
+  const statusEl = document.getElementById("adminStatusFinal");
+  if (statusEl) statusEl.value = "concluido";
+  const motivoEl = document.getElementById("adminMotivo");
+  if (motivoEl) motivoEl.value = "";
+  const obsEl = document.getElementById("adminObservacoes");
+  if (obsEl) obsEl.value = "";
+  adminSelectedFiles = [];
+  renderizarPreviewFotosAdmin();
+  const camposSomente = document.getElementById("adminCamposSomenteConcluido");
+  if (camposSomente) camposSomente.style.display = "block";
+  if (concluirAdminModalInstance) concluirAdminModalInstance.show();
+}
+
+async function salvarConclusaoAdmin() {
+  if (!currentServicoId) return;
+  const statusFinal = document.getElementById("adminStatusFinal")?.value;
+  const dataConclusao = document.getElementById("adminDataConclusao")?.value;
+  const horaConclusao = document.getElementById("adminHoraConclusao")?.value;
+  const motivo = document.getElementById("adminMotivo")?.value?.trim() || "";
+  const observacoes =
+    document.getElementById("adminObservacoes")?.value?.trim() || "";
+
+  if (!statusFinal || !dataConclusao || !horaConclusao) {
+    showToast("Preencha data, hora e status final.", "warning");
+    return;
+  }
+  if (!motivo || motivo.length < 5) {
+    showToast("O motivo é obrigatório (mínimo 5 caracteres).", "warning");
+    return;
+  }
+
+  const btnSalvar = document.getElementById("btnSalvarConclusaoAdmin");
+  if (btnSalvar) {
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML =
+      '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
+  }
+
+  try {
+    if (adminSelectedFiles.length > 0) {
+      const formDataFotos = new FormData();
+      adminSelectedFiles.forEach((f) =>
+        formDataFotos.append("foto_conclusao", f),
+      );
+      await fetch(`/api/servicos/${currentServicoId}/upload-foto-conclusao`, {
+        method: "POST",
+        body: formDataFotos,
+      });
+    }
+
+    const res = await fetch(
+      `/api/servicos/${currentServicoId}/concluir-admin`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status_final: statusFinal,
+          dataConclusao,
+          horaConclusao,
+          motivo,
+          observacoes,
+        }),
+      },
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || `Erro ${res.status}`);
+
+    showToast(
+      "Serviço concluído administrativamente! Redirecionando...",
+      "success",
+    );
+    if (concluirAdminModalInstance) concluirAdminModalInstance.hide();
+    adminSelectedFiles = [];
+    currentServicoId = null;
+
+    setTimeout(() => {
+      window.location.href = "/servicos_concluidos";
+    }, 1500);
+  } catch (err) {
+    showToast("Erro ao concluir: " + err.message, "danger");
+  } finally {
+    if (btnSalvar) {
+      btnSalvar.disabled = false;
+      btnSalvar.innerHTML =
+        '<span class="material-symbols-outlined">save</span> Confirmar Conclusão Administrativa';
+    }
+  }
+}
+
 async function salvarFinalizacao() {
   if (!currentServicoId) return;
   const statusFinal = document.getElementById("statusFinalServico")?.value;
   const dataConclusao = document.getElementById("dataConclusao")?.value;
   const horaConclusao = document.getElementById("horaConclusao")?.value;
-  const observacoes = document.getElementById("observacoesFinalizacao")?.value || "";
+  const observacoes =
+    document.getElementById("observacoesFinalizacao")?.value || "";
+
   if (!statusFinal || !dataConclusao || !horaConclusao) {
     showToast("Preencha data, hora e status final.", "warning");
     return;
   }
+
   const btnSalvar = document.getElementById("btnSalvarFinalizacao");
   if (btnSalvar) {
     btnSalvar.disabled = true;
     btnSalvar.textContent = "Salvando...";
   }
+
   try {
     if (selectedFiles.length > 0) {
       const formDataFotos = new FormData();
-      selectedFiles.forEach(f => formDataFotos.append("foto_conclusao", f));
-      await fetch(`/api/servicos/${currentServicoId}/upload-foto-conclusao`, { method: "POST", body: formDataFotos });
+      selectedFiles.forEach((f) => formDataFotos.append("foto_conclusao", f));
+      await fetch(`/api/servicos/${currentServicoId}/upload-foto-conclusao`, {
+        method: "POST",
+        body: formDataFotos,
+      });
     }
     const res = await fetch(`/api/servicos/${currentServicoId}/concluir`, {
       method: "POST",
@@ -255,8 +503,8 @@ async function salvarFinalizacao() {
         status_final: statusFinal,
         data_conclusao: dataConclusao,
         hora_conclusao: horaConclusao,
-        observacoes_conclusao: observacoes
-      })
+        observacoes_conclusao: observacoes,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || `Erro ${res.status}`);
@@ -279,12 +527,14 @@ async function abrirModalResponsavel(servicoId) {
   try {
     const [encRes, servRes] = await Promise.all([
       fetch("/api/encarregados"),
-      fetch(`/api/servicos/${servicoId}`)
+      fetch(`/api/servicos/${servicoId}`),
     ]);
     if (encRes.ok) todosEncarregados = await encRes.json();
     if (servRes.ok) {
       const servico = await servRes.json();
-      responsaveisSelecionados = (servico.responsaveis || []).map(r => typeof r === "object" ? r.matricula : r);
+      responsaveisSelecionados = (servico.responsaveis || []).map((r) =>
+        typeof r === "object" ? r.responsavel_matricula || r.matricula : r,
+      );
     }
   } catch (e) {
     todosEncarregados = [];
@@ -296,7 +546,11 @@ async function abrirModalResponsavel(servicoId) {
 
 function filtrarResponsaveis(termo) {
   const termoLower = (termo || "").toLowerCase();
-  const filtrados = todosEncarregados.filter(e => e.nome.toLowerCase().includes(termoLower) || String(e.matricula).includes(termoLower));
+  const filtrados = todosEncarregados.filter(
+    (e) =>
+      e.nome.toLowerCase().includes(termoLower) ||
+      String(e.matricula).includes(termoLower),
+  );
   renderizarListaEncarregados(filtrados);
 }
 
@@ -308,7 +562,7 @@ function renderizarListaEncarregados(lista) {
     container.innerHTML = `<p class="text-muted text-center py-3">Nenhum encarregado encontrado.</p>`;
     return;
   }
-  lista.forEach(enc => {
+  lista.forEach((enc) => {
     const selecionado = responsaveisSelecionados.includes(enc.matricula);
     const div = document.createElement("div");
     div.className = `d-flex align-items-center justify-content-between p-2 mb-1 rounded ${selecionado ? "bg-success bg-opacity-10 border border-success" : "bg-light border"}`;
@@ -319,7 +573,9 @@ function renderizarListaEncarregados(lista) {
 
 function toggleResponsavel(matricula) {
   if (responsaveisSelecionados.includes(matricula)) {
-    responsaveisSelecionados = responsaveisSelecionados.filter(m => m !== matricula);
+    responsaveisSelecionados = responsaveisSelecionados.filter(
+      (m) => m !== matricula,
+    );
   } else {
     responsaveisSelecionados.push(matricula);
   }
@@ -332,7 +588,7 @@ async function salvarResponsaveis() {
     const res = await fetch(`/api/servicos/${currentServicoId}/responsavel`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ responsaveis: responsaveisSelecionados })
+      body: JSON.stringify({ responsaveis: responsaveisSelecionados }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || `Erro ${res.status}`);
@@ -380,7 +636,10 @@ async function confirmarUploadAPR() {
   const formData = new FormData();
   formData.append("apr_file", inputAPR.files[0]);
   try {
-    const res = await fetch(`/api/servicos/${aprServicoId}/upload-apr`, { method: "POST", body: formData });
+    const res = await fetch(`/api/servicos/${aprServicoId}/upload-apr`, {
+      method: "POST",
+      body: formData,
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || `Erro ${res.status}`);
     showToast("APR anexada com sucesso!", "success");
@@ -392,13 +651,28 @@ async function confirmarUploadAPR() {
 
 function adicionarArquivos(files) {
   const maxFiles = 5;
-  const novos = Array.from(files).filter(f => !selectedFiles.find(sf => sf.name === f.name));
+  const novos = Array.from(files).filter(
+    (f) => !selectedFiles.find((sf) => sf.name === f.name),
+  );
   if (selectedFiles.length + novos.length > maxFiles) {
     showToast(`Máximo de ${maxFiles} fotos permitidas.`, "warning");
     return;
   }
   selectedFiles.push(...novos);
   renderizarPreviewFotos();
+}
+
+function adicionarArquivosAdmin(files) {
+  const maxFiles = 5;
+  const novos = Array.from(files).filter(
+    (f) => !adminSelectedFiles.find((sf) => sf.name === f.name),
+  );
+  if (adminSelectedFiles.length + novos.length > maxFiles) {
+    showToast(`Máximo de ${maxFiles} fotos permitidas.`, "warning");
+    return;
+  }
+  adminSelectedFiles.push(...novos);
+  renderizarPreviewFotosAdmin();
 }
 
 function renderizarPreviewFotos() {
@@ -409,17 +683,20 @@ function renderizarPreviewFotos() {
     const col = document.createElement("div");
     col.className = "col-md-3 col-sm-4 col-6 position-relative preview-item";
     const imgUrl = URL.createObjectURL(file);
-    col.innerHTML = `
-      <div class="card h-100">
-        <img src="${imgUrl}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview">
-        <div class="card-body p-2 text-center">
-          <small class="text-muted">${file.name.substring(0, 20)}${file.name.length > 20 ? "..." : ""}</small>
-          <button type="button" class="btn btn-sm btn-danger mt-1 w-100" onclick="removerFoto(${index})">
-            <span class="material-symbols-outlined" style="font-size: 16px;">delete</span> Remover
-          </button>
-        </div>
-      </div>
-    `;
+    col.innerHTML = `<div class="card h-100"><img src="${imgUrl}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview"><div class="card-body p-2 text-center"><small class="text-muted">${file.name.substring(0, 20)}${file.name.length > 20 ? "..." : ""}</small><button type="button" class="btn btn-sm btn-danger mt-1 w-100" onclick="removerFoto(${index})"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span> Remover</button></div></div>`;
+    container.appendChild(col);
+  });
+}
+
+function renderizarPreviewFotosAdmin() {
+  const container = document.getElementById("adminPreviewContainer");
+  if (!container) return;
+  container.innerHTML = "";
+  adminSelectedFiles.forEach((file, index) => {
+    const col = document.createElement("div");
+    col.className = "col-md-3 col-sm-4 col-6 position-relative preview-item";
+    const imgUrl = URL.createObjectURL(file);
+    col.innerHTML = `<div class="card h-100"><img src="${imgUrl}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview"><div class="card-body p-2 text-center"><small class="text-muted">${file.name.substring(0, 20)}${file.name.length > 20 ? "..." : ""}</small><button type="button" class="btn btn-sm btn-danger mt-1 w-100" onclick="removerFotoAdmin(${index})"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span> Remover</button></div></div>`;
     container.appendChild(col);
   });
 }
@@ -427,4 +704,8 @@ function renderizarPreviewFotos() {
 function removerFoto(index) {
   selectedFiles.splice(index, 1);
   renderizarPreviewFotos();
+}
+function removerFotoAdmin(index) {
+  adminSelectedFiles.splice(index, 1);
+  renderizarPreviewFotosAdmin();
 }
