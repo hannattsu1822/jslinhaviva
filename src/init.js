@@ -15,9 +15,7 @@ const { projectRootDir } = require("./shared/path.helper");
 
 const app = express();
 
-// ─── CONFIANÇA NO PROXY (resolve erro do rate-limit com X-Forwarded-For) ──────
-// Deve ser chamado ANTES de qualquer middleware que dependa de IP/headers
-app.set('trust proxy', 1);  // 1 = confia no primeiro proxy (NGINX/Cloudflare)
+app.set('trust proxy', 1);
 
 const server = http.createServer(app);
 
@@ -28,7 +26,6 @@ const logger = {
   error: (msg) => console.error(`[ERROR] ${msg}`),
 };
 
-// ─── Segurança HTTP headers ───────────────────────────────────────────────────
 app.use(
   helmet({
     contentSecurityPolicy: false,
@@ -36,15 +33,25 @@ app.use(
   })
 );
 
-// ─── CORS restrito ao domínio da aplicação ────────────────────────────────────
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "https://linhaviva.sulgipe.com.br",
+  "https://sulgipelinhaviva.online"
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "https://sulgipelinhaviva.online",
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Acesso não permitido pela política de CORS"));
+      }
+    },
     credentials: true,
   })
 );
 
-// ─── Rate limit global: 200 req / 15 min por IP ───────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -57,11 +64,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// ─── Body parsers ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// ─── View engine ─────────────────────────────────────────────────────────────
 app.engine("html", require("ejs").renderFile);
 app.set("view engine", "html");
 
@@ -76,7 +81,6 @@ logger.info(`[Static] Servindo 'public': ${publicDir}`);
 app.use("/scripts", express.static(path.join(viewsDir, "scripts")));
 app.use("/static",  express.static(path.join(viewsDir, "static")));
 
-// ─── Criação de diretórios de upload ─────────────────────────────────────────
 const ensureDirectoryExists = (dirPath, dirName) => {
   if (!fs.existsSync(dirPath)) {
     try {
@@ -111,7 +115,6 @@ app.use("/upload_InspDistRedes",               express.static(uploadsInspRedesDi
 app.use("/upload_checklist_diario_veiculos",   express.static(uploadsChecklistDailyDir));
 app.use("/upload_arquivos_processos",          express.static(uploadsProcessosDir));
 
-// ─── Multer — upload geral ────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, multerTempDir),
   filename: (req, file, cb) => {
@@ -126,7 +129,6 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, true),
 });
 
-// ─── Multer — anexos checklist ────────────────────────────────────────────────
 const anexoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const trafoId = req.params.id;
@@ -155,7 +157,6 @@ const uploadAnexoChecklist = multer({
   limits: { fileSize: 3 * 1024 * 1024 },
 });
 
-// ─── Sessão ───────────────────────────────────────────────────────────────────
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret || typeof sessionSecret !== "string" || sessionSecret.trim() === "") {
   logger.error("A variável de ambiente SESSION_SECRET não está definida.");
@@ -171,14 +172,13 @@ const sessionMiddleware = session({
   cookie: {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax",
+    sameSite: "lax",
     maxAge: 8 * 60 * 60 * 1000,
   },
 });
 
 app.use(sessionMiddleware);
 
-// ─── Pool MySQL ───────────────────────────────────────────────────────────────
 const pool = mysql.createPool({
   host:             process.env.DB_HOST,
   port:             process.env.DB_PORT,
@@ -200,12 +200,10 @@ pool.on("error", (err) =>
   logger.error(`DB: Erro no pool MySQL: ${err.message}`)
 );
 
-// ─── WebSocket ────────────────────────────────────────────────────────────────
 const wss = new WebSocketServer({ noServer: true });
 app.set("wss", wss);
 
 server.on("upgrade", (request, socket, head) => {
-  // Importante: o trust proxy também afeta o IP que chega aqui, mas a sessão é lida via cookie
   sessionMiddleware(request, {}, () => {
     if (!request.session || !request.session.user) {
       logger.warn(
@@ -239,7 +237,6 @@ wss.on("connection", (ws, req) => {
   ws.on("error", (error) => logger.error(`[WebSocket] Erro: ${error.message}`));
 });
 
-// ─── Helper: salvar anexos de processos ──────────────────────────────────────
 async function salvarAnexos(processoId, files) {
   const anexosSalvos = [];
   const processoUploadDir = path.join(uploadsProcessosDir, String(processoId));
@@ -272,7 +269,6 @@ async function salvarAnexos(processoId, files) {
   return anexosSalvos;
 }
 
-// ─── Exports ──────────────────────────────────────────────────────────────────
 module.exports = {
   app,
   server,
