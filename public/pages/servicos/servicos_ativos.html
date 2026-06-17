@@ -179,6 +179,30 @@
       .preview-item:hover img {
         transform: scale(1.02);
       }
+      .badge-desligamento-sim {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        border: 1px solid #badbcc;
+        padding: 0.4rem 0.7rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        border-radius: 8px;
+      }
+      .badge-desligamento-nao {
+        background-color: #f1f3f5;
+        color: #495057;
+        border: 1px solid #dee2e6;
+        padding: 0.4rem 0.7rem;
+        font-weight: 500;
+        font-size: 0.75rem;
+        border-radius: 8px;
+      }
+      .col-desligamento {
+        background: rgba(44, 95, 138, 0.03);
+      }
+      thead .col-desligamento-head {
+        background: rgba(44, 95, 138, 0.14) !important;
+      }
     </style>
   </head>
   <body>
@@ -388,7 +412,7 @@
                     placeholder="Filtrar por ID ou processo..."
                   />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label for="filtroSubestacao" class="form-label"
                     >Subestação</label
                   ><select
@@ -398,7 +422,7 @@
                     <option value="">Todas</option>
                   </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label for="filtroEncarregado" class="form-label"
                     >Encarregado</label
                   ><select
@@ -408,7 +432,7 @@
                     <option value="">Todos</option>
                   </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label for="filtroData" class="form-label"
                     >Data Prevista</label
                   ><input
@@ -416,6 +440,18 @@
                     class="form-control glass-input"
                     id="filtroData"
                   />
+                </div>
+                <div class="col-md-2">
+                  <label for="filtroDesligamento" class="form-label"
+                    >Desligamento</label
+                  ><select
+                    class="form-select glass-input"
+                    id="filtroDesligamento"
+                  >
+                    <option value="">Todos</option>
+                    <option value="SIM">Sim</option>
+                    <option value="NAO">Não</option>
+                  </select>
                 </div>
                 <div class="col-md-3">
                   <label for="ordenarPor" class="form-label">Ordenar por</label
@@ -444,7 +480,7 @@
                     <th>Alimentador</th>
                     <th>Tipo</th>
                     <th>Data Prevista</th>
-                    <th>Desligamento</th>
+                    <th class="col-desligamento-head">Desligamento</th>
                     <th>Equipe / Progresso</th>
                     <th>APR</th>
                     <th>Ações</th>
