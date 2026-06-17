@@ -217,7 +217,7 @@ async function carregarServicosAtivos() {
     showToast("Erro ao carregar serviços ativos: " + error.message, "danger");
     const tbody = document.getElementById("tabela-servicos");
     if (tbody)
-      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">Falha ao carregar serviços. Tente atualizar.</td></tr>`;
   }
 }
 
@@ -282,7 +282,7 @@ function atualizarTabela() {
   });
 
   if (servicosFiltrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Nenhum serviço ativo encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4">Nenhum serviço ativo encontrado.</td></tr>`;
     return;
   }
 
@@ -346,6 +346,7 @@ function atualizarTabela() {
             <td>${servico.alimentador || "—"}</td>
             <td>${servico.tipo_processo || "—"}</td>
             <td>${dataPrevista}</td>
+            <td>${servico.desligamento === "SIM" ? "Sim" : "Não"}</td>
             <td>${equipeHtml}</td>
             <td><button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button></td>
             <td>
