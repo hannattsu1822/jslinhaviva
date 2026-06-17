@@ -170,11 +170,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   document
     .getElementById("filtroProcesso")
     ?.addEventListener("input", debounce(atualizarTabela, 300));
-  ["filtroSubestacao", "filtroEncarregado", "filtroData", "ordenarPor"].forEach(
-    (id) => {
-      document.getElementById(id)?.addEventListener("change", atualizarTabela);
-    },
-  );
+  [
+    "filtroSubestacao",
+    "filtroEncarregado",
+    "filtroData",
+    "filtroDesligamento",
+    "ordenarPor",
+  ].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", atualizarTabela);
+  });
 
   await carregarDadosIniciais();
 });
@@ -238,6 +242,8 @@ function atualizarTabela() {
   const filtroEncarregado =
     document.getElementById("filtroEncarregado")?.value || "";
   const filtroData = document.getElementById("filtroData")?.value || "";
+  const filtroDesligamento =
+    document.getElementById("filtroDesligamento")?.value || "";
   const ordenarPor =
     document.getElementById("ordenarPor")?.value || "data_desc";
 
@@ -259,7 +265,16 @@ function atualizarTabela() {
       !filtroData ||
       (servico.data_prevista_execucao &&
         servico.data_prevista_execucao.startsWith(filtroData));
-    return termoMatch && subestacaoMatch && encarregadoMatch && dataMatch;
+    const desligamentoValor = servico.desligamento === "SIM" ? "SIM" : "NAO";
+    const desligamentoMatch =
+      !filtroDesligamento || desligamentoValor === filtroDesligamento;
+    return (
+      termoMatch &&
+      subestacaoMatch &&
+      encarregadoMatch &&
+      dataMatch &&
+      desligamentoMatch
+    );
   });
 
   servicosFiltrados.sort((a, b) => {
@@ -329,6 +344,12 @@ function atualizarTabela() {
           servico.data_prevista_execucao + "T00:00:00",
         ).toLocaleDateString("pt-BR")
       : "—";
+
+    const desligamentoHtml =
+      servico.desligamento === "SIM"
+        ? '<span class="badge-desligamento-sim">Sim</span>'
+        : '<span class="badge-desligamento-nao">Não</span>';
+
     const botoesEquipe = podeAtribuirEquipe
       ? `<button class="btn btn-sm btn-equipe w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe</button>`
       : "";
@@ -346,7 +367,7 @@ function atualizarTabela() {
             <td>${servico.alimentador || "—"}</td>
             <td>${servico.tipo_processo || "—"}</td>
             <td>${dataPrevista}</td>
-            <td>${servico.desligamento === "SIM" ? "Sim" : "Não"}</td>
+            <td class="col-desligamento text-center">${desligamentoHtml}</td>
             <td>${equipeHtml}</td>
             <td><button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button></td>
             <td>
