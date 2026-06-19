@@ -1,0 +1,51 @@
+# ============================================
+# DEPENDÊNCIAS E BUILD
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ============================================
+# SEGURANÇA - NUNCA SUBIR SENHAS/TOKENS
+# ============================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ============================================
+# UPLOADS E ARQUIVOS DE USUÁRIO
+# ============================================
+uploads/
+upload_*/
+trafos_reformados_anexos/
+public/uploads/
+
+# ============================================
+# BACKUPS (muito grandes pro GitHub)
+# ============================================
+*.sql
+*.sql.gz
+backup_*.sql
+*.backup
+
+# ============================================
+# LOGS E TEMPORÁRIOS
+# ============================================
+logs/
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ============================================
+# SCRIPTS DE INSTALAÇÃO (muito específicos)
+# ============================================
+install.sh
