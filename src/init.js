@@ -42,7 +42,10 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      // Em desenvolvimento, permitir qualquer origem
+      if (process.env.NODE_ENV !== "production") {
+        callback(null, true);
+      } else if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
         callback(new Error("Acesso não permitido pela política de CORS"));

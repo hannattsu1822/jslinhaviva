@@ -1,5 +1,5 @@
 const { promisePool } = require("../../../init");
-const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
 
 async function importarDadosProcessos(file, planilhaTipo) {
   if (!file) throw new Error("Nenhum arquivo de planilha foi enviado.");
@@ -7,25 +7,55 @@ async function importarDadosProcessos(file, planilhaTipo) {
 
   const connection = await promisePool.getConnection();
   try {
-    const workbook = XLSX.read(file.buffer, {
-      type: "buffer",
-      cellDates: true,
-    });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName)
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(file.buffer);
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet || worksheet.rowCount < 2) {
       throw new Error("A planilha enviada está vazia ou corrompida.");
+    }
 
-    const worksheet = workbook.Sheets[sheetName];
-    const dataAsArray = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      blankrows: false,
+    // Ler cabeçalho (linha 1) como array
+    const headerRow = worksheet.getRow(1);
+    const headers = [];
+    headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      headers[colNumber - 1] = cell.value ? String(cell.value).trim() : "";
     });
-    if (dataAsArray.length < 2)
-      throw new Error(
-        "A planilha não contém dados válidos ou está sem cabeçalhos."
-      );
 
-    const headers = dataAsArray[0].map((header) => String(header).trim());
+    const dataAsArray = [headers];
+    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+      const row = worksheet.getRow(rowNumber);
+      const rowData = [];
+      let hasData = false;
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        let value = cell.value;
+        // Tratar richText
+        if (value && typeof value === "object" && value.richText) {
+          value = value.richText.map((r) => r.text).join("");
+        }
+        // Tratar fórmulas
+        if (value && typeof value === "object" && value.result !== undefined) {
+          value = value.result;
+        }
+        // Tratar datas
+        if (value instanceof Date) {
+          value = value;
+        }
+        rowData[colNumber - 1] = value;
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+          hasData = true;
+        }
+      });
+      // Só adiciona linhas que têm dados (equivalente a blankrows: false)
+      if (hasData) {
+        dataAsArray.push(rowData);
+      }
+    }
+
+    if (dataAsArray.length < 2) {
+      throw new Error("A planilha não contém dados válidos ou está sem cabeçalhos.");
+    }
+
     const dataRows = dataAsArray.slice(1);
 
     const NOME_COLUNA_COMENTARIOS = "PrimeiroDeComentários";
@@ -39,9 +69,7 @@ async function importarDadosProcessos(file, planilhaTipo) {
       planilhaTipo === "programacao_obras" &&
       (indiceIdProcessoVisual === -1 || indicePrevisaoExecucao === -1)
     ) {
-      throw new Error(
-        "Cabeçalhos 'IDPROCESSO_VISUAL' ou 'Previsão execução' não encontrados."
-      );
+      throw new Error("Cabeçalhos 'IDPROCESSO_VISUAL' ou 'Previsão execução' não encontrados.");
     }
     if (
       planilhaTipo === "desligamento_programado" &&
@@ -81,7 +109,7 @@ async function importarDadosProcessos(file, planilhaTipo) {
       }
 
       if (!processoValue || !dataValue) continue;
-      const dataDoProcesso = new Date(dataValue);
+      const dataDoProcesso = dataValue instanceof Date ? dataValue : new Date(dataValue);
       if (isNaN(dataDoProcesso.getTime())) continue;
 
       const dataSql = `${dataDoProcesso.getFullYear()}-${String(

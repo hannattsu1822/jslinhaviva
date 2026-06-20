@@ -1,7 +1,7 @@
 {
   "name": "jslinhaviva",
   "version": "1.0.0",
-  "description": "Sistema de gestão de infraestrutura elétrica - Linhaviva",
+  "description": "Sistema de gest\u00e3o de infraestrutura el\u00e9trica - Linhaviva",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "axios": "^1.18.0",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "chartjs-node-canvas": "^5.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -30,13 +30,15 @@
     "pino-pretty": "^11.2.1",
     "playwright": "^1.61.0",
     "proj4": "^2.20.9",
-    "ws": "^8.17.1",
-    "xlsx": "^0.18.5"
+    "ws": "^8.17.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

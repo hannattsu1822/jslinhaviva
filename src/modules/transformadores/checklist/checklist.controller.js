@@ -148,6 +148,7 @@ async function gerarPdfTabela(req, res) {
     );
     res.send(pdfBuffer);
   } catch (error) {
+    console.error("❌ [DEBUG PDF] Erro ao gerar PDF da tabela:", error);
     if (!res.headersSent) {
       const statusCode = error.message.includes("Nenhum dado") ? 400 : 500;
       res.status(statusCode).json({ success: false, message: error.message });

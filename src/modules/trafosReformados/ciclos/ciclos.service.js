@@ -1,5 +1,5 @@
 const { promisePool } = require("../../../init");
-const xlsx = require("xlsx");
+const ExcelJS = require("exceljs");
 const fs = require("fs");
 
 async function listarCiclos(filtros) {
@@ -110,88 +110,83 @@ async function importarCiclos(filePath) {
   const connection = await promisePool.getConnection();
   try {
     await connection.beginTransaction();
-    const workbook = xlsx.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(sheet, { defval: null });
-
-    if (!data || data.length === 0)
+    
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet || worksheet.rowCount < 2) {
       throw new Error("Planilha vazia ou formato inválido");
+    }
+    
+    const headerRow = worksheet.getRow(1);
+    const headers = [];
+    headerRow.eachCell((cell, colNumber) => {
+      headers[colNumber - 1] = cell.value ? String(cell.value).trim() : "";
+    });
 
-    const headers = Object.keys(data[0]);
     const columnMap = {
-      item: headers.find((h) => h.trim().toUpperCase() === "ITEM"),
-      numero_projeto: headers.find(
+      item: headers.findIndex((h) => h.toUpperCase() === "ITEM"),
+      numero_projeto: headers.findIndex(
+        (h) => h.toUpperCase().includes("PROJETO") || h.toUpperCase().includes("PROJ")
+      ),
+      pot: headers.findIndex(
         (h) =>
-          h.trim().toUpperCase().includes("PROJETO") ||
-          h.trim().toUpperCase().includes("PROJ")
+          h.toUpperCase() === "POT" ||
+          h.toUpperCase() === "POTENCIA" ||
+          h.toUpperCase() === "POTÊNCIA"
       ),
-      pot: headers.find(
+      numero_serie: headers.findIndex(
         (h) =>
-          h.trim().toUpperCase() === "POT" ||
-          h.trim().toUpperCase() === "POTENCIA" ||
-          h.trim().toUpperCase() === "POTÊNCIA"
+          h.toUpperCase().includes("SÉRIE") ||
+          h.toUpperCase().includes("SERIE") ||
+          h.toUpperCase() === "N. SÉRIE"
       ),
-      numero_serie: headers.find(
-        (h) =>
-          h.trim().toUpperCase().includes("SÉRIE") ||
-          h.trim().toUpperCase().includes("SERIE") ||
-          h.trim().toUpperCase() === "N. SÉRIE"
+      numero_nota: headers.findIndex(
+        (h) => h.toUpperCase().includes("NOTA") || h.toUpperCase() === "N. NOTA"
       ),
-      numero_nota: headers.find(
-        (h) =>
-          h.trim().toUpperCase().includes("NOTA") ||
-          h.trim().toUpperCase() === "N. NOTA"
+      t_at: headers.findIndex(
+        (h) => h.toUpperCase().includes("T AT") || h.toUpperCase().includes("TENSÃO AT")
       ),
-      t_at: headers.find(
-        (h) =>
-          h.trim().toUpperCase().includes("T AT") ||
-          h.trim().toUpperCase().includes("TENSÃO AT")
+      t_bt: headers.findIndex(
+        (h) => h.toUpperCase().includes("T BT") || h.toUpperCase().includes("TENSÃO BT")
       ),
-      t_bt: headers.find(
-        (h) =>
-          h.trim().toUpperCase().includes("T BT") ||
-          h.trim().toUpperCase().includes("TENSÃO BT")
-      ),
-      taps: headers.find((h) => h.trim().toUpperCase().includes("TAP")),
-      fabricante: headers.find((h) =>
-        h.trim().toUpperCase().includes("FABRICANTE")
-      ),
+      taps: headers.findIndex((h) => h.toUpperCase().includes("TAP")),
+      fabricante: headers.findIndex((h) => h.toUpperCase().includes("FABRICANTE")),
     };
 
     const requiredColumns = ["item", "numero_serie", "pot", "fabricante"];
-    const missingColumns = requiredColumns.filter((col) => !columnMap[col]);
-    if (missingColumns.length > 0)
+    const missingColumns = requiredColumns.filter((col) => columnMap[col] === -1);
+    if (missingColumns.length > 0) {
       throw new Error(
-        `Colunas obrigatórias não encontradas na planilha: ${missingColumns.join(
-          ", "
-        )}`
+        `Colunas obrigatórias não encontradas na planilha: ${missingColumns.join(", ")}`
       );
+    }
 
     const results = {
-      total: data.length,
+      total: worksheet.rowCount - 1,
       imported: 0,
       failed: 0,
       errors_details: [],
     };
 
-    for (const [index, row] of data.entries()) {
-      const linha = index + 2;
+    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+      const row = worksheet.getRow(rowNumber);
       let numeroSerie = "";
       try {
         const getValue = (key) => {
-          const colName = columnMap[key];
-          if (!colName || row[colName] === undefined || row[colName] === null)
-            return null;
-          return String(row[colName]).trim();
+          const colIndex = columnMap[key];
+          if (colIndex === -1) return null;
+          const cell = row.getCell(colIndex + 1);
+          if (!cell || cell.value === undefined || cell.value === null) return null;
+          return String(cell.value).trim();
         };
+        
         numeroSerie = getValue("numero_serie");
         if (!numeroSerie) throw new Error("Número de série é obrigatório");
         if (!getValue("item")) throw new Error("Coluna 'Item' é obrigatória.");
-        if (!getValue("pot"))
-          throw new Error("Coluna 'Potência (POT)' é obrigatória.");
-        if (!getValue("fabricante"))
-          throw new Error("Coluna 'Fabricante' é obrigatória.");
+        if (!getValue("pot")) throw new Error("Coluna 'Potência (POT)' é obrigatória.");
+        if (!getValue("fabricante")) throw new Error("Coluna 'Fabricante' é obrigatória.");
 
         const sql = `INSERT INTO trafos_reformados (item, numero_projeto, pot, numero_serie, numero_nota, t_at, t_bt, taps, fabricante, status_avaliacao, data_importacao) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', CURDATE())`;
         const params = [
@@ -210,11 +205,8 @@ async function importarCiclos(filePath) {
       } catch (error) {
         results.failed++;
         results.errors_details.push({
-          linha,
-          numero_serie:
-            numeroSerie ||
-            (columnMap.numero_serie && row[columnMap.numero_serie]) ||
-            "",
+          linha: rowNumber,
+          numero_serie: numeroSerie || "",
           erro: error.message,
         });
       }
