@@ -1,0 +1,41 @@
+:root {
+  /* Marca Linha Viva */
+  --lv-primary: #1e56a0;
+  --lv-primary-dark: #163d72;
+  --lv-primary-light: #2d6cb5;
+  --lv-accent: #38bdf8;
+  --lv-accent-soft: #7dd3fc;
+
+  /* Superfícies */
+  --lv-bg-deep: #0b1220;
+  --lv-bg-mid: #111c33;
+  --lv-surface: rgba(255, 255, 255, 0.94);
+  --lv-surface-border: rgba(255, 255, 255, 0.55);
+  --lv-text: #0f172a;
+  --lv-text-muted: #64748b;
+  --lv-text-on-dark: #e2e8f0;
+
+  /* Estados */
+  --lv-success: #16a34a;
+  --lv-error: #dc2626;
+  --lv-error-bg: #fef2f2;
+  --lv-error-border: #fecaca;
+  --lv-success-bg: #f0fdf4;
+  --lv-success-border: #bbf7d0;
+
+  /* Formulário */
+  --lv-input-bg: #f8fafc;
+  --lv-input-border: #e2e8f0;
+  --lv-input-focus: #2563eb;
+  --lv-radius-sm: 10px;
+  --lv-radius-md: 16px;
+  --lv-radius-lg: 24px;
+
+  /* Sombras */
+  --lv-shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.06);
+  --lv-shadow-md: 0 18px 45px rgba(15, 23, 42, 0.12);
+  --lv-shadow-lg: 0 30px 70px rgba(15, 23, 42, 0.18);
+
+  /* Tipografia */
+  --lv-font: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+}

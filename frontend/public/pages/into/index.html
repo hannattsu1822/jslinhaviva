@@ -3,363 +3,176 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Linha Viva | Login Moderno</title>
-    <link rel="stylesheet" href="/static/css/index.css" />
+    <title>Linha Viva | Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
+    <link rel="stylesheet" href="/static/css/auth/login.css" />
   </head>
 
-  <body>
-    <div class="login-container">
-      <div class="login-header">
-        <div class="logo">
+  <body class="login-page">
+    <div class="login-page__bg" aria-hidden="true">
+      <div class="login-page__grid"></div>
+      <div class="login-page__orb login-page__orb--1"></div>
+      <div class="login-page__orb login-page__orb--2"></div>
+    </div>
+
+    <main class="login-shell">
+      <section class="login-brand" aria-label="Sobre o sistema">
+        <div class="login-brand__badge">
+          <i class="fas fa-shield-halved"></i>
+          Acesso seguro
+        </div>
+
+        <div class="login-brand__icon" aria-hidden="true">
           <i class="fas fa-bolt"></i>
-          <h1>Linha Viva</h1>
-          <p>Sistema Integrado de Inspeções</p>
-        </div>
-      </div>
-
-      <form class="login-form" id="loginForm">
-        <div class="input-group">
-          <input type="text" id="matricula" placeholder="Matrícula" required />
-          <i class="fas fa-user"></i>
         </div>
 
-        <div class="input-group">
-          <input type="password" id="senha" placeholder="Senha" required />
-          <i class="fas fa-lock"></i>
-        </div>
+        <h1 class="login-brand__title">
+          <span>Linha Viva</span>
+        </h1>
 
-        <button type="button" onclick="handleLoginAttempt()" class="login-btn">
-          <span>Acessar Sistema</span>
-          <i class="fas fa-arrow-right"></i>
+        <p class="login-brand__subtitle">
+          Plataforma integrada para gestão de inspeções, infraestrutura elétrica e operações de campo.
+        </p>
+
+        <ul class="login-brand__features">
+          <li>
+            <i class="fas fa-check"></i>
+            Monitoramento em tempo real
+          </li>
+          <li>
+            <i class="fas fa-check"></i>
+            Gestão de serviços e equipes
+          </li>
+          <li>
+            <i class="fas fa-check"></i>
+            Relatórios e indicadores centralizados
+          </li>
+        </ul>
+      </section>
+
+      <section class="login-panel">
+        <div class="login-card">
+          <header class="login-card__header">
+            <h2>Bem-vindo de volta</h2>
+            <p>Entre com sua matrícula e senha para continuar</p>
+          </header>
+
+          <form class="login-form" id="loginForm" novalidate>
+            <div class="field">
+              <label for="matricula">Matrícula</label>
+              <div class="field__control">
+                <input
+                  type="text"
+                  id="matricula"
+                  name="matricula"
+                  placeholder="Digite sua matrícula"
+                  autocomplete="username"
+                  required
+                />
+                <i class="fas fa-user field__icon" aria-hidden="true"></i>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="senha">Senha</label>
+              <div class="field__control">
+                <input
+                  type="password"
+                  id="senha"
+                  name="senha"
+                  placeholder="Digite sua senha"
+                  autocomplete="current-password"
+                  required
+                />
+                <i class="fas fa-lock field__icon" aria-hidden="true"></i>
+                <button
+                  type="button"
+                  id="togglePassword"
+                  class="field__toggle"
+                  aria-label="Mostrar senha"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="login-btn">
+              <span>Acessar Sistema</span>
+              <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          <div id="login-message" class="login-alert" role="alert" aria-live="polite"></div>
+
+          <footer class="login-card__footer">
+            Sistema Linha Viva &mdash; Sulgipe
+          </footer>
+        </div>
+      </section>
+    </main>
+
+    <div id="welcomeOverlay" class="welcome-overlay" aria-hidden="true">
+      <div
+        id="welcomeCard"
+        class="welcome-modal"
+        role="dialog"
+        aria-labelledby="welcomeCardTitle"
+        aria-modal="true"
+      >
+        <button
+          id="closeWelcomeCard"
+          class="welcome-modal__close"
+          type="button"
+          aria-label="Fechar"
+        >
+          <i class="fas fa-xmark" aria-hidden="true"></i>
         </button>
-      </form>
 
-      <div id="login-message"></div>
+        <div class="welcome-modal__glow" aria-hidden="true"></div>
+
+        <div class="welcome-modal__avatar" id="welcomeCardAvatar" aria-hidden="true">LV</div>
+
+        <div class="welcome-modal__badge">
+          <i class="fas fa-check" aria-hidden="true"></i>
+          Login realizado
+        </div>
+
+        <h3 id="welcomeCardTitle" class="welcome-modal__title">Bem-vindo de volta!</h3>
+
+        <p class="welcome-modal__greeting">
+          Olá, <strong id="welcomeCardUserName"></strong>
+        </p>
+
+        <div class="welcome-modal__meta">
+          <div class="welcome-modal__meta-icon" aria-hidden="true">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="welcome-modal__meta-text">
+            <span class="welcome-modal__meta-label">Último acesso</span>
+            <span id="welcomeCardLastAccess" class="welcome-modal__meta-value"></span>
+          </div>
+        </div>
+
+        <div class="welcome-modal__progress" aria-hidden="true">
+          <div class="welcome-modal__progress-bar"></div>
+        </div>
+
+        <p class="welcome-modal__redirect">
+          <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+          Redirecionando ao painel...
+        </p>
+      </div>
     </div>
 
-    <div id="welcomeCard" class="welcome-card">
-      <div class="welcome-card-header">
-        <i class="fas fa-check-circle"></i>
-        <span id="welcomeCardTitle">Login Bem-sucedido!</span>
-      </div>
-      <div class="welcome-card-body">
-        <p>Olá, <strong id="welcomeCardUserName"></strong>!</p>
-        <p id="welcomeCardLastAccess" class="last-access"></p>
-      </div>
-      <button id="closeWelcomeCard" class="close-welcome-card-btn">
-        &times;
-      </button>
-    </div>
-
-    <script>
-      function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = window.atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; ++i) {
-          outputArray[i] = rawData.charCodeAt(i);
-        }
-        return outputArray;
-      }
-
-      async function subscribeUser() {
-        console.log("DEBUG: [Frontend] Iniciando o processo de inscrição para notificações push.");
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            console.warn('DEBUG: [Frontend] Push messaging não é suportado por este navegador.');
-            return;
-        }
-        console.log("DEBUG: [Frontend] Service Worker e Push Manager são suportados.");
-        try {
-            console.log("DEBUG: [Frontend] Registrando o service worker '/sw.js'...");
-            const registration = await navigator.serviceWorker.register('/sw.js');
-            console.log("DEBUG: [Frontend] Service worker registrado com sucesso:", registration);
-            console.log("DEBUG: [Frontend] Aguardando o service worker ficar 'pronto' (ativo)...");
-            await navigator.serviceWorker.ready;
-            console.log("DEBUG: [Frontend] Service worker está pronto.");
-
-            const existingSubscription = await registration.pushManager.getSubscription();
-            if (existingSubscription) {
-                console.log('DEBUG: [Frontend] Inscrição antiga encontrada. Removendo-a para criar uma nova...', existingSubscription);
-                await existingSubscription.unsubscribe();
-                console.log('DEBUG: [Frontend] Inscrição antiga removida com sucesso.');
-            }
-
-            console.log("DEBUG: [Frontend] Solicitando permissão para notificações...");
-            const permission = await Notification.requestPermission();
-            console.log("DEBUG: [Frontend] Status da permissão:", permission);
-            if (permission !== 'granted') {
-                console.warn('DEBUG: [Frontend] Permissão para notificações foi negada ou ignorada.');
-                if (permission === 'denied') {
-                    alert("As notificações estão bloqueadas. Para reativá-las, clique no cadeado na barra de endereços e mude a permissão de notificações para 'Permitir'.");
-                }
-                return;
-            }
-
-            const vapidPublicKey = "BOJqp3DYakKat9iZiLBpbXZkoHRep5ZJ6SoaVXmEMo5JK5rT4Ti4rPKYuF3zjii0qonZ0QIlTWJtAO5g6Gxb2xc";
-            console.log("DEBUG: [Frontend] Chave VAPID Pública que será usada para a inscrição:", vapidPublicKey);
-            const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-            console.log("DEBUG: [Frontend] Chave convertida para Uint8Array:", applicationServerKey);
-            console.log("DEBUG: [Frontend] Tentando se inscrever no push manager...");
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: applicationServerKey,
-            });
-            console.log("DEBUG: [Frontend] Inscrição BEM-SUCEDIDA! Novo objeto de inscrição:", subscription);
-            console.log("DEBUG: [Frontend] Enviando novo objeto de inscrição para o servidor em '/api/push/subscribe'...");
-            await fetch('/api/push/subscribe', {
-                method: 'POST',
-                body: JSON.stringify({
-                    subscription
-                }),
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            });
-            console.log('DEBUG: [Frontend] Nova inscrição enviada para o servidor com sucesso.');
-        } catch (error) {
-            console.error('DEBUG: [Frontend] FALHA CRÍTICA ao se inscrever para notificações push.');
-            console.error('DEBUG: [Frontend] Nome do Erro:', error.name);
-            console.error('DEBUG: [Frontend] Mensagem do Erro:', error.message);
-            console.error('DEBUG: [Frontend] Objeto completo do Erro:', error);
-        }
-      }
-
-      const loginForm = document.getElementById("loginForm");
-      const matriculaInput = document.getElementById("matricula");
-      const senhaInput = document.getElementById("senha");
-      const messageEl = document.getElementById("login-message");
-      const loginButton = loginForm.querySelector(".login-btn");
-      const loginButtonSpan = loginButton
-        ? loginButton.querySelector("span")
-        : null;
-      const originalButtonTextContent = loginButtonSpan
-        ? loginButtonSpan.textContent
-        : "Acessar Sistema";
-
-      const welcomeCardEl = document.getElementById("welcomeCard");
-      const welcomeCardUserNameEl = document.getElementById(
-        "welcomeCardUserName"
-      );
-      const welcomeCardLastAccessEl = document.getElementById(
-        "welcomeCardLastAccess"
-      );
-      const closeWelcomeCardBtn = document.getElementById("closeWelcomeCard");
-
-      function resetLoginForm() {
-        if (matriculaInput) {
-          matriculaInput.value = "";
-        }
-        if (senhaInput) {
-          senhaInput.value = "";
-        }
-        hideMessage();
-
-        if (loginButton && loginButtonSpan) {
-          loginButton.disabled = false;
-          loginButtonSpan.textContent = originalButtonTextContent;
-        }
-      }
-
-      function showWelcomeCard(userData) {
-        if (
-          !welcomeCardEl ||
-          !welcomeCardUserNameEl ||
-          !welcomeCardLastAccessEl
-        ) {
-          return;
-        }
-
-        welcomeCardUserNameEl.textContent = userData.nome || "Usuário";
-
-        let lastAccessDisplay = "Este é seu primeiro acesso!";
-        const lastLoginTimestamp = localStorage.getItem("lastLoginTimestamp");
-
-        if (userData.ultimoAcesso) {
-          const date = new Date(userData.ultimoAcesso);
-          lastAccessDisplay = `Último acesso: ${date.toLocaleDateString(
-            "pt-BR"
-          )} às ${date.toLocaleTimeString("pt-BR")}`;
-        } else if (lastLoginTimestamp) {
-          const date = new Date(parseInt(lastLoginTimestamp, 10));
-          lastAccessDisplay = `Último acesso: ${date.toLocaleDateString(
-            "pt-BR"
-          )} às ${date.toLocaleTimeString("pt-BR")}`;
-        }
-        welcomeCardLastAccessEl.textContent = lastAccessDisplay;
-
-        localStorage.setItem("lastLoginTimestamp", Date.now().toString());
-        welcomeCardEl.classList.add("show");
-
-        setTimeout(() => {
-          hideWelcomeCard();
-        }, 5000);
-      }
-
-      function hideWelcomeCard() {
-        if (welcomeCardEl) {
-          welcomeCardEl.classList.remove("show");
-        }
-      }
-
-      if (closeWelcomeCardBtn) {
-        closeWelcomeCardBtn.addEventListener("click", hideWelcomeCard);
-      }
-
-      async function performLogin() {
-        const matricula = matriculaInput.value.trim();
-        const senha = senhaInput.value.trim();
-
-        if (!matricula || !senha) {
-          showMessage("Matrícula e senha são obrigatórios.", "error");
-          return;
-        }
-        hideMessage();
-
-        loginButton.disabled = true;
-        loginButtonSpan.textContent = "Acessando...";
-
-        let responseOk = false;
-
-        try {
-          const actualResponse = await fetch("/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ matricula, senha }),
-          });
-          const actualResult = await actualResponse.json();
-
-          const currentResponse = actualResponse;
-          const currentResult = actualResult;
-
-          if (!currentResponse) {
-            throw new Error("Resposta da API não definida.");
-          }
-
-          if (currentResponse.ok) {
-            responseOk = true;
-
-            const userDataForCard = {
-              nome: currentResult.user ? currentResult.user.nome : "Usuário",
-              ultimoAcesso: currentResult.user
-                ? currentResult.user.ultimoAcesso
-                : null,
-            };
-            showWelcomeCard(userDataForCard);
-
-            localStorage.setItem(
-              "user",
-              JSON.stringify({
-                nome: currentResult.user?.nome,
-                matricula: currentResult.user?.matricula,
-                cargo: currentResult.user?.cargo,
-                nivel: currentResult.user?.nivel,
-              })
-            );
-            
-            await subscribeUser();
-
-            document.removeEventListener("keydown", handleEnterKey);
-
-            setTimeout(() => {
-              window.location.href = "/dashboard";
-            }, 2750);
-          } else {
-            showMessage(
-              currentResult.message ||
-                "Credenciais inválidas. Verifique seus dados.",
-              "error"
-            );
-            if (senhaInput) {
-              senhaInput.value = "";
-              senhaInput.focus();
-            }
-          }
-        } catch (error) {
-          showMessage(
-            "Erro de conexão ou falha inesperada. Tente novamente.",
-            "error"
-          );
-          if (senhaInput) {
-            senhaInput.value = "";
-            senhaInput.focus();
-          }
-        } finally {
-          if (!responseOk) {
-            loginButton.disabled = false;
-            loginButtonSpan.textContent = originalButtonTextContent;
-          } else {
-            if (loginButtonSpan.textContent === "Acessando...") {
-              loginButtonSpan.textContent = "Redirecionando...";
-            }
-          }
-        }
-      }
-
-      function showMessage(message, type = "error") {
-        messageEl.textContent = message;
-        messageEl.className = "login-message-active";
-
-        if (type === "error") {
-          messageEl.style.backgroundColor = "#f8d7da";
-          messageEl.style.color = "#721c24";
-          messageEl.style.borderColor = "#f5c6cb";
-        } else if (type === "success") {
-          messageEl.style.backgroundColor = "#d4edda";
-          messageEl.style.color = "#155724";
-          messageEl.style.borderColor = "#c3e6cb";
-        } else {
-          messageEl.style.backgroundColor = "#e2e3e5";
-          messageEl.style.color = "#495057";
-          messageEl.style.borderColor = "#d6d8db";
-        }
-      }
-
-      function hideMessage() {
-        messageEl.className = "";
-        messageEl.textContent = "";
-      }
-
-      window.handleLoginAttempt = function() {
-        if (loginButton.disabled) {
-          return;
-        }
-        performLogin();
-      }
-
-      if (loginForm) {
-        loginForm.addEventListener("submit", function (event) {
-          event.preventDefault();
-          handleLoginAttempt();
-        });
-      }
-
-      function handleEnterKey(event) {
-        const keyPressed = event.key;
-        const keyCodePressed = event.keyCode;
-        if (keyPressed === "Enter" || keyCodePressed === 13) {
-          event.preventDefault();
-          handleLoginAttempt();
-        }
-      }
-
-      document.addEventListener("keydown", handleEnterKey);
-
-      window.addEventListener("pageshow", function (event) {
-        resetLoginForm();
-        document.removeEventListener("keydown", handleEnterKey);
-        document.addEventListener("keydown", handleEnterKey);
-      });
-
-      resetLoginForm();
-    </script>
+    <script src="/scripts/auth/login.js"></script>
   </body>
 </html>

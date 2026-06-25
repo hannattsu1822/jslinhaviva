@@ -8,7 +8,11 @@ Pasta dedicada ao frontend, desacoplada do backend (`src/`).
 frontend/
 ├── public/          Páginas HTML estáticas (legado)
 │   ├── pages/       Telas servidas via sendFile
-│   └── scripts/     JS/CSS do módulo legado
+│   ├── scripts/     JS por módulo (ex: auth/, frota/, subestacoes/)
+│   └── static/css/  Estilos organizados por domínio
+│       ├── base/    Tokens e variáveis globais (variables.css)
+│       ├── auth/    Telas de autenticação (login.css)
+│       └── ...      Demais módulos (migrar gradualmente)
 ├── views/           Templates EJS (SSR)
 │   ├── pages/       Telas renderizadas pelo Express
 │   ├── partials/    Componentes compartilhados (sidebar, etc.)
@@ -16,6 +20,16 @@ frontend/
 └── shared/          Utilitários compartilhados
     └── utils/       api-client.js, csrf-fetch.js
 ```
+
+### Convenção de CSS (public)
+
+| Pasta | Uso |
+|-------|-----|
+| `static/css/base/` | Variáveis, reset, utilitários globais |
+| `static/css/auth/` | Login e fluxos de autenticação |
+| `static/css/<modulo>/` | Estilos específicos de cada área do sistema |
+
+Arquivos soltos na raiz de `static/css/` são legado — ao editar uma tela, prefira mover o CSS para a pasta do módulo correspondente.
 
 ## Como funciona hoje
 

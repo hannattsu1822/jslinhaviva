@@ -107,12 +107,15 @@ async function loginSeguro(req, res) {
       return res.status(401).json({ message: "Matrícula ou senha inválida." });
     }
 
+    const ultimoAcessoAnterior = usuario.ultimo_login || null;
+
     const safeUser = {
       id: usuario.id,
       nome: usuario.nome,
       matricula: usuario.matricula,
       cargo: usuario.cargo,
       nivel: usuario.nivel,
+      ultimoAcesso: ultimoAcessoAnterior,
     };
 
     await new Promise((resolve, reject) => {
@@ -122,8 +125,19 @@ async function loginSeguro(req, res) {
       });
     });
 
-    req.session.user = safeUser;
+    req.session.user = {
+      id: safeUser.id,
+      nome: safeUser.nome,
+      matricula: safeUser.matricula,
+      cargo: safeUser.cargo,
+      nivel: safeUser.nivel,
+    };
     ensureCsrfToken(req);
+
+    await promisePool.query(
+      "UPDATE users SET ultimo_login = NOW() WHERE matricula = ?",
+      [matriculaLimpa]
+    );
 
     await registrarAuditoria(matriculaLimpa, "LOGIN", "Login no sistema");
 
