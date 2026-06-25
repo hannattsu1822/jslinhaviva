@@ -1,0 +1,108 @@
+@media print {
+  body {
+    font-size: 9pt; /* Reduzir um pouco para caber mais em A4 */
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .card,
+  .form-section {
+    border: 1px solid #ccc !important; /* Manter bordas se desejado */
+    box-shadow: none !important;
+    page-break-inside: avoid !important; /* Tentar não quebrar cards no meio da página */
+    margin-bottom: 10px !important;
+  }
+  .card-header {
+    background-color: #f0f0f0 !important;
+    color: black !important;
+    padding: 5px !important;
+    font-size: 11pt !important;
+  }
+  .card-body {
+    padding: 8px !important;
+  }
+  /* Esconder elementos não necessários para impressão */
+  .sidebar,
+  .sidebar-toggle-button,
+  #infoServicoCard ~ .d-flex.justify-content-between a.btn-outline-secondary,
+  button[type="submit"],
+  button[data-bs-toggle="modal"],
+  .btn-remover-linha,
+  .btn-remover-participante-display,
+  .btn-remover-linha-atividade,
+  .btn-remover-linha-material,
+  .input-group .btn {
+    display: none !important;
+  }
+
+  /* Estilo para valores de input parecerem texto */
+  .printed-value {
+    display: inline-block;
+    width: auto; /* Ajustar conforme necessário, ou usar 100% e quebrar linha */
+    min-height: 1.2em;
+    padding: 1px 2px;
+    border-bottom: 1px dotted #777;
+    line-height: 1.2em;
+  }
+  .printed-value-readonly {
+    /* Para campos que já eram display */
+    display: inline-block;
+    width: auto;
+    padding: 1px 2px;
+    line-height: 1.2em;
+  }
+
+  /* Ajustes para checkboxes e radios (a lógica JS já os substitui) */
+  .form-check-input[type="radio"],
+  .form-check-input[type="checkbox"] {
+    display: none !important; /* Garante que os originais estão escondidos */
+  }
+  .form-check-label .checkbox-display-print,
+  .form-check-label .radio-display-print {
+    /* Se usar classes nos spans criados */
+    border: 1px solid #000;
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+    margin-right: 5px;
+    text-align: center;
+    line-height: 8px;
+    font-size: 8px;
+  }
+  .form-check-label .checked-print::after {
+    content: "X";
+  }
+  /* Quebras de página */
+  h2,
+  .card-header {
+    page-break-after: avoid;
+  }
+  .form-section {
+    page-break-before: auto;
+  }
+}
+
+/* Estilos para quando .pdf-print-mode-active é adicionado via JS ANTES da impressão */
+body.pdf-print-mode-active {
+  font-size: 9pt;
+  margin: 0;
+  padding: 0;
+}
+body.pdf-print-mode-active .container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+body.pdf-print-mode-active .card,
+body.pdf-print-mode-active .form-section {
+  border: 1px solid #ccc !important;
+  box-shadow: none !important;
+  margin-bottom: 10px !important;
+}
+/* ... (outros estilos do @media print podem ser duplicados aqui se necessário para a captura do Playwright) ... */

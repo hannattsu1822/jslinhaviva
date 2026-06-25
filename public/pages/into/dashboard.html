@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/dashboard.css" />
+    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
+    <link rel="stylesheet" href="/static/css/toast.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/main.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/into/dashboard_calendar.css" />
+    <style>
+      .checklist-badge {
+        background: rgba(25, 135, 84, 0.1);
+        border: 1px solid #198754;
+        color: #198754;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        display: none;
+        backdrop-filter: blur(5px);
+      }
+      .checklist-alert-pending {
+        background: rgba(255, 193, 7, 0.15);
+        border: 1px solid #ffc107;
+        color: #856404;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        display: none;
+        backdrop-filter: blur(5px);
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+      .checklist-alert-pending .icon-box {
+        background: #ffc107;
+        color: #000;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-right: 15px;
+      }
+      .glass-modal .modal-content {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      }
+      .checklist-placa-card {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 16px;
+        backdrop-filter: blur(6px);
+      }
+      .checklist-status-hint {
+        font-size: 0.9rem;
+        color: #6c757d;
+      }
+      .checklist-status-inline {
+        display: none;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        font-size: 0.95rem;
+      }
+      .checklist-status-inline.info {
+        display: block;
+        background: #e7f1ff;
+        border-color: #b6d4fe;
+        color: #084298;
+      }
+      .checklist-status-inline.success {
+        display: block;
+        background: #d1e7dd;
+        border-color: #badbcc;
+        color: #0f5132;
+      }
+      .checklist-status-inline.error {
+        display: block;
+        background: #f8d7da;
+        border-color: #f5c2c7;
+        color: #842029;
+      }
+    </style>
+  </head>
+
+  <body>
+    <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar bg-glass">
+      <div class="sidebar-header text-center py-3">
+        <div class="user-icon mb-2">
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
+      </div>
+      <div class="user-info p-3 mt-2 rounded">
+        <div class="info-item mb-2">
+          <i class="fas fa-id-card me-2"></i
+          ><span id="user-matricula">Matrícula: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-briefcase me-2"></i
+          ><span id="user-cargo">Cargo: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-calendar-alt me-2"></i
+          ><span id="current-date">--/--/----</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-clock me-2"></i
+          ><span id="current-time">--:--:--</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav flex-grow-1">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="/dashboard" class="nav-link"
+              ><i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard
+              Principal</a
+            >
+          </li>
+          <!-- Link do NOC na sidebar (visível para COD) -->
+          <li class="nav-item" id="sidebar-noc-link" style="display: none">
+            <a href="/centro-operacoes" class="nav-link"
+              ><i class="fas fa-desktop fa-fw me-2"></i>Centro de Operações</a
+            >
+          </li>
+          <li class="nav-item" id="sidebar-prv-link" style="display: none">
+            <a href="/prv" class="nav-link"
+              ><i class="fas fa-clipboard-list fa-fw me-2"></i>Roteiro de Viagem</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-checklist-link"
+            style="display: none"
+          >
+            <a href="/checklist-diario" class="nav-link"
+              ><i class="fas fa-clipboard-check fa-fw me-2"></i>Checklist Diário</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-subestacoes-link"
+            style="display: none"
+          >
+            <a href="/subestacoes-dashboard" class="nav-link"
+              ><i class="fas fa-charging-station fa-fw me-2"></i>Subestações</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-transformadores-link"
+            style="display: none"
+          >
+            <a href="/transformadores" class="nav-link"
+              ><i class="fas fa-bolt fa-fw me-2"></i>Transformadores</a
+            >
+          </li>
+          <li class="nav-item" id="sidebar-frota-link" style="display: none">
+            <a href="/frota" class="nav-link"
+              ><i class="fas fa-truck fa-fw me-2"></i>Frota</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-gestao-servicos-link"
+            style="display: none"
+          >
+            <a href="/gestao-servicos" class="nav-link"
+              ><i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-gestao-turmas-link"
+            style="display: none"
+          >
+            <a href="/gestao-turmas" class="nav-link"
+              ><i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de
+              Turmas</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-fibra-optica-link"
+            style="display: none"
+          >
+            <a href="/fibra-optica" class="nav-link"
+              ><i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-inspecoes-redes-link"
+            style="display: none"
+          >
+            <a href="/inspecoes-redes" class="nav-link"
+              ><i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de
+              Redes</a
+            >
+          </li>
+          <li class="nav-item" id="sidebar-avulsos-link" style="display: none">
+            <a href="/avulsos-dashboard" class="nav-link"
+              ><i class="fas fa-hand-sparkles fa-fw me-2"></i>Avulsos</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-monitoramento-link"
+            style="display: none"
+          >
+            <a href="/monitoramento-hub" class="nav-link"
+              ><i class="fas fa-satellite-dish fa-fw me-2"></i>Monitoramento</a
+            >
+          </li>
+          <li class="nav-item" id="sidebar-gestao-link" style="display: none">
+            <a href="/dashboard-gestor" class="nav-link"
+              ><i class="fas fa-cogs fa-fw me-2"></i>Painel de Gestão</a
+            >
+          </li>
+          <li
+            class="nav-item"
+            id="sidebar-auditoria-link"
+            style="display: none"
+          >
+            <a href="/auditoria" class="nav-link"
+              ><i class="fas fa-search fa-fw me-2"></i>Auditoria</a
+            >
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <button onclick="logout()" class="btn-logout">
+          <i class="fas fa-sign-out-alt me-2"></i>Sair
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container py-4">
+        <div
+          id="checklist-placa-card"
+          class="checklist-placa-card"
+          style="display: none"
+        >
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+              <h5 class="mb-1 fw-bold text-dark">
+                <i class="fas fa-car me-2 text-primary"></i>Checklist Diário por Veículo
+              </h5>
+              <div class="checklist-status-hint">
+                Selecione o veículo para ver se o checklist do dia já foi realizado.
+              </div>
+            </div>
+
+            <div style="min-width: 240px; max-width: 360px; width: 100%">
+              <label for="checklist-veiculo-select" class="form-label fw-bold mb-1">Veículo</label>
+              <select id="checklist-veiculo-select" class="form-select"></select>
+              <div id="checklist-veiculo-status" class="checklist-status-inline info"></div>
+            </div>
+          </div>
+
+          <div id="checklist-status-badge" class="checklist-badge align-items-center">
+            <i class="fas fa-check-circle fa-2x me-3"></i>
+            <div>
+              <h5 class="mb-0 fw-bold">Checklist Diário Realizado</h5>
+              <small id="checklist-details-text">Veículo verificado e registrado no sistema.</small>
+            </div>
+          </div>
+
+          <div id="checklist-pending-alert" class="checklist-alert-pending">
+            <div class="d-flex align-items-center">
+              <div class="icon-box">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div>
+                <h4 class="mb-1 fw-bold text-dark">Checklist Pendente</h4>
+                <p class="mb-0 text-dark">
+                  O checklist do dia ainda não foi registrado para este veículo.
+                </p>
+              </div>
+            </div>
+            <a
+              id="checklist-cta-link"
+              href="/checklist-diario"
+              class="btn btn-warning fw-bold text-dark px-4 shadow-sm"
+            >
+              <i class="fas fa-clipboard-check me-2"></i>Realizar Agora
+            </a>
+          </div>
+        </div>
+
+        <h1 class="page-title mb-4">
+          <i class="fas fa-tachometer-alt me-3"></i>Painel de Controle Principal
+        </h1>
+
+        <div class="row g-4">
+          
+          <!-- NOVO CARD: CENTRO DE OPERAÇÕES (NOC) -->
+          <div
+            id="card-noc"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/centro-operacoes" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-dark mx-auto mb-2">
+                      <i class="fas fa-desktop"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Centro de Operações</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+          <!-- FIM NOVO CARD -->
+
+          <div
+            id="card-subestacoes"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/subestacoes-dashboard" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-info mx-auto mb-2">
+                      <i class="fas fa-charging-station"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Subestações</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="card-transformadores"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/transformadores" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-primary mx-auto mb-2">
+                      <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Transformadores</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div id="card-frota" class="col-md-6 col-lg-3" style="display: none">
+            <a href="/frota" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-warning mx-auto mb-2">
+                      <i class="fas fa-truck"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Frota</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="card-gestao-servicos"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/gestao-servicos" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-info mx-auto mb-2">
+                      <i class="fas fa-tools"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Gestão de Serviços</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="card-gestao-turmas"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/gestao-turmas" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-secondary mx-auto mb-2">
+                      <i class="fa-solid fa-users-gear"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Gestão de Turmas</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="card-fibra-optica"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/fibra-optica" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #9c27b0 !important"
+                    >
+                      <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Fibra Óptica</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="card-inspecoes-redes"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/inspecoes-redes" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #ff5722 !important"
+                    >
+                      <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Inspeções de Redes</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="card-avulsos"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/avulsos-dashboard" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #607d8b !important"
+                    >
+                      <i class="fas fa-hand-sparkles"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Avulsos</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="card-monitoramento"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/monitoramento-hub" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #009688 !important"
+                    >
+                      <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Monitoramento</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div id="prv-card" class="col-md-6 col-lg-3" style="display: none">
+            <a href="/prv" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div
+                      class="icon-circle mx-auto mb-2"
+                      style="background-color: #17a2b8 !important"
+                    >
+                      <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Roteiro de Viagem</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div id="gestao-card" class="col-md-6 col-lg-3" style="display: none">
+            <a href="/dashboard-gestor" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-dark mx-auto mb-2">
+                      <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Painel de Gestão</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+
+          <div
+            id="auditoria-card"
+            class="col-md-6 col-lg-3"
+            style="display: none"
+          >
+            <a href="/auditoria" class="card-link"
+              ><div class="card glass-card h-100">
+                <div
+                  class="card-body d-flex align-items-center justify-content-center"
+                >
+                  <div class="text-center">
+                    <div class="icon-circle bg-danger mx-auto mb-2">
+                      <i class="fas fa-search"></i>
+                    </div>
+                    <h3 class="card-title mb-0">Auditoria</h3>
+                  </div>
+                </div>
+              </div></a
+            >
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="card dashboard-calendar-card">
+              <h2
+                class="mb-3 card-title"
+                style="
+                  font-size: 1.5rem;
+                  color: var(--primary-blue-filter, #007bff);
+                "
+              >
+                <i class="fas fa-calendar-alt me-2"></i>Próximos Checklists de
+                Veículos
+              </h2>
+              <div id="dashboard-calendar">
+                <p class="text-center text-muted py-5">
+                  Carregando calendário...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content-overlay"></div>
+
+    <div
+      id="access-denied-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-labelledby="accessDeniedModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-exclamation-circle text-danger mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3" id="accessDeniedModalLabel">Acesso negado!</h4>
+            <p>Você não tem permissão para acessar este recurso.</p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="development-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-labelledby="developmentModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-modal">
+          <div class="modal-body text-center p-4">
+            <i
+              class="fas fa-hammer text-warning mb-3"
+              style="font-size: 3rem"
+            ></i>
+            <h4 class="mb-3" id="developmentModalLabel">Em Desenvolvimento!</h4>
+            <p>
+              Este recurso está sendo construído e estará disponível em breve.
+            </p>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js"></script>
+    <script src="/scripts/utils/csrf-fetch.js"></script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/into/dashboard_calendar.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/api/me")
+          .then((response) => {
+            if (!response.ok) {
+              window.location.href = "/login";
+              return;
+            }
+            return response.json();
+          })
+          .then((user) => {
+            if (!user) return;
+
+            const userLevel = user.nivel || 0;
+            const userCargo = String(user.cargo || "").trim().toLowerCase();
+            const isMotorista = userCargo === "motorista";
+            const isCOD = userCargo === "cod"; // Verifica se é COD
+
+            const cardPermissions = {
+              "card-subestacoes": 3,
+              "card-transformadores": 5,
+              "card-frota": 2,
+              "card-gestao-servicos": 2,
+              "card-gestao-turmas": 3,
+              "card-fibra-optica": 3,
+              "card-inspecoes-redes": 3,
+              "card-avulsos": 2,
+              "card-monitoramento": 5,
+              "prv-card": 3,
+              "gestao-card": 5,
+              "auditoria-card": 10,
+              "card-noc": 1, // NOC requer nível 1 (mas será tratado especial para COD)
+            };
+
+            const sidebarItemIds = [
+              "sidebar-subestacoes-link",
+              "sidebar-transformadores-link",
+              "sidebar-frota-link",
+              "sidebar-gestao-servicos-link",
+              "sidebar-gestao-turmas-link",
+              "sidebar-fibra-optica-link",
+              "sidebar-inspecoes-redes-link",
+              "sidebar-avulsos-link",
+              "sidebar-monitoramento-link",
+              "sidebar-gestao-link",
+              "sidebar-auditoria-link",
+              "sidebar-prv-link",
+              "sidebar-checklist-link",
+              "sidebar-noc-link"
+            ];
+
+            const hideElement = (id) => {
+              const el = document.getElementById(id);
+              if (el) el.style.display = "none";
+            };
+
+            const showElement = (id, display = "block") => {
+              const el = document.getElementById(id);
+              if (el) el.style.display = display;
+            };
+
+            const hideDashboardNavItem = () => {
+              const dashboardNavItem = document.querySelector(
+                '.sidebar-nav .nav-list .nav-item a[href="/dashboard"]'
+              );
+              if (dashboardNavItem && dashboardNavItem.closest("li")) {
+                dashboardNavItem.closest("li").style.display = "none";
+              }
+            };
+
+            // --- LÓGICA PARA COD ---
+            if (isCOD) {
+              // Esconde todos os cards padrão
+              Object.keys(cardPermissions).forEach((id) => hideElement(id));
+              
+              // Mostra apenas o NOC
+              showElement("card-noc", "block");
+
+              // Esconde calendário
+              const calendarCard = document.querySelector(".dashboard-calendar-card");
+              if (calendarCard) calendarCard.style.display = "none";
+
+              // Esconde checklist
+              const checklistCard = document.getElementById("checklist-placa-card");
+              if (checklistCard) checklistCard.style.display = "none";
+
+              // Limpa sidebar e deixa só o NOC
+              sidebarItemIds.forEach((id) => hideElement(id));
+              showElement("sidebar-noc-link", "block");
+              
+              // Esconde link do dashboard principal pois ele só usa o NOC
+              hideDashboardNavItem();
+
+              return; // Encerra aqui para COD
+            }
+
+            // --- LÓGICA PARA MOTORISTA ---
+            if (isMotorista) {
+              Object.keys(cardPermissions).forEach((id) => hideElement(id));
+              showElement("prv-card", "block");
+
+              const calendarCard = document.querySelector(".dashboard-calendar-card");
+              if (calendarCard) calendarCard.style.display = "none";
+
+              if (typeof initChecklistDiarioPorVeiculo === "function") {
+                initChecklistDiarioPorVeiculo();
+              }
+
+              const checklistCard = document.getElementById("checklist-placa-card");
+              if (checklistCard) checklistCard.style.display = "block";
+
+              sidebarItemIds.forEach((id) => hideElement(id));
+              showElement("sidebar-prv-link", "block");
+              showElement("sidebar-checklist-link", "block");
+              hideDashboardNavItem();
+
+              return;
+            }
+
+            // --- LÓGICA PADRÃO (OUTROS CARGOS) ---
+            for (const cardId in cardPermissions) {
+              const requiredLevel = cardPermissions[cardId];
+              const cardElement = document.getElementById(cardId);
+              
+              // NOC geralmente não aparece no dashboard comum, a menos que seja nível muito alto ou específico
+              // Aqui deixei visível se tiver nível, mas você pode remover o 'card-noc' do loop se quiser que só COD veja
+              if (cardElement && userLevel >= requiredLevel) {
+                cardElement.style.display = "block";
+              }
+            }
+
+            const prvSidebar = document.getElementById("sidebar-prv-link");
+            if (prvSidebar && userLevel >= 3) {
+              prvSidebar.style.display = "block";
+            }
+
+            const checklistSidebar = document.getElementById("sidebar-checklist-link");
+            if (checklistSidebar && userLevel >= 4) {
+              checklistSidebar.style.display = "block";
+            }
+            
+            const nocSidebar = document.getElementById("sidebar-noc-link");
+            if (nocSidebar && userLevel >= 1) { // Permite acesso via sidebar se tiver nível
+                 nocSidebar.style.display = "block";
+            }
+
+            if (userLevel >= 4) {
+              initChecklistDiarioPorVeiculo();
+            }
+          })
+          .catch((error) => {
+            console.error("Erro ao buscar dados do usuário:", error);
+            window.location.href = "/login";
+          });
+      });
+
+      function debounce(fn, wait) {
+        let t = null;
+        return function (...args) {
+          clearTimeout(t);
+          t = setTimeout(() => fn.apply(this, args), wait);
+        };
+      }
+
+      function parsePositiveInt(value) {
+        const n = Number(value);
+        if (!Number.isInteger(n) || n <= 0) return null;
+        return n;
+      }
+
+      function setInlineStatus(type, text) {
+        const el = document.getElementById("checklist-veiculo-status");
+        if (!el) return;
+        if (!text) {
+          el.className = "checklist-status-inline";
+          el.textContent = "";
+          return;
+        }
+        el.className = `checklist-status-inline ${type}`;
+        el.textContent = text;
+      }
+
+      function showBadgeRealizado(detalhes) {
+        const badgeSuccess = document.getElementById("checklist-status-badge");
+        const alertPending = document.getElementById("checklist-pending-alert");
+        const detailsText = document.getElementById("checklist-details-text");
+
+        if (badgeSuccess) badgeSuccess.style.display = "flex";
+        if (alertPending) alertPending.style.setProperty("display", "none", "important");
+
+        if (!detailsText) return;
+
+        if (detalhes && detalhes.placa_veiculo && detalhes.hora_registro) {
+          detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje às ${String(
+            detalhes.hora_registro
+          ).substring(0, 5)}.`;
+          return;
+        }
+
+        if (detalhes && detalhes.placa_veiculo) {
+          detailsText.textContent = `Veículo ${detalhes.placa_veiculo} verificado hoje.`;
+          return;
+        }
+
+        detailsText.textContent = "Veículo verificado e registrado no sistema.";
+      }
+
+      function showPendente() {
+        const badgeSuccess = document.getElementById("checklist-status-badge");
+        const alertPending = document.getElementById("checklist-pending-alert");
+
+        if (badgeSuccess) badgeSuccess.style.display = "none";
+        if (alertPending) alertPending.style.setProperty("display", "flex", "important");
+      }
+
+      function hideStatusBlocks() {
+        const badgeSuccess = document.getElementById("checklist-status-badge");
+        const alertPending = document.getElementById("checklist-pending-alert");
+
+        if (badgeSuccess) badgeSuccess.style.display = "none";
+        if (alertPending) alertPending.style.setProperty("display", "none", "important");
+      }
+
+      function updateCtaLinkWithVeiculoId(veiculoIdRaw) {
+        const cta = document.getElementById("checklist-cta-link");
+        const veiculoId = parsePositiveInt(veiculoIdRaw);
+
+        if (!cta) return;
+
+        if (!veiculoId) {
+          cta.setAttribute("href", "/checklist-diario");
+          return;
+        }
+
+        cta.setAttribute("href", `/checklist-diario?veiculoId=${encodeURIComponent(veiculoId)}`);
+      }
+
+      async function carregarVeiculosChecklist() {
+        const select = document.getElementById("checklist-veiculo-select");
+        if (!select) return [];
+
+        select.innerHTML = '<option value="">Carregando veículos...</option>';
+
+        try {
+          const response = await fetch("/api/checklist/veiculos");
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const msg = data && data.message ? data.message : `Erro HTTP ${response.status}`;
+            throw new Error(msg);
+          }
+
+          const veiculos = Array.isArray(data) ? data : [];
+
+          const options = [
+            '<option value="">Selecione um veículo</option>',
+            ...veiculos.map((v) => {
+              const label = [v.modelo, v.placa].filter(Boolean).join(" - ");
+              return `<option value="${String(v.id)}">${label || "Veículo " + v.id}</option>`;
+            }),
+          ];
+
+          select.innerHTML = options.join("");
+          return veiculos;
+        } catch (error) {
+          console.error("Erro ao carregar veículos do checklist:", error);
+          select.innerHTML = '<option value="">Não foi possível carregar</option>';
+          return [];
+        }
+      }
+
+      async function verificarChecklistDiarioPorVeiculoId(veiculoIdRaw) {
+        const veiculoId = parsePositiveInt(veiculoIdRaw);
+
+        if (!veiculoId) {
+          setInlineStatus(
+            "info",
+            "Selecione um veículo para consultar o status do checklist do dia."
+          );
+          hideStatusBlocks();
+          updateCtaLinkWithVeiculoId(null);
+          return;
+        }
+
+        setInlineStatus("info", "Verificando checklist do dia para este veículo...");
+        updateCtaLinkWithVeiculoId(veiculoId);
+
+        try {
+          const response = await fetch(
+            `/api/checklist/status?veiculoId=${encodeURIComponent(veiculoId)}`
+          );
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const msg = data && data.message ? data.message : `Erro HTTP ${response.status}`;
+            throw new Error(msg);
+          }
+
+          if (data && data.realizado) {
+            setInlineStatus("success", "Checklist do dia já foi realizado para este veículo.");
+            showBadgeRealizado(data.detalhes);
+            return;
+          }
+
+          setInlineStatus("error", "Checklist do dia ainda não foi realizado para este veículo.");
+          showPendente();
+        } catch (error) {
+          console.error("Erro ao verificar checklist:", error);
+          setInlineStatus("info", "Não foi possível consultar agora. Tente novamente em instantes.");
+          hideStatusBlocks();
+        }
+      }
+
+      async function initChecklistDiarioPorVeiculo() {
+        const card = document.getElementById("checklist-placa-card");
+        const select = document.getElementById("checklist-veiculo-select");
+
+        if (card) card.style.display = "block";
+        if (!select) return;
+
+        await carregarVeiculosChecklist();
+
+        const url = new URL(window.location.href);
+        const veiculoIdQuery =
+          url.searchParams.get("veiculoId") ||
+          url.searchParams.get("veiculo_id") ||
+          url.searchParams.get("veiculo");
+
+        const parsedId = parsePositiveInt(veiculoIdQuery);
+        if (parsedId) {
+          select.value = String(parsedId);
+        }
+
+        const verificarDebounced = debounce(() => {
+          verificarChecklistDiarioPorVeiculoId(select.value);
+        }, 400);
+
+        select.addEventListener("change", verificarDebounced);
+        select.addEventListener("blur", () => verificarChecklistDiarioPorVeiculoId(select.value));
+
+        verificarChecklistDiarioPorVeiculoId(select.value);
+      }
+    </script>
+  </body>
+</html>

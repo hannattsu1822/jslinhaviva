@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestão de Motoristas</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/frota_styles.css" />
+  </head>
+  <body>
+    <header class="main-header">
+      <div class="logo">Gestão de Motoristas</div>
+      <nav class="main-nav">
+        <a href="/frota_controle">Voltar ao Controle</a>
+        <a href="/">Início</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="page-header">
+        <h1 class="page-title">Consulta e Gestão de Motoristas</h1>
+        <p class="page-subtitle">
+          Filtre, consulte e gerencie os motoristas da frota.
+        </p>
+      </div>
+
+      <div class="form-toggle-button">
+        <button class="btn btn-primary" id="toggleFormBtn">
+          Cadastrar Novo Motorista
+        </button>
+      </div>
+
+      <div id="formContainer" class="form-container hidden">
+        <section class="card-section">
+          <div class="card-header">Dados do Novo Motorista</div>
+          <div class="card-content">
+            <form id="driverForm">
+              <div class="form-grid form-grid-2-col">
+                <div class="form-group">
+                  <label for="matricula">Matrícula *</label>
+                  <input type="text" id="matricula" required maxlength="50" />
+                </div>
+                <div class="form-group">
+                  <label for="nome">Nome Completo *</label>
+                  <input type="text" id="nome" required maxlength="255" />
+                </div>
+                <div class="form-group">
+                  <label for="situacao">Situação *</label>
+                  <select id="situacao" required>
+                    <option value="Ativo" selected>Ativo</option>
+                    <option value="Inativo">Inativo</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-success">
+                  Salvar Motorista
+                </button>
+                <button
+                  type="button"
+                  id="closeFormBtn"
+                  class="btn btn-secondary"
+                >
+                  Fechar
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+
+      <section class="card-section">
+        <div class="card-header">Filtros de Pesquisa</div>
+        <div class="card-content">
+          <form class="form-grid form-grid-3-col">
+            <div class="form-group">
+              <label for="filterId">ID</label>
+              <input
+                type="text"
+                id="filterId"
+                placeholder="Filtrar por ID..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="filterMatricula">Matrícula</label>
+              <input
+                type="text"
+                id="filterMatricula"
+                placeholder="Filtrar por Matrícula..."
+              />
+            </div>
+            <div class="form-group">
+              <label for="filterNome">Nome</label>
+              <input
+                type="text"
+                id="filterNome"
+                placeholder="Filtrar por Nome..."
+              />
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="card-section">
+        <div class="card-header">Motoristas Cadastrados</div>
+        <div class="card-content">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Matrícula</th>
+                  <th>Nome</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="driverTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toastContainer" class="toast-container"></div>
+    <script src="/scripts/frota/frota_motoristas_cadastro.js"></script>
+  </body>
+</html>

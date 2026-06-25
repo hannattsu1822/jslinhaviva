@@ -1,0 +1,52 @@
+require("dotenv").config();
+const {
+  server,
+  app,
+  logger,
+  uploadsSubestacoesDir,
+  uploadsFibraDir,
+  trafosReformadosAnexosDir,
+  uploadsInspRedesDir,
+  uploadsChecklistDailyDir,
+  uploadsProcessosDir,
+} = require("./init");
+const { mountSecureUploads } = require("./shared/secureUpload.middleware");
+const { autenticar, verificarNivel } = require("./auth");
+const { iniciarClienteMQTT } = require("./mqtt_handler");
+
+mountSecureUploads(app, [
+  { urlPath: "/upload_arquivos_subestacoes", dir: uploadsSubestacoesDir, minNivel: 1 },
+  { urlPath: "/upload_arquivos_fibra", dir: uploadsFibraDir, minNivel: 1 },
+  { urlPath: "/trafos_reformados_anexos", dir: trafosReformadosAnexosDir, minNivel: 1 },
+  { urlPath: "/upload_InspDistRedes", dir: uploadsInspRedesDir, minNivel: 1 },
+  { urlPath: "/upload_checklist_diario_veiculos", dir: uploadsChecklistDailyDir, minNivel: 1 },
+  { urlPath: "/upload_arquivos_processos", dir: uploadsProcessosDir, minNivel: 1 },
+], { autenticar, verificarNivel });
+
+// ─── MQTT ─────────────────────────────────────────────────────────────────────
+iniciarClienteMQTT(app);
+
+// ─── Rotas principais ─────────────────────────────────────────────────────────
+const aggregatorRoutes = require("./routes");
+app.use("/", aggregatorRoutes);
+
+// ─── Middleware global de erros (deve ficar APÓS todas as rotas) ──────────────
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  const isProd = process.env.NODE_ENV === "production";
+
+  logger.error(`[ERRO] ${req.method} ${req.originalUrl} → ${err.message}`);
+
+  res.status(status).json({
+    success: false,
+    message: isProd ? "Erro interno do servidor." : err.message,
+    ...(isProd ? {} : { stack: err.stack }),
+  });
+});
+
+// ─── Iniciar servidor ─────────────────────────────────────────────────────────
+const port = process.env.SERVER_PORT || 3000;
+
+server.listen(port, () => {
+  logger.info(`Servidor HTTP e WebSocket rodando em http://localhost:${port}`);
+});

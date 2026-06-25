@@ -1,0 +1,118 @@
+/* public/static/css/transformadores_reformados.css */
+:root {
+  --primary-blue-trafos-reformados: #2a5298;
+  --dark-blue-trafos-reformados: #1e3c72;
+  --light-blue-trafos-reformados: #e6f0ff;
+  --white-trafos-reformados: #ffffff;
+  --light-gray-trafos-reformados: #f8f9fa;
+  --medium-gray-trafos-reformados: #dee2e6;
+  --text-dark-trafos-reformados: #212529;
+  --success-trafos-reformados: #28a745;
+  --border-radius-trafos-reformados: 8px;
+}
+
+/* Estilos para o conteúdo principal da página Transformadores Reformados */
+.page-title-trafos-reformados {
+  font-weight: 600;
+  color: var(--text-dark-trafos-reformados);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.page-title-trafos-reformados i {
+  margin-right: 10px;
+  color: var(--primary-blue-trafos-reformados);
+}
+
+.card.action-card-trafos-reformados {
+  border: 1px solid var(--medium-gray-trafos-reformados);
+  border-radius: var(--border-radius-trafos-reformados);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background-color: var(--white-trafos-reformados);
+  height: 100%;
+  min-height: 220px;
+  color: var(--text-dark-trafos-reformados);
+  display: flex;
+  flex-direction: column;
+}
+
+.card.action-card-trafos-reformados:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-blue-trafos-reformados);
+}
+
+.card.action-card-trafos-reformados .card-body {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.card.action-card-trafos-reformados .card-title {
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin-top: 0.5rem;
+  color: var(--text-dark-trafos-reformados);
+}
+
+.card.action-card-trafos-reformados .card-text {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+  flex-grow: 1;
+}
+
+.card.action-card-trafos-reformados .icon-circle {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
+  color: var(--white-trafos-reformados);
+  margin-bottom: 1rem;
+}
+
+.action-card-trafos-reformados .bg-primary {
+  background-color: var(--primary-blue-trafos-reformados) !important;
+}
+.action-card-trafos-reformados .bg-success {
+  background-color: var(--success-trafos-reformados) !important;
+}
+
+.btn-secondary.glass-btn {
+  /* Estilo para o botão Voltar */
+  background-color: rgba(108, 117, 125, 0.7); /* bg-secondary com alpha */
+  border: 1px solid rgba(108, 117, 125, 0.5);
+  color: #fff;
+  backdrop-filter: blur(5px);
+}
+.btn-secondary.glass-btn:hover {
+  background-color: rgba(86, 94, 100, 0.8);
+}
+
+@media (max-width: 576px) {
+  .page-title-trafos-reformados {
+    font-size: 1.5rem;
+  }
+  .card.action-card-trafos-reformados {
+    min-height: 190px;
+  }
+  .card.action-card-trafos-reformados .card-title {
+    font-size: 1.1rem;
+  }
+  .card.action-card-trafos-reformados .icon-circle {
+    width: 55px;
+    height: 55px;
+    font-size: 1.6rem;
+  }
+}

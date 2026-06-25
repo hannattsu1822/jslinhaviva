@@ -1,0 +1,269 @@
+/* public/static/css/sidebar_styles.css */
+
+:root {
+  --sidebar-width-large: 280px;
+  --sidebar-width-small: 260px;
+  --sidebar-transition-speed: 0.3s;
+  --sidebar-bg-color: #1e3c72;
+  --sidebar-text-color: #ffffff;
+  --sidebar-icon-color: #f0f0f0;
+  --sidebar-border-color: rgba(255, 255, 255, 0.1);
+  --sidebar-hover-bg-color: rgba(255, 255, 255, 0.1);
+  --sidebar-active-bg-color: rgba(255, 255, 255, 0.2);
+  /* Nova variável para o fundo do user-info */
+  --sidebar-user-info-bg: rgba(0, 0, 0, 0.2); /* Preto com 20% de opacidade */
+}
+
+.sidebar {
+  width: var(--sidebar-width-large);
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--sidebar-transition-speed) ease-in-out,
+    width var(--sidebar-transition-speed) ease-in-out;
+  overflow-y: auto; /* Permite scroll na sidebar inteira se o conteúdo total for maior */
+  background: var(--sidebar-bg-color);
+  color: var(--sidebar-text-color);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-header {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid var(--sidebar-border-color);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar .user-icon i {
+  font-size: 3.5rem;
+  color: var(--sidebar-icon-color);
+  margin-bottom: 0.5rem;
+}
+
+.sidebar .user-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--sidebar-text-color);
+  margin-bottom: 0.1rem;
+}
+
+/* MODIFICAÇÃO AQUI para .user-info */
+.sidebar .user-info {
+  background-color: var(
+    --sidebar-user-info-bg
+  ); /* Aplicando o fundo escuro translúcido */
+  margin: 0.75rem; /* Adiciona margem em volta do bloco */
+  padding: 0.75rem 1rem;
+  border-radius: 6px; /* Cantos arredondados para o bloco */
+  flex-shrink: 0;
+  /* A border-bottom anterior foi removida, o background agora faz a divisão.
+     Se precisar de uma linha separadora abaixo, pode adicionar border-bottom aqui,
+     ou border-top em .sidebar-nav */
+}
+
+.sidebar .info-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.85rem;
+  color: var(--sidebar-text-color);
+}
+
+.sidebar .info-item i {
+  width: 24px;
+  margin-right: 0.75rem;
+  color: var(--sidebar-icon-color);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.sidebar-nav {
+  padding-top: 0.25rem; /* Pequeno espaço se user-info não tiver mais border-bottom */
+  padding-bottom: 0.5rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sidebar-nav .nav-list {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.sidebar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.8rem 1.25rem;
+  color: var(--sidebar-text-color);
+  text-decoration: none;
+  border-radius: 5px;
+  margin: 0.1rem 0.75rem;
+  transition: background-color 0.2s ease-in-out;
+  font-size: 0.9rem;
+}
+
+.sidebar-nav .nav-link:hover,
+.sidebar-nav .nav-link:focus {
+  background-color: var(--sidebar-hover-bg-color);
+  color: var(--sidebar-text-color);
+  outline: none;
+}
+
+.sidebar-nav .nav-link.active {
+  background-color: var(--sidebar-active-bg-color);
+  font-weight: 500;
+}
+
+.sidebar-nav .nav-link i.fa-fw {
+  width: 20px;
+  margin-right: 0.85rem;
+  font-size: 0.9em;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--sidebar-border-color);
+  flex-shrink: 0;
+}
+
+.sidebar .btn-logout {
+  width: 100%;
+  background-color: #dc3545;
+  color: #ffffff;
+  border: 1px solid #dc3545;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.3rem;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.sidebar .btn-logout:hover,
+.sidebar .btn-logout:focus {
+  background-color: #c82333;
+  border-color: #bd2130;
+  color: #ffffff;
+  outline: none;
+  box-shadow: none;
+}
+
+.sidebar .btn-logout i {
+  color: #ffffff;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width-large);
+  padding: 25px;
+  transition: margin-left var(--sidebar-transition-speed) ease-in-out;
+  width: calc(100% - var(--sidebar-width-large));
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.sidebar-toggle-button {
+  display: none;
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1040;
+  background-color: #ffffff;
+  color: #333333;
+  border: 1px solid #cccccc;
+  border-radius: 0.25rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.sidebar-toggle-button:hover {
+  background-color: #f2f2f2;
+}
+
+.main-content-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 1020;
+}
+.main-content-overlay.active {
+  display: block;
+}
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: var(--sidebar-width-small);
+    position: fixed;
+    box-shadow: 3px 0 15px rgba(0, 0, 0, 0.2);
+  }
+
+  .sidebar.active {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .sidebar-toggle-button {
+    display: block;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .sidebar.active {
+    width: 260px;
+  }
+
+  .sidebar .user-name {
+    font-size: 0.95rem;
+  }
+  .sidebar .info-item,
+  .sidebar .info-item span {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.15rem;
+  }
+  .sidebar .info-item i {
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+  }
+  .sidebar .sidebar-header {
+    padding: 1rem 0.75rem;
+  }
+  .sidebar .user-info {
+    /* Ajustes para user-info em telas pequenas */
+    margin: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+  .sidebar-nav .nav-link {
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+  }
+  .sidebar-nav .nav-link i.fa-fw {
+    margin-right: 0.6rem;
+  }
+  .sidebar .btn-logout {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+  }
+  .sidebar-toggle-button {
+    top: 8px;
+    left: 8px;
+    padding: 0.3rem 0.6rem;
+    font-size: 1rem;
+  }
+}

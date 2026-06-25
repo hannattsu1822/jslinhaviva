@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalhes da Inspeção</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/subestacoes/detalhes-inspecao.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header class="page-header">
+        <div class="header-content">
+          <h1>
+            <span class="material-symbols-outlined">plagiarism</span>
+            Detalhes da Inspeção
+            <span id="inspecaoIdTitulo"></span>
+          </h1>
+        </div>
+        <div class="header-actions">
+          <button id="btnImprimir" class="btn btn-sm btn-secondary">
+            <span class="material-symbols-outlined">print</span> Imprimir
+          </button>
+        </div>
+      </header>
+
+      <main id="conteudoDetalhes">
+        <div id="loadingIndicator" class="page-state-indicator">
+          <div class="loading-spinner"></div>
+          <p>Carregando detalhes da inspeção...</p>
+        </div>
+
+        <div id="detalhesContainer" class="hidden">
+          <div id="infoGeraisContainer"></div>
+          <div id="obsGeraisContainer"></div>
+
+          <div id="checklistItemsContainer"></div>
+
+          <div id="avulsaItemsContainer"></div>
+
+          <div id="medicoesContainer"></div>
+          <div id="equipamentosObservadosContainer"></div>
+          <div id="anexosGeraisContainer"></div>
+          <div id="anexosEscritorioContainer"></div>
+        </div>
+
+        <div
+          id="erroCarregamento"
+          class="page-state-indicator error-message hidden"
+        ></div>
+      </main>
+
+      <footer class="page-footer">
+        <a
+          href="/pagina-listagem-inspecoes-subestacoes"
+          class="btn btn-sm btn-secondary"
+        >
+          <span class="material-symbols-outlined">arrow_back</span>
+          Voltar para a Listagem
+        </a>
+      </footer>
+    </div>
+
+    <div id="imageLightbox" class="modal-lightbox hidden">
+      <button class="btn-close-lightbox" aria-label="Fechar">×</button>
+      <div class="modal-content-lightbox">
+        <img src="" alt="Imagem ampliada" id="lightboxImage" />
+      </div>
+    </div>
+
+    <div class="modal" id="modalTermografia" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <span
+                class="material-symbols-outlined"
+                style="color: var(--c-warning)"
+                >local_fire_department</span
+              >
+              Anexar Imagens de Termografia
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="item-description-box">
+              <strong>Item:</strong> <span id="termografiaItemDescricao"></span>
+            </div>
+            <input type="hidden" id="termografiaInspecaoId" />
+            <input type="hidden" id="termografiaItemId" />
+            <input type="hidden" id="termografiaEspecificacaoId" />
+
+            <div class="upload-actions">
+              <button
+                type="button"
+                id="btnAdicionarAnexoTermografia"
+                class="btn btn-sm btn-primary"
+              >
+                <span class="material-symbols-outlined">attach_file_add</span>
+                Procurar Arquivos
+              </button>
+              <input
+                type="file"
+                id="arquivosTermografiaInput"
+                class="visually-hidden"
+                multiple
+                accept="image/*"
+              />
+            </div>
+            <div class="form-text">
+              Tipos permitidos: Imagens (JPG, PNG, HEIC, etc.).
+            </div>
+            <div
+              id="previewAnexosTermografia"
+              class="anexos-preview-container"
+            ></div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary btn-close-modal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              id="btnSalvarAnexosTermografia"
+              class="btn btn-sm btn-success"
+            >
+              <span class="material-symbols-outlined">save</span> Salvar Anexos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template id="templateAnexoPreview">
+      <div class="anexo-preview-item">
+        <div class="anexo-preview-icon-container">
+          <img src="" class="anexo-preview-img visually-hidden" alt="preview" />
+          <span class="material-symbols-outlined anexo-preview-icon-default"
+            >description</span
+          >
+        </div>
+        <div class="anexo-info">
+          <div class="anexo-name">Nome do Arquivo.jpg</div>
+          <div class="anexo-status"></div>
+        </div>
+        <button type="button" class="btn-remover-anexo" title="Remover anexo">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
+    </template>
+
+    <script src="/scripts/subestacoes/detalhes-inspecao.js"></script>
+  </body>
+</html>

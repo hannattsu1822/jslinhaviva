@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visualização do Mapa de Fibra</title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="/static/css/components/bootstrap-overrides.css"
+    />
+    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link
+      rel="stylesheet"
+      href="/static/css/fibra_optica/visualizacao_mapa.css"
+    />
+  </head>
+  <body>
+    <div class="page-container">
+      <%- include('../../partials/sidebar.html') %>
+
+      <main class="main-content">
+        <header class="main-header">
+          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-content">
+            <h1 class="page-title">
+              <i class="fa-solid fa-map-marked-alt"></i>
+              Visualização do Mapa de Fibra
+            </h1>
+          </div>
+        </header>
+
+        <div class="container-fluid">
+          <div class="d-flex justify-content-end mb-4">
+            <a href="/fibra-optica" class="btn btn-secondary">
+              <i class="fa-solid fa-arrow-left me-2"></i>Voltar
+            </a>
+          </div>
+
+          <div
+            id="route-panel"
+            class="alert alert-success d-none mb-3"
+            role="alert"
+          >
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong>Modo de Criação de Rota Ativado.</strong>
+                <span id="route-info" class="ms-3"
+                  >Pontos: 0 | Distância Total: 0.00 m</span
+                >
+              </div>
+              <button
+                id="generate-maps-route-btn"
+                class="btn btn-light btn-sm"
+                disabled
+              >
+                <i class="fa-solid fa-map-location-dot me-2"></i>Gerar Rota no
+                Maps
+              </button>
+            </div>
+          </div>
+
+          <div class="card shadow-sm mb-3">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="fa-solid fa-filter me-2"></i>Filtros de Exibição
+              </h5>
+            </div>
+            <div
+              class="card-body d-flex justify-content-between align-items-center flex-wrap"
+              id="map-filter-container"
+            >
+              <div class="filter-group d-flex align-items-center flex-wrap">
+                <strong class="me-3">Filtrar por tipo:</strong>
+                <div class="form-check form-check-inline">
+                  <input
+                    class="form-check-input filter-checkbox"
+                    type="checkbox"
+                    id="filterCliente"
+                    value="Cliente"
+                    checked
+                  />
+                  <label class="form-check-label" for="filterCliente"
+                    >Cliente</label
+                  >
+                </div>
+                <div class="form-check form-check-inline">
+                  <input
+                    class="form-check-input filter-checkbox"
+                    type="checkbox"
+                    id="filterCaixa"
+                    value="Caixa de Emenda"
+                    checked
+                  />
+                  <label class="form-check-label" for="filterCaixa"
+                    >Caixa de Emenda</label
+                  >
+                </div>
+                <div class="form-check form-check-inline">
+                  <input
+                    class="form-check-input filter-checkbox"
+                    type="checkbox"
+                    id="filterPoste"
+                    value="Poste"
+                    checked
+                  />
+                  <label class="form-check-label" for="filterPoste"
+                    >Poste</label
+                  >
+                </div>
+                <div class="form-check form-check-inline">
+                  <input
+                    class="form-check-input filter-checkbox"
+                    type="checkbox"
+                    id="filterReserva"
+                    value="Reserva"
+                    checked
+                  />
+                  <label class="form-check-label" for="filterReserva"
+                    >Reserva</label
+                  >
+                </div>
+                <div class="form-check form-check-inline">
+                  <input
+                    class="form-check-input filter-checkbox"
+                    type="checkbox"
+                    id="filterOutro"
+                    value="Outro"
+                    checked
+                  />
+                  <label class="form-check-label" for="filterOutro"
+                    >Outro</label
+                  >
+                </div>
+              </div>
+              <div class="filter-actions mt-2 mt-md-0">
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  id="selectAllBtn"
+                >
+                  Marcar Todos
+                </button>
+                <button
+                  class="btn btn-sm btn-outline-secondary ms-2"
+                  id="deselectAllBtn"
+                >
+                  Desmarcar Todos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card shadow-sm">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5 class="card-title mb-0">
+                <i class="fa-solid fa-map-location-dot me-2"></i>Mapa Interativo
+              </h5>
+              <div class="d-flex gap-2">
+                <button id="route-tool-btn" class="btn btn-sm btn-success">
+                  <i class="fa-solid fa-road me-2"></i>Criar Rota
+                </button>
+                <button id="measure-tool-btn" class="btn btn-sm btn-purple">
+                  <i class="fa-solid fa-ruler-horizontal me-2"></i>Medir Vão
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-2">
+              <div id="map"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.min.js"></script>
+    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/scripts/utils/toast.js"></script>
+    <script src="/scripts/fibra_optica/visualizacao_mapa.js"></script>
+  </body>
+</html>

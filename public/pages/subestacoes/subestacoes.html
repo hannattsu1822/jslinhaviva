@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerenciamento de Subestações e Catálogo de Equipamentos</title>
+    <link rel="stylesheet" href="/static/css/subestacoes/subestacoes.css" />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header class="page-header">
+        <h1>
+          <span class="material-icons-outlined header-icon"
+            >electrical_services</span
+          >
+          Gerenciamento de Infraestrutura
+        </h1>
+      </header>
+
+      <main>
+        <section class="card-section subestacao-selector-section">
+          <div class="card-section-header">
+            <h2>
+              <span class="material-icons-outlined section-title-icon"
+                >tune</span
+              >
+              Gerenciar Subestações
+            </h2>
+          </div>
+          <div class="controls">
+            <select id="selectSubestacao" class="form-control">
+              <option value="">Carregando subestações...</option>
+            </select>
+            <button id="btnNovaSubestacao" class="btn btn-primary">
+              <span class="material-icons-outlined">add_circle_outline</span>
+              Nova Subestação
+            </button>
+          </div>
+        </section>
+
+        <section id="subestacaoDetalhesSection" class="card-section hidden">
+          <div class="card-section-header">
+            <h3 id="nomeSubestacaoDetalhes">
+              <span class="material-icons-outlined section-title-icon"
+                >info</span
+              >
+              Detalhes da Subestação
+            </h3>
+            <div class="card-actions">
+              <button
+                id="btnEditarSubestacao"
+                class="btn btn-icon"
+                title="Editar Subestação"
+              >
+                <span class="material-icons-outlined edit-icon">edit</span>
+              </button>
+              <button
+                id="btnExcluirSubestacao"
+                class="btn btn-icon icon-danger"
+                title="Excluir Subestação"
+              >
+                <span class="material-icons-outlined delete-icon">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <p>
+              <strong>Sigla:</strong> <span id="siglaSubestacaoDetalhes"></span>
+            </p>
+            <p>
+              <strong>Ano de Início de Operação:</strong>
+              <span id="anoOpSubestacaoDetalhes"></span>
+            </p>
+          </div>
+        </section>
+
+        <section id="catalogoEquipamentosSection" class="card-section">
+          <div class="card-section-header">
+            <h3>
+              <span class="material-icons-outlined section-title-icon"
+                >category</span
+              >
+              Catálogo Universal de Equipamentos
+            </h3>
+            <button id="btnNovoItemCatalogo" class="btn btn-primary">
+              <span class="material-icons-outlined">add_circle_outline</span>
+              Novo Item no Catálogo
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table id="tabelaCatalogoEquipamentos" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th class="actions-column">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="corpoTabelaCatalogo"></tbody>
+              </table>
+            </div>
+            <p id="nenhumItemCatalogo" class="feedback-message hidden">
+              Nenhum item cadastrado no catálogo de equipamentos.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <div id="modalSubestacao" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 id="modalSubestacaoTitulo">
+              <span class="material-icons-outlined">domain</span>
+              Nova Subestação
+            </h4>
+            <button
+              class="close-modal"
+              data-modal-id="modalSubestacao"
+              aria-label="Fechar"
+            >
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formSubestacao">
+              <input type="hidden" id="subestacaoIdModal" />
+              <div class="form-group">
+                <label for="subestacaoSiglaModal">Sigla:*</label>
+                <input
+                  type="text"
+                  id="subestacaoSiglaModal"
+                  class="form-control"
+                  required
+                  maxlength="10"
+                />
+              </div>
+              <div class="form-group">
+                <label for="subestacaoNomeModal">Nome:*</label>
+                <input
+                  type="text"
+                  id="subestacaoNomeModal"
+                  class="form-control"
+                  required
+                  maxlength="100"
+                />
+              </div>
+              <div class="form-group">
+                <label for="subestacaoAnoOpModal"
+                  >Ano de Início de Operação (Opcional):</label
+                >
+                <input
+                  type="number"
+                  id="subestacaoAnoOpModal"
+                  class="form-control"
+                  min="1900"
+                  max="2200"
+                  placeholder="Ex: 2023"
+                />
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-link close-modal"
+                  data-modal-id="modalSubestacao"
+                >
+                  Cancelar
+                </button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-icons-outlined">save</span> Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalCatalogoItem" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 id="modalCatalogoItemTitulo">
+              <span class="material-icons-outlined">category</span> Novo Item de
+              Catálogo
+            </h4>
+            <button
+              class="close-modal"
+              data-modal-id="modalCatalogoItem"
+              aria-label="Fechar"
+            >
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formCatalogoItem">
+              <input type="hidden" id="catalogoItemIdModal" />
+              <div class="form-group">
+                <label for="catalogoCodigoModal">Código:*</label>
+                <input
+                  type="text"
+                  id="catalogoCodigoModal"
+                  class="form-control"
+                  required
+                  maxlength="50"
+                  placeholder="Ex: DJ-69, TR-138"
+                />
+              </div>
+              <div class="form-group">
+                <label for="catalogoNomeModal">Nome:*</label>
+                <input
+                  type="text"
+                  id="catalogoNomeModal"
+                  class="form-control"
+                  required
+                  maxlength="255"
+                  placeholder="Ex: Disjuntor 69kV"
+                />
+              </div>
+              <div class="form-group">
+                <label for="catalogoCategoriaModal">Categoria:</label>
+                <input
+                  type="text"
+                  id="catalogoCategoriaModal"
+                  class="form-control"
+                  maxlength="100"
+                  placeholder="Ex: Disjuntores, Transformadores"
+                />
+              </div>
+              <div class="form-group">
+                <label for="catalogoDescricaoModal">Descrição:</label>
+                <textarea
+                  id="catalogoDescricaoModal"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Descrição técnica ou detalhes adicionais (opcional)"
+                ></textarea>
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-link close-modal"
+                  data-modal-id="modalCatalogoItem"
+                >
+                  Cancelar
+                </button>
+                <button type="submit" class="btn btn-success">
+                  <span class="material-icons-outlined">save</span> Salvar Item
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="modalConfirmacao" class="modal hidden">
+        <div class="modal-content small">
+          <div class="modal-header">
+            <h4>
+              <span class="material-icons-outlined warning-icon"
+                >warning_amber</span
+              >
+              Confirmar Exclusão
+            </h4>
+            <button
+              class="close-modal"
+              data-modal-id="modalConfirmacao"
+              aria-label="Fechar"
+            >
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p id="mensagemConfirmacao">
+              Você tem certeza que deseja excluir este item?
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              id="btnCancelarExclusao"
+              class="btn btn-link"
+              data-modal-id="modalConfirmacao"
+            >
+              Cancelar
+            </button>
+            <button id="btnConfirmarExclusao" class="btn btn-danger">
+              <span class="material-icons-outlined">delete_forever</span>
+              Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/scripts/subestacoes/subestacoes.js"></script>
+  </body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registrar Nova Inspeção</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Google Material Icons -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+
+    <!-- Google Fonts (Poppins) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/InspRedesDist/criar_servico.css" />
+  </head>
+  <body>
+    <div class="container my-4">
+      <!-- Cabeçalho da Página -->
+      <header
+        class="page-header d-flex justify-content-between align-items-center pb-3 mb-4"
+      >
+        <h1 class="page-title h2 mb-0">
+          <span class="material-icons page-icon">post_add</span>
+          Registrar Nova Inspeção
+        </h1>
+        <a href="/inspecoes-redes" class="btn btn-outline-secondary btn-back">
+          <span class="material-icons">arrow_back</span>
+          Voltar ao Dashboard
+        </a>
+      </header>
+
+      <!-- Formulário de Criação -->
+      <main>
+        <div class="card shadow-sm">
+          <div class="card-body p-4 p-md-5">
+            <form id="form-criar-servico" enctype="multipart/form-data">
+              <div class="row g-4">
+                <!-- Processo -->
+                <div class="col-md-6">
+                  <label for="processo" class="form-label">Processo</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="processo"
+                    name="processo"
+                    required
+                  />
+                </div>
+
+                <!-- Data Prevista -->
+                <div class="col-md-6">
+                  <label for="data_servico" class="form-label"
+                    >Data Prevista da Inspeção</label
+                  >
+                  <input
+                    type="date"
+                    class="form-control"
+                    id="data_servico"
+                    name="data_servico"
+                    required
+                  />
+                </div>
+
+                <!-- Tipo da Ordem -->
+                <div class="col-md-6">
+                  <label for="tipo_ordem" class="form-label"
+                    >Tipo da Ordem</label
+                  >
+                  <select
+                    class="form-select"
+                    id="tipo_ordem"
+                    name="tipo_ordem"
+                    required
+                  >
+                    <option value="" selected disabled>Selecione...</option>
+                    <option value="ODI">ODI</option>
+                    <option value="ODS">ODS</option>
+                    <option value="ODD">ODD</option>
+                  </select>
+                </div>
+
+                <!-- Criador da Ordem (Seleção Única) -->
+                <div class="col-md-6">
+                  <label for="criador_matricula" class="form-label"
+                    >Criador da Ordem de Serviço</label
+                  >
+                  <select
+                    class="form-select"
+                    id="criador_matricula"
+                    name="criador_matricula"
+                    required
+                  >
+                    <option value="" selected disabled>Carregando...</option>
+                    <!-- Opções serão populadas via JavaScript -->
+                  </select>
+                </div>
+
+                <!-- Subestação -->
+                <div class="col-md-4">
+                  <label for="subestacao" class="form-label">Subestação</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="subestacao"
+                    name="subestacao"
+                  />
+                </div>
+
+                <!-- Alimentador -->
+                <div class="col-md-4">
+                  <label for="alimentador" class="form-label"
+                    >Alimentador</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="alimentador"
+                    name="alimentador"
+                  />
+                </div>
+
+                <!-- Chave Montante -->
+                <div class="col-md-4">
+                  <label for="chave_montante" class="form-label"
+                    >Chave Montante</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="chave_montante"
+                    name="chave_montante"
+                  />
+                </div>
+
+                <!-- Descrição -->
+                <div class="col-12">
+                  <label for="descricao" class="form-label">Descrição</label>
+                  <textarea
+                    class="form-control"
+                    id="descricao"
+                    name="descricao"
+                    rows="4"
+                  ></textarea>
+                </div>
+
+                <!-- Seção de Anexos Interativa -->
+                <div class="col-12">
+                  <label class="form-label">Anexos do Registro</label>
+                  <div class="upload-area" id="upload-area">
+                    <span class="material-icons">cloud_upload</span>
+                    <p>
+                      Arraste e solte os arquivos aqui, ou clique para
+                      selecionar.
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    id="anexos_gerais"
+                    name="anexos_gerais"
+                    multiple
+                    hidden
+                  />
+                  <div class="preview-area mt-3" id="preview-area">
+                    <!-- Pré-visualizações dos arquivos aparecerão aqui -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botão de Submissão -->
+              <div class="mt-5 text-end">
+                <button
+                  type="submit"
+                  class="btn btn-primary btn-lg"
+                  id="btn-submit"
+                >
+                  <span class="material-icons me-2">save</span>
+                  Salvar e Continuar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="/scripts/InspRedesDist/criar_servico.js"></script>
+  </body>
+</html>

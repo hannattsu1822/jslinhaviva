@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= pageTitle %></title>
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/logbox/relatorios.css" />
+  </head>
+  <body>
+    <div class="report-page-container">
+      <header class="page-header">
+        <h1>
+          <span class="material-icons">assessment</span>
+          Gerador de Relatórios
+        </h1>
+      </header>
+
+      <div class="card filter-card">
+        <div class="filter-group">
+          <label>Tipo de Relatório</label>
+          <div id="report-type-selector" class="report-type-buttons">
+            <button data-type="detailed" class="active">Diário</button>
+            <button data-type="monthly">Mensal</button>
+            <button data-type="annual">Anual</button>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="device-select">Equipamento</label>
+          <select id="device-select">
+            <option value="all">Todos os Equipamentos</option>
+            <% devices.forEach(device => { %>
+            <option value="<%= device.id %>">
+              <%= device.local_tag %> (SN: <%= device.serial_number %>)
+            </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Período</label>
+          <div id="date-pickers">
+            <input type="date" id="date-input-detailed" class="date-picker" />
+            <input type="month" id="date-input-monthly" class="date-picker hidden" />
+            <input type="number" id="date-input-annual" class="date-picker hidden" placeholder="Digite o ano" />
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <button id="btn-generate-report" class="btn btn-primary">
+            <span class="material-icons">play_arrow</span> Gerar Relatório
+          </button>
+          <button id="btn-export-pdf" class="btn btn-secondary" disabled>
+            <span class="material-icons">picture_as_pdf</span> Exportar PDF
+          </button>
+        </div>
+      </div>
+
+      <div id="report-display-area">
+        <div id="initial-message" class="info-message">
+          <span class="material-icons">info</span>
+          <p>Selecione os filtros acima e clique em "Gerar Relatório" para começar.</p>
+        </div>
+
+        <div id="loader" class="info-message hidden">
+          <div class="spinner"></div>
+          <p>Gerando relatório, por favor aguarde...</p>
+        </div>
+
+        <div id="report-content-area" class="hidden">
+          <header class="report-header">
+            <h2 id="report-title"></h2>
+            <p id="report-period"></p>
+          </header>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <h4>Temp. Média Geral</h4>
+              <p><span id="kpi-avg-temp">--</span> °C</p>
+            </div>
+            <div class="kpi-card">
+              <h4>Temp. Máxima Absoluta</h4>
+              <p><span id="kpi-max-temp">--</span> °C</p>
+            </div>
+            <div class="kpi-card">
+              <h4>Temp. Mínima Absoluta</h4>
+              <p><span id="kpi-min-temp">--</span> °C</p>
+            </div>
+            <div class="kpi-card">
+              <h4>Total de Acionamentos</h4>
+              <p><span id="kpi-fan-count">--</span></p>
+            </div>
+          </div>
+
+          <div class="card chart-card">
+            <h3>Evolução da Temperatura</h3>
+            <div class="chart-container">
+              <canvas id="report-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="card table-card">
+            <h3 id="table-title"></h3>
+            <div class="table-container">
+              <table id="report-table">
+                <thead>
+                  <tr id="report-table-header">
+                  </tr>
+                </thead>
+                <tbody id="report-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/scripts/logbox/relatorios.js"></script>
+  </body>
+</html>

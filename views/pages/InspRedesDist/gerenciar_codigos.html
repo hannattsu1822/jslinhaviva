@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerenciar Códigos de Inspeção</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/InspRedesDist/gerenciar_codigos.css"
+    />
+  </head>
+  <body>
+    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <div class="container my-4">
+      <header
+        class="page-header d-flex justify-content-between align-items-center pb-3 mb-4"
+      >
+        <h1 class="page-title h2 mb-0">
+          <span class="material-icons page-icon">engineering</span>
+          Gerenciar Códigos de Infraestrutura
+        </h1>
+        <a href="/inspecoes-redes" class="btn btn-outline-secondary btn-back">
+          <span class="material-icons">arrow_back</span>
+          Voltar ao Dashboard
+        </a>
+      </header>
+
+      <main class="row">
+        <section class="col-lg-5 mb-4">
+          <div class="card h-100">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5 class="mb-0">Tipos de Ponto de Defeito</h5>
+              <button class="btn btn-primary btn-sm" id="btn-adicionar-tipo">
+                <span class="material-icons me-1" style="font-size: 1.2rem"
+                  >add</span
+                >
+                Novo Tipo
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover" id="table-tipos">
+                  <thead>
+                    <tr>
+                      <th>Nome do Tipo</th>
+                      <th class="text-end">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colspan="2" class="text-center text-muted">
+                        Carregando...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="col-lg-7 mb-4">
+          <div class="card h-100">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5 class="mb-0">Tags de Código</h5>
+              <button class="btn btn-primary btn-sm" id="btn-adicionar-tag">
+                <span class="material-icons me-1" style="font-size: 1.2rem"
+                  >add</span
+                >
+                Nova Tag
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover" id="table-tags">
+                  <thead>
+                    <tr>
+                      <th>Tag</th>
+                      <th>Tipo</th>
+                      <th>Descrição</th>
+                      <th class="text-end">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colspan="4" class="text-center text-muted">
+                        Carregando...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal fade" id="modal-tipo" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modal-tipo-title">
+              Adicionar Novo Tipo
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="form-tipo">
+              <input type="hidden" id="tipo-id" name="id" />
+              <div class="mb-3">
+                <label for="ponto_defeito" class="form-label"
+                  >Nome do Tipo</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="ponto_defeito"
+                  name="ponto_defeito"
+                  required
+                />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              form="form-tipo"
+              id="btn-salvar-tipo"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal-tag" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modal-tag-title">Adicionar Nova Tag</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="form-tag">
+              <input type="hidden" id="tag-id" name="id" />
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="tag_code" class="form-label">Código da Tag</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="tag_code"
+                    name="tag_code"
+                    required
+                  />
+                </div>
+                <div class="col-md-8 mb-3">
+                  <label for="id_ponto_defeito" class="form-label"
+                    >Tipo de Ponto de Defeito</label
+                  >
+                  <select
+                    class="form-select"
+                    id="id_ponto_defeito"
+                    name="id_ponto_defeito"
+                    required
+                  >
+                    <option value="" selected disabled>Carregando...</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="descricao" class="form-label"
+                  >Descrição do Defeito</label
+                >
+                <textarea
+                  class="form-control"
+                  id="descricao"
+                  name="descricao"
+                  rows="3"
+                  required
+                ></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              form="form-tag"
+              id="btn-salvar-tag"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/InspRedesDist/gerenciar_codigos.js"></script>
+  </body>
+</html>

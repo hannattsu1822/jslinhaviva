@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acompanhamento de Serviços | Construção</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
+    <link rel="stylesheet" href="/static/css/toast.css" />
+
+    <style>
+      :root {
+        --primary: #0d6efd;
+        --primary-dark: #0b5ed7;
+        --secondary: #6c757d;
+        --success: #198754;
+        --warning: #ffc107;
+        --danger: #dc3545;
+        --dark: #1f2937;
+        --light: #f8fafc;
+        --muted: #64748b;
+        --border: #e5e7eb;
+        --surface: rgba(255, 255, 255, 0.88);
+        --surface-strong: #ffffff;
+        --shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.06);
+        --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.1);
+        --shadow-lg: 0 18px 45px rgba(15, 23, 42, 0.14);
+        --radius-sm: 10px;
+        --radius-md: 16px;
+        --radius-lg: 22px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Poppins", sans-serif;
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(13, 110, 253, 0.08),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgba(25, 135, 84, 0.06),
+            transparent 22%
+          ),
+          linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+        color: var(--dark);
+      }
+
+      .main-content {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+      }
+
+      .container {
+        max-width: 1380px;
+      }
+
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+      }
+
+      .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #172033;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+      }
+
+      .page-title i {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        color: #fff;
+        font-size: 1.1rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .page-subtitle {
+        margin-top: 0.35rem;
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .glass-card {
+        background: var(--surface);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(255, 255, 255, 0.65);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+      }
+
+      .card-body {
+        padding: 1.35rem;
+      }
+
+      .filters-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1rem;
+      }
+
+      .filters-title i {
+        color: var(--primary);
+        margin-right: 0.45rem;
+      }
+
+      .form-label {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 0.55rem;
+      }
+
+      .form-control,
+      .form-select {
+        min-height: 46px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background-color: rgba(255, 255, 255, 0.94);
+        color: #1e293b;
+        box-shadow: none;
+        transition: all 0.18s ease;
+      }
+
+      .form-control::placeholder {
+        color: #94a3b8;
+      }
+
+      .form-control:hover,
+      .form-select:hover {
+        border-color: #cbd5e1;
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        border-color: rgba(13, 110, 253, 0.45);
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
+        background-color: #fff;
+      }
+
+      .btn {
+        border-radius: 12px;
+        font-weight: 600;
+        min-height: 44px;
+        padding: 0.65rem 1rem;
+        transition: all 0.18s ease;
+      }
+
+      .btn-outline-primary {
+        border-width: 1px;
+        color: var(--primary);
+        border-color: rgba(13, 110, 253, 0.35);
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .btn-outline-primary:hover {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+        transform: translateY(-1px);
+      }
+
+      .btn-outline-secondary:hover {
+        transform: translateY(-1px);
+      }
+
+      .badge.bg-primary {
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        ) !important;
+        border-radius: 999px;
+        padding: 0.55rem 0.9rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .periodo-wrapper {
+        min-width: 0;
+      }
+
+      .periodo-range {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        width: 100%;
+      }
+
+      .periodo-campo {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .periodo-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: 0.35rem;
+        padding-left: 0.1rem;
+      }
+
+      .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+
+      .table-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .table-responsive {
+        border-radius: 16px;
+        overflow: auto;
+      }
+
+      .table {
+        margin-bottom: 0;
+        --bs-table-bg: transparent;
+        vertical-align: middle;
+      }
+
+      .table thead th {
+        background: linear-gradient(135deg, #0f172a, #1e3a5f);
+        color: #fff;
+        border: none;
+        font-size: 0.84rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        padding: 1rem 0.9rem;
+      }
+
+      .table tbody tr {
+        transition: background-color 0.16s ease;
+      }
+
+      .table tbody td {
+        padding: 0.95rem 0.9rem;
+        border-color: #eef2f7;
+        color: #334155;
+        font-size: 0.92rem;
+        vertical-align: middle;
+      }
+
+      .table tbody tr:nth-child(even) {
+        background-color: rgba(248, 250, 252, 0.55);
+      }
+
+      .table tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.05);
+      }
+
+      .table tbody td strong {
+        color: #0f172a;
+        font-weight: 700;
+      }
+
+      .status-concluido,
+      .status-nao-concluido,
+      .status-andamento {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-weight: 600;
+        font-size: 0.88rem;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+
+      .status-concluido {
+        color: #166534;
+        background: rgba(25, 135, 84, 0.12);
+      }
+
+      .status-nao-concluido {
+        color: #b42318;
+        background: rgba(220, 53, 69, 0.1);
+      }
+
+      .status-andamento {
+        color: #075985;
+        background: rgba(13, 202, 240, 0.12);
+      }
+
+      .motivo-nao-concluido {
+        display: block;
+        margin-top: 0.45rem;
+        font-size: 0.78rem;
+        line-height: 1.45;
+        color: var(--muted);
+        max-width: 240px;
+      }
+
+      .pagination-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.25rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding-top: 0.75rem;
+        border-top: 1px solid #eef2f7;
+      }
+
+      .pagination-info {
+        font-size: 0.9rem;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      .pagination-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .pagination-buttons .btn {
+        min-height: 40px;
+        padding: 0.5rem 0.85rem;
+        border-radius: 10px;
+      }
+
+      .text-muted {
+        color: #64748b !important;
+      }
+
+      .sidebar-toggle-button {
+        box-shadow: var(--shadow-sm);
+      }
+
+      @media (max-width: 992px) {
+        .page-title {
+          font-size: 1.35rem;
+          line-height: 1.35;
+        }
+
+        .card-body {
+          padding: 1rem;
+        }
+
+        .table thead th,
+        .table tbody td {
+          padding: 0.8rem 0.7rem;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .main-content {
+          padding-top: 1rem;
+        }
+
+        .page-header {
+          align-items: stretch;
+        }
+
+        .page-title {
+          font-size: 1.2rem;
+          gap: 0.6rem;
+        }
+
+        .page-title i {
+          width: 40px;
+          height: 40px;
+          font-size: 1rem;
+          border-radius: 12px;
+        }
+
+        #btn-atualizar {
+          width: 100%;
+        }
+
+        .periodo-range {
+          grid-template-columns: 1fr;
+        }
+
+        .pagination-controls {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .pagination-buttons {
+          justify-content: space-between;
+        }
+
+        .pagination-buttons .btn {
+          flex: 1;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar bg-glass">
+      <div class="sidebar-header text-center py-3">
+        <div class="user-icon mb-2">
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
+      </div>
+
+      <div class="user-info p-3 mt-2 rounded">
+        <div class="info-item mb-2">
+          <i class="fas fa-id-card me-2"></i>
+          <span id="user-matricula">Matrícula: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-briefcase me-2"></i>
+          <span id="user-cargo">Cargo: Carregando...</span>
+        </div>
+        <div class="info-item mb-2">
+          <i class="fas fa-calendar-alt me-2"></i>
+          <span id="current-date">--/--/----</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-clock me-2"></i>
+          <span id="current-time">--:--:--</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav flex-grow-1">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="
+                event.preventDefault();
+                navigateTo('dashboard');
+              "
+              class="nav-link"
+            >
+              <i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a
+              href="#"
+              onclick="
+                event.preventDefault();
+                navigateTo('gestao-servicos');
+              "
+              class="nav-link"
+            >
+              <i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços
+            </a>
+          </li>
+
+          <li
+            class="nav-item"
+            id="sidebar-construcao-link"
+            style="display: none"
+          >
+            <a
+              href="#"
+              onclick="
+                event.preventDefault();
+                navigateTo('acompanhamento_construcao');
+              "
+              class="nav-link active"
+            >
+              <i class="fas fa-hard-hat fa-fw me-2"></i>Acompanhamento
+              Construção
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button onclick="logout()" class="btn-logout">
+          <i class="fas fa-sign-out-alt me-2"></i>Sair
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container py-4">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">
+              <i class="fas fa-hard-hat"></i>
+              <span>Acompanhamento de Serviços - Construção</span>
+            </h1>
+            <p class="page-subtitle">
+              Consulte, filtre e acompanhe os serviços de construção com mais
+              clareza e organização.
+            </p>
+          </div>
+
+          <button class="btn btn-outline-primary" id="btn-atualizar">
+            <i class="fas fa-sync-alt me-2"></i>Atualizar
+          </button>
+        </div>
+
+        <div class="card glass-card mb-4">
+          <div class="card-body">
+            <div class="filters-title">
+              <i class="fas fa-filter"></i>Filtros de busca
+            </div>
+
+            <div class="row g-3 align-items-end">
+              <div class="col-lg-3 col-md-6">
+                <label for="filtro-processo" class="form-label">
+                  Filtrar por ID ou Processo
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filtro-processo"
+                  placeholder="Digite para buscar..."
+                />
+              </div>
+
+              <div class="col-lg-3 col-md-6">
+                <label for="filtro-status" class="form-label">
+                  Filtrar por Status
+                </label>
+                <select class="form-select" id="filtro-status">
+                  <option value="">Todos</option>
+                  <option value="andamento">Em Andamento</option>
+                  <option value="concluido">Concluído</option>
+                  <option value="nao_concluido">Não Concluído</option>
+                </select>
+              </div>
+
+              <div class="col-lg-6 col-md-12 periodo-wrapper">
+                <label class="form-label">Período de Término</label>
+
+                <div class="periodo-range">
+                  <div class="periodo-campo">
+                    <span class="periodo-label">De</span>
+                    <input
+                      type="date"
+                      class="form-control"
+                      id="filtro-data-inicio"
+                      aria-label="Data inicial"
+                    />
+                  </div>
+
+                  <div class="periodo-campo">
+                    <span class="periodo-label">Até</span>
+                    <input
+                      type="date"
+                      class="form-control"
+                      id="filtro-data-fim"
+                      aria-label="Data final"
+                    />
+                  </div>
+                </div>
+
+                <small class="text-muted">Ex.: de 03 até 10.</small>
+              </div>
+
+              <div class="col-lg-3 col-md-6">
+                <label for="filtro-desligamento" class="form-label">
+                  Desligamento
+                </label>
+                <select class="form-select" id="filtro-desligamento">
+                  <option value="">Todos</option>
+                  <option value="SIM">Com desligamento</option>
+                  <option value="NAO">Sem desligamento</option>
+                </select>
+              </div>
+
+              <div class="col-lg-3 col-md-6">
+                <label for="ordenar-por" class="form-label">Ordenar por</label>
+                <select class="form-select" id="ordenar-por">
+                  <option value="data_desc">Data (Mais recente)</option>
+                  <option value="data_asc">Data (Mais antiga)</option>
+                  <option value="id_desc">ID (Mais recente)</option>
+                  <option value="id_asc">ID (Mais antigo)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-body">
+            <div class="table-header">
+              <h5 class="table-title">Lista de Serviços</h5>
+              <span class="badge bg-primary" id="contador-servicos"
+                >0 serviços</span
+              >
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Processo</th>
+                    <th>Equipe</th>
+                    <th>Alimentador</th>
+                    <th>Desligamento</th>
+                    <th>Data Criação</th>
+                    <th>Data Prevista</th>
+                    <th>Data Término</th>
+                    <th>Status / Motivo</th>
+                    <th class="text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-servicos-construcao">
+                  <tr>
+                    <td colspan="10" class="text-center py-5">
+                      Carregando serviços...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination-controls">
+              <div class="pagination-info">
+                <span id="info-paginacao">Página 1 de 1</span>
+              </div>
+
+              <div class="pagination-buttons">
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  id="btn-primeira-pagina"
+                >
+                  <i class="fas fa-angle-double-left"></i>
+                </button>
+
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  id="btn-pagina-anterior"
+                >
+                  <i class="fas fa-angle-left"></i> Anterior
+                </button>
+
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  id="btn-proxima-pagina"
+                >
+                  Próxima <i class="fas fa-angle-right"></i>
+                </button>
+
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  id="btn-ultima-pagina"
+                >
+                  <i class="fas fa-angle-double-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/servicos/servicos_construcao.js"></script>
+  </body>
+</html>

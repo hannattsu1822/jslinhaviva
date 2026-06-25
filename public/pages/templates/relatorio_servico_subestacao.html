@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório Final de Serviço de Subestação</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
+        .header, .footer { text-align: center; }
+        .header h1 { font-size: 16pt; margin: 0; }
+        .header p { margin: 5px 0; }
+        .content { margin-top: 20px; }
+        .section { border: 1px solid #ccc; border-radius: 5px; margin-bottom: 15px; page-break-inside: avoid; }
+        .section-header { background-color: #f2f2f2; padding: 8px; font-weight: bold; border-bottom: 1px solid #ccc; }
+        .section-body { padding: 10px; }
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .info-item { display: flex; flex-direction: column; }
+        .info-item strong { font-size: 8pt; color: #555; margin-bottom: 2px; }
+        .info-item p { margin: 0; font-size: 10pt; }
+        .full-width { grid-column: 1 / -1; }
+        .text-area { background-color: #fafafa; border: 1px solid #eee; padding: 8px; min-height: 40px; white-space: pre-wrap; word-wrap: break-word; }
+        .item-card { border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 10px; padding: 10px; page-break-inside: avoid; }
+        .item-card-header { font-weight: bold; }
+        .item-card-details { font-size: 9pt; color: #555; margin-top: 5px; border-top: 1px dotted #ccc; padding-top: 5px; }
+        .photo-grid-container { page-break-inside: avoid; margin-top: 10px; }
+        .photo-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .gallery-item { text-align: center; }
+        .gallery-item img { max-width: 100%; height: auto; border: 1px solid #ddd; }
+        .caption { font-size: 8pt; color: #666; margin-top: 5px; }
+        .no-content { color: #888; font-style: italic; }
+        .doc-list { list-style-type: none; padding-left: 0; }
+        .doc-list li { background-color: #f9f9f9; padding: 5px; border-bottom: 1px solid #eee; font-size: 9pt; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; font-size: 8pt; color: #777; }
+        .status-badge { padding: 3px 8px; border-radius: 10px; font-weight: bold; color: white; font-size: 9pt; }
+        .status-concluido { background-color: #28a745; }
+        .status-concluido-com-pendencia { background-color: #ffc107; color: #333; }
+        .status-nao-concluido { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Relatório Final de Serviço</h1>
+        <p>Processo/OS Nº: {{processo}}</p>
+    </div>
+
+    <div class="content">
+        <div class="section">
+            <div class="section-header">Informações Gerais do Serviço</div>
+            <div class="section-body">
+                <div class="info-grid">
+                    <div class="info-item"><strong>Subestação</strong><p>{{subestacao_nome}} ({{subestacao_sigla}})</p></div>
+                    <div class="info-item"><strong>Tipo de Ordem</strong><p>{{tipo_ordem}}</p></div>
+                    <div class="info-item"><strong>Prioridade</strong><p>{{prioridade}}</p></div>
+                    <div class="info-item"><strong>Responsável Técnico</strong><p>{{responsavel_nome}}</p></div>
+                    <div class="info-item"><strong>Data Prevista</strong><p>{{data_prevista}}</p></div>
+                    <div class="info-item"><strong>Horário Previsto</strong><p>{{horario_previsto}}</p></div>
+                    <div class="info-item full-width"><strong>Motivo do Serviço</strong><div class="text-area">{{motivo}}</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Itens de Escopo Executados</div>
+            <div class="section-body">
+                {{itens_escopo_html}}
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Detalhes da Conclusão Geral</div>
+            <div class="section-body">
+                <div class="info-grid">
+                    <div class="info-item"><strong>Status Final</strong><p><span class="status-badge {{status_final_classe}}">{{status_final_texto}}</span></p></div>
+                    <div class="info-item"><strong>Data de Conclusão</strong><p>{{data_conclusao}}</p></div>
+                    <div class="info-item"><strong>Horário de Conclusão</strong><p>{{horario_fim}}</p></div>
+                    <div class="info-item full-width"><strong>Observações da Conclusão</strong><div class="text-area">{{observacoes_conclusao}}</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Anexos Gerais do Serviço</div>
+            <div class="section-body">
+                <h4>Imagens</h4>
+                {{galeria_anexos_gerais}}
+                <h4 style="margin-top: 20px;">Outros Documentos</h4>
+                {{lista_documentos_gerais}}
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Relatório gerado em {{data_geracao}}
+    </div>
+</body>
+</html>

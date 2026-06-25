@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestão de Checklists | Linha Viva</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background-color: #f4f6f9;
+      }
+      .container-fluid {
+        padding: 2rem;
+      }
+      .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+      }
+      .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+      }
+      .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+      .status-ok {
+        background-color: #d1e7dd;
+        color: #0f5132;
+      }
+      .status-warn {
+        background-color: #fff3cd;
+        color: #664d03;
+      }
+      .status-danger {
+        background-color: #f8d7da;
+        color: #842029;
+      }
+
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+      }
+      .photo-item {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.2s;
+        border: 1px solid #dee2e6;
+      }
+      .photo-item:hover {
+        transform: scale(1.05);
+      }
+
+      .info-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0;
+      }
+      .info-value {
+        font-weight: 600;
+        color: #212529;
+        font-size: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-dark">
+          <i class="fas fa-tasks me-2 text-primary"></i>Gestão de Checklists
+          Diários
+        </h2>
+        <a href="/dashboard-gestor" class="btn btn-outline-secondary"
+          ><i class="fas fa-arrow-left me-2"></i>Voltar</a
+        >
+      </div>
+
+      <!-- Filtros -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <form id="filterForm" class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label">Data Início</label>
+              <input type="date" class="form-control" id="dataInicio" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Data Fim</label>
+              <input type="date" class="form-control" id="dataFim" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Placa</label>
+              <input
+                type="text"
+                class="form-control"
+                id="placaBusca"
+                placeholder="ABC-1234"
+              />
+            </div>
+            <div class="col-md-3">
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-filter me-2"></i>Filtrar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Veículo</th>
+                  <th>Motorista</th>
+                  <th>KM</th>
+                  <th>Status Geral</th>
+                  <th class="text-end pe-4">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <tr>
+                  <td colspan="6" class="text-center py-4">Carregando...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-light">
+            <h5 class="modal-title fw-bold">
+              <i class="fas fa-info-circle me-2"></i>Detalhes do Checklist
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <!-- Cabeçalho com Informações Gerais -->
+            <div class="card bg-light border-0 mb-4">
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <p class="info-label">Motorista / Usuário</p>
+                    <p class="info-value" id="det-motorista">---</p>
+                  </div>
+                  <div class="col-md-3">
+                    <p class="info-label">Placa</p>
+                    <p class="info-value" id="det-placa">---</p>
+                  </div>
+                  <div class="col-md-3">
+                    <p class="info-label">Quilometragem</p>
+                    <p class="info-value" id="det-km">---</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="info-label">Data do Registro</p>
+                    <p class="info-value" id="det-data">---</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="info-label">Hora do Registro</p>
+                    <p class="info-value" id="det-hora">---</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+              Itens Verificados
+            </h6>
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <p><strong>Óleo:</strong> <span id="det-oleo"></span></p>
+                <p><strong>Água:</strong> <span id="det-agua"></span></p>
+                <p><strong>Pneus:</strong> <span id="det-pneus"></span></p>
+              </div>
+              <div class="col-md-6">
+                <p><strong>Luzes:</strong> <span id="det-luzes"></span></p>
+                <p><strong>Freios:</strong> <span id="det-freios"></span></p>
+                <p><strong>Lataria:</strong> <span id="det-lataria"></span></p>
+              </div>
+              <div class="col-12 mt-2">
+                <div class="alert alert-secondary">
+                  <strong>Observações:</strong>
+                  <span id="det-obs" class="fst-italic"></span>
+                </div>
+              </div>
+            </div>
+
+            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+              Fotos Anexadas
+            </h6>
+            <div id="photosContainer" class="photo-grid">
+              <!-- Fotos via JS -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Adicionado SweetAlert para confirmações bonitas -->
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        carregarDados();
+      });
+
+      document.getElementById("filterForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        carregarDados();
+      });
+
+      async function carregarDados() {
+        const dataInicio = document.getElementById("dataInicio").value;
+        const dataFim = document.getElementById("dataFim").value;
+        const placa = document.getElementById("placaBusca").value;
+
+        const params = new URLSearchParams({ dataInicio, dataFim, placa });
+
+        try {
+          const res = await fetch(`/api/gestao/checklists?${params}`);
+          const dados = await res.json();
+          renderizarTabela(dados);
+        } catch (err) {
+          console.error(err);
+          Swal.fire("Erro", "Erro ao carregar dados.", "error");
+        }
+      }
+
+      function renderizarTabela(lista) {
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML = "";
+
+        if (lista.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="6" class="text-center py-4">Nenhum registro encontrado.</td></tr>';
+          return;
+        }
+
+        lista.forEach((item) => {
+          const dataFormatada = new Date(item.data_registro).toLocaleDateString(
+            "pt-BR"
+          );
+
+          let statusClass = "status-ok";
+          let statusText = "Normal";
+
+          if (
+            item.nivel_oleo === "BAIXO" ||
+            item.nivel_agua === "BAIXO" ||
+            item.calibragem_pneus === "NAO_OK"
+          ) {
+            statusClass = "status-warn";
+            statusText = "Atenção";
+          }
+          if (
+            item.nivel_oleo === "CRITICO" ||
+            item.freios === "RUIM" ||
+            item.luzes_sinalizacao === "DEFEITO"
+          ) {
+            statusClass = "status-danger";
+            statusText = "Crítico";
+          }
+
+          // Serializar o objeto para passar no onclick (escapando aspas)
+          const itemString = JSON.stringify(item).replace(/"/g, "&quot;");
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+                    <td>${dataFormatada} <small class="text-muted">${
+            item.hora_registro
+          }</small></td>
+                    <td class="fw-bold">${item.placa_veiculo}</td>
+                    <td>${item.nome_motorista || item.matricula_usuario}</td>
+                    <td>${item.quilometragem} km</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td class="text-end pe-4">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-info text-white" title="Ver Detalhes" onclick="abrirDetalhes(${itemString})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-warning text-dark" title="Reenviar (Solicitar Novo)" onclick="reenviarChecklist(${
+                              item.id
+                            })">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger text-white" title="Excluir Registro" onclick="excluirChecklist(${
+                              item.id
+                            })">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function abrirDetalhes(item) {
+        // Preencher Cabeçalho
+        document.getElementById("det-motorista").textContent =
+          item.nome_motorista || item.matricula_usuario;
+        document.getElementById("det-placa").textContent = item.placa_veiculo;
+        document.getElementById("det-km").textContent =
+          item.quilometragem + " km";
+        document.getElementById("det-data").textContent = new Date(
+          item.data_registro
+        ).toLocaleDateString("pt-BR");
+        document.getElementById("det-hora").textContent = item.hora_registro;
+
+        // Preencher Itens Técnicos
+        document.getElementById("det-oleo").textContent = item.nivel_oleo;
+        document.getElementById("det-agua").textContent = item.nivel_agua;
+        document.getElementById("det-pneus").textContent =
+          item.calibragem_pneus;
+        document.getElementById("det-luzes").textContent =
+          item.luzes_sinalizacao;
+        document.getElementById("det-freios").textContent = item.freios;
+        document.getElementById("det-lataria").textContent =
+          item.avarias_lataria ? "Sim (Com Avaria)" : "Não";
+        document.getElementById("det-obs").textContent =
+          item.observacoes || "Nenhuma observação.";
+
+        // Buscar fotos
+        const container = document.getElementById("photosContainer");
+        container.innerHTML =
+          '<div class="text-center w-100"><i class="fas fa-spinner fa-spin"></i> Carregando fotos...</div>';
+
+        const modal = new bootstrap.Modal(
+          document.getElementById("detailsModal")
+        );
+        modal.show();
+
+        try {
+          const res = await fetch(`/api/gestao/checklists/${item.id}/fotos`);
+          const data = await res.json();
+
+          container.innerHTML = "";
+          if (data.fotos && data.fotos.length > 0) {
+            data.fotos.forEach((foto) => {
+              const img = document.createElement("img");
+              img.src = foto.caminho_arquivo;
+              img.className = "photo-item";
+              img.onclick = () => window.open(foto.caminho_arquivo, "_blank");
+              container.appendChild(img);
+            });
+          } else {
+            container.innerHTML =
+              '<p class="text-muted">Nenhuma foto anexada.</p>';
+          }
+        } catch (err) {
+          container.innerHTML =
+            '<p class="text-danger">Erro ao carregar fotos.</p>';
+        }
+      }
+
+      async function reenviarChecklist(id) {
+        const result = await Swal.fire({
+          title: "Solicitar Reenvio?",
+          text: "Isso excluirá o registro atual e o motorista verá o alerta de 'Pendente' novamente na dashboard.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#ffc107",
+          cancelButtonColor: "#d33",
+          confirmButtonText: "Sim, solicitar novo!",
+          cancelButtonText: "Cancelar",
+        });
+
+        if (result.isConfirmed) {
+          deletarRegistro(
+            id,
+            "O checklist foi removido e o motorista deverá enviar um novo."
+          );
+        }
+      }
+
+      async function excluirChecklist(id) {
+        const result = await Swal.fire({
+          title: "Tem certeza?",
+          text: "Você não poderá reverter isso! O registro e as fotos serão apagados.",
+          icon: "error",
+          showCancelButton: true,
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#3085d6",
+          confirmButtonText: "Sim, excluir!",
+          cancelButtonText: "Cancelar",
+        });
+
+        if (result.isConfirmed) {
+          deletarRegistro(id, "Registro excluído com sucesso.");
+        }
+      }
+
+      async function deletarRegistro(id, msgSucesso) {
+        try {
+          const res = await fetch(`/api/gestao/checklists/${id}`, {
+            method: "DELETE",
+          });
+
+          if (res.ok) {
+            Swal.fire("Sucesso!", msgSucesso, "success");
+            carregarDados(); // Recarrega a tabela
+          } else {
+            Swal.fire("Erro!", "Não foi possível realizar a ação.", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          Swal.fire("Erro!", "Erro de conexão.", "error");
+        }
+      }
+    </script>
+  </body>
+</html>

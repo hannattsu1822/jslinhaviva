@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consultar Inspeções</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/InspRedesDist/listar_servicos.css"
+    />
+  </head>
+  <body>
+    <div class="container my-4">
+      <header
+        class="page-header d-flex justify-content-between align-items-center pb-3 mb-4"
+      >
+        <h1 class="page-title h2 mb-0">
+          <span class="material-icons page-icon">manage_search</span>
+          Central de Controle de Inspeções
+        </h1>
+        <a href="/inspecoes-redes" class="btn btn-outline-secondary btn-back">
+          <span class="material-icons">arrow_back</span>
+          Voltar ao Dashboard
+        </a>
+      </header>
+
+      <main>
+        <!-- Seção de Filtros -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-4">
+                <label for="filtro-processo" class="form-label"
+                  >ID / Processo</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filtro-processo"
+                  placeholder="Buscar por ID ou Processo..."
+                />
+              </div>
+              <div class="col-md-3">
+                <label for="filtro-data" class="form-label"
+                  >Data Prevista</label
+                >
+                <input type="date" class="form-control" id="filtro-data" />
+              </div>
+              <div class="col-md-5">
+                <label for="filtro-local" class="form-label"
+                  >Alimentador / Subestação</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="filtro-local"
+                  placeholder="Buscar por local..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela de Serviços -->
+        <div class="card shadow-sm">
+          <div
+            class="card-header d-flex justify-content-between align-items-center"
+          >
+            <h5 class="mb-0">Inspeções Agendadas</h5>
+            <a href="/inspecoes/servicos/novo" class="btn btn-primary btn-sm">
+              <span class="material-icons me-1" style="font-size: 1.2rem"
+                >add_circle</span
+              >
+              Registrar Nova Inspeção
+            </a>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table
+                class="table table-hover align-middle"
+                id="tabela-servicos"
+              >
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col">ID/Processo</th>
+                    <th scope="col">Data Prevista</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Responsável (Execução)</th>
+                    <th scope="col">Alimentador</th>
+                    <th scope="col">Subestação</th>
+                    <th scope="col" class="text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- O conteúdo será inserido aqui via JavaScript -->
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                      <div
+                        class="spinner-border spinner-border-sm"
+                        role="status"
+                      >
+                        <span class="visually-hidden">Carregando...</span>
+                      </div>
+                      <span class="ms-2">Carregando inspeções...</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Modal: Atribuir Responsáveis (MANTIDO) -->
+    <div class="modal fade" id="modal-atribuir" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modal-atribuir-title">
+              Atribuir Responsáveis
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="form-atribuir">
+              <input type="hidden" id="atribuir-servico-id" name="servicoId" />
+              <div class="mb-3">
+                <label class="form-label"
+                  >Selecione a equipe de execução:</label
+                >
+                <div
+                  id="responsaveis-checkbox-container"
+                  class="checkbox-list-container"
+                >
+                  <p class="text-muted">Carregando responsáveis...</p>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              form="form-atribuir"
+              id="btn-salvar-atribuicao"
+            >
+              Salvar Atribuição
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- O MODAL DE FINALIZAÇÃO FOI REMOVIDO DAQUI -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/InspRedesDist/listar_servicos.js"></script>
+  </body>
+</html>

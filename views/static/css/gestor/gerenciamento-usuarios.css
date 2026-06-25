@@ -1,0 +1,14 @@
+/* Estilos para a tabela de usuários */
+.table {
+  min-width: 750px; /* Garante que a tabela não quebre em telas muito pequenas */
+}
+
+/* Estilo para a linha de usuário desativado */
+.table-secondary.text-muted {
+  text-decoration: line-through;
+}
+
+/* Garante que os botões de ação tenham um espaçamento mínimo */
+.table .btn {
+  margin-left: 0.25rem;
+}

@@ -1,0 +1,467 @@
+/* public/static/css/frota/agendar_checklist.css */
+
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  --text-color: #343a40;
+  --light-bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --border-color: #dee2e6;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --dark-overlay: rgba(0, 0, 0, 0.6);
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: var(--light-bg);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px var(--shadow-color);
+  padding: 30px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  font-size: 2.2em;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header h1 .material-icons {
+  font-size: 1.2em;
+  margin-right: 10px;
+}
+
+.subtitle {
+  font-size: 1.1em;
+  color: var(--secondary-color);
+  margin-bottom: 20px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.form-card,
+.filter-section,
+.table-section {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 25px;
+  background-color: var(--light-bg);
+}
+
+.filter-section h2,
+.table-section h2,
+.modal-header h2 {
+  /* Adicionado .modal-header h2 */
+  font-size: 1.4em;
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.filter-section h2 .material-icons,
+.table-section h2 .material-icons,
+.modal-header h2 .material-icons {
+  /* Adicionado .modal-header h2 .material-icons */
+  font-size: 1.1em;
+  margin-right: 8px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group select,
+.form-group textarea {
+  width: calc(100% - 20px);
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1em;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-actions {
+  text-align: right;
+  margin-top: 30px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 500;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.btn .material-icons {
+  font-size: 1.1em;
+  margin-right: 8px;
+}
+
+.primary-btn {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.primary-btn:hover {
+  background-color: #0056b3;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.secondary-btn {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.secondary-btn:hover {
+  background-color: #545b62;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.mensagem {
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 5px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.mensagem.show {
+  opacity: 1;
+}
+
+.mensagem.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.mensagem.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* ESTILOS DA TABELA */
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--card-bg);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.data-table th {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.9em;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background-color: var(--light-bg);
+}
+
+.data-table tbody tr:hover {
+  background-color: #e9ecef;
+}
+
+.data-table td.text-center {
+  text-align: center;
+  color: var(--secondary-color);
+}
+
+.data-table td.error-message {
+  color: var(--error-color);
+  font-weight: 500;
+}
+
+.no-records-message {
+  text-align: center;
+  padding: 20px;
+  color: var(--secondary-color);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-records-message .material-icons {
+  margin-right: 8px;
+  font-size: 1.2em;
+}
+
+.data-table .actions {
+  text-align: center;
+  display: flex; /* Para alinhar botões de ação lado a lado */
+  justify-content: center;
+  gap: 5px; /* Espaço entre os botões */
+}
+
+.data-table .btn.small-btn {
+  padding: 6px 10px;
+  font-size: 0.85em;
+  margin: 0; /* Remove margin para usar gap */
+}
+
+.data-table .view-details-btn {
+  /* Renomeado de view-btn para clareza */
+  background-color: var(--info-color);
+  color: white;
+}
+
+.data-table .view-details-btn:hover {
+  background-color: #138496;
+}
+
+.data-table .delete-btn {
+  /* Novo estilo para o botão de exclusão */
+  background-color: var(--error-color);
+  color: white;
+}
+
+.data-table .delete-btn:hover {
+  background-color: #c82333;
+}
+
+/* Estilos para os status na tabela */
+.data-table .status-agendado {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.data-table .status-concluido {
+  color: var(--success-color);
+  font-weight: 500;
+}
+
+.data-table .status-atrasado {
+  color: var(--error-color);
+  font-weight: 500;
+}
+
+/* ESTILOS DOS MODAIS */
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--dark-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-content {
+  background-color: var(--card-bg);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  position: relative;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.modal-header {
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.modal-header h2 {
+  font-size: 1.8em;
+  color: var(--primary-color);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-header h2 .material-icons {
+  font-size: 1.1em;
+  margin-right: 10px;
+}
+
+/* O close-button no canto superior direito foi removido do HTML */
+/* .close-button { ... } */
+
+.modal-content .form-actions {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Estilos específicos para o corpo do modal de detalhes */
+.modal-body-details p {
+  margin-bottom: 10px;
+  font-size: 1em;
+  color: var(--text-color);
+}
+
+.modal-body-details p strong {
+  color: var(--primary-color);
+  margin-right: 5px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .container {
+    margin: 20px auto;
+    padding: 20px;
+  }
+  .header h1 {
+    font-size: 1.8em;
+  }
+  .subtitle {
+    font-size: 1em;
+  }
+  .action-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .btn {
+    width: 100%;
+    margin-left: 0;
+  }
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .filter-section h2,
+  .table-section h2,
+  .modal-header h2 {
+    font-size: 1.2em;
+  }
+  .form-group label,
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 0.9em;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 10px;
+    font-size: 0.9em;
+  }
+  .data-table .actions {
+    flex-direction: column; /* Empilha os botões de ação da tabela */
+    gap: 5px;
+  }
+  .data-table .btn.small-btn {
+    width: 100%; /* Botões de ação da tabela ocupam 100% */
+    padding: 6px 10px;
+    font-size: 0.85em;
+  }
+  .modal-content {
+    width: 95%;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 10px;
+  }
+  .container {
+    padding: 15px;
+  }
+  .header h1 {
+    font-size: 1.5em;
+  }
+  .subtitle {
+    font-size: 0.9em;
+  }
+  .data-table th,
+  .data-table td {
+    font-size: 0.8em;
+  }
+}

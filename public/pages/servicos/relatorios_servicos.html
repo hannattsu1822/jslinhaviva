@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relatórios de Serviços</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/servicos/relatorios_servicos.css"
+    />
+  </head>
+  <body>
+    <header class="bg-primary text-white p-3 mb-4 shadow-sm">
+      <div class="container d-flex justify-content-between align-items-center">
+        <h1 class="h4 mb-0 d-flex align-items-center">
+          <span class="material-symbols-outlined me-2" style="font-size: 1.5em"
+            >analytics</span
+          >
+          Relatórios de Serviços
+        </h1>
+        <a href="/gestao-servicos" class="btn btn-light btn-sm">
+          <span
+            class="material-symbols-outlined me-1"
+            style="font-size: 1.2em; vertical-align: middle"
+            >arrow_back</span
+          >
+          Voltar para Gestão
+        </a>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card mb-4 shadow-sm">
+        <div class="card-header bg-light">
+          <h2 class="h5 mb-0 d-flex align-items-center">
+            <span class="material-symbols-outlined me-2">filter_alt</span>
+            Filtros
+          </h2>
+        </div>
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label for="filtroPeriodoInicio" class="form-label"
+                >Período Início:</label
+              >
+              <input
+                type="date"
+                class="form-control form-control-sm"
+                id="filtroPeriodoInicio"
+              />
+            </div>
+            <div class="col-md-3">
+              <label for="filtroPeriodoFim" class="form-label"
+                >Período Fim:</label
+              >
+              <input
+                type="date"
+                class="form-control form-control-sm"
+                id="filtroPeriodoFim"
+              />
+            </div>
+            <div class="col-md-3">
+              <label for="filtroEncarregadoRel" class="form-label"
+                >Encarregado:</label
+              >
+              <select
+                class="form-select form-select-sm"
+                id="filtroEncarregadoRel"
+              >
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="filtroStatusFinal" class="form-label"
+                >Status Finalização:</label
+              >
+              <select class="form-select form-select-sm" id="filtroStatusFinal">
+                <option value="finalizado" selected>Todos Finalizados</option>
+                <option value="concluido">Apenas Concluídos</option>
+                <option value="nao_concluido">Apenas Não Concluídos</option>
+              </select>
+            </div>
+            <div class="col-md-12 text-end">
+              <button
+                class="btn btn-primary btn-sm mt-2"
+                id="btnGerarRelatorios"
+              >
+                <span
+                  class="material-symbols-outlined me-1"
+                  style="font-size: 1.2em; vertical-align: middle"
+                  >refresh</span
+                >
+                Aplicar Filtros e Gerar
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="row">
+        <div class="col-lg-6 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h3 class="h6 mb-0">Serviços por Encarregado</h3>
+            </div>
+            <div class="card-body chart-container">
+              <canvas id="graficoServicosPorEncarregado"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h3 class="h6 mb-0">Serviços por Desligamento</h3>
+            </div>
+            <div class="card-body chart-container">
+              <canvas id="graficoServicosPorDesligamento"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="row">
+        <div class="col-lg-8 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h3 class="h6 mb-0" id="tituloGraficoPorMes">
+                Serviços Concluídos por Mês
+              </h3>
+            </div>
+            <div class="card-body chart-container">
+              <canvas id="graficoServicosPorMes"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <h3 class="h6 mb-0">Status de Finalização</h3>
+            </div>
+            <div class="card-body chart-container">
+              <canvas id="graficoStatusFinalizacao"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="text-center text-muted py-3 mt-4 border-top">
+      <small
+        >© <span id="anoAtual"></span> Sistema Integrado Linha VIVA. Todos os
+        direitos reservados.</small
+      >
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/scripts/servicos/relatorios_servicos.js"></script>
+  </body>
+</html>

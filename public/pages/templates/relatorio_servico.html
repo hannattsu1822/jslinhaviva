@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Relatório de Serviço - {{processo}}</title>
+    <style>
+      body {
+        font-family: "Times New Roman", Times, serif;
+        font-size: 11pt;
+        color: #333;
+        line-height: 1.4;
+      }
+
+      .report-container {
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      header {
+        text-align: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 25px;
+      }
+
+      header h1 {
+        font-size: 18pt;
+        margin: 0;
+        font-weight: bold;
+      }
+
+      /* Classe para forçar o início em uma nova página */
+      .page-break {
+        page-break-before: always;
+      }
+
+      h2 {
+        font-size: 14pt;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+        margin-top: 25px;
+        margin-bottom: 15px;
+        font-weight: bold;
+      }
+
+      .grid-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px 20px;
+        margin-bottom: 20px;
+      }
+
+      .grid-item {
+        padding: 8px;
+        border: 1px solid #ddd;
+        background-color: #f9f9f9;
+        word-wrap: break-word;
+        page-break-inside: avoid; /* Evita que um item individual seja quebrado */
+      }
+
+      .grid-item strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10pt;
+        color: #555;
+        font-weight: bold;
+      }
+
+      .full-width {
+        grid-column: span 2;
+      }
+
+      .text-area {
+        white-space: pre-wrap;
+        font-family: inherit;
+        padding: 10px;
+        border: 1px solid #ddd;
+        background-color: #fff;
+        min-height: 60px;
+      }
+
+      .responsaveis-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        page-break-inside: avoid; /* Evita que a tabela de responsáveis quebre */
+      }
+
+      .responsaveis-table th,
+      .responsaveis-table td {
+        border: 1px solid #000;
+        padding: 6px;
+        text-align: left;
+        font-size: 10pt;
+      }
+
+      .responsaveis-table thead {
+        background-color: #e0e0e0;
+        font-weight: bold;
+      }
+
+      .photo-grid-container {
+        margin-top: 15px;
+        page-break-inside: avoid;
+      }
+
+      .photo-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+
+      .gallery-item {
+        border: 1px solid #ccc;
+        padding: 5px;
+        text-align: center;
+      }
+
+      .gallery-item img {
+        max-width: 100%;
+        height: auto;
+        margin-bottom: 5px;
+      }
+
+      .caption {
+        font-size: 9pt;
+        color: #555;
+        margin: 0;
+        word-wrap: break-word;
+      }
+
+      .no-content {
+        font-style: italic;
+        color: #777;
+      }
+
+      .status-concluido {
+        color: #006400;
+        font-weight: bold;
+      }
+      .status-nao-concluido {
+        color: #8b0000;
+        font-weight: bold;
+      }
+
+      footer {
+        text-align: center;
+        margin-top: 30px;
+        font-size: 9pt;
+        color: #777;
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+      }
+
+      ul {
+        list-style-type: disc;
+        padding-left: 20px;
+      }
+      li {
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="report-container">
+      <header>
+        <h1>Relatório Final de Serviço de Redes de Distribuição</h1>
+      </header>
+
+      <main>
+        <!-- PÁGINA 1: INFORMAÇÕES GERAIS -->
+        <section>
+          <h2>Detalhes do Serviço</h2>
+          <div class="grid-container">
+            <div class="grid-item">
+              <strong>Processo:</strong> {{processo}}
+            </div>
+            <div class="grid-item"><strong>ID do Serviço:</strong> {{id}}</div>
+            <div class="grid-item">
+              <strong>Data Prevista:</strong> {{data_prevista_execucao}}
+            </div>
+            <div class="grid-item"><strong>Tipo:</strong> {{tipo}}</div>
+            <div class="grid-item">
+              <strong>Subestação:</strong> {{subestacao}}
+            </div>
+            <div class="grid-item">
+              <strong>Alimentador:</strong> {{alimentador}}
+            </div>
+            <div class="grid-item">
+              <strong>Chave Montante:</strong> {{chave_montante}}
+            </div>
+            <div class="grid-item">
+              <strong>Desligamento:</strong> {{desligamento}}
+            </div>
+            <div class="grid-item full-width">
+              <strong>Descrição do Serviço:</strong>
+              <div class="text-area">{{descricao_servico}}</div>
+            </div>
+            <div class="grid-item full-width">
+              <strong>Observações Iniciais:</strong>
+              <div class="text-area">{{observacoes}}</div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Equipe Responsável</h2>
+          {{lista_responsaveis}}
+        </section>
+
+        <section>
+          <h2>Detalhes da Finalização</h2>
+          <div class="grid-container">
+            <div class="grid-item">
+              <strong>Status Final:</strong>
+              <span class="{{status_final_classe}}"
+                >{{status_final_texto}}</span
+              >
+            </div>
+            <div class="grid-item">
+              <strong>Data da Finalização:</strong> {{data_finalizacao}}
+            </div>
+            <div class="grid-item full-width">
+              <strong>Responsável pela Finalização:</strong>
+              {{responsavel_finalizacao}}
+            </div>
+            {{motivo_nao_conclusao_html}}
+            <div class="grid-item full-width">
+              <strong>Observações da Conclusão:</strong>
+              <div class="text-area">{{observacoes_conclusao}}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PÁGINA 2 E SEGUINTES: EVIDÊNCIAS -->
+        <section class="page-break">
+          <h2>Anexos Fotográficos</h2>
+          {{galeria_geral}}
+        </section>
+
+        <section>
+          <h2>Documentos Anexos (PDF)</h2>
+          {{lista_anexos_pdf}}
+        </section>
+      </main>
+
+      <footer>
+        <p>Relatório gerado em: {{data_geracao}}</p>
+      </footer>
+    </div>
+  </body>
+</html>

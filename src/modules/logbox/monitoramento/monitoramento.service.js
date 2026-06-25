@@ -1,0 +1,457 @@
+const { promisePool } = require("../../../init");
+const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
+const {
+  validarTemperatura,
+  verificarConexaoAtiva,
+  extrairTemperaturaPayload,
+  FAN_CONFIG
+} = require("../helpers/validation.helper");
+const pythonApi = require("../../../shared/pythonApiClient");
+
+const MAX_FAN_RUNTIME_MS = 4 * 60 * 60 * 1000;
+const USE_PYTHON_API = process.env.USE_PYTHON_API === 'true';
+
+// ============================================
+// FUNÇÕES DE RELATÓRIO (mantidas 100% MariaDB)
+// ============================================
+
+async function getReportData(filters) {
+  const { deviceId, reportType, date, month, year } = filters;
+  let deviceInfo = null;
+  let startDate, endDate;
+  switch (reportType) {
+    case "monthly":
+      startDate = new Date(`${month}-01T00:00:00`);
+      endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+    case "annual":
+      startDate = new Date(`${year}-01-01T00:00:00`);
+      endDate = new Date(`${year}-12-31T23:59:59`);
+      break;
+    default:
+      startDate = new Date(`${date}T00:00:00`);
+      endDate = new Date(`${date}T23:59:59`);
+      break;
+  }
+  const [deviceRows] = await promisePool.query(
+    "SELECT * FROM dispositivos_logbox WHERE id = ?",
+    [deviceId]
+  );
+  if (deviceRows.length === 0) {
+    throw new Error("Dispositivo não encontrado");
+  }
+  deviceInfo = deviceRows[0];
+  let chartData = { labels: [], datasets: [] };
+  let processedReadings = [];
+  if (reportType === "detailed") {
+    const [readings] = await promisePool.query(
+      "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
+      [deviceInfo.serial_number, startDate, endDate]
+    );
+    processedReadings = readings.map((r) => {
+      const temp = extrairTemperaturaPayload(r.payload_json);
+      return {
+        temperatura_externa: temp,
+        timestamp_leitura: r.timestamp_leitura,
+      };
+    }).filter(r => validarTemperatura(r.temperatura_externa).valid);
+
+    chartData.labels = processedReadings.map((r) =>
+      new Date(r.timestamp_leitura).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+
+    chartData.datasets.push(
+      { label: "Min", data: [] },
+      {
+        label: "Temperatura",
+        data: processedReadings.map((r) => r.temperatura_externa),
+      }
+    );
+  } else {
+    const [aggregated] = await promisePool.query(
+      `SELECT DATE(timestamp_leitura) as data_dia, MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min_temp, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg_temp, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max_temp FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? GROUP BY DATE(timestamp_leitura) ORDER BY data_dia ASC`,
+      [deviceInfo.serial_number, startDate, endDate]
+    );
+    chartData.labels = aggregated.map((r) =>
+      new Date(r.data_dia).toLocaleDateString("pt-BR")
+    );
+
+    chartData.datasets.push(
+      { label: "Mínima", data: aggregated.map((r) => r.min_temp) },
+      { label: "Média", data: aggregated.map((r) => r.avg_temp) },
+      { label: "Máxima", data: aggregated.map((r) => r.max_temp) }
+    );
+  }
+  const [stats] = await promisePool.query(
+    `SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_max, COUNT(*) as total_count FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?`,
+    [deviceInfo.serial_number, startDate, endDate]
+  );
+  const fanHistory = await obterHistoricoVentilacao(deviceInfo.serial_number);
+  const fanHistoryFiltrado = fanHistory.filter(h => {
+    const dataInicio = new Date(h.timestamp_inicio);
+    return dataInicio >= startDate && dataInicio <= endDate;
+  });
+  let fanHistoryAgregado = [];
+  if (reportType !== "detailed") {
+    const mapAgregado = {};
+    fanHistoryFiltrado.forEach((item) => {
+      const key = new Date(item.timestamp_inicio).toLocaleDateString("pt-BR");
+      if (!mapAgregado[key]) {
+        mapAgregado[key] = { dia: key, count: 0, total_duration: 0 };
+      }
+      mapAgregado[key].count++;
+      mapAgregado[key].total_duration += item.duracao_segundos || 0;
+    });
+    fanHistoryAgregado = Object.values(mapAgregado);
+  }
+  const [connectionHistory] = await promisePool.query(
+    "SELECT * FROM historico_conexao WHERE serial_number = ? AND timestamp_offline >= ? AND timestamp_offline <= ? ORDER BY timestamp_offline DESC",
+    [deviceInfo.serial_number, startDate, endDate]
+  );
+  return {
+    device: deviceInfo,
+    filters: { ...filters, startDate, endDate },
+    readings: processedReadings,
+    chartData: chartData,
+    stats: stats[0],
+    fanHistory: fanHistoryFiltrado,
+    fanHistoryAgregado,
+    connectionHistory,
+  };
+}
+
+// ============================================
+// FUNÇÕES DE TELEMETRIA (Python API + Fallback MariaDB)
+// ============================================
+
+async function obterLeituras(serialNumber) {
+  // Tenta Python API primeiro
+  if (USE_PYTHON_API) {
+    try {
+      const result = await pythonApi.getLogboxReadings(serialNumber, 300);
+      if (result.success && result.data && result.data.labels) {
+        const { labels, temperaturas } = result.data;
+        const validReadings = [];
+        for (let i = 0; i < labels.length; i++) {
+          const temp = temperaturas[i];
+          if (validarTemperatura(temp).valid) {
+            validReadings.push({ timestamp_leitura: labels[i], temp });
+          }
+        }
+        const processed = validReadings.slice(0, 200).reverse();
+        console.log(`[PythonAPI] obterLeituras(${serialNumber}) ✅ ${processed.length} leituras`);
+        return {
+          labels: processed.map(r => r.timestamp_leitura),
+          temperaturas: processed.map(r => r.temp)
+        };
+      }
+    } catch (err) {
+      console.warn(`[Fallback] Python API falhou em obterLeituras(${serialNumber}): ${err.message}`);
+    }
+  }
+
+  // Fallback: MariaDB
+  const [rows] = await promisePool.query(
+    "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 300",
+    [serialNumber]
+  );
+  const leiturasValidas = rows.filter(r => {
+    const temp = extrairTemperaturaPayload(r.payload_json);
+    return validarTemperatura(temp).valid;
+  });
+  const reversedRows = leiturasValidas.slice(0, 200).reverse();
+  return {
+    labels: reversedRows.map((r) => r.timestamp_leitura),
+    temperaturas: reversedRows.map((r) => extrairTemperaturaPayload(r.payload_json)),
+  };
+}
+
+async function obterStatus(serialNumber) {
+  let status = {};
+  let ultimaLeitura = null;
+
+  // Tenta Python API primeiro
+  if (USE_PYTHON_API) {
+    try {
+      const result = await pythonApi.getLogboxStatus(serialNumber);
+      if (result.success && result.data && result.data.status) {
+        status = result.data.status;
+        ultimaLeitura = new Date();
+        console.log(`[PythonAPI] obterStatus(${serialNumber}) ✅`);
+      }
+    } catch (err) {
+      console.warn(`[Fallback] Python API falhou em obterStatus(${serialNumber}): ${err.message}`);
+    }
+  }
+
+  // Fallback: MariaDB
+  if (Object.keys(status).length === 0) {
+    const [rows] = await promisePool.query(
+      "SELECT status_json, ultima_leitura FROM dispositivos_logbox WHERE serial_number = ?",
+      [serialNumber]
+    );
+    if (rows.length === 0 || !rows[0].status_json) {
+      throw new Error("Status não encontrado");
+    }
+    ultimaLeitura = rows[0].ultima_leitura;
+    try {
+      status = typeof rows[0].status_json === "string"
+        ? JSON.parse(rows[0].status_json)
+        : rows[0].status_json;
+    } catch (e) {
+      status = {};
+    }
+  }
+
+  // Validação comum (aplica em ambas as fontes)
+  const temp = extrairTemperaturaPayload(status);
+  if (!validarTemperatura(temp).valid) {
+    status.ch_analog_1 = null;
+    status.temperature_error = "Valor inválido no banco de dados";
+  }
+
+  // Só calcula conexão/ventoinha se vier do MariaDB
+  if (!status.connection_status) {
+    const conexao = verificarConexaoAtiva(ultimaLeitura);
+    status.connection_status = conexao.online ? 'online' : 'offline';
+    status.last_seen_minutes = conexao.minutes_ago || conexao.minutes_offline;
+  }
+  if (temp !== null && !status.fan_status) {
+    status.fan_status = temp >= FAN_CONFIG.TEMP_ON ? 'ON' : (temp <= FAN_CONFIG.TEMP_OFF ? 'OFF' : 'HOLD');
+  }
+
+  // Contagem diária de ventilação (sempre MariaDB - dado administrativo)
+  const [[fanCount]] = await promisePool.query(
+    "SELECT COUNT(*) as count FROM historico_ventilacao WHERE serial_number = ? AND timestamp_inicio >= CURDATE()",
+    [serialNumber]
+  );
+  status.fan_daily_count = fanCount ? fanCount.count : 0;
+
+  return status;
+}
+
+async function obterUltimaLeitura(serialNumber) {
+  let rows = [];
+
+  // Tenta Python API primeiro
+  if (USE_PYTHON_API) {
+    try {
+      const result = await pythonApi.getLogboxReadings(serialNumber, 10);
+      if (result.success && result.data && result.data.labels) {
+        rows = result.data.labels.map((label, i) => ({
+          payload: { ch_analog_1: result.data.temperaturas[i] },
+          timestamp_leitura: label
+        }));
+        console.log(`[PythonAPI] obterUltimaLeitura(${serialNumber}) ✅ ${rows.length} leituras`);
+      }
+    } catch (err) {
+      console.warn(`[Fallback] Python API falhou em obterUltimaLeitura(${serialNumber}): ${err.message}`);
+    }
+  }
+
+  // Fallback: MariaDB
+  if (rows.length === 0) {
+    const [dbRows] = await promisePool.query(
+      "SELECT payload_json as payload, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 10",
+      [serialNumber]
+    );
+    rows = dbRows;
+  }
+
+  if (rows.length === 0) {
+    throw new Error("Nenhuma leitura encontrada");
+  }
+
+  const ultimaValida = rows.find(row => {
+    const temp = extrairTemperaturaPayload(row.payload);
+    return validarTemperatura(temp).valid;
+  });
+
+  const ultimas5Validas = rows
+    .map(row => ({
+      timestamp: row.timestamp_leitura,
+      valor: extrairTemperaturaPayload(row.payload)
+    }))
+    .filter(item => validarTemperatura(item.valor).valid)
+    .slice(0, 5)
+    .reverse();
+
+  return {
+    latest: ultimaValida || rows[0],
+    recent_readings: ultimas5Validas
+  };
+}
+
+async function obterEstatisticas(serialNumber) {
+  // Tenta Python API primeiro
+  if (USE_PYTHON_API) {
+    try {
+      const result = await pythonApi.getLogboxStats(serialNumber);
+      if (result.success && result.data) {
+        console.log(`[PythonAPI] obterEstatisticas(${serialNumber}) ✅`);
+        return {
+          today: result.data.today || { min: "N/A", avg: "N/A", max: "N/A" },
+          month: result.data.month || { min: "N/A", avg: "N/A", max: "N/A" }
+        };
+      }
+    } catch (err) {
+      console.warn(`[Fallback] Python API falhou em obterEstatisticas(${serialNumber}): ${err.message}`);
+    }
+  }
+
+  // Fallback: MariaDB
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const month = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  const [[todayStats]] = await promisePool.query(
+    "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+    [serialNumber, today]
+  );
+  const [[monthStats]] = await promisePool.query(
+    "SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura >= ?",
+    [serialNumber, month]
+  );
+
+  const format = (stats) => ({
+    min: stats.min ? parseFloat(stats.min).toFixed(1) : "N/A",
+    avg: stats.avg ? parseFloat(stats.avg).toFixed(1) : "N/A",
+    max: stats.max ? parseFloat(stats.max).toFixed(1) : "N/A",
+  });
+
+  return { today: format(todayStats), month: format(monthStats) };
+}
+
+// ============================================
+// FUNÇÕES ADMINISTRATIVAS/HISTÓRICAS (100% MariaDB)
+// ============================================
+
+async function obterEstatisticasVentilacao(serialNumber) {
+  const [rows] = await promisePool.query(
+    `SELECT COUNT(*) as total_count, MIN(duracao_segundos) as min_duration, MAX(duracao_segundos) as max_duration, AVG(duracao_segundos) as avg_duration FROM historico_ventilacao WHERE serial_number = ? AND duracao_segundos IS NOT NULL`,
+    [serialNumber]
+  );
+  const stats = rows[0];
+  return {
+    total_count: stats.total_count || 0,
+    min_duration: stats.min_duration ? Math.round(stats.min_duration) : 0,
+    max_duration: stats.max_duration ? Math.round(stats.max_duration) : 0,
+    avg_duration: stats.avg_duration ? Math.round(stats.avg_duration) : 0
+  };
+}
+
+async function obterHistoricoVentilacao(serialNumber) {
+  const [history] = await promisePool.query(
+    "SELECT timestamp_inicio, timestamp_fim, duracao_segundos FROM historico_ventilacao WHERE serial_number = ? ORDER BY timestamp_inicio DESC LIMIT 50",
+    [serialNumber]
+  );
+  const now = new Date();
+  const historyTratado = history.map(item => {
+    if (item.timestamp_fim) return item;
+    const inicio = new Date(item.timestamp_inicio);
+    const diff = now - inicio;
+    if (diff > MAX_FAN_RUNTIME_MS) {
+      return {
+        ...item,
+        timestamp_fim: new Date(inicio.getTime() + MAX_FAN_RUNTIME_MS),
+        duracao_segundos: (MAX_FAN_RUNTIME_MS / 1000),
+        status: "Erro: Tempo Excedido"
+      };
+    }
+    return {
+      ...item,
+      duracao_segundos: Math.floor(diff / 1000),
+      status: "Em andamento"
+    };
+  });
+  return historyTratado;
+}
+
+async function obterHistoricoConexao(serialNumber) {
+  const [history] = await promisePool.query(
+    "SELECT * FROM historico_conexao WHERE serial_number = ? ORDER BY timestamp_offline DESC LIMIT 100",
+    [serialNumber]
+  );
+  const [[summary]] = await promisePool.query(
+    "SELECT COUNT(*) as total_disconnects, AVG(duracao_segundos) as avg_duration FROM historico_conexao WHERE serial_number = ?",
+    [serialNumber]
+  );
+  return {
+    summary: {
+      total_disconnects: summary.total_disconnects || 0,
+      avg_duration_seconds: summary.avg_duration || 0,
+    },
+    history,
+  };
+}
+
+async function gerarPdfRelatorio(filters) {
+  const data = await getReportData(filters);
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: 800, height: 400 });
+  let datasets = [];
+  let labels = data.chartData.labels;
+  if (filters.reportType === 'detailed') {
+    datasets.push({
+      label: "Temperatura (°C)",
+      data: data.chartData.datasets[1].data,
+      borderColor: "rgb(75, 192, 192)",
+      borderWidth: 2,
+      tension: 0.1,
+      pointRadius: 0
+    });
+  } else {
+    datasets.push({
+      label: "Média (°C)",
+      data: data.chartData.datasets[1].data,
+      borderColor: "rgb(255, 159, 64)",
+      borderWidth: 2
+    });
+  }
+  const configuration = {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      scales: { y: { beginAtZero: false } },
+      plugins: { legend: { display: true } }
+    },
+  };
+  const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage();
+  const { width, height } = page.getSize();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const image = await pdfDoc.embedPng(imageBuffer);
+  const imageDims = image.scale(0.6);
+  page.drawText(`Relatório de Monitoramento - ${data.device.local_tag}`, {
+    x: 50, y: height - 50, font, size: 18,
+  });
+  const periodo = `${new Date(data.filters.startDate).toLocaleDateString('pt-BR')} a ${new Date(data.filters.endDate).toLocaleDateString('pt-BR')}`;
+  page.drawText(`Período: ${periodo}`, { x: 50, y: height - 75, font, size: 12 });
+  page.drawImage(image, {
+    x: 50, y: height - 120 - imageDims.height,
+    width: imageDims.width, height: imageDims.height,
+  });
+  let y = height - 140 - imageDims.height;
+  page.drawText(`Estatísticas: Mín: ${parseFloat(data.stats.temp_min).toFixed(1)}°C | Méd: ${parseFloat(data.stats.temp_avg).toFixed(1)}°C | Máx: ${parseFloat(data.stats.temp_max).toFixed(1)}°C`, {
+    x: 50, y, font, size: 10
+  });
+  const pdfBytes = await pdfDoc.save();
+  return pdfBytes;
+}
+
+module.exports = {
+  getReportData,
+  obterLeituras,
+  obterStatus,
+  obterUltimaLeitura,
+  obterEstatisticas,
+  obterEstatisticasVentilacao,
+  obterHistoricoVentilacao,
+  obterHistoricoConexao,
+  gerarPdfRelatorio,
+};

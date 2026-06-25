@@ -1,0 +1,418 @@
+/* static/css/frota_veiculos_cadastro.css */
+
+/* Root Variables from dashboard.css */
+:root {
+  --primary-blue: #2a5298;
+  --dark-blue: #1e3c72;
+  --light-blue: #e6f0ff;
+  --white: #ffffff;
+  --light-gray: #f8f9fa;
+  --medium-gray: #dee2e6;
+  --dark-gray: #6c757d;
+  --text-color: #495057;
+  --text-dark: #212529;
+  --success: #28a745;
+  --warning: #ffc107;
+  --danger: #dc3545;
+  --info: #17a2b8; /* Added for consistency if needed */
+}
+
+/* General Styles */
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: var(--light-gray);
+  color: var(--text-color);
+  min-height: 100vh;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  display: flex; /* Added to manage sidebar and content layout */
+}
+
+/* Sidebar Styles (Adapted for HTML structure) */
+.sidebar {
+  width: 250px; /* Slightly wider for better spacing */
+  background: linear-gradient(
+    135deg,
+    var(--dark-blue) 0%,
+    var(--primary-blue) 100%
+  );
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
+  height: 100vh; /* Full height */
+  position: fixed; /* Fixed position */
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-info .user-icon {
+  /* Target the i tag directly if it's for the user avatar */
+  font-size: 4rem; /* Material icon size */
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0.5rem;
+}
+
+.user-info h5 {
+  /* Targeting #userName */
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.user-info p {
+  /* Targeting #userRole */
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar .list-unstyled.components {
+  padding: 1rem 0;
+  flex-grow: 1;
+  list-style-type: none; /* Ensure default list styles are off */
+  margin: 0;
+}
+
+.sidebar .list-unstyled.components li a {
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.sidebar .list-unstyled.components li a .material-icons {
+  /* Style for Google Material Icons */
+  margin-right: 12px;
+  font-size: 1.3rem; /* Adjust icon size */
+  vertical-align: middle;
+}
+
+.sidebar .list-unstyled.components li a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+}
+
+.sidebar .list-unstyled.components li a.active {
+  /* Optional: for active link styling */
+  background-color: rgba(255, 255, 255, 0.2);
+  border-left: 3px solid var(--white);
+  padding-left: calc(1.5rem - 3px);
+}
+
+.sidebar-footer {
+  padding: 1.5rem;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-footer .btn-danger {
+  background-color: var(--danger);
+  border-color: var(--danger);
+  color: var(--white);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-footer .btn-danger .material-icons {
+  margin-right: 8px;
+}
+.sidebar-footer .btn-danger:hover {
+  background-color: #bb2d3b; /* Darker danger */
+  border-color: #bb2d3b;
+}
+
+/* Content Area */
+.content {
+  margin-left: 250px; /* Same as sidebar width */
+  padding: 2rem;
+  width: calc(100% - 250px);
+  flex-grow: 1;
+  overflow-y: auto; /* Allow content to scroll if it overflows */
+  height: 100vh;
+}
+
+.page-title {
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem; /* From HTML */
+  font-size: 1.75rem; /* Bootstrap h1 like */
+}
+.page-title + .lead {
+  /* Targeting p.lead directly after h1.page-title */
+  margin-bottom: 1.5rem; /* Match dashboard.css */
+}
+
+/* Card Styles for Form and Filters */
+.card {
+  background-color: var(--white);
+  border: 1px solid var(--medium-gray);
+  border-radius: 8px; /* Consistent border radius */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem; /* Spacing */
+}
+
+.card-header {
+  background-color: var(--light-blue);
+  border-bottom: 1px solid var(--medium-gray);
+  padding: 0.75rem 1.25rem;
+  font-weight: 500;
+}
+.card-header .card-title {
+  color: var(--primary-blue);
+}
+.card-header .material-icons {
+  margin-right: 8px;
+  vertical-align: text-bottom;
+  color: var(--primary-blue);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-title {
+  /* General card titles */
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 1rem;
+}
+
+/* Form Styles */
+.form-label {
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+  border: 1px solid var(--medium-gray);
+  border-radius: 6px;
+  padding: 0.65rem 0.9rem; /* Adjusted padding */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: var(--white);
+  color: var(--text-color);
+  width: 100%; /* Ensure they take full width of their container */
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary-blue);
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(var(--primary-blue), 0.25); /* Bootstrap-like focus */
+}
+
+textarea.form-control {
+  min-height: 80px; /* Decent default height for textareas */
+}
+
+/* Button Styles */
+.btn {
+  padding: 0.65rem 1.2rem; /* Adjusted padding */
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none; /* Ensure links styled as buttons are correct */
+  cursor: pointer;
+  border: 1px solid transparent; /* Base for all buttons */
+}
+
+.btn .material-icons {
+  /* Styling for icons inside buttons */
+  margin-right: 8px;
+  font-size: 1.2rem; /* Adjust icon size in buttons */
+}
+
+/* Specific button colors from dashboard.css if not covered by Bootstrap */
+.btn-primary {
+  background-color: var(--primary-blue);
+  color: var(--white);
+  border-color: var(--primary-blue);
+}
+.btn-primary:hover {
+  background-color: var(--dark-blue);
+  border-color: var(--dark-blue);
+  transform: translateY(-2px);
+}
+
+.btn-success {
+  background-color: var(--success);
+  color: var(--white);
+  border-color: var(--success);
+}
+.btn-success:hover {
+  background-color: #1e7e34; /* Darker success */
+  border-color: #1c7430;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: var(--dark-gray);
+  color: var(--white);
+  border-color: var(--dark-gray);
+}
+.btn-secondary:hover {
+  background-color: #5a6268; /* Darker secondary */
+  border-color: #545b62;
+  transform: translateY(-2px);
+}
+
+/* Table Styles */
+.table-responsive {
+  /* max-height: 65vh; */ /* From dashboard.css, adjust if needed */
+  overflow-y: auto;
+  border: 1px solid var(--medium-gray);
+  border-radius: 8px;
+  background-color: var(--white);
+}
+
+.table {
+  color: var(--text-dark);
+  width: 100%;
+  margin-bottom: 0; /* Remove default Bootstrap margin if inside .table-responsive */
+  border-collapse: collapse; /* Ensures borders are clean */
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--primary-blue);
+  color: var(--white);
+  border-bottom: 2px solid var(--dark-blue);
+  padding: 0.9rem 1rem;
+  font-weight: 500;
+  text-align: left; /* Explicitly set text alignment */
+  white-space: nowrap;
+}
+
+.table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background-color: var(--light-blue);
+}
+
+.table tbody td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--medium-gray);
+  vertical-align: middle;
+}
+.table tbody tr:last-child td {
+  border-bottom: none; /* Remove border for the last row's cells */
+}
+
+.table .btn-sm.btn-danger .material-icons {
+  /* For delete icon in table */
+  margin-right: 0; /* No margin if it's just an icon button */
+  font-size: 1.1rem;
+}
+.table .btn-sm {
+  padding: 0.25rem 0.5rem; /* Smaller padding for small buttons */
+}
+
+/* Toast Notification (Assuming Bootstrap handles base styles, this is for theme alignment) */
+.toast-container {
+  z-index: 1090; /* Ensure toasts are above other content */
+}
+.toast.bg-success {
+  background-color: var(--success) !important; /* Ensure override */
+}
+.toast.bg-danger {
+  background-color: var(--danger) !important; /* Ensure override */
+}
+.toast.text-white .toast-header {
+  color: var(--text-dark); /* Header text on colored background */
+}
+.toast.text-white .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%); /* Make close button visible on dark bg */
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+  /* Target tablets and smaller */
+  .sidebar {
+    width: 220px; /* Slightly narrower sidebar for medium screens */
+  }
+  .content {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    flex-direction: column; /* Stack sidebar and content */
+  }
+  .sidebar {
+    position: relative; /* Change from fixed to relative */
+    width: 100%;
+    height: auto; /* Auto height */
+    box-shadow: none; /* Remove shadow when stacked */
+    margin-bottom: 1rem;
+  }
+  .content {
+    margin-left: 0;
+    width: 100%;
+    padding: 1.5rem; /* Adjust padding for smaller screens */
+    height: auto;
+  }
+  .sidebar .list-unstyled.components li a {
+    padding: 0.75rem 1rem; /* Adjust sidebar link padding */
+  }
+  .page-title {
+    font-size: 1.5rem;
+  }
+  .row > [class^="col-md-"] {
+    /* Ensure columns stack properly */
+    margin-bottom: 1rem;
+  }
+  .row > [class^="col-md-"]:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .content {
+    padding: 1rem;
+  }
+  .page-title {
+    font-size: 1.3rem;
+    text-align: center;
+  }
+  .page-title + .lead {
+    font-size: 0.95rem;
+    text-align: center;
+  }
+  .btn {
+    padding: 0.5rem 0.8rem; /* Smaller buttons */
+    font-size: 0.9rem;
+  }
+  .btn .material-icons {
+    font-size: 1rem;
+  }
+  .form-control,
+  .form-select {
+    padding: 0.5rem 0.75rem;
+  }
+  .card-body {
+    padding: 1rem;
+  }
+}

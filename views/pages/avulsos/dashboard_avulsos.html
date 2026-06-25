@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Avulsos</title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+
+    <link
+      rel="stylesheet"
+      href="/static/css/components/bootstrap-overrides.css"
+    />
+    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link rel="stylesheet" href="/static/css/avulsos/dashboard_avulsos.css" />
+  </head>
+  <body>
+    <div class="page-container">
+      <%- include('../../partials/sidebar.html') %>
+
+      <main class="main-content">
+        <header class="main-header">
+          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="header-content">
+            <h1 class="page-title">
+              <i class="fa-solid fa-puzzle-piece"></i>
+              Serviços Avulsos
+            </h1>
+          </div>
+        </header>
+
+        <div class="container-fluid">
+          <div class="text-center mb-5">
+            <p class="lead text-muted">
+              Selecione uma das opções abaixo para continuar.
+            </p>
+          </div>
+
+          <div class="row justify-content-center g-4">
+            <div class="col-md-6 col-lg-4">
+              <a
+                href="/gerar-formulario-txt-bas"
+                class="text-decoration-none text-dark"
+              >
+                <div class="card h-100 shadow-sm">
+                  <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                      <i class="fas fa-helmet-safety fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title mb-2 fw-bold">BAS CONSTRUÇÃO</h5>
+                    <p class="card-text text-muted">
+                      Gerar relatório TXT de Boletim de Análise de Segurança
+                      para obras de construção.
+                    </p>
+                  </div>
+                </div>
+              </a>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+              <a
+                href="/gerar-formulario-txt-bas-linhaviva"
+                class="text-decoration-none text-dark"
+              >
+                <div class="card h-100 shadow-sm">
+                  <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                      <i class="fas fa-bolt fa-3x text-danger"></i>
+                    </div>
+                    <h5 class="card-title mb-2 fw-bold">BAS LINHA VIVA</h5>
+                    <p class="card-text text-muted">
+                      Acessar ou gerar formulários de BAS específicos para
+                      operações em linha viva.
+                    </p>
+                  </div>
+                </div>
+              </a>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+              <a
+                href="/bas-importar-dados-pagina"
+                class="text-decoration-none text-dark"
+              >
+                <div class="card h-100 shadow-sm">
+                  <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                      <i class="fas fa-file-arrow-up fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title mb-2 fw-bold">
+                      BAS IMPORTAR (CONSTRUÇÃO)
+                    </h5>
+                    <p class="card-text text-muted">
+                      Importar dados de processos para o sistema BAS
+                      relacionados à construção.
+                    </p>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/scripts/components/sidebar.js"></script>
+  </body>
+</html>

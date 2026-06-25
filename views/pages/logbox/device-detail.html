@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= pageTitle %></title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        body { background-color: #f8f9fa; }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            transition: transform 0.2s ease-in-out;
+        }
+        .card:hover { transform: translateY(-3px); }
+
+        .kpi-icon { font-size: 42px !important; margin-bottom: 8px; }
+        
+        .diag-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+        .diag-item:last-child { border-bottom: none; }
+        
+        .diag-label { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            color: #6c757d; 
+            font-weight: 500; 
+        }
+        
+        .diag-value { 
+            font-family: monospace; 
+            background-color: #e9ecef; 
+            padding: 2px 8px; 
+            border-radius: 6px; 
+            color: #212529; 
+            font-weight: 600;
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #198754;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+        }
+
+        @keyframes flashUpdate {
+            0% { background-color: #cfe2ff; }
+            100% { background-color: white; }
+        }
+        .updated-anim { animation: flashUpdate 1s ease-out; }
+        
+        .material-symbols-outlined { vertical-align: middle; }
+
+        .fan-stat-box {
+            text-align: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .fan-stat-value {
+            font-weight: bold;
+            color: #0d6efd;
+            font-size: 1.1rem;
+        }
+        .fan-stat-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid p-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 text-muted mb-1">
+                <span class="material-symbols-outlined">router</span>
+                <small class="text-uppercase fw-bold">Monitoramento em Tempo Real</small>
+            </div>
+            <h1 class="h3 text-primary fw-bold mb-0"><%= device.local_tag %></h1>
+            <p class="text-muted mb-0">Serial Number: <strong><%= device.serial_number %></strong></p>
+        </div>
+        <a href="/gerenciar-dispositivos" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">arrow_back</span> Voltar
+        </a>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center" id="box-temp">
+                <div class="card-body">
+                    <span class="material-symbols-outlined kpi-icon text-primary">device_thermostat</span>
+                    <h6 class="text-muted text-uppercase">Temperatura</h6>
+                    <h2 class="display-5 fw-bold my-2">
+                        <span id="latest-temp">--</span><small class="fs-4 text-muted">°C</small>
+                    </h2>
+                    <small class="text-muted" id="latest-timestamp">Aguardando...</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <span class="material-symbols-outlined kpi-icon text-success">wifi</span>
+                    <h6 class="text-muted text-uppercase">Conexão</h6>
+                    <h3 class="fw-bold my-3" id="connection-status-text">Verificando...</h3>
+                    <small class="text-muted" id="diag-wifi-rssi">RSSI: --</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <span class="material-symbols-outlined kpi-icon text-warning">bolt</span>
+                    <h6 class="text-muted text-uppercase">Energia</h6>
+                    <h4 class="fw-bold my-3" id="diag-power-source">Verificando...</h4>
+                    <small class="text-muted" id="diag-battery-voltage">Bateria: --</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100 text-center" id="box-alarm">
+                <div class="card-body pb-0">
+                    <span class="material-symbols-outlined kpi-icon text-danger">notifications_active</span>
+                    <h6 class="text-muted text-uppercase">Alarmes</h6>
+                    <h2 class="display-5 fw-bold my-2" id="active-alarms-count">0</h2>
+                    <small class="text-muted" id="alarm-subtitle">Normal</small>
+                </div>
+                <div class="card-footer bg-white border-top-0 pt-0 pb-3">
+                    <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                        <small class="text-muted">Acionamentos Hoje:</small>
+                        <span class="badge bg-secondary rounded-pill" id="fan-daily-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="card-title mb-0 d-flex align-items-center">
+                <span class="live-indicator"></span> Histórico de Temperatura
+            </h5>
+            <span class="badge bg-light text-dark border">Tempo Real</span>
+        </div>
+        <div class="card-body p-0">
+            <div id="loader-historico" class="d-flex justify-content-center align-items-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+            </div>
+            <div id="graficoHistorico" style="min-height: 350px;"></div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined text-info">query_stats</span>
+                        Temp. Estatísticas (Hoje)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined text-info">arrow_downward</span> Mínima</span>
+                        <span class="diag-value" id="stat-today-min">-- °C</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined text-info">functions</span> Média</span>
+                        <span class="diag-value" id="stat-today-avg">-- °C</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined text-info">arrow_upward</span> Máxima</span>
+                        <span class="diag-value" id="stat-today-max">-- °C</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">cyclone</span>
+                        Ventilação (Histórico)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="fan-stat-box">
+                                <div class="fan-stat-value" id="fan-min-duration">--</div>
+                                <div class="fan-stat-label">Tempo Mín.</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fan-stat-box">
+                                <div class="fan-stat-value" id="fan-max-duration">--</div>
+                                <div class="fan-stat-label">Tempo Máx.</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="fan-stat-box">
+                                <div class="fan-stat-value" id="fan-avg-duration">--</div>
+                                <div class="fan-stat-label">Tempo Médio de Ativação</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">Total Registrado: <strong id="fan-total-count">--</strong></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary">developer_board</span>
+                        Diagnóstico Técnico
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">thermostat</span> Temp. Interna</span>
+                        <span class="diag-value" id="diag-internal-temp">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">lan</span> IP</span>
+                        <span class="diag-value" id="diag-ip-address">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">memory</span> Firmware</span>
+                        <span class="diag-value" id="diag-firmware-version">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">update</span> Última Com.</span>
+                        <span class="diag-value" id="diag-last-packet">--</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label"><span class="material-symbols-outlined">signal_wifi_4_bar</span> Sinal</span>
+                        <span class="diag-value" id="diag-wifi-detail">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const serialNumber = "<%= serialNumber %>";
+    let chart = null;
+    let dadosGraficoBuffer = []; 
+
+    console.log("Painel Iniciado para SN:", serialNumber);
+
+    document.addEventListener("DOMContentLoaded", () => {
+        inicializarPainel();
+    });
+
+    function inicializarPainel() {
+        iniciarWebSocket();
+        carregarLeiturasIniciais();
+        carregarStatusInicial();
+        carregarEstatisticasDetalhes();
+        carregarEstatisticasVentilacao();
+    }
+
+    function iniciarWebSocket() {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}`;
+
+        const socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => console.log("✅ WebSocket conectado!");
+        
+        socket.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                
+                if (msg.dados && msg.dados.serial_number && msg.dados.serial_number !== serialNumber) return;
+
+                if (msg.type === "nova_leitura_logbox" || msg.type === "nova_leitura") {
+                    console.log("📡 Nova leitura recebida. Sincronizando...");
+                    carregarUltimaLeitura(); 
+                    atualizarPainelCompleto(msg.dados);
+                } else if (msg.type === "atualizacao_status") {
+                    atualizarPainelCompleto(msg.dados);
+                }
+            } catch (e) { console.error("Erro WS:", e); }
+        };
+
+        socket.onclose = () => {
+            console.warn("WebSocket desconectado. Reconectando...");
+            setTimeout(iniciarWebSocket, 5000);
+        };
+    }
+
+    async function carregarLeiturasIniciais() {
+        const loader = document.getElementById("loader-historico");
+        try {
+            const response = await fetch(`/api/logbox-device/${serialNumber}/leituras`);
+            let data = { labels: [], temperaturas: [] };
+            
+            if (response.ok) {
+                data = await response.json();
+            }
+            
+            dadosGraficoBuffer = (data.labels || []).map((label, index) => {
+                return [new Date(label).getTime(), data.temperaturas[index]];
+            });
+
+            if (loader) loader.style.display = "none";
+            inicializarGrafico();
+            
+        } catch (error) {
+            console.error("Erro ao carregar leituras:", error);
+            if (loader) loader.style.display = "none";
+            inicializarGrafico(); 
+        }
+    }
+
+    async function carregarStatusInicial() {
+        try {
+            const response = await fetch(`/api/logbox-device/${serialNumber}/status`);
+            if (response.ok) {
+                const data = await response.json();
+                const statusData = data.status || data;
+                atualizarPainelCompleto(statusData);
+            }
+            carregarUltimaLeitura();
+        } catch (e) { console.error(e); }
+    }
+
+    async function carregarUltimaLeitura() {
+        try {
+            const response = await fetch(`/api/logbox-device/${serialNumber}/latest`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.latest && data.latest.payload) {
+                    const payload = typeof data.latest.payload === 'string' 
+                        ? JSON.parse(data.latest.payload) 
+                        : data.latest.payload;
+                        
+                    const temp = extrairTemperatura(payload);
+                    if (temp !== null) {
+                        atualizarTexto("latest-temp", temp.toFixed(1));
+                        const box = document.getElementById("box-temp");
+                        if (box) {
+                            box.classList.remove("updated-anim");
+                            void box.offsetWidth;
+                            box.classList.add("updated-anim");
+                        }
+                    }
+                    atualizarTexto("latest-timestamp", `Em: ${new Date(data.latest.timestamp_leitura).toLocaleString("pt-BR")}`);
+                }
+
+                if (data.recent_readings && Array.isArray(data.recent_readings)) {
+                    atualizarGraficoComHistorico(data.recent_readings);
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao carregar última leitura:", e);
+        }
+    }
+
+    async function carregarEstatisticasDetalhes() {
+        try {
+            const res = await fetch(`/api/logbox-device/${serialNumber}/stats-detail`);
+            if (res.ok) {
+                const stats = await res.json();
+                atualizarTexto("stat-today-min", `${stats.today.min} °C`);
+                atualizarTexto("stat-today-avg", `${stats.today.avg} °C`);
+                atualizarTexto("stat-today-max", `${stats.today.max} °C`);
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function carregarEstatisticasVentilacao() {
+        try {
+            const res = await fetch(`/api/logbox-device/${serialNumber}/fan-stats`);
+            if (res.ok) {
+                const stats = await res.json();
+                atualizarTexto("fan-total-count", stats.total_count);
+                atualizarTexto("fan-min-duration", formatarDuracao(stats.min_duration));
+                atualizarTexto("fan-max-duration", formatarDuracao(stats.max_duration));
+                atualizarTexto("fan-avg-duration", formatarDuracao(stats.avg_duration));
+            }
+        } catch (e) { console.error("Erro ao carregar stats ventilação:", e); }
+    }
+
+    function atualizarPainelCompleto(status) {
+        if (!status) return;
+
+        const connEl = document.getElementById("connection-status-text");
+        if (connEl) {
+            const isOnline = status.connection_status !== "offline";
+            connEl.textContent = isOnline ? "Online" : "Offline";
+            connEl.className = isOnline ? "fw-bold text-success" : "fw-bold text-danger";
+        }
+
+        const rssi = detectarValor(status, ['lqi', 'rssi', 'signal', 'wifi_signal']);
+        atualizarTexto("diag-wifi-rssi", `RSSI: ${rssi || "--"} dBm`);
+        atualizarTexto("diag-wifi-detail", `${rssi || "--"} dBm`);
+
+        const tensao = detectarValor(status, ['ch_analog_2', 'supply_voltage', 'input_voltage']);
+        const powerInfo = getPowerSourceStatus(tensao);
+        atualizarTexto("diag-power-source", powerInfo.text);
+
+        const bat = detectarValor(status, ['ch_analog_3', 'battery', 'battery_voltage', 'vbat']);
+        atualizarTexto("diag-battery-voltage", `Bateria: ${bat ? parseFloat(bat).toFixed(2) : "--"} V`);
+
+        const tempInt = detectarValor(status, ['temperature', 'internal_temperature', 'temp_int', 'mcu_temp']);
+        atualizarTexto("diag-internal-temp", tempInt ? `${parseFloat(tempInt).toFixed(1)} °C` : "--");
+
+        const ip = detectarValor(status, ['ip', 'ip_address', 'net_ip', 'local_ip']);
+        atualizarTexto("diag-ip-address", ip || "--");
+
+        const fw = detectarValor(status, ['firmware_version', 'version', 'fw_version', 'fw']);
+        atualizarTexto("diag-firmware-version", fw || "--");
+
+        const ts = status.timestamp || status.ts || new Date().toISOString();
+        atualizarTexto("diag-last-packet", new Date(ts).toLocaleTimeString("pt-BR"));
+
+        if (status.fan_daily_count !== undefined) {
+            atualizarTexto("fan-daily-count", status.fan_daily_count);
+        }
+
+        atualizarListaAlarmes(status.alarms);
+    }
+
+    function inicializarGrafico() {
+        const container = document.querySelector("#graficoHistorico");
+        if (!container) return;
+
+        if (chart) chart.destroy();
+
+        const options = {
+            series: [{
+                name: 'Temperatura',
+                data: dadosGraficoBuffer
+            }],
+            chart: {
+                id: 'realtime',
+                height: 350,
+                type: 'area',
+                animations: {
+                    enabled: true,
+                    easing: 'linear',
+                    dynamicAnimation: {
+                        speed: 1000
+                    }
+                },
+                toolbar: { show: false },
+                zoom: { enabled: false }
+            },
+            dataLabels: { enabled: false },
+            stroke: {
+                curve: 'smooth',
+                width: 2
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.7,
+                    opacityTo: 0.1,
+                    stops: [0, 90, 100]
+                }
+            },
+            colors: ['#0d6efd'],
+            xaxis: {
+                type: 'datetime',
+                tooltip: { enabled: false },
+                labels: {
+                    datetimeUTC: false,
+                    datetimeFormatter: {
+                        year: 'yyyy',
+                        month: 'MMM \'yy',
+                        day: 'dd MMM',
+                        hour: 'HH:mm'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    formatter: (val) => val.toFixed(1) + " °C"
+                }
+            },
+            tooltip: {
+                x: { format: 'dd/MM/yy HH:mm:ss' }
+            },
+            grid: {
+                borderColor: '#f1f1f1',
+            }
+        };
+
+        chart = new ApexCharts(container, options);
+        chart.render();
+    }
+
+    function atualizarGraficoComHistorico(novosPontos) {
+        if (!chart || !novosPontos) return;
+
+        novosPontos.forEach(ponto => {
+            const timestamp = new Date(ponto.timestamp).getTime();
+            const valor = ponto.valor;
+            const existe = dadosGraficoBuffer.some(d => d[0] === timestamp);
+            if (!existe) {
+                dadosGraficoBuffer.push([timestamp, valor]);
+            }
+        });
+
+        dadosGraficoBuffer.sort((a, b) => a[0] - b[0]);
+
+        if (dadosGraficoBuffer.length > 300) {
+            dadosGraficoBuffer = dadosGraficoBuffer.slice(dadosGraficoBuffer.length - 300);
+        }
+
+        chart.updateSeries([{
+            data: dadosGraficoBuffer
+        }]);
+    }
+
+    function detectarValor(dados, chavesPossiveis) {
+        if (!dados) return null;
+        for (let chave of chavesPossiveis) {
+            if (dados[chave] !== undefined && dados[chave] !== null && dados[chave] !== "") return dados[chave];
+            if (dados[chave.toLowerCase()] !== undefined) return dados[chave.toLowerCase()];
+            if (dados[chave.toUpperCase()] !== undefined) return dados[chave.toUpperCase()];
+        }
+        return null;
+    }
+
+    function extrairTemperatura(dados) {
+        if (dados.ch_analog_1 !== undefined) return dados.ch_analog_1;
+        if (dados.value_channels && Array.isArray(dados.value_channels)) return dados.value_channels[2];
+        if (dados.temperature !== undefined) return dados.temperature;
+        if (dados.temp_int !== undefined) return dados.temp_int;
+        if (dados.internal_temperature !== undefined) return dados.internal_temperature;
+        return null;
+    }
+
+    function atualizarTexto(id, texto) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = texto;
+    }
+
+    function atualizarListaAlarmes(alarms) {
+        const countEl = document.getElementById("active-alarms-count");
+        const subEl = document.getElementById("alarm-subtitle");
+        if (!countEl) return;
+        let activeCount = 0;
+        if (alarms) {
+            activeCount = Array.isArray(alarms) 
+                ? alarms.filter(a => a === 1).length 
+                : Object.values(alarms).filter(v => v === true).length;
+        }
+        countEl.textContent = activeCount;
+        if (subEl) subEl.textContent = activeCount > 0 ? `${activeCount} Alarme(s)` : "Sistema Normal";
+        
+        const box = document.getElementById("box-alarm");
+        if(activeCount > 0) {
+            box.classList.add("border-danger");
+            countEl.classList.add("text-danger");
+        } else {
+            box.classList.remove("border-danger");
+            countEl.classList.remove("text-danger");
+        }
+    }
+
+    function getPowerSourceStatus(voltage) {
+        if (voltage === undefined || voltage === null) return { text: "Verificando..." };
+        return voltage > 9 ? { text: "Rede Elétrica" } : { text: "Apenas Bateria" };
+    }
+
+    function formatarDuracao(segundos) {
+        if (!segundos) return "0s";
+        if (segundos < 60) return `${segundos}s`;
+        if (segundos < 3600) return `${Math.floor(segundos / 60)}m ${segundos % 60}s`;
+        return `${Math.floor(segundos / 3600)}h ${Math.floor((segundos % 3600) / 60)}m`;
+    }
+</script>
+
+</body>
+</html>
