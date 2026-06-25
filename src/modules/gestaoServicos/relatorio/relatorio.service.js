@@ -4,7 +4,7 @@ const fsPromises = require("fs").promises;
 const { PDFDocument } = require("pdf-lib");
 const playwright = require("playwright");
 const { promisePool } = require("../../../init");
-const { projectRootDir } = require("../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
 async function processarImagensParaBase64(imagens) {
   const imagensProcessadas = await Promise.all(
@@ -60,10 +60,7 @@ function gerarGaleriaHtml(imagens) {
 }
 
 async function preencherTemplateHtml(servicoData) {
-  const templatePath = path.join(
-    projectRootDir,
-    "public/pages/templates/relatorio_servico.html"
-  );
+  const templatePath = publicPage("templates/relatorio_servico.html");
   let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
 
   const formatarData = (dataStr, comHora = false) => {

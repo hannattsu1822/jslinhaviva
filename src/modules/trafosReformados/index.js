@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../auth");
-const { projectRootDir } = require("../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 
 const ciclosRoutes = require("./ciclos/ciclos.routes");
 const checklistRoutes = require("./checklist/checklist.routes");
@@ -14,10 +14,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/reformados/transformadores_reformados.html"
-      )
+      publicPage("trafos/reformados/transformadores_reformados.html")
     );
   }
 );
@@ -28,10 +25,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/reformados/trafos_reformados_filtrar.html"
-      )
+      publicPage("trafos/reformados/trafos_reformados_filtrar.html")
     );
   }
 );
@@ -42,10 +36,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/reformados/trafos_reformados_importar.html"
-      )
+      publicPage("trafos/reformados/trafos_reformados_importar.html")
     );
   }
 );
@@ -56,10 +47,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/reformados/consultar_historicos.html"
-      )
+      publicPage("trafos/reformados/consultar_historicos.html")
     );
   }
 );
@@ -70,10 +58,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/reformados/historico_checklist.html"
-      )
+      publicPage("trafos/reformados/historico_checklist.html")
     );
   }
 );

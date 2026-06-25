@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../auth");
-const { projectRootDir } = require("../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 
 const transformadoresRoutes = require("./transformadores/transformadores.routes");
 const checklistRoutes = require("./checklist/checklist.routes");
@@ -10,7 +10,7 @@ const checklistRoutes = require("./checklist/checklist.routes");
 // Rotas de Páginas HTML
 router.get("/transformadores", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/trafos/transformadores.html")
+    publicPage("trafos/transformadores.html")
   );
 });
 router.get(
@@ -19,10 +19,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/upload_transformadores.html"
-      )
+      publicPage("trafos/upload_transformadores.html")
     );
   }
 );
@@ -32,10 +29,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/formulario_transformadores.html"
-      )
+      publicPage("trafos/formulario_transformadores.html")
     );
   }
 );
@@ -45,17 +39,14 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/trafos/filtrar_transformadores.html"
-      )
+      publicPage("trafos/filtrar_transformadores.html")
     );
   }
 );
 // ESTA É A ROTA QUE FALTAVA
 router.get("/relatorio_formulario", (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/trafos/relatorio_formulario.html")
+    publicPage("trafos/relatorio_formulario.html")
   );
 });
 

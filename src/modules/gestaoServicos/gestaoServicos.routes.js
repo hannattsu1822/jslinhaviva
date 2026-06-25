@@ -2,7 +2,7 @@ const express = require("express");
 const path = require("path");
 const { upload, promisePool } = require("../../init");
 const { autenticar, verificarNivel, verificarCargo } = require("../../auth");
-const { projectRootDir } = require("../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 const { resolvePathWithinBase, sendSafeFile } = require("../../shared/pathSecurity.helper");
 const coreController = require("./core/core.controller");
 const anexoController = require("./anexo/anexo.controller");
@@ -14,19 +14,19 @@ const router = express.Router();
 
 router.get("/gestao-servicos", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/gestao_servico.html"),
+    publicPage("servicos/gestao_servico.html"),
   );
 });
 
 router.get("/registro_servicos", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/registro_servicos.html"),
+    publicPage("servicos/registro_servicos.html"),
   );
 });
 
 router.get("/servicos_ativos", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/servicos_ativos.html"),
+    publicPage("servicos/servicos_ativos.html"),
   );
 });
 
@@ -36,17 +36,14 @@ router.get(
   verificarNivel(2),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/servicos/servicos_concluidos.html",
-      ),
+      publicPage("servicos/servicos_concluidos.html"),
     );
   },
 );
 
 router.get("/detalhes_servico", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/detalhes_servico.html"),
+    publicPage("servicos/detalhes_servico.html"),
   );
 });
 
@@ -56,17 +53,14 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/servicos/servicos_atribuidos.html",
-      ),
+      publicPage("servicos/servicos_atribuidos.html"),
     );
   },
 );
 
 router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/servicos/editar_servico.html"),
+    publicPage("servicos/editar_servico.html"),
   );
 });
 
@@ -76,10 +70,7 @@ router.get(
   verificarCargo(["Construção", "ADM", "ADMIN", "Engenheiro"]),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/servicos/servicos_construcao.html",
-      ),
+      publicPage("servicos/servicos_construcao.html"),
     );
   },
 );

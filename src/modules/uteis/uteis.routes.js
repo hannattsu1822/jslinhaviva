@@ -3,7 +3,7 @@ const router = express.Router();
 const { autenticar, verificarNivel } = require("../../auth");
 const controller = require("./uteis.controller");
 const path = require("path");
-const { projectRootDir } = require("../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 
 // Rotas de Páginas
 router.get(
@@ -38,10 +38,7 @@ router.get(
   verificarNivel(4),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/servicos/relatorios_servicos.html"
-      )
+      publicPage("servicos/relatorios_servicos.html")
     );
   }
 );

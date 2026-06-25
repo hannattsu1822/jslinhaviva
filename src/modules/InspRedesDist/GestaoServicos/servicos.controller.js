@@ -1,18 +1,14 @@
 const service = require("./servicos.service");
 const { registrarAuditoria } = require("../../../auth");
 const path = require("path");
-const { projectRootDir } = require("../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 const { chromium } = require("playwright"); // MUDANÇA: Importa o Playwright
 const ejs = require("ejs");
 const fs = require("fs");
 
 async function renderizarPaginaListagem(req, res) {
   try {
-    const filePath = path.join(
-      projectRootDir,
-      "views",
-      "pages",
-      "InspRedesDist",
+    const filePath = viewsPage("InspRedesDist",
       "listar_servicos.html"
     );
     res.sendFile(filePath);
@@ -24,11 +20,7 @@ async function renderizarPaginaListagem(req, res) {
 
 async function renderizarPaginaConcluidos(req, res) {
   try {
-    const filePath = path.join(
-      projectRootDir,
-      "views",
-      "pages",
-      "InspRedesDist",
+    const filePath = viewsPage("InspRedesDist",
       "listar_servicos_concluidos.html"
     );
     res.sendFile(filePath);
@@ -40,11 +32,7 @@ async function renderizarPaginaConcluidos(req, res) {
 
 async function renderizarPaginaCriacao(req, res) {
   try {
-    const filePath = path.join(
-      projectRootDir,
-      "views",
-      "pages",
-      "InspRedesDist",
+    const filePath = viewsPage("InspRedesDist",
       "criar_servico.html"
     );
     res.sendFile(filePath);
@@ -56,11 +44,7 @@ async function renderizarPaginaCriacao(req, res) {
 
 async function renderizarPaginaDetalhes(req, res) {
   try {
-    const filePath = path.join(
-      projectRootDir,
-      "views",
-      "pages",
-      "InspRedesDist",
+    const filePath = viewsPage("InspRedesDist",
       "detalhes_servico.html"
     );
     res.sendFile(filePath);
@@ -72,11 +56,7 @@ async function renderizarPaginaDetalhes(req, res) {
 
 function renderizarPaginaColeta(req, res) {
   try {
-    const filePath = path.join(
-      projectRootDir,
-      "views",
-      "pages",
-      "InspRedesDist",
+    const filePath = viewsPage("InspRedesDist",
       "coletar_pontos.html"
     );
     res.sendFile(filePath);
@@ -134,11 +114,7 @@ async function handleGerarRelatorio(req, res) {
       dataForTemplate.rotaCompletaUrl = `https://www.google.com/maps/dir/${waypoints}`;
     }
 
-    const templatePath = path.join(
-      projectRootDir,
-      "views",
-      "pages",
-      "InspRedesDist",
+    const templatePath = viewsPage("InspRedesDist",
       "relatorio_template.html"
     );
     const html = await ejs.renderFile(templatePath, dataForTemplate);

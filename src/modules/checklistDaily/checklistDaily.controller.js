@@ -1,5 +1,4 @@
-const path = require("path");
-
+const { publicPage, viewsPage } = require("../../shared/path.helper");
 const checklistService = require("./checklistDaily.service");
 
 function getMatriculaFromRequest(req) {
@@ -17,15 +16,11 @@ function parsePositiveInt(value) {
 }
 
 async function renderizarPagina(req, res) {
-  res.sendFile(
-    path.join(__dirname, "../../../public/pages/into/checklist_diario.html")
-  );
+  res.sendFile(publicPage("into/checklist_diario.html"));
 }
 
 async function renderizarPaginaGestao(req, res) {
-  res.sendFile(
-    path.join(__dirname, "../../../views/pages/gestor/checklist_gestao.html")
-  );
+  res.sendFile(viewsPage("gestor/checklist_gestao.html"));
 }
 
 async function listarVeiculosAPI(req, res) {

@@ -4,7 +4,7 @@
   const fsPromises = require("fs").promises;
   const playwright = require("playwright");
   const { PDFDocument } = require("pdf-lib");
-  const { projectRootDir } = require("../../../../shared/path.helper");
+  const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../../shared/path.helper");
 
   async function processarImagensParaUrlLocal(anexos) {
     if (!anexos || anexos.length === 0) {
@@ -60,10 +60,7 @@
   }
 
   async function preencherTemplateHtmlServicoSubestacao(servicoData) {
-    const templatePath = path.join(
-      projectRootDir,
-      "public/pages/templates/relatorio_servico_subestacao.html"
-    );
+    const templatePath = publicPage("templates/relatorio_servico_subestacao.html");
     let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
 
     const formatarData = (dataStr) => {

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../auth");
-const { projectRootDir } = require("../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 
 const infraRoutes = require("./infra/infra.routes");
 const servicosRoutes = require("./servicos");
@@ -14,10 +14,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/subestacoes-dashboard.html"
-      )
+      publicPage("subestacoes/subestacoes-dashboard.html")
     );
   }
 );
@@ -28,7 +25,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(projectRootDir, "public/pages/subestacoes/subestacoes.html")
+      publicPage("subestacoes/subestacoes.html")
     );
   }
 );

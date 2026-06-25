@@ -1,15 +1,11 @@
 const service = require("./infra_codes.service");
 const { registrarAuditoria } = require("../../../auth");
 const path = require("path");
-const { projectRootDir } = require("../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
 async function renderizarPaginaGerenciamento(req, res) {
   try {
-    const filePath = path.join(
-      projectRootDir,
-      "views",
-      "pages",
-      "InspRedesDist",
+    const filePath = viewsPage("InspRedesDist",
       "gerenciar_codigos.html"
     );
     res.sendFile(filePath);

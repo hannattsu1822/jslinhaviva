@@ -1,6 +1,7 @@
 const { promisePool, uploadsSubestacoesDir } = require("../../../../init");
 const path = require("path");
 const fs = require("fs").promises;
+const { publicDir } = require("../../../../shared/path.helper");
 
 async function moverAnexo(
   anexo,
@@ -301,10 +302,7 @@ async function atualizarInspecao(inspecaoId, dados) {
         [anexos_para_deletar, inspecaoId]
       );
       for (const anexo of anexosDb) {
-        const fullPath = path.join(
-          projectRootDir,
-          "public",
-          anexo.caminho_servidor
+        const fullPath = path.join(publicDir, anexo.caminho_servidor
         );
         try {
           await fs.unlink(fullPath);

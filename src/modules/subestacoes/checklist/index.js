@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../../auth");
-const { projectRootDir } = require("../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
 const coreRoutes = require("./core/core.routes");
 const anexosRoutes = require("./anexos/anexos.routes");
@@ -14,10 +14,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/inspecoes-checklist-subestacoes.html"
-      )
+      publicPage("subestacoes/inspecoes-checklist-subestacoes.html")
     );
   }
 );
@@ -28,10 +25,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/listagem-inspecoes.html"
-      )
+      publicPage("subestacoes/listagem-inspecoes.html")
     );
   }
 );
@@ -42,10 +36,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/detalhes-inspecao-checklist.html"
-      )
+      publicPage("subestacoes/detalhes-inspecao-checklist.html")
     );
   }
 );

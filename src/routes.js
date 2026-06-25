@@ -1,6 +1,6 @@
 const express = require("express");
-const path = require("path");
 const { autenticar } = require("./auth");
+const { publicPage } = require("./shared/path.helper");
 
 const rotasAuth = require("./routes/rotas_auth");
 const rotasAuditoria = require("./routes/rotas_auditoria");
@@ -58,11 +58,11 @@ router.get("/", (req, res) => {
 });
 
 router.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/pages/login/login.html"));
+  res.sendFile(publicPage("login/login.html"));
 });
 
 router.get("/dashboard", autenticar, (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/pages/into/dashboard.html"));
+  res.sendFile(publicPage("into/dashboard.html"));
 });
 
 module.exports = router;

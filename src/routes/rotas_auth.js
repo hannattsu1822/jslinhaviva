@@ -1,8 +1,8 @@
 const express = require("express");
-const path = require("path");
-const { loginSeguro, loginLimiter, registrarAuditoria, autenticar } = require("../auth");
+const { loginSeguro, loginLimiter, registrarAuditoria, autenticar, isApiRequest } = require("../auth");
 const { promisePool } = require("../init");
 const { ensureCsrfToken } = require("../middleware/csrf");
+const { publicPage } = require("../shared/path.helper");
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.get("/login", (req, res) => {
   if (req.session && req.session.user) {
     return res.redirect("/dashboard");
   }
-  res.sendFile(path.join(__dirname, "../../public/pages/into/index.html"));
+  res.sendFile(publicPage("into/index.html"));
 });
 
 // ─── POST login — com rate limit específico (5 tentativas / 15 min por IP) ───
@@ -40,6 +40,10 @@ router.post("/api/logout", autenticar, async (req, res) => {
         }
       } catch (auditError) {
         console.error("Erro ao registrar auditoria de logout:", auditError);
+      }
+
+      if (isApiRequest(req)) {
+        return res.json({ success: true, message: "Logout realizado." });
       }
 
       return res.redirect("/login");

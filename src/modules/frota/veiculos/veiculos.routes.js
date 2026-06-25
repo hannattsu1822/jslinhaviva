@@ -3,27 +3,27 @@ const path = require("path");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../auth");
 const controller = require("./veiculos.controller");
-const { projectRootDir } = require("../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
 router.get("/frota", autenticar, verificarNivel(2), (req, res) => {
-  res.sendFile(path.join(projectRootDir, "public/pages/frota/frota.html"));
+  res.sendFile(publicPage("frota/frota.html"));
 });
 
 router.get("/checklist_veiculos", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/checklist_veiculos.html")
+    publicPage("frota/checklist_veiculos.html")
   );
 });
 
 router.get("/agendar_checklist", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/agendar_checklist.html")
+    publicPage("frota/agendar_checklist.html")
   );
 });
 
 router.get("/frota_controle", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/frota_controle.html")
+    publicPage("frota/frota_controle.html")
   );
 });
 
@@ -33,10 +33,7 @@ router.get(
   verificarNivel(2),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/frota/frota_motoristas_cadastro.html"
-      )
+      publicPage("frota/frota_motoristas_cadastro.html")
     );
   }
 );
@@ -47,10 +44,7 @@ router.get(
   verificarNivel(2),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/frota/frota_estoque_cadastro.html"
-      )
+      publicPage("frota/frota_estoque_cadastro.html")
     );
   }
 );
@@ -61,35 +55,32 @@ router.get(
   verificarNivel(2),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/frota/frota_veiculos_cadastro.html"
-      )
+      publicPage("frota/frota_veiculos_cadastro.html")
     );
   }
 );
 
 router.get("/filtrar_veiculos", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/filtrar_veiculos.html")
+    publicPage("frota/filtrar_veiculos.html")
   );
 });
 
 router.get("/relatorio_publico_veiculos", (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/relatorio_veiculos.html")
+    publicPage("frota/relatorio_veiculos.html")
   );
 });
 
 router.get("/check_horimetro", autenticar, verificarNivel(3), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/check_horimetro.html")
+    publicPage("frota/check_horimetro.html")
   );
 });
 
 router.get("/editar_inspecao", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/editar_inspecao.html")
+    publicPage("frota/editar_inspecao.html")
   );
 });
 

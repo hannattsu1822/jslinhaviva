@@ -16,10 +16,45 @@ const loginLimiter = rateLimit({
   },
 });
 
+function isApiRequest(req) {
+  const url = req.originalUrl || req.url || "";
+  return (
+    url.startsWith("/api/") ||
+    req.path?.startsWith("/api/") ||
+    req.headers.accept?.includes("application/json") ||
+    req.headers["x-requested-with"] === "XMLHttpRequest"
+  );
+}
+
+function autenticarApi(req, res, next) {
+  if (req.session && req.session.user) {
+    req.user = req.session.user;
+    return next();
+  }
+  return res.status(401).json({
+    success: false,
+    message: "Não autenticado.",
+  });
+}
+
+function autenticarPagina(req, res, next) {
+  if (req.session && req.session.user) {
+    req.user = req.session.user;
+    return next();
+  }
+  res.redirect("/login");
+}
+
 function autenticar(req, res, next) {
   if (req.session && req.session.user) {
     req.user = req.session.user;
     return next();
+  }
+  if (isApiRequest(req)) {
+    return res.status(401).json({
+      success: false,
+      message: "Não autenticado.",
+    });
   }
   res.redirect("/login");
 }
@@ -181,6 +216,9 @@ async function verificarSenha(senhaDigitada, hashArmazenado) {
 module.exports = {
   loginLimiter,
   autenticar,
+  autenticarApi,
+  autenticarPagina,
+  isApiRequest,
   loginSeguro,
   verificarNivel,
   verificarCargo,

@@ -3,17 +3,17 @@ const path = require("path");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../auth");
 const controller = require("./oleo.controller");
-const { projectRootDir } = require("../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
 router.get("/registro_oleo", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/registro_oleo.html")
+    publicPage("frota/registro_oleo.html")
   );
 });
 
 router.get("/proxima_troca_oleo", autenticar, verificarNivel(4), (req, res) => {
   res.sendFile(
-    path.join(projectRootDir, "public/pages/frota/proxima_troca_oleo.html")
+    publicPage("frota/proxima_troca_oleo.html")
   );
 });
 

@@ -2,6 +2,7 @@ const { promisePool, uploadsSubestacoesDir } = require("../../../../init");
 const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs").promises;
+const { publicDir } = require("../../../../shared/path.helper");
 
 async function listarUsuariosPorCargo(cargos) {
   const placeholders = cargos.map(() => "?").join(",");
@@ -417,10 +418,7 @@ async function atualizarServico(servicoId, dados, arquivos) {
         [anexoId, anexoId]
       );
       if (anexoRows.length > 0 && anexoRows[0].caminho_servidor) {
-        const caminhoCompleto = path.join(
-          __dirname,
-          "../../../../public",
-          anexoRows[0].caminho_servidor
+        const caminhoCompleto = path.join(publicDir, anexoRows[0].caminho_servidor
         );
         try {
           await fsPromises.unlink(caminhoCompleto);

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../../auth");
-const { projectRootDir } = require("../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
 const coreRoutes = require("./core");
 const itensRoutes = require("./itens");
@@ -16,10 +16,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/servicos-subestacoes-servicos.html"
-      )
+      publicPage("subestacoes/servicos-subestacoes-servicos.html")
     );
   }
 );
@@ -30,10 +27,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/servicos-concluidos.html"
-      )
+      publicPage("subestacoes/servicos-concluidos.html")
     );
   }
 );
@@ -44,10 +38,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/registrar-servico-subestacao.html"
-      )
+      publicPage("subestacoes/registrar-servico-subestacao.html")
     );
   }
 );
@@ -58,10 +49,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/servico-detalhes-pagina.html"
-      )
+      publicPage("subestacoes/servico-detalhes-pagina.html")
     );
   }
 );
@@ -72,10 +60,7 @@ router.get(
   verificarNivel(3),
   (req, res) => {
     res.sendFile(
-      path.join(
-        projectRootDir,
-        "public/pages/subestacoes/servico-concluido-detalhes.html"
-      )
+      publicPage("subestacoes/servico-concluido-detalhes.html")
     );
   }
 );

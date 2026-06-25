@@ -13,7 +13,7 @@ const rateLimit = require("express-rate-limit");
 const { csrfProtection } = require("./middleware/csrf");
 const { createUploadFileFilter } = require("./shared/secureUpload.middleware");
 
-const { projectRootDir } = require("./shared/path.helper");
+const { projectRootDir, frontendDir, publicDir, viewsDir } = require("./shared/path.helper");
 
 const app = express();
 
@@ -134,16 +134,20 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.engine("html", require("ejs").renderFile);
 app.set("view engine", "html");
 
-const publicDir = path.join(projectRootDir, "public");
-const viewsDir  = path.join(projectRootDir, "views");
-
 app.set("views", [viewsDir, publicDir]);
 
-app.use(express.static(publicDir));
-logger.info(`[Static] Servindo 'public': ${publicDir}`);
+const serveFrontend = process.env.SERVE_FRONTEND !== "false";
 
-app.use("/scripts", express.static(path.join(viewsDir, "scripts")));
-app.use("/static",  express.static(path.join(viewsDir, "static")));
+if (serveFrontend) {
+  app.use(express.static(publicDir));
+  logger.info(`[Static] Servindo frontend/public: ${publicDir}`);
+
+  app.use("/scripts", express.static(path.join(viewsDir, "scripts")));
+  app.use("/static", express.static(path.join(viewsDir, "static")));
+  app.use("/shared", express.static(path.join(frontendDir, "shared")));
+} else {
+  logger.info("[Static] SERVE_FRONTEND=false — backend em modo API-only");
+}
 
 const ensureDirectoryExists = (dirPath, dirName) => {
   if (!fs.existsSync(dirPath)) {

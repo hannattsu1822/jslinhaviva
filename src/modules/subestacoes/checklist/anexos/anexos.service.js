@@ -2,7 +2,7 @@ const { promisePool, uploadsSubestacoesDir } = require("../../../../init");
 const path = require("path");
 const fs = require("fs").promises;
 const crypto = require("crypto");
-const { projectRootDir } = require("../../../../shared/path.helper");
+const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../../shared/path.helper");
 
 async function moverAnexo(
   anexo,
@@ -243,10 +243,7 @@ async function excluirAnexo(anexoId) {
     }
     const anexo = anexoRows[0];
     if (anexo.caminho_servidor) {
-      const fullPath = path.join(
-        projectRootDir,
-        "public",
-        anexo.caminho_servidor
+      const fullPath = path.join(publicDir, anexo.caminho_servidor
       );
       try {
         await fs.unlink(fullPath);

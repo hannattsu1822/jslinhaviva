@@ -1,16 +1,13 @@
-// src/routes/rotas_auditoria.js
 const express = require("express");
-const path = require("path");
 const { promisePool } = require("../init");
-
-
 const { autenticar, verificarNivel } = require("../auth");
+const { publicPage } = require("../shared/path.helper");
 
 const router = express.Router();
 
 
 router.get("/auditoria", autenticar, verificarNivel(4), (req, res) => {
-  res.sendFile(path.join(__dirname, "../../public/pages/into/auditoria.html"));
+  res.sendFile(publicPage("into/auditoria.html"));
 });
 
 
