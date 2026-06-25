@@ -1,4 +1,5 @@
-const { promisePool, logger } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
+const logger = require("../../../config/logger");
 
 function extrairCampos(body) {
   return {

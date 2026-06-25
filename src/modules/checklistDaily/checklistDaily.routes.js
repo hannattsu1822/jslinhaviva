@@ -4,7 +4,7 @@ const router = express.Router();
 
 const { autenticar, verificarNivel } = require("../../auth");
 
-const { upload } = require("../../init");
+const { upload } = require("../../infrastructure/uploads");
 
 const checklistController = require("./checklistDaily.controller");
 

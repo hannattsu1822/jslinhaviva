@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 const ExcelJS = require("exceljs");
 const fs = require("fs");
 

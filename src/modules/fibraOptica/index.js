@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../auth");
 const { projectRootDir } = require("../../shared/path.helper");
-const { promisePool } = require("../../init");
+const { promisePool } = require("../../infrastructure/database");
 
 const servicosRoutes = require("./servicos/servicos.routes");
 const mapaRoutes = require("./mapa/mapa.routes");

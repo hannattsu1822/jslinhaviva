@@ -1,5 +1,6 @@
 const mqtt = require("mqtt");
-const { logger } = require("./init"); // Removi promisePool pois o service já cuida do banco
+const logger = require("./config/logger");
+const { promisePool } = require("./infrastructure/database");
 const WebSocket = require('ws');
 const { 
   sanitizarDadosLeitura 
@@ -15,8 +16,6 @@ async function salvarLeituraRele(dados, wss) {
     logger.error('[MQTT Handler] Erro: Dados recebidos do MQTT para o relé estão incompletos.');
     return;
   }
-
-  const { promisePool } = require("./init"); // Importação local se necessário ou manter no topo
 
   const { rele_id, device_id, timestamp, dados: dadosMedidos } = dados;
 
@@ -82,7 +81,6 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
 }
 
 async function salvarStatusConexao(dados, wss) {
-  const { promisePool } = require("./init");
   try {
     await promisePool.query(
       "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",

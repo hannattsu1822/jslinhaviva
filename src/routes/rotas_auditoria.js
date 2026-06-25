@@ -1,5 +1,5 @@
 const express = require("express");
-const { promisePool } = require("../init");
+const { promisePool } = require("../infrastructure/database");
 const { autenticar, verificarNivel } = require("../auth");
 const { publicPage } = require("../shared/path.helper");
 

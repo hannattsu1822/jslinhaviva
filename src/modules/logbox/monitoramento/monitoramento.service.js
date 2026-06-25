@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
 const {

@@ -1,5 +1,5 @@
 // CORREÇÃO AQUI: Apenas dois níveis para voltar para 'src'
-const { promisePool } = require("../../init"); 
+const { promisePool } = require("../../infrastructure/database"); 
 
 // CORREÇÃO AQUI: ./helpers pois a pasta helpers está dentro de logbox
 const { 

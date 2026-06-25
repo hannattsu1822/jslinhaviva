@@ -1,5 +1,5 @@
 const service = require("./monitoramento.service");
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 
 async function renderizarPaginaDetalhe(req, res) {
   try {

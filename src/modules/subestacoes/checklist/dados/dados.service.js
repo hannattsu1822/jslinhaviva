@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../../init");
+const { promisePool } = require("../../../../infrastructure/database");
 
 async function obterDetalhesParaServico(inspecao_ids) {
   if (!Array.isArray(inspecao_ids) || inspecao_ids.length === 0) {

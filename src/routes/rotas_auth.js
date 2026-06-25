@@ -1,6 +1,6 @@
 const express = require("express");
 const { loginSeguro, loginLimiter, registrarAuditoria, autenticar, isApiRequest } = require("../auth");
-const { promisePool } = require("../init");
+const { promisePool } = require("../infrastructure/database");
 const { ensureCsrfToken } = require("../middleware/csrf");
 const { publicPage } = require("../shared/path.helper");
 

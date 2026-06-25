@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 
 async function solicitarHorasExtras(dadosSolicitacao) {
     const { matricula, nomeEmpregado, mesAno, servicos } = dadosSolicitacao;

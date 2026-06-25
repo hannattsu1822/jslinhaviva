@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 
 async function contarServicos(status) {
   let query = "SELECT COUNT(*) as total FROM processos";

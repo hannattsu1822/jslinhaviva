@@ -1,4 +1,5 @@
-const { promisePool, uploadsSubestacoesDir } = require("../../../../init");
+const { promisePool } = require("../../../../infrastructure/database");
+const { uploadsSubestacoesDir } = require("../../../../infrastructure/uploads");
 const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs").promises;

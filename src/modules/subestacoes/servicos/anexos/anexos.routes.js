@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
-const { upload } = require("../../../../init");
+const { upload } = require("../../../../infrastructure/uploads");
 const controller = require("./anexos.controller");
 
 router.post(

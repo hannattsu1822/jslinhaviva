@@ -1,4 +1,4 @@
-const { promisePool } = require("../../init");
+const { promisePool } = require("../../infrastructure/database");
 
 async function listarReles() {
   // Adiciona a coluna custom_id à consulta para garantir que sempre seja retornada.

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
 const controller = require("./core.controller");
-const { promisePool } = require("../../../../init");
+const { promisePool } = require("../../../../infrastructure/database");
 
 async function verificarInspecaoExiste(req, res, next) {
   const idParaVerificar = req.params.inspecaoId || req.params.id;

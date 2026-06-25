@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
-const { upload } = require("../../../../init");
+const { promisePool } = require("../../../../infrastructure/database");
+const { upload } = require("../../../../infrastructure/uploads");
 const controller = require("./core.controller");
 
 async function verificarServicoExiste(req, res, next) {
@@ -12,7 +13,6 @@ async function verificarServicoExiste(req, res, next) {
       .json({ message: `ID do serviço inválido: ${servicoId}` });
   }
   try {
-    const { promisePool } = require("../../../../init");
     const [servicoRows] = await promisePool.query(
       "SELECT id, status, data_conclusao, observacoes_conclusao, processo FROM servicos_subestacoes WHERE id = ?",
       [servicoId]

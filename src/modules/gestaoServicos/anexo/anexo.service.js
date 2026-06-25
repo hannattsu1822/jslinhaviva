@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs").promises;
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 const { projectRootDir } = require("../../../shared/path.helper");
 const {
   determinarNomePastaParaServicoExistente,

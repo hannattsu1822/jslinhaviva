@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../auth");
 const controller = require("./checklist.controller");
-const { uploadAnexoChecklist } = require("../../../init");
+const { uploadAnexoChecklist } = require("../../../infrastructure/uploads");
 
 router.get(
   "/api/checklist_por_registro/:registroId",

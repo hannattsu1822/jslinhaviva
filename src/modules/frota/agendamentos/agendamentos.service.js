@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 
 async function agendarChecklist(dadosAgendamento, agendadoPorMatricula) {
   const { veiculo_id, data_agendamento, encarregado_matricula, observacoes } =

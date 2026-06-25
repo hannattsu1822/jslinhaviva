@@ -3,7 +3,7 @@ const fs = require("fs");
 const fsPromises = require("fs").promises;
 const { PDFDocument } = require("pdf-lib");
 const playwright = require("playwright");
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
 async function processarImagensParaBase64(imagens) {

@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
-const { upload, promisePool } = require("../../init");
+const { promisePool } = require("../../infrastructure/database");
+const { upload } = require("../../infrastructure/uploads");
 const { autenticar, verificarNivel, verificarCargo } = require("../../auth");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 const { resolvePathWithinBase, sendSafeFile } = require("../../shared/pathSecurity.helper");

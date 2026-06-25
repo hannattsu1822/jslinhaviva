@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 
 async function listarVeiculos(filtros) {
   const { termo, status, pagina } = filtros;

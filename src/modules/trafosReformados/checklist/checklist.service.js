@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 const { chromium } = require("playwright");
 const path = require("path");
 const fs = require("fs");

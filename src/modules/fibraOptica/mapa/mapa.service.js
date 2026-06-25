@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 const proj4 = require("proj4");
 
 function convertUtmToLatLon(easting, northing, utmZoneString) {

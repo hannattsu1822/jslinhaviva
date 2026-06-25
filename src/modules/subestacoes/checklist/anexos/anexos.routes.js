@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
-const { upload } = require("../../../../init");
+const { upload } = require("../../../../infrastructure/uploads");
 const controller = require("./anexos.controller");
-const { promisePool } = require("../../../../init");
+const { promisePool } = require("../../../../infrastructure/database");
 
 async function verificarInspecaoExiste(req, res, next) {
   const idParaVerificar = req.params.inspecaoId || req.params.id;

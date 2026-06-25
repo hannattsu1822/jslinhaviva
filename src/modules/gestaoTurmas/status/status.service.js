@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 
 const TIPOS_STATUS_PERMITIDOS = [
   "FOLGA",

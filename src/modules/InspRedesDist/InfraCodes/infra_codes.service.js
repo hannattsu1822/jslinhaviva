@@ -1,4 +1,4 @@
-const { promisePool } = require("../../../init");
+const { promisePool } = require("../../../infrastructure/database");
 
 // --- Funções para Tipos de Código (redes_code_types) ---
 

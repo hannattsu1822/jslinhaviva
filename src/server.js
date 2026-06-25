@@ -1,15 +1,14 @@
 require("dotenv").config();
+const { server, app } = require("./init");
+const logger = require("./config/logger");
 const {
-  server,
-  app,
-  logger,
   uploadsSubestacoesDir,
   uploadsFibraDir,
   trafosReformadosAnexosDir,
   uploadsInspRedesDir,
   uploadsChecklistDailyDir,
   uploadsProcessosDir,
-} = require("./init");
+} = require("./infrastructure/uploads");
 const { mountSecureUploads } = require("./shared/secureUpload.middleware");
 const { autenticar, verificarNivel } = require("./auth");
 const { iniciarClienteMQTT } = require("./mqtt_handler");

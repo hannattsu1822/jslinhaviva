@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const { promisePool } = require("../../init");
+const { promisePool } = require("../../infrastructure/database");
 const { projectRootDir } = require("../../shared/path.helper");
 
 const checklistQuery = require("./checklistDaily.query");
