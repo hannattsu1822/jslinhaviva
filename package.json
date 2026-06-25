@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.js",
     "start:cluster": "pm2 start src/server.js -i max --name jslinhaviva",
     "start:api": "node scripts/start-api-only.js",
-    "export:fibra": "node scripts/export-fibra-pontos.js"
+    "export:fibra": "node scripts/export-fibra-pontos.js",
+    "generate:pwa-icons": "node scripts/generate-pwa-icons.js"
   },
   "dependencies": {
     "axios": "^1.18.0",

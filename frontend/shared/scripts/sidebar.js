@@ -1,3 +1,12 @@
+(function loadPwaScript() {
+  if (window.__linhavivaPwaInit || document.querySelector('script[data-pwa="true"]')) return;
+  const script = document.createElement("script");
+  script.src = "/shared/scripts/pwa.js";
+  script.defer = true;
+  script.dataset.pwa = "true";
+  document.head.appendChild(script);
+})();
+
 (function patchFetchWithCsrf() {
   if (window.__csrfFetchPatched || typeof window.fetch !== "function") return;
   window.__csrfFetchPatched = true;

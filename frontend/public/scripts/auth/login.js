@@ -15,8 +15,7 @@ async function subscribeUser() {
   }
 
   try {
-    const registration = await navigator.serviceWorker.register("/sw.js");
-    await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.ready;
 
     const existingSubscription = await registration.pushManager.getSubscription();
     if (existingSubscription) {
