@@ -23,18 +23,15 @@
       rel="stylesheet"
       href="/static/css/components/bootstrap-overrides.css"
     />
-    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/avulsos/bas_importar_dados.css" />
   </head>
   <body>
     <div class="page-container">
-      <%- include('../../partials/sidebar.html') %>
+      <div id="sidebar-root"></div>
 
       <main class="main-content">
         <header class="main-header">
-          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
-            <i class="fa-solid fa-bars"></i>
-          </button>
           <div class="header-content">
             <h1 class="page-title">
               <i class="fa-solid fa-file-arrow-up"></i>
@@ -134,7 +131,7 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
-    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/avulsos/bas_importar_dados.js"></script>
   </body>
 </html>

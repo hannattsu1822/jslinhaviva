@@ -13,9 +13,12 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
   </head>
   <body>
-    <div class="checklist-container">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="checklist-container">
       <h1>Editar Inspeção</h1>
       <form id="editarForm" class="checklist-form">
         <div class="form-group">
@@ -68,5 +71,7 @@
     </div>
 
     <script src="/scripts/frota/editar_inspecao.js"></script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

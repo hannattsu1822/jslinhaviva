@@ -91,9 +91,13 @@
             text-transform: uppercase;
         }
     </style>
-</head>
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
 <body>
+    <div id="sidebar-root"></div>
 
+<div class="main-content">
 <div class="container-fluid p-4">
     
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -617,6 +621,8 @@
         return `${Math.floor(segundos / 3600)}h ${Math.floor((segundos % 3600) / 60)}m`;
     }
 </script>
+    </div>
 
-</body>
+    <script src="/shared/scripts/sidebar.js"></script>
+  </body>
 </html>

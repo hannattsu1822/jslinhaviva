@@ -1,0 +1,124 @@
+<button class="sidebar-toggle-button" aria-label="Toggle sidebar">
+  <i class="fas fa-bars"></i>
+</button>
+
+<div class="sidebar bg-glass">
+  <div class="sidebar-header text-center py-3">
+    <div class="user-icon mb-2">
+      <i class="fas fa-user-circle"></i>
+    </div>
+    <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
+  </div>
+
+  <div class="user-info p-3 mt-2 rounded">
+    <div class="info-item mb-2">
+      <i class="fas fa-id-card me-2"></i>
+      <span id="user-matricula">Matrícula: Carregando...</span>
+    </div>
+    <div class="info-item mb-2">
+      <i class="fas fa-briefcase me-2"></i>
+      <span id="user-cargo">Cargo: Carregando...</span>
+    </div>
+    <div class="info-item mb-2">
+      <i class="fas fa-calendar-alt me-2"></i>
+      <span id="current-date">--/--/----</span>
+    </div>
+    <div class="info-item">
+      <i class="fas fa-clock me-2"></i>
+      <span id="current-time">--:--:--</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav flex-grow-1">
+    <ul class="nav-list">
+      <li class="nav-item">
+        <a href="/dashboard" class="nav-link" data-nav="dashboard">
+          <i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard Principal
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-noc-link" style="display: none">
+        <a href="/centro-operacoes" class="nav-link" data-nav="noc">
+          <i class="fas fa-desktop fa-fw me-2"></i>Centro de Operações
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-prv-link" style="display: none">
+        <a href="/prv" class="nav-link" data-nav="prv">
+          <i class="fas fa-clipboard-list fa-fw me-2"></i>Roteiro de Viagem
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-checklist-link" style="display: none">
+        <a href="/checklist-diario" class="nav-link" data-nav="checklist">
+          <i class="fas fa-clipboard-check fa-fw me-2"></i>Checklist Diário
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-subestacoes-link" style="display: none">
+        <a href="/subestacoes-dashboard" class="nav-link" data-nav="subestacoes">
+          <i class="fas fa-charging-station fa-fw me-2"></i>Subestações
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-transformadores-link" style="display: none">
+        <a href="/transformadores" class="nav-link" data-nav="transformadores">
+          <i class="fas fa-bolt fa-fw me-2"></i>Transformadores
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-frota-link" style="display: none">
+        <a href="/frota" class="nav-link" data-nav="frota">
+          <i class="fas fa-truck fa-fw me-2"></i>Frota
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-gestao-servicos-link" style="display: none">
+        <a href="/gestao-servicos" class="nav-link" data-nav="gestao-servicos">
+          <i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-construcao-link" style="display: none">
+        <a href="/acompanhamento_construcao" class="nav-link" data-nav="construcao">
+          <i class="fas fa-hard-hat fa-fw me-2"></i>Acompanhamento Construção
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-gestao-turmas-link" style="display: none">
+        <a href="/gestao-turmas" class="nav-link" data-nav="gestao-turmas">
+          <i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de Turmas
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-fibra-optica-link" style="display: none">
+        <a href="/fibra-optica" class="nav-link" data-nav="fibra-optica">
+          <i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-inspecoes-redes-link" style="display: none">
+        <a href="/inspecoes-redes" class="nav-link" data-nav="inspecoes-redes">
+          <i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de Redes
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-avulsos-link" style="display: none">
+        <a href="/avulsos-dashboard" class="nav-link" data-nav="avulsos">
+          <i class="fas fa-hand-sparkles fa-fw me-2"></i>Avulsos
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-monitoramento-link" style="display: none">
+        <a href="/monitoramento-hub" class="nav-link" data-nav="monitoramento">
+          <i class="fas fa-satellite-dish fa-fw me-2"></i>Monitoramento
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-gestao-link" style="display: none">
+        <a href="/dashboard-gestor" class="nav-link" data-nav="gestao">
+          <i class="fas fa-cogs fa-fw me-2"></i>Painel de Gestão
+        </a>
+      </li>
+      <li class="nav-item" id="sidebar-auditoria-link" style="display: none">
+        <a href="/auditoria" class="nav-link" data-nav="auditoria">
+          <i class="fas fa-search fa-fw me-2"></i>Auditoria
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button type="button" id="sidebar-logout-btn" class="btn-logout">
+      <i class="fas fa-sign-out-alt me-2"></i>Sair
+    </button>
+  </div>
+</div>
+
+<div class="main-content-overlay"></div>

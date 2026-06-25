@@ -23,7 +23,7 @@
       rel="stylesheet"
       href="/static/css/components/bootstrap-overrides.css"
     />
-    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link
       rel="stylesheet"
       href="/static/css/avulsos/gerar_formulario_txt_bas_linhaviva.css"
@@ -31,13 +31,10 @@
   </head>
   <body>
     <div class="page-container">
-      <%- include('../../partials/sidebar.html') %>
+      <div id="sidebar-root"></div>
 
       <main class="main-content">
         <header class="main-header">
-          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
-            <i class="fa-solid fa-bars"></i>
-          </button>
           <div class="header-content">
             <h1 class="page-title">
               <i class="fa-solid fa-bolt"></i>
@@ -144,7 +141,7 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
-    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/avulsos/gerar_formulario_txt_bas_linhaviva.js"></script>
   </body>
 </html>

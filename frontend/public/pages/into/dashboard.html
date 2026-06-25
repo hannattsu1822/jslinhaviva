@@ -17,7 +17,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/static/css/dashboard.css" />
-    <link rel="stylesheet" href="/static/css/sidebar_styles.css" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
     <link
       href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/main.min.css"
@@ -109,160 +109,7 @@
   </head>
 
   <body>
-    <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
-      <i class="fas fa-bars"></i>
-    </button>
-
-    <div class="sidebar bg-glass">
-      <div class="sidebar-header text-center py-3">
-        <div class="user-icon mb-2">
-          <i class="fas fa-user-circle"></i>
-        </div>
-        <h5 class="user-name mb-1" id="user-name">Carregando...</h5>
-      </div>
-      <div class="user-info p-3 mt-2 rounded">
-        <div class="info-item mb-2">
-          <i class="fas fa-id-card me-2"></i
-          ><span id="user-matricula">Matrícula: Carregando...</span>
-        </div>
-        <div class="info-item mb-2">
-          <i class="fas fa-briefcase me-2"></i
-          ><span id="user-cargo">Cargo: Carregando...</span>
-        </div>
-        <div class="info-item mb-2">
-          <i class="fas fa-calendar-alt me-2"></i
-          ><span id="current-date">--/--/----</span>
-        </div>
-        <div class="info-item">
-          <i class="fas fa-clock me-2"></i
-          ><span id="current-time">--:--:--</span>
-        </div>
-      </div>
-      <nav class="sidebar-nav flex-grow-1">
-        <ul class="nav-list">
-          <li class="nav-item">
-            <a href="/dashboard" class="nav-link"
-              ><i class="fas fa-tachometer-alt fa-fw me-2"></i>Dashboard
-              Principal</a
-            >
-          </li>
-          <!-- Link do NOC na sidebar (visível para COD) -->
-          <li class="nav-item" id="sidebar-noc-link" style="display: none">
-            <a href="/centro-operacoes" class="nav-link"
-              ><i class="fas fa-desktop fa-fw me-2"></i>Centro de Operações</a
-            >
-          </li>
-          <li class="nav-item" id="sidebar-prv-link" style="display: none">
-            <a href="/prv" class="nav-link"
-              ><i class="fas fa-clipboard-list fa-fw me-2"></i>Roteiro de Viagem</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-checklist-link"
-            style="display: none"
-          >
-            <a href="/checklist-diario" class="nav-link"
-              ><i class="fas fa-clipboard-check fa-fw me-2"></i>Checklist Diário</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-subestacoes-link"
-            style="display: none"
-          >
-            <a href="/subestacoes-dashboard" class="nav-link"
-              ><i class="fas fa-charging-station fa-fw me-2"></i>Subestações</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-transformadores-link"
-            style="display: none"
-          >
-            <a href="/transformadores" class="nav-link"
-              ><i class="fas fa-bolt fa-fw me-2"></i>Transformadores</a
-            >
-          </li>
-          <li class="nav-item" id="sidebar-frota-link" style="display: none">
-            <a href="/frota" class="nav-link"
-              ><i class="fas fa-truck fa-fw me-2"></i>Frota</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-gestao-servicos-link"
-            style="display: none"
-          >
-            <a href="/gestao-servicos" class="nav-link"
-              ><i class="fas fa-tools fa-fw me-2"></i>Gestão de Serviços</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-gestao-turmas-link"
-            style="display: none"
-          >
-            <a href="/gestao-turmas" class="nav-link"
-              ><i class="fa-solid fa-users-gear fa-fw me-2"></i>Gestão de
-              Turmas</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-fibra-optica-link"
-            style="display: none"
-          >
-            <a href="/fibra-optica" class="nav-link"
-              ><i class="fas fa-network-wired fa-fw me-2"></i>Fibra Óptica</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-inspecoes-redes-link"
-            style="display: none"
-          >
-            <a href="/inspecoes-redes" class="nav-link"
-              ><i class="fas fa-broadcast-tower fa-fw me-2"></i>Inspeções de
-              Redes</a
-            >
-          </li>
-          <li class="nav-item" id="sidebar-avulsos-link" style="display: none">
-            <a href="/avulsos-dashboard" class="nav-link"
-              ><i class="fas fa-hand-sparkles fa-fw me-2"></i>Avulsos</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-monitoramento-link"
-            style="display: none"
-          >
-            <a href="/monitoramento-hub" class="nav-link"
-              ><i class="fas fa-satellite-dish fa-fw me-2"></i>Monitoramento</a
-            >
-          </li>
-          <li class="nav-item" id="sidebar-gestao-link" style="display: none">
-            <a href="/dashboard-gestor" class="nav-link"
-              ><i class="fas fa-cogs fa-fw me-2"></i>Painel de Gestão</a
-            >
-          </li>
-          <li
-            class="nav-item"
-            id="sidebar-auditoria-link"
-            style="display: none"
-          >
-            <a href="/auditoria" class="nav-link"
-              ><i class="fas fa-search fa-fw me-2"></i>Auditoria</a
-            >
-          </li>
-        </ul>
-      </nav>
-      <div class="sidebar-footer">
-        <button onclick="logout()" class="btn-logout">
-          <i class="fas fa-sign-out-alt me-2"></i>Sair
-        </button>
-      </div>
-    </div>
+    <div id="sidebar-root"></div>
 
     <div class="main-content">
       <div class="container py-4">
@@ -626,10 +473,7 @@
         </div>
       </div>
     </div>
-
-    <div class="main-content-overlay"></div>
-
-    <div
+<div
       id="access-denied-modal"
       class="modal fade"
       tabindex="-1"
@@ -690,162 +534,85 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js"></script>
     <script src="/scripts/utils/csrf-fetch.js"></script>
-    <script src="/scripts/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/into/dashboard_calendar.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        fetch("/api/me")
-          .then((response) => {
-            if (!response.ok) {
-              window.location.href = "/login";
-              return;
-            }
-            return response.json();
-          })
-          .then((user) => {
-            if (!user) return;
+      document.addEventListener("sidebar:ready", function (event) {
+        const user = event.detail?.user;
+        if (!user) return;
 
-            const userLevel = user.nivel || 0;
-            const userCargo = String(user.cargo || "").trim().toLowerCase();
-            const isMotorista = userCargo === "motorista";
-            const isCOD = userCargo === "cod"; // Verifica se é COD
+        const userLevel = user.nivel || 0;
+        const userCargo = String(user.cargo || "").trim().toLowerCase();
+        const isMotorista = userCargo === "motorista";
+        const isCOD = userCargo === "cod";
 
-            const cardPermissions = {
-              "card-subestacoes": 3,
-              "card-transformadores": 5,
-              "card-frota": 2,
-              "card-gestao-servicos": 2,
-              "card-gestao-turmas": 3,
-              "card-fibra-optica": 3,
-              "card-inspecoes-redes": 3,
-              "card-avulsos": 2,
-              "card-monitoramento": 5,
-              "prv-card": 3,
-              "gestao-card": 5,
-              "auditoria-card": 10,
-              "card-noc": 1, // NOC requer nível 1 (mas será tratado especial para COD)
-            };
+        const cardPermissions = {
+          "card-subestacoes": 3,
+          "card-transformadores": 5,
+          "card-frota": 2,
+          "card-gestao-servicos": 2,
+          "card-gestao-turmas": 3,
+          "card-fibra-optica": 3,
+          "card-inspecoes-redes": 3,
+          "card-avulsos": 2,
+          "card-monitoramento": 5,
+          "prv-card": 3,
+          "gestao-card": 5,
+          "auditoria-card": 10,
+          "card-noc": 1,
+        };
 
-            const sidebarItemIds = [
-              "sidebar-subestacoes-link",
-              "sidebar-transformadores-link",
-              "sidebar-frota-link",
-              "sidebar-gestao-servicos-link",
-              "sidebar-gestao-turmas-link",
-              "sidebar-fibra-optica-link",
-              "sidebar-inspecoes-redes-link",
-              "sidebar-avulsos-link",
-              "sidebar-monitoramento-link",
-              "sidebar-gestao-link",
-              "sidebar-auditoria-link",
-              "sidebar-prv-link",
-              "sidebar-checklist-link",
-              "sidebar-noc-link"
-            ];
+        const hideElement = (id) => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = "none";
+        };
 
-            const hideElement = (id) => {
-              const el = document.getElementById(id);
-              if (el) el.style.display = "none";
-            };
+        const showElement = (id, display = "block") => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = display;
+        };
 
-            const showElement = (id, display = "block") => {
-              const el = document.getElementById(id);
-              if (el) el.style.display = display;
-            };
+        if (isCOD) {
+          Object.keys(cardPermissions).forEach((id) => hideElement(id));
+          showElement("card-noc", "block");
 
-            const hideDashboardNavItem = () => {
-              const dashboardNavItem = document.querySelector(
-                '.sidebar-nav .nav-list .nav-item a[href="/dashboard"]'
-              );
-              if (dashboardNavItem && dashboardNavItem.closest("li")) {
-                dashboardNavItem.closest("li").style.display = "none";
-              }
-            };
+          const calendarCard = document.querySelector(".dashboard-calendar-card");
+          if (calendarCard) calendarCard.style.display = "none";
 
-            // --- LÓGICA PARA COD ---
-            if (isCOD) {
-              // Esconde todos os cards padrão
-              Object.keys(cardPermissions).forEach((id) => hideElement(id));
-              
-              // Mostra apenas o NOC
-              showElement("card-noc", "block");
+          const checklistCard = document.getElementById("checklist-placa-card");
+          if (checklistCard) checklistCard.style.display = "none";
 
-              // Esconde calendário
-              const calendarCard = document.querySelector(".dashboard-calendar-card");
-              if (calendarCard) calendarCard.style.display = "none";
+          return;
+        }
 
-              // Esconde checklist
-              const checklistCard = document.getElementById("checklist-placa-card");
-              if (checklistCard) checklistCard.style.display = "none";
+        if (isMotorista) {
+          Object.keys(cardPermissions).forEach((id) => hideElement(id));
+          showElement("prv-card", "block");
 
-              // Limpa sidebar e deixa só o NOC
-              sidebarItemIds.forEach((id) => hideElement(id));
-              showElement("sidebar-noc-link", "block");
-              
-              // Esconde link do dashboard principal pois ele só usa o NOC
-              hideDashboardNavItem();
+          const calendarCard = document.querySelector(".dashboard-calendar-card");
+          if (calendarCard) calendarCard.style.display = "none";
 
-              return; // Encerra aqui para COD
-            }
+          if (typeof initChecklistDiarioPorVeiculo === "function") {
+            initChecklistDiarioPorVeiculo();
+          }
 
-            // --- LÓGICA PARA MOTORISTA ---
-            if (isMotorista) {
-              Object.keys(cardPermissions).forEach((id) => hideElement(id));
-              showElement("prv-card", "block");
+          const checklistCard = document.getElementById("checklist-placa-card");
+          if (checklistCard) checklistCard.style.display = "block";
 
-              const calendarCard = document.querySelector(".dashboard-calendar-card");
-              if (calendarCard) calendarCard.style.display = "none";
+          return;
+        }
 
-              if (typeof initChecklistDiarioPorVeiculo === "function") {
-                initChecklistDiarioPorVeiculo();
-              }
+        for (const cardId in cardPermissions) {
+          const requiredLevel = cardPermissions[cardId];
+          const cardElement = document.getElementById(cardId);
+          if (cardElement && userLevel >= requiredLevel) {
+            cardElement.style.display = "block";
+          }
+        }
 
-              const checklistCard = document.getElementById("checklist-placa-card");
-              if (checklistCard) checklistCard.style.display = "block";
-
-              sidebarItemIds.forEach((id) => hideElement(id));
-              showElement("sidebar-prv-link", "block");
-              showElement("sidebar-checklist-link", "block");
-              hideDashboardNavItem();
-
-              return;
-            }
-
-            // --- LÓGICA PADRÃO (OUTROS CARGOS) ---
-            for (const cardId in cardPermissions) {
-              const requiredLevel = cardPermissions[cardId];
-              const cardElement = document.getElementById(cardId);
-              
-              // NOC geralmente não aparece no dashboard comum, a menos que seja nível muito alto ou específico
-              // Aqui deixei visível se tiver nível, mas você pode remover o 'card-noc' do loop se quiser que só COD veja
-              if (cardElement && userLevel >= requiredLevel) {
-                cardElement.style.display = "block";
-              }
-            }
-
-            const prvSidebar = document.getElementById("sidebar-prv-link");
-            if (prvSidebar && userLevel >= 3) {
-              prvSidebar.style.display = "block";
-            }
-
-            const checklistSidebar = document.getElementById("sidebar-checklist-link");
-            if (checklistSidebar && userLevel >= 4) {
-              checklistSidebar.style.display = "block";
-            }
-            
-            const nocSidebar = document.getElementById("sidebar-noc-link");
-            if (nocSidebar && userLevel >= 1) { // Permite acesso via sidebar se tiver nível
-                 nocSidebar.style.display = "block";
-            }
-
-            if (userLevel >= 4) {
-              initChecklistDiarioPorVeiculo();
-            }
-          })
-          .catch((error) => {
-            console.error("Erro ao buscar dados do usuário:", error);
-            window.location.href = "/login";
-          });
+        if (userLevel >= 4) {
+          initChecklistDiarioPorVeiculo();
+        }
       });
 
       function debounce(fn, wait) {

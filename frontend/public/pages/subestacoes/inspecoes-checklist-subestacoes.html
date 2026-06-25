@@ -12,9 +12,13 @@
       rel="stylesheet"
       href="/static/css/subestacoes/inspecoes-checklist-subestacoes.css"
     />
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
-    <div class="modal" id="modalPreSelecaoInspecao" style="display: flex">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="modal" id="modalPreSelecaoInspecao" style="display: flex">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
@@ -780,5 +784,7 @@
     </template>
 
     <script src="/scripts/subestacoes/inspecoes-checklist-subestacoes.js"></script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

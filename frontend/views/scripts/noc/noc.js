@@ -105,4 +105,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     conectarWebSocket();
+
+    const logoutButton = document.getElementById("noc-logout-btn");
+    if (logoutButton) {
+        logoutButton.addEventListener("click", async () => {
+            if (!confirm("Deseja sair do sistema?")) return;
+
+            try {
+                await fetch("/api/logout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                });
+            } catch (error) {
+                console.error("Erro ao fazer logout:", error);
+            } finally {
+                localStorage.removeItem("user");
+                localStorage.removeItem("token");
+                window.location.href = "/login";
+            }
+        });
+    }
 });

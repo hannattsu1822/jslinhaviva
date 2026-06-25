@@ -23,7 +23,7 @@
       rel="stylesheet"
       href="/static/css/components/bootstrap-overrides.css"
     />
-    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link
       rel="stylesheet"
       href="/static/css/avulsos/autorizacao_horas_extras.css"
@@ -31,13 +31,10 @@
   </head>
   <body>
     <div class="page-container">
-      <%- include('../../partials/sidebar.html') %>
+      <div id="sidebar-root"></div>
 
       <main class="main-content">
         <header class="main-header">
-          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
-            <i class="fa-solid fa-bars"></i>
-          </button>
           <div class="header-content">
             <h1 class="page-title">
               <i class="fa-solid fa-user-clock"></i>
@@ -321,7 +318,7 @@
     ></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.9/vfs_fonts.js"></script>
-    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/avulsos/autorizacao_horas_extras.js"></script>
   </body>
 </html>

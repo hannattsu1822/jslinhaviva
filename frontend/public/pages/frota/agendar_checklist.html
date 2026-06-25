@@ -16,9 +16,13 @@
     />
     <!-- Seu CSS nativo para esta página -->
     <link rel="stylesheet" href="/static/css/frota/agendar_checklist.css" />
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
-    <div class="container">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="container">
       <div class="header">
         <h1>
           <i class="material-icons">event_available</i> Gestão de Agendamentos
@@ -234,5 +238,7 @@
 
     <!-- Seu script JavaScript para esta página -->
     <script src="/scripts/frota/agendar_checklist.js"></script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

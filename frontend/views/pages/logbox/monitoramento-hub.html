@@ -16,9 +16,13 @@
 
     <link rel="stylesheet" href="/static/css/logbox/style.css" />
     <link rel="stylesheet" href="/static/css/logbox/hub.css" />
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
-    <div class="dashboard-container">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="dashboard-container">
       <h1>
         <span class="material-icons">hub</span>
         Hub de Monitoramento
@@ -97,5 +101,7 @@
     </div>
 
     <script src="/scripts/logbox/hub.js"></script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

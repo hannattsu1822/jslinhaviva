@@ -13,9 +13,13 @@
       rel="stylesheet"
       href="/static/css/gestao_turmas/controle-status.css"
     />
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
-    <div class="container">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="container">
       <header>
         <h1>Controle de Status de Funcionários</h1>
         <button
@@ -171,5 +175,7 @@
 
     <!-- Caminho com /static/ para o JavaScript -->
     <script src="/scripts/gestao_turmas/controle-status.js"></script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

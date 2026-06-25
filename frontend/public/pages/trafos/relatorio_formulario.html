@@ -66,10 +66,13 @@
         line-height: 1.4;
       }
     </style>
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
   </head>
 
   <body>
-    <div class="relatorio-container">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="relatorio-container">
       <h1>
         <i class="fas fa-file-alt icon"></i>Relatório de Transformador
         <span id="checklistId"></span>
@@ -97,5 +100,7 @@
     </div>
 
     <script src="/scripts/trafos/relatorio_formulario.js"></script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

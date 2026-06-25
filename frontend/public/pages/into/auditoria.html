@@ -41,9 +41,12 @@
         display: none; /* Escondido por padrão */
       }
     </style>
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
   </head>
   <body>
-    <div class="container-fluid mt-4">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="container-fluid mt-4">
       <div class="container-custom">
         <h1 class="page-title text-center mb-4">
           <i class="fas fa-shield-alt me-2"></i>Logs de Auditoria
@@ -187,5 +190,7 @@
         }
       }
     </script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

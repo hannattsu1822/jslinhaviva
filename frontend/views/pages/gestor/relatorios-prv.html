@@ -25,18 +25,15 @@
       href="/static/css/components/bootstrap-overrides.css"
     />
 
-    <link rel="stylesheet" href="/static/css/components/sidebar.css" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/gestor/relatorios-prv.css" />
   </head>
   <body>
     <div class="page-container">
-      <%- include('../../partials/sidebar.html') %>
+      <div id="sidebar-root"></div>
 
       <main class="main-content">
         <header class="main-header">
-          <button class="sidebar-toggle-button" aria-label="Toggle sidebar">
-            <i class="fa-solid fa-bars"></i>
-          </button>
           <div class="header-content">
             <h1 class="page-title">
               <i class="fa-solid fa-file-invoice"></i>
@@ -155,7 +152,7 @@
       crossorigin="anonymous"
     ></script>
 
-    <script src="/scripts/components/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/utils/toast.js"></script>
     <script src="/scripts/gestor/relatorios-prv.js"></script>
   </body>

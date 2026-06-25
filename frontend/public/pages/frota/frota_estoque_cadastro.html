@@ -13,9 +13,13 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/static/css/frota_styles.css" />
+      <link rel="stylesheet" href="/shared/css/sidebar.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body>
-    <header class="main-header">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<header class="main-header">
       <div class="logo">Gestão de Estoque</div>
       <nav class="main-nav">
         <a href="/frota_controle">Voltar ao Controle</a>
@@ -133,5 +137,7 @@
 
     <div id="toastContainer" class="toast-container"></div>
     <script src="/scripts/frota/frota_estoque_cadastro.js"></script>
+    </div>
+      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

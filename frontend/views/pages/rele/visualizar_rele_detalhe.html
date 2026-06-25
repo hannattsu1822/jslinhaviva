@@ -7,9 +7,13 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/logbox/style.css">
     <link rel="stylesheet" href="/static/css/reles/visualizar_rele_detalhe.css">
-</head>
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
 <body>
-    <div class="dashboard-container">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+<div class="dashboard-container">
         <div class="header">
             <h1 id="rele-name-header"><%= releNome %></h1>
             <div id="status-indicator" class="status-box status-no-data">
@@ -88,5 +92,7 @@
         const DADOS_INICIAIS = <%- JSON.stringify(ultimaLeitura || null) %>;
     </script>
     <script src="/scripts/reles/visualizar_rele_detalhe.js"></script>
-</body>
+    </div>
+    <script src="/shared/scripts/sidebar.js"></script>
+  </body>
 </html>
