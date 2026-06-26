@@ -92,10 +92,12 @@ async function carregarRelatorio() {
   relatorioContent.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--sys-color-text-secondary);">Carregando dados do relatório...</p>`;
 
   try {
-    const response = await fetch(
-      `/api/inspecoes_publico/${inspecaoId}?token=${encodeURIComponent(reportToken || "")}`,
-      { credentials: "same-origin" }
-    );
+    const response = reportToken
+      ? await fetch(
+          `/api/inspecoes_publico/${inspecaoId}?token=${encodeURIComponent(reportToken)}`,
+          { credentials: "same-origin" }
+        )
+      : await fetch(`/api/inspecoes/${inspecaoId}`, { credentials: "same-origin" });
     if (!response.ok) {
       const errorData = await response
         .json()

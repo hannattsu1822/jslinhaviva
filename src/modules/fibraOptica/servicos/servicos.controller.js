@@ -1,4 +1,5 @@
 const service = require("./servicos.service");
+const { assertAcessoServicoFibra } = require("../../../shared/accessControl.helper");
 const { registrarAuditoria } = require("../../../auth");
 
 async function obterResponsaveis(req, res) {
@@ -81,6 +82,7 @@ async function listarProjetosConcluidos(req, res) {
 
 async function obterDetalhesServico(req, res) {
   try {
+    await assertAcessoServicoFibra(req.user, req.params.id);
     const { servico, anexos } = await service.obterDetalhesServico(
       req.params.id
     );
@@ -115,13 +117,16 @@ async function obterDetalhesServico(req, res) {
       anexos: anexos,
     });
   } catch (error) {
-    const statusCode = error.message.includes("não encontrado") ? 404 : 500;
+    const statusCode =
+      error.statusCode ||
+      (error.message.includes("não encontrado") ? 404 : 500);
     res.status(statusCode).send(error.message);
   }
 }
 
 async function obterDadosParaEdicao(req, res) {
   try {
+    await assertAcessoServicoFibra(req.user, req.params.id);
     const { servico, responsaveis, anexos } =
       await service.obterDadosParaEdicao(req.params.id);
     res.render("pages/fibra_optica/editar_servico.html", {
@@ -132,7 +137,9 @@ async function obterDadosParaEdicao(req, res) {
     });
   } catch (error) {
     console.error("Erro ao carregar página de edição:", error);
-    const statusCode = error.message.includes("não encontrado") ? 404 : 500;
+    const statusCode =
+      error.statusCode ||
+      (error.message.includes("não encontrado") ? 404 : 500);
     res.status(statusCode).send(error.message);
   }
 }

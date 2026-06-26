@@ -67,9 +67,8 @@ async function obterChecklistPublico(req, res) {
     "checklist_transformador",
     req.params.id
   );
-  const isAuthenticatedUser = (req.session?.user?.nivel ?? 0) >= 3;
 
-  if (!hasValidToken && !isAuthenticatedUser) {
+  if (!hasValidToken) {
     return res.status(403).json({ message: "Token inválido ou expirado." });
   }
 
@@ -78,6 +77,17 @@ async function obterChecklistPublico(req, res) {
     res.status(200).json(checklist);
   } catch (err) {
     console.error("Erro API /checklist_transformadores_publico:", err);
+    const statusCode = err.message.includes("não encontrado") ? 404 : 500;
+    res.status(statusCode).json({ message: err.message });
+  }
+}
+
+async function obterChecklistAutenticado(req, res) {
+  try {
+    const checklist = await service.obterChecklistPublico(req.params.id);
+    res.status(200).json(checklist);
+  } catch (err) {
+    console.error("Erro API /checklist_transformadores:", err);
     const statusCode = err.message.includes("não encontrado") ? 404 : 500;
     res.status(statusCode).json({ message: err.message });
   }
@@ -175,6 +185,7 @@ module.exports = {
   obterHistoricoRemessas,
   salvarChecklist,
   obterChecklistPublico,
+  obterChecklistAutenticado,
   excluirChecklist,
   filtrarChecklists,
   gerarPdfChecklist,

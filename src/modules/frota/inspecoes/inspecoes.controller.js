@@ -139,9 +139,8 @@ async function gerarPdfInspecao(req, res) {
 async function obterInspecaoPublica(req, res) {
   const token = req.query.token;
   const hasValidToken = verifyReportToken(token, "inspecao_veiculo", req.params.id);
-  const isAuthenticatedUser = (req.session?.user?.nivel ?? 0) >= 2;
 
-  if (!hasValidToken && !isAuthenticatedUser) {
+  if (!hasValidToken) {
     return res.status(403).json({ message: "Token inválido ou expirado." });
   }
 

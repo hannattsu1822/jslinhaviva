@@ -3,6 +3,59 @@ let accessDeniedModalInstance;
 let developmentModalInstance;
 let user = null;
 
+const CARGOS_GESTAO = ["GERENTE", "ENGENHEIRO", "ADM", "ADMIN", "TÉCNICO"];
+
+function normalizarCargo(cargo) {
+  return (cargo || "").trim().toUpperCase();
+}
+
+async function resolverUsuario() {
+  try {
+    const response = await fetch("/api/me", { credentials: "same-origin" });
+    if (response.ok) {
+      user = await response.json();
+      localStorage.setItem("user", JSON.stringify(user));
+      return user;
+    }
+  } catch {
+    /* ignora falha de rede */
+  }
+
+  try {
+    user = JSON.parse(localStorage.getItem("user"));
+  } catch {
+    user = null;
+  }
+  return user;
+}
+
+function podeEditarServico() {
+  return Boolean(user && user.nivel >= 4);
+}
+
+function podeExcluirServico() {
+  return Boolean(user && user.nivel >= 7);
+}
+
+function podeGerenciarEquipe() {
+  if (!user) return false;
+  if (user.nivel >= 5) return true;
+  if (user.nivel < 4) return false;
+  return CARGOS_GESTAO.includes(normalizarCargo(user.cargo));
+}
+
+function aplicarPermissoesInterface() {
+  const btnEditar = document.getElementById("btn-editar");
+  const btnExcluir = document.getElementById("btn-excluir");
+
+  if (btnEditar) {
+    btnEditar.style.display = podeEditarServico() ? "" : "none";
+  }
+  if (btnExcluir) {
+    btnExcluir.style.display = podeExcluirServico() ? "" : "none";
+  }
+}
+
 function tratarValor(valor) {
   return valor || "Não informado";
 }
@@ -49,7 +102,16 @@ async function carregarDetalhesServico() {
   }
 
   try {
-    const response = await fetch(`/api/servicos/${servicoId}`);
+    const response = await fetch(`/api/servicos/${servicoId}`, {
+      credentials: "same-origin",
+    });
+
+    if (response.status === 403) {
+      mostrarErroDetalhes("Você não tem permissão para visualizar este serviço.");
+      aplicarPermissoesInterface();
+      return;
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       throw new Error(
@@ -153,19 +215,11 @@ async function carregarDetalhesServico() {
     renderizarBotaoForcarConclusao(data.status, servicoId);
 
     preencherAnexos(data.anexos || []);
+    aplicarPermissoesInterface();
   } catch (error) {
     console.error("Erro ao carregar detalhes do serviço:", error);
     mostrarErroDetalhes(error.message);
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Verifica se o usuário logado é gestor (nível >= 4 ou cargo gestor)
-// ─────────────────────────────────────────────────────────────────────────────
-function ehGestor() {
-  if (!user) return false;
-  const cargosGestores = ["Gerente", "Engenheiro", "ADM", "ADMIN"];
-  return user.nivel >= 4 || cargosGestores.includes(user.cargo);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -181,7 +235,7 @@ function preencherEquipeResponsavel(responsaveis, statusServico) {
   }
 
   const servicoConcluido = statusServico === "concluido" || statusServico === "nao_concluido";
-  const podeRemover = ehGestor() && !servicoConcluido;
+  const podeRemover = podeGerenciarEquipe() && !servicoConcluido;
 
   const table = document.createElement("table");
   table.className = "table table-sm table-borderless responsaveis-table";
@@ -266,6 +320,7 @@ async function executarRemocaoEncarregado(matriculaRemover) {
   try {
     const response = await fetch(`/api/servicos/${servicoId}/responsavel/${matriculaRemover}`, {
       method: "DELETE",
+      credentials: "same-origin",
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Erro ao remover encarregado.");
@@ -288,7 +343,7 @@ function renderizarBotaoForcarConclusao(statusServico, servicoId) {
   const btnAnterior = document.getElementById("btn-forcar-conclusao");
   if (btnAnterior) btnAnterior.remove();
 
-  if (!ehGestor()) return;
+  if (!podeGerenciarEquipe()) return;
   if (statusServico === "concluido" || statusServico === "nao_concluido") return;
 
   const btn = document.createElement("button");
@@ -365,6 +420,7 @@ function abrirModalForcarConclusao(servicoId) {
       const response = await fetch(`/api/servicos/${servicoId}/forcar-conclusao`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ dataConclusao, horaConclusao, observacoes }),
       });
       const result = await response.json();
@@ -463,7 +519,7 @@ window.navigateTo = async function (pageNameOrUrl) {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
-  user = JSON.parse(localStorage.getItem("user"));
+  await resolverUsuario();
 
   if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
     const confirmModalEl = document.getElementById("confirmModal");
@@ -474,31 +530,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
   }
 
+  aplicarPermissoesInterface();
   await carregarDetalhesServico();
-
-  if (user && user.nivel <= 2) {
-    const btnEditar = document.getElementById("btn-editar");
-    const btnExcluir = document.getElementById("btn-excluir");
-    if (btnEditar) btnEditar.style.display = "none";
-    if (btnExcluir) btnExcluir.style.display = "none";
-  }
 
   const urlParams = new URLSearchParams(window.location.search);
   const servicoId = urlParams.get("id");
 
   const btnEditar = document.getElementById("btn-editar");
-  if (btnEditar)
+  if (btnEditar && podeEditarServico()) {
     btnEditar.onclick = () => (window.location.href = `/editar_servico?id=${servicoId}`);
+  }
 
   const btnExcluir = document.getElementById("btn-excluir");
-  if (btnExcluir)
+  if (btnExcluir && podeExcluirServico()) {
     btnExcluir.onclick = () => confirmModalInstance && confirmModalInstance.show();
+  }
 
   const confirmDeleteBtn = document.getElementById("confirmDelete");
   if (confirmDeleteBtn) {
     confirmDeleteBtn.onclick = async () => {
+      if (!podeExcluirServico()) {
+        alert("Você não tem permissão para excluir este serviço.");
+        confirmModalInstance && confirmModalInstance.hide();
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/servicos/${servicoId}`, { method: "DELETE" });
+        const response = await fetch(`/api/servicos/${servicoId}`, {
+          method: "DELETE",
+          credentials: "same-origin",
+        });
         if (response.ok) {
           alert("Serviço excluído com sucesso!");
           window.location.href = "/servicos_ativos";

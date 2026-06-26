@@ -14,12 +14,12 @@ const { autenticar, verificarNivel } = require("./auth");
 const { iniciarClienteMQTT } = require("./mqtt_handler");
 
 mountSecureUploads(app, [
-  { urlPath: "/upload_arquivos_subestacoes", dir: uploadsSubestacoesDir, minNivel: 1 },
-  { urlPath: "/upload_arquivos_fibra", dir: uploadsFibraDir, minNivel: 1 },
-  { urlPath: "/trafos_reformados_anexos", dir: trafosReformadosAnexosDir, minNivel: 1 },
-  { urlPath: "/upload_InspDistRedes", dir: uploadsInspRedesDir, minNivel: 1 },
-  { urlPath: "/upload_checklist_diario_veiculos", dir: uploadsChecklistDailyDir, minNivel: 1 },
-  { urlPath: "/upload_arquivos_processos", dir: uploadsProcessosDir, minNivel: 1 },
+  { urlPath: "/upload_arquivos_subestacoes", dir: uploadsSubestacoesDir, minNivel: 2 },
+  { urlPath: "/upload_arquivos_fibra", dir: uploadsFibraDir, minNivel: 3 },
+  { urlPath: "/trafos_reformados_anexos", dir: trafosReformadosAnexosDir, minNivel: 3 },
+  { urlPath: "/upload_InspDistRedes", dir: uploadsInspRedesDir, minNivel: 3 },
+  { urlPath: "/upload_checklist_diario_veiculos", dir: uploadsChecklistDailyDir, minNivel: 3 },
+  { urlPath: "/upload_arquivos_processos", dir: uploadsProcessosDir, minNivel: 3 },
 ], { autenticar, verificarNivel });
 
 // ─── MQTT ─────────────────────────────────────────────────────────────────────

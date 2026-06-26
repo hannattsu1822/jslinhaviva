@@ -51,11 +51,13 @@ async function listarServicos(req, res) {
 async function obterDetalhesServico(req, res) {
   try {
     const { id } = req.params;
-    const resultado = await service.obterDetalhesServico(id);
+    const resultado = await service.obterDetalhesServico(id, req.user);
     res.status(200).json({ success: true, data: resultado });
   } catch (error) {
     console.error("Erro ao buscar detalhes do serviço:", error);
-    const statusCode = error.message === "Serviço não encontrado" ? 404 : 500;
+    const statusCode =
+      error.statusCode ||
+      (error.message === "Serviço não encontrado" ? 404 : 500);
     res.status(statusCode).json({
       success: false,
       message: error.message || "Erro ao buscar detalhes do serviço",

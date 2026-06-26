@@ -31,6 +31,12 @@ router.get(
   "/api/checklist_transformadores_publico/:id",
   controller.obterChecklistPublico
 );
+router.get(
+  "/api/checklist_transformadores/:id",
+  autenticar,
+  verificarNivel(3),
+  controller.obterChecklistAutenticado
+);
 router.delete(
   "/api/excluir_transformador/:id",
   autenticar,

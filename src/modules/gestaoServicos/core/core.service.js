@@ -7,6 +7,7 @@ const {
   determinarNomePastaParaServicoExistente,
 } = require("../utils/servico.helpers");
 const { formatarTamanhoArquivo } = require("../utils/file.helpers");
+const { assertAcessoServicoGestao } = require("../../../shared/accessControl.helper");
 
 async function criarServico(servicoData, files) {
   const connection = await promisePool.getConnection();
@@ -220,7 +221,9 @@ async function listarServicos(status, user) {
   return servicos;
 }
 
-async function obterDetalhesServico(id) {
+async function obterDetalhesServico(id, user) {
+  await assertAcessoServicoGestao(user, id);
+
   const connection = await promisePool.getConnection();
   try {
     const [servicoRows] = await connection.query(

@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const { projectRootDir } = require("../shared/path.helper");
-const { createUploadFileFilter } = require("../shared/secureUpload.middleware");
+const { createUploadFileFilter, validateMulterUploads } = require("../shared/secureUpload.middleware");
 const logger = require("../config/logger");
 
 function ensureDirectoryExists(dirPath, dirName) {
@@ -40,11 +40,40 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({
+const multerInstance = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024, files: 25 },
   fileFilter: createUploadFileFilter(),
 });
+
+function chainUploadMiddleware(...middlewares) {
+  return (req, res, next) => {
+    let index = 0;
+    const run = (err) => {
+      if (err) return next(err);
+      const middleware = middlewares[index];
+      index += 1;
+      if (!middleware) return next();
+      middleware(req, res, run);
+    };
+    run();
+  };
+}
+
+const upload = {
+  single: (fieldName) =>
+    chainUploadMiddleware(multerInstance.single(fieldName), validateMulterUploads),
+  array: (fieldName, maxCount) =>
+    chainUploadMiddleware(
+      multerInstance.array(fieldName, maxCount),
+      validateMulterUploads
+    ),
+  fields: (fields) =>
+    chainUploadMiddleware(multerInstance.fields(fields), validateMulterUploads),
+  any: () =>
+    chainUploadMiddleware(multerInstance.any(), validateMulterUploads),
+  none: () => chainUploadMiddleware(multerInstance.none()),
+};
 
 const anexoStorage = multer.diskStorage({
   destination: (req, _file, cb) => {
@@ -68,11 +97,24 @@ const anexoFileFilter = (_req, file, cb) => {
   }
 };
 
-const uploadAnexoChecklist = multer({
+const uploadAnexoChecklistMulter = multer({
   storage: anexoStorage,
   fileFilter: anexoFileFilter,
   limits: { fileSize: 3 * 1024 * 1024 },
 });
+
+const uploadAnexoChecklist = {
+  single: (fieldName) =>
+    chainUploadMiddleware(
+      uploadAnexoChecklistMulter.single(fieldName),
+      validateMulterUploads
+    ),
+  array: (fieldName, maxCount) =>
+    chainUploadMiddleware(
+      uploadAnexoChecklistMulter.array(fieldName, maxCount),
+      validateMulterUploads
+    ),
+};
 
 module.exports = {
   upload,

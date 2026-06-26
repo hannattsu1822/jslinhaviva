@@ -5,6 +5,10 @@ const { upload } = require("../../infrastructure/uploads");
 const { autenticar, verificarNivel, verificarCargo } = require("../../auth");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 const { resolvePathWithinBase, sendSafeFile } = require("../../shared/pathSecurity.helper");
+const {
+  assertAcessoServicoGestao,
+  extrairServicoIdDoIdentificador,
+} = require("../../shared/accessControl.helper");
 const coreController = require("./core/core.controller");
 const anexoController = require("./anexo/anexo.controller");
 const lifecycleController = require("./lifecycle/lifecycle.controller");
@@ -174,8 +178,23 @@ router.get(
   "/api/upload_arquivos/:identificador/:filename",
   autenticar,
   verificarNivel(2),
-  (req, res) => {
+  async (req, res) => {
     const { identificador, filename } = req.params;
+    const servicoId = extrairServicoIdDoIdentificador(identificador);
+
+    if (!servicoId) {
+      return res.status(400).json({ success: false, message: "Identificador inválido." });
+    }
+
+    try {
+      await assertAcessoServicoGestao(req.user, servicoId);
+    } catch (error) {
+      return res.status(error.statusCode || 403).json({
+        success: false,
+        message: error.message || "Acesso negado.",
+      });
+    }
+
     const baseDir = path.join(projectRootDir, "upload_arquivos");
     const filePath = resolvePathWithinBase(baseDir, identificador, filename);
 

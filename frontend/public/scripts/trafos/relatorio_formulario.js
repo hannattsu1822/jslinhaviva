@@ -75,10 +75,14 @@ async function carregarRelatorio() {
   relatorioContent.innerHTML = `<p style="text-align: center; padding: 30px; color: var(--sys-dark-gray); font-style: italic;"><i class="fas fa-spinner fa-spin"></i> Carregando dados do relatório...</p>`;
 
   try {
-    const response = await fetch(
-      `/api/checklist_transformadores_publico/${checklistId}?token=${encodeURIComponent(reportToken || "")}`,
-      { credentials: "same-origin" }
-    );
+    const response = reportToken
+      ? await fetch(
+          `/api/checklist_transformadores_publico/${checklistId}?token=${encodeURIComponent(reportToken)}`,
+          { credentials: "same-origin" }
+        )
+      : await fetch(`/api/checklist_transformadores/${checklistId}`, {
+          credentials: "same-origin",
+        });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
         message: `Erro HTTP: ${response.status}. Não foi possível obter detalhes do erro.`,
