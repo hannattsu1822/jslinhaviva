@@ -36,7 +36,14 @@ async function listarRegistros(veiculoId, mesAno) {
   const [ano, mes] = mesAno.split("-");
   const mesAnoFormatado = `${mes}/${ano}`;
   const [registros] = await promisePool.query(
-    "SELECT * FROM prv_registros WHERE veiculo_id = ? AND mes_ano_referencia = ? AND chegada_km IS NOT NULL ORDER BY dia, saida_horario",
+    `SELECT r.*,
+      DATE_FORMAT(
+        STR_TO_DATE(CONCAT(r.dia, '/', r.mes_ano_referencia), '%d/%m/%Y'),
+        '%Y-%m-%d'
+      ) AS data_viagem
+     FROM prv_registros r
+     WHERE r.veiculo_id = ? AND r.mes_ano_referencia = ? AND r.chegada_km IS NOT NULL
+     ORDER BY data_viagem, r.saida_horario`,
     [veiculoId, mesAnoFormatado]
   );
   return registros;

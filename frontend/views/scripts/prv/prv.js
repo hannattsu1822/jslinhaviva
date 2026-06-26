@@ -58,6 +58,19 @@ function normalizeKmPayload(payload) {
   return Number.isFinite(km) ? km : null;
 }
 
+  function formatarDiaPrv(registro) {
+    if (registro.data_viagem) {
+      const [ano, mes, dia] = String(registro.data_viagem).split("-");
+      if (ano && mes && dia) return `${dia}/${mes}/${ano}`;
+    }
+    if (registro.dia != null && registro.mes_ano_referencia) {
+      const [mes, ano] = String(registro.mes_ano_referencia).split("/");
+      if (mes && ano) {
+        return `${String(registro.dia).padStart(2, "0")}/${mes}/${ano}`;
+      }
+    }
+    return "—";
+  }
 
   const limparFormulario = () => {
     prvForm.reset();
@@ -162,9 +175,7 @@ function normalizeKmPayload(payload) {
       } - ${r.chegada_km || ""} KM</small>`;
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td data-label="Dia">${new Date(r.dia).toLocaleDateString("pt-BR", {
-          timeZone: "UTC",
-        })}</td>
+        <td data-label="Dia">${formatarDiaPrv(r)}</td>
         <td data-label="Saída">${saidaInfo}</td>
         <td data-label="Chegada">${chegadaInfo}</td>
         <td data-label="KM">${kmPercorrido}</td>
