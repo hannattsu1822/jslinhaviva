@@ -1,5 +1,5 @@
 /**
- * Permissões padrão por nível — usado em Serviços, Subestações e Fibra.
+ * Permissões padrão por nível — usado em Serviços, Subestações, Fibra e Redes.
  *
  * Nível 7+: controle total
  * Nível 2–4: operações básicas (nos registros atribuídos ao usuário)

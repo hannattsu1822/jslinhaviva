@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (!FibraPermissions.podeRegistrarServicoFibra?.(user)) {
+        window.location.replace("/fibra-optica");
+      }
+    })
+    .catch(() => {});
+
   const choiceModalEl = document.getElementById("choice-modal");
   const choiceModal = choiceModalEl
     ? new bootstrap.Modal(choiceModalEl, {

@@ -3,9 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   cards.forEach((card) => {
     const url = card.dataset.url;
-    if (!url) {
-      return;
-    }
+    if (!url) return;
 
     card.addEventListener("click", () => {
       window.location.href = url;
@@ -19,21 +17,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  function aplicarPermissoesDashboard(user) {
+  UiPermissoes.aguardarUsuario((user) => {
     if (!user) return;
-    const isAdmin = (user.nivel ?? 0) >= 7;
-    const cardRegistro = document.getElementById("card-fibra-registro");
-    if (cardRegistro && isAdmin) {
-      cardRegistro.style.display = "";
-    }
-  }
-
-  document.addEventListener("sidebar:ready", (event) => {
-    aplicarPermissoesDashboard(event.detail?.user);
+    UiPermissoes.aplicarCardsPorId(user, {
+      "card-fibra-registro": (u) =>
+        FibraPermissions.podeRegistrarServicoFibra?.(u),
+      "card-fibra-andamento": (u) =>
+        FibraPermissions.podeAcessarModuloFibra?.(u),
+      "card-fibra-concluidos": (u) =>
+        FibraPermissions.podeAcessarModuloFibra?.(u),
+      "card-fibra-coletar": (u) =>
+        FibraPermissions.podeColetarPontosFibra?.(u),
+      "card-fibra-visualizar-mapa": (u) =>
+        FibraPermissions.podeVisualizarMapaFibra?.(u),
+      "card-fibra-gerenciar-pontos": (u) =>
+        FibraPermissions.podeGerenciarPontosFibra?.(u),
+    });
   });
-
-  fetch("/api/me", { credentials: "same-origin" })
-    .then((r) => (r.ok ? r.json() : null))
-    .then(aplicarPermissoesDashboard)
-    .catch(() => {});
 });

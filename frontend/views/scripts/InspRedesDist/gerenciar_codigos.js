@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (!RedePermissions.podeGerenciarCodigos?.(user)) {
+        window.location.replace("/inspecoes-redes");
+      }
+    })
+    .catch(() => {});
+
   const modalTipoEl = document.getElementById("modal-tipo");
   const modalTipo = new bootstrap.Modal(modalTipoEl);
   const formTipo = document.getElementById("form-tipo");

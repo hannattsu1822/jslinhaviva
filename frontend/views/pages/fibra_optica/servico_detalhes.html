@@ -47,12 +47,15 @@
             <a href="/projetos_fibra_andamento" class="btn btn-secondary">
               <i class="fa-solid fa-arrow-left me-2"></i>Voltar para Lista
             </a>
+            <% if (permissoes.podeGerenciar) { %>
             <a
               href="/fibra/servico/<%= servico.id %>/editar"
               class="btn btn-primary"
+              id="btn-editar-servico-fibra"
             >
               <i class="fa-solid fa-pencil me-2"></i>Editar Serviço
             </a>
+            <% } %>
           </div>
 
           <div class="row g-4">
@@ -265,11 +268,10 @@
 
     <div id="toast-container"></div>
 
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-      crossorigin="anonymous"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="/scripts/shared/moduloNivel.permissions.js"></script>
+    <script src="/scripts/shared/uiPermissoes.js"></script>
+    <script src="/scripts/fibra_optica/fibra.permissions.js"></script>
     <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/utils/toast.js"></script>
     <script src="/scripts/fibra_optica/servico_detalhes.js"></script>

@@ -1,6 +1,7 @@
 const service = require("./servicos.service");
 const { assertAcessoServicoFibra } = require("../../../shared/accessControl.helper");
 const { registrarAuditoria } = require("../../../auth");
+const { buildPermissoesFibra } = require("../fibra.view.helper");
 
 async function obterResponsaveis(req, res) {
   try {
@@ -8,6 +9,7 @@ async function obterResponsaveis(req, res) {
     res.render("pages/fibra_optica/registro_projeto.html", {
       user: req.session.user,
       responsaveis: responsaveis,
+      permissoes: buildPermissoesFibra(req.user),
     });
   } catch (error) {
     res.status(500).send("Erro ao carregar a página de registro de projeto.");
@@ -49,6 +51,7 @@ async function listarProjetosAndamento(req, res) {
       encarregados: encarregadosParaFiltro,
       statusOptions: statusPermitidos,
       filtros: req.query,
+      permissoes: buildPermissoesFibra(req.user),
     });
   } catch (error) {
     console.error("Erro ao carregar projetos em andamento:", error);
@@ -74,6 +77,7 @@ async function listarProjetosConcluidos(req, res) {
       encarregados: encarregadosParaFiltro,
       statusOptions: statusPermitidos,
       filtros: req.query,
+      permissoes: buildPermissoesFibra(req.user),
     });
   } catch (error) {
     res.status(500).send("Erro ao carregar a página de serviços concluídos.");
@@ -115,6 +119,7 @@ async function obterDetalhesServico(req, res) {
       user: req.session.user,
       servico: servicoParaRenderizar,
       anexos: anexos,
+      permissoes: buildPermissoesFibra(req.user),
     });
   } catch (error) {
     const statusCode =
@@ -134,6 +139,7 @@ async function obterDadosParaEdicao(req, res) {
       servico: servico,
       responsaveis: responsaveis,
       anexos: anexos,
+      permissoes: buildPermissoesFibra(req.user),
     });
   } catch (error) {
     console.error("Erro ao carregar página de edição:", error);
@@ -146,6 +152,7 @@ async function obterDadosParaEdicao(req, res) {
 
 async function editarServico(req, res) {
   try {
+    await assertAcessoServicoFibra(req.user, req.params.id);
     const { connection } = await service.editarServico(
       req.params.id,
       req.body,
@@ -193,6 +200,7 @@ async function modificarAtribuicao(req, res) {
 
 async function finalizarServico(req, res) {
   try {
+    await assertAcessoServicoFibra(req.user, req.body.servicoId);
     const pontosMapa = req.body.pontosMapa
       ? JSON.parse(req.body.pontosMapa)
       : [];
@@ -211,10 +219,11 @@ async function finalizarServico(req, res) {
     res.json({ message: "Serviço finalizado com sucesso!" });
   } catch (error) {
     const statusCode =
-      error.message.includes("incompletos") ||
+      error.statusCode ||
+      (error.message.includes("incompletos") ||
       error.message.includes("inválido")
         ? 400
-        : 500;
+        : 500);
     res.status(statusCode).json({ message: error.message });
   }
 }
@@ -270,11 +279,12 @@ async function excluirServico(req, res) {
 
 async function obterAnexosAPR(req, res) {
   try {
+    await assertAcessoServicoFibra(req.user, req.params.id);
     const anexos = await service.obterAnexosAPR(req.params.id);
     res.json(anexos);
   } catch (error) {
     console.error("Erro ao buscar anexos APR:", error);
-    res.status(500).json({ message: "Erro interno ao buscar anexos." });
+    res.status(error.statusCode || 500).json({ message: error.message || "Erro interno ao buscar anexos." });
   }
 }
 

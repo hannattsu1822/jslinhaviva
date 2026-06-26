@@ -99,7 +99,7 @@
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <form class="row g-3 align-items-end" method="GET" action="/projetos_fibra_concluidos">
-                            <% if (user.nivel >= 7) { %>
+                            <% if (permissoes.podeGerenciar) { %>
                             <div class="col-md-3">
                                 <label for="encarregado" class="form-label">Encarregado</label>
                                 <select id="encarregado" name="encarregado" class="form-select">
@@ -168,7 +168,7 @@
                                                 <a href="/fibra/servico/<%= servico.id %>" class="btn btn-sm btn-secondary" title="Ver Detalhes">
                                                     <i class="fa-solid fa-eye"></i>
                                                 </a>
-                                                <% if (user.nivel >= 7) { %>
+                                                <% if (permissoes.podeGerenciar) { %>
                                                 <button class="btn btn-sm btn-orange btn-apr <%= servico.apr_count > 0 ? 'has-aprs' : '' %>" title="Gerenciar APRs">
                                                     <i class="fa-solid fa-file-signature"></i>
                                                 </button>
@@ -198,7 +198,9 @@
     <div id="toast-container"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
+    <script src="/scripts/shared/moduloNivel.permissions.js"></script>
+    <script src="/scripts/shared/uiPermissoes.js"></script>
+    <script src="/scripts/fibra_optica/fibra.permissions.js"></script>
     <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/utils/toast.js"></script>
     <script src="/scripts/fibra_optica/projetos_concluidos.js"></script>

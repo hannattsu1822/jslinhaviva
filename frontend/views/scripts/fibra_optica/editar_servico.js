@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (!FibraPermissions.podeEditarServicoFibra?.(user)) {
+        window.location.replace("/fibra-optica");
+      }
+    })
+    .catch(() => {});
+
   const form = document.getElementById("form-editar-servico");
   if (!form) return;
 

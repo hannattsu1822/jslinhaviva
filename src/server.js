@@ -15,9 +15,9 @@ const { iniciarClienteMQTT } = require("./mqtt_handler");
 
 mountSecureUploads(app, [
   { urlPath: "/upload_arquivos_subestacoes", dir: uploadsSubestacoesDir, minNivel: 2 },
-  { urlPath: "/upload_arquivos_fibra", dir: uploadsFibraDir, minNivel: 3 },
+  { urlPath: "/upload_arquivos_fibra", dir: uploadsFibraDir, minNivel: 2 },
   { urlPath: "/trafos_reformados_anexos", dir: trafosReformadosAnexosDir, minNivel: 3 },
-  { urlPath: "/upload_InspDistRedes", dir: uploadsInspRedesDir, minNivel: 3 },
+  { urlPath: "/upload_InspDistRedes", dir: uploadsInspRedesDir, minNivel: 2 },
   { urlPath: "/upload_checklist_diario_veiculos", dir: uploadsChecklistDailyDir, minNivel: 3 },
   { urlPath: "/upload_arquivos_processos", dir: uploadsProcessosDir, minNivel: 3 },
 ], { autenticar, verificarNivel });

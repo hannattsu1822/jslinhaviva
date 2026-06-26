@@ -118,7 +118,7 @@
                             Date(ponto.created_at).toLocaleString('pt-BR') %>
                           </td>
                           <td data-label="Ações" class="text-end">
-                            <% if (user.nivel >= 7) { %>
+                            <% if (permissoes.podeGerenciar) { %>
                             <button
                               class="btn btn-sm btn-danger btn-delete-point"
                               data-id="<%= ponto.id %>"
@@ -154,11 +154,10 @@
 
     <div id="toast-container"></div>
 
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-      crossorigin="anonymous"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="/scripts/shared/moduloNivel.permissions.js"></script>
+    <script src="/scripts/shared/uiPermissoes.js"></script>
+    <script src="/scripts/fibra_optica/fibra.permissions.js"></script>
     <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/utils/toast.js"></script>
     <script src="/scripts/fibra_optica/mapa_fibra.js"></script>

@@ -71,7 +71,7 @@ const SIDEBAR_PERMISSIONS_BY_LEVEL = {
   "sidebar-gestao-servicos-link": NIVEL_ACESSO_MIN,
   "sidebar-gestao-turmas-link": 3,
   "sidebar-fibra-optica-link": NIVEL_ACESSO_MIN,
-  "sidebar-inspecoes-redes-link": 3,
+  "sidebar-inspecoes-redes-link": NIVEL_ACESSO_MIN,
   "sidebar-avulsos-link": NIVEL_ACESSO_MIN,
   "sidebar-monitoramento-link": 5,
   "sidebar-gestao-link": 5,

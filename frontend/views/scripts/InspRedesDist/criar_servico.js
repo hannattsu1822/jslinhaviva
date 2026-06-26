@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (!RedePermissions.podeRegistrarInspecao?.(user)) {
+        window.location.replace("/inspecoes-redes");
+      }
+    })
+    .catch(() => {});
+
   // --- Elementos do Formulário ---
   const form = document.getElementById("form-criar-servico");
   const submitButton = document.getElementById("btn-submit");

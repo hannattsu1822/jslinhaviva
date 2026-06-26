@@ -57,10 +57,37 @@ async function assertAcessoServicoFibra(user, servicoId) {
   }
 }
 
+async function usuarioTemAcessoServicoRede(user, servicoId) {
+  if (!user?.matricula) return false;
+  if (temControleTotal(user)) return true;
+
+  const id = parseInt(servicoId, 10);
+  if (!Number.isFinite(id) || id <= 0) return false;
+
+  const [rows] = await promisePool.query(
+    `SELECT 1 FROM redes_servicos_responsaveis
+     WHERE id_servico = ? AND responsavel_matricula = ?
+     LIMIT 1`,
+    [id, user.matricula]
+  );
+  return rows.length > 0;
+}
+
+async function assertAcessoServicoRede(user, servicoId) {
+  const permitido = await usuarioTemAcessoServicoRede(user, servicoId);
+  if (!permitido) {
+    const err = new Error("Acesso negado a esta inspeção de rede.");
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 module.exports = {
   extrairServicoIdDoIdentificador,
   usuarioTemAcessoServicoGestao,
   assertAcessoServicoGestao,
   usuarioTemAcessoServicoFibra,
   assertAcessoServicoFibra,
+  usuarioTemAcessoServicoRede,
+  assertAcessoServicoRede,
 };

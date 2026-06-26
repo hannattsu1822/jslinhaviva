@@ -73,7 +73,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4" id="card-fibra-andamento" style="display: none">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/projetos_fibra_andamento"
@@ -94,7 +94,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4" id="card-fibra-concluidos" style="display: none">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/projetos_fibra_concluidos"
@@ -116,7 +116,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4" id="card-fibra-coletar" style="display: none">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/mapa_fibra"
@@ -137,7 +137,7 @@
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4" id="card-fibra-visualizar-mapa" style="display: none">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/visualizacao_mapa_fibra"
@@ -158,8 +158,7 @@
               </div>
             </div>
 
-            <% if (user.nivel >= 7) { %>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4" id="card-fibra-gerenciar-pontos" style="display: none">
               <div
                 class="card h-100 dashboard-card shadow-sm"
                 data-url="/gerenciar-pontos-fibra"
@@ -179,7 +178,6 @@
                 </div>
               </div>
             </div>
-            <% } %>
           </div>
         </div>
       </main>
@@ -190,6 +188,9 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
+    <script src="/scripts/shared/moduloNivel.permissions.js"></script>
+    <script src="/scripts/shared/uiPermissoes.js"></script>
+    <script src="/scripts/fibra_optica/fibra.permissions.js"></script>
     <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/fibra_optica/dashboard_fibra.js"></script>
   </body>

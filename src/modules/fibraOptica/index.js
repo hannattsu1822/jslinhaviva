@@ -3,9 +3,10 @@ const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../auth");
 const {
-  NIVEL_ADMIN,
+  NIVEL_ADMIN_FIBRA,
   NIVEL_ACESSO_MIN,
 } = require("./fibra.permissions");
+const { buildPermissoesFibra } = require("./fibra.view.helper");
 const { projectRootDir } = require("../../shared/path.helper");
 const { promisePool } = require("../../infrastructure/database");
 
@@ -15,16 +16,18 @@ const mapaRoutes = require("./mapa/mapa.routes");
 router.get("/fibra-optica", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
   res.render("pages/fibra_optica/dashboard_fibra.html", {
     user: req.session.user,
+    permissoes: buildPermissoesFibra(req.user),
   });
 });
 
 router.get(
   "/visualizacao_mapa_fibra",
   autenticar,
-  verificarNivel(NIVEL_ACESSO_MIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   (req, res) => {
     res.render("pages/fibra_optica/visualizacao_mapa.html", {
       user: req.session.user,
+      permissoes: buildPermissoesFibra(req.user),
     });
   }
 );
@@ -32,7 +35,7 @@ router.get(
 router.get(
   "/gerenciar-pontos-fibra",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   async (req, res) => {
     try {
       const sql = `
@@ -50,6 +53,7 @@ router.get(
       res.render("pages/fibra_optica/gerenciar_pontos_fibra.html", {
         user: req.session.user,
         pontos: pontos,
+        permissoes: buildPermissoesFibra(req.user),
       });
     } catch (error) {
       console.error(

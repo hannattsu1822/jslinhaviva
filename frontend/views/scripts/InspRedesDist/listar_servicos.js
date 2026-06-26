@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
+  const P = () => window.RedePermissions || {};
+  let currentUser = null;
+
   const tabelaServicosBody = document.querySelector("#tabela-servicos tbody");
   const filtroProcesso = document.getElementById("filtro-processo");
   const filtroData = document.getElementById("filtro-data");
@@ -33,6 +36,8 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    const isAdmin = P().temControleTotal?.(currentUser);
+
     servicos.forEach((servico) => {
       const dataFormatada = new Date(servico.data_servico).toLocaleDateString(
         "pt-BR",
@@ -56,12 +61,16 @@ document.addEventListener("DOMContentLoaded", function () {
           }/coletar" class="btn btn-outline-primary btn-icon" title="Coletar Pontos">
             <span class="material-icons">edit_location_alt</span>
           </a>
-          <button class="btn btn-outline-secondary btn-icon btn-atribuir" title="Atribuir Responsável">
+          ${
+            isAdmin
+              ? `<button class="btn btn-outline-secondary btn-icon btn-atribuir" title="Atribuir Responsável">
             <span class="material-icons">group_add</span>
           </button>
           <button class="btn btn-outline-danger btn-icon btn-excluir" title="Excluir Inspeção">
             <span class="material-icons">delete</span>
-          </button>
+          </button>`
+              : ""
+          }
         </td>
       `;
       tabelaServicosBody.appendChild(tr);
@@ -70,30 +79,40 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function inicializarPagina() {
     try {
-      const [servicosResponse, responsaveisResponse] = await Promise.all([
-        fetch("/inspecoes/api/servicos/lista"),
-        fetch("/inspecoes/api/responsaveis"),
-      ]);
+      const userResponse = await fetch("/api/me", { credentials: "same-origin" });
+      if (userResponse.ok) {
+        currentUser = await userResponse.json();
+      }
+
+      const requests = [fetch("/inspecoes/api/servicos/lista")];
+      if (P().temControleTotal?.(currentUser)) {
+        requests.push(fetch("/inspecoes/api/responsaveis"));
+      }
+
+      const [servicosResponse, responsaveisResponse] = await Promise.all(
+        requests
+      );
 
       if (!servicosResponse.ok)
         throw new Error("Falha ao carregar a lista de inspeções.");
       allServicos = await servicosResponse.json();
       renderizarTabela(allServicos);
 
-      if (!responsaveisResponse.ok)
-        throw new Error("Falha ao carregar a lista de responsáveis.");
-      allResponsaveis = await responsaveisResponse.json();
-
-      responsaveisCheckboxContainer.innerHTML = allResponsaveis
-        .map(
-          (user) => `
+      if (responsaveisResponse?.ok) {
+        allResponsaveis = await responsaveisResponse.json();
+        responsaveisCheckboxContainer.innerHTML = allResponsaveis
+          .map(
+            (user) => `
         <div class="form-check">
           <input class="form-check-input" type="checkbox" value="${user.matricula}" id="resp-${user.matricula}">
           <label class="form-check-label" for="resp-${user.matricula}">${user.nome}</label>
         </div>
       `
-        )
-        .join("");
+          )
+          .join("");
+      } else if (P().temControleTotal?.(currentUser)) {
+        throw new Error("Falha ao carregar a lista de responsáveis.");
+      }
     } catch (error) {
       console.error(error);
       tabelaServicosBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${error.message}</td></tr>`;

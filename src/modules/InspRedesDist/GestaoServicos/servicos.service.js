@@ -2,6 +2,7 @@ const { promisePool } = require("../../../infrastructure/database");
 const path = require("path");
 const fs = require("fs");
 const { projectRootDir } = require("../../../shared/path.helper");
+const { temControleTotal } = require("../rede.permissions");
 
 async function obterResponsaveis() {
   const sql = `
@@ -38,7 +39,18 @@ async function salvarAnexosGerais(idServico, files, connection) {
   }
 }
 
-async function listarServicos() {
+async function listarServicos(usuario) {
+  const params = [];
+  let filtroResponsavel = "";
+  if (usuario && !temControleTotal(usuario)) {
+    filtroResponsavel = `
+      AND EXISTS (
+        SELECT 1 FROM redes_servicos_responsaveis rsr
+        WHERE rsr.id_servico = s.id AND rsr.responsavel_matricula = ?
+      )`;
+    params.push(usuario.matricula);
+  }
+
   const sql = `
     SELECT 
       s.id, s.processo, s.data_servico, s.tipo_ordem, s.alimentador, s.subestacao, s.status,
@@ -53,14 +65,25 @@ async function listarServicos() {
       (SELECT COUNT(*) FROM redes_servicos_pontos WHERE id_servico = s.id) as total_pontos
     FROM redes_servicos_info s
     LEFT JOIN users criador ON s.criador_matricula = criador.matricula
-    WHERE s.status != 'Finalizado'
+    WHERE s.status != 'Finalizado'${filtroResponsavel}
     ORDER BY s.data_servico DESC, s.id DESC
   `;
-  const [servicos] = await promisePool.query(sql);
+  const [servicos] = await promisePool.query(sql, params);
   return servicos;
 }
 
-async function listarServicosConcluidos() {
+async function listarServicosConcluidos(usuario) {
+  const params = [];
+  let filtroResponsavel = "";
+  if (usuario && !temControleTotal(usuario)) {
+    filtroResponsavel = `
+      AND EXISTS (
+        SELECT 1 FROM redes_servicos_responsaveis rsr
+        WHERE rsr.id_servico = s.id AND rsr.responsavel_matricula = ?
+      )`;
+    params.push(usuario.matricula);
+  }
+
   const sql = `
     SELECT 
       s.id, s.processo, s.data_servico, s.tipo_ordem, s.alimentador, s.subestacao, s.status,
@@ -75,10 +98,10 @@ async function listarServicosConcluidos() {
       (SELECT COUNT(*) FROM redes_servicos_pontos WHERE id_servico = s.id) as total_pontos
     FROM redes_servicos_info s
     LEFT JOIN users criador ON s.criador_matricula = criador.matricula
-    WHERE s.status = 'Finalizado'
+    WHERE s.status = 'Finalizado'${filtroResponsavel}
     ORDER BY s.data_finalizacao DESC, s.id DESC
   `;
-  const [servicos] = await promisePool.query(sql);
+  const [servicos] = await promisePool.query(sql, params);
   return servicos;
 }
 

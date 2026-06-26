@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (!FibraPermissions.podeColetarPontosFibra?.(user)) {
+        window.location.replace("/fibra-optica");
+      }
+    })
+    .catch(() => {});
+
   const form = document.getElementById("map-points-form");
   const mapPointsContainer = document.getElementById("map-points-container");
   const btnAddMapPoint = document.getElementById("btn-add-map-point");

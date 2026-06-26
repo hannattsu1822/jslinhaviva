@@ -1,10 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../auth");
+const { NIVEL_ACESSO_MIN } = require("./rede.permissions");
 
-// --- Rota para a página principal do módulo ---
-// Esta rota permanece como está.
-router.get("/inspecoes-redes", autenticar, verificarNivel(3), (req, res) => {
+router.get("/inspecoes-redes", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
   res.render("pages/InspRedesDist/dashboard_inspecoes.html", {
     user: req.session.user,
   });

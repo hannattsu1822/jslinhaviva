@@ -2,7 +2,12 @@ const { promisePool } = require("../../../infrastructure/database");
 const path = require("path");
 const fs = require("fs");
 const { projectRootDir } = require("../../../shared/path.helper");
-const { temControleTotal } = require("../fibra.permissions");
+const {
+  NIVEL_ADMIN,
+  NIVEL_ACESSO_MIN,
+  NIVEL_BASICO_MAX,
+  temControleTotal,
+} = require("../fibra.permissions");
 
 async function salvarAnexosFibra(
   servicoId,
@@ -45,7 +50,8 @@ async function salvarAnexosFibra(
 
 async function obterResponsaveis() {
   const [responsaveis] = await promisePool.query(
-    "SELECT matricula, nome FROM users WHERE nivel >= 7 ORDER BY nome ASC"
+    "SELECT matricula, nome FROM users WHERE nivel >= ? ORDER BY nome ASC",
+    [NIVEL_ADMIN]
   );
   return responsaveis;
 }
@@ -199,7 +205,8 @@ async function listarProjetos(filtros, usuario, statusPermitidos) {
 
   const [servicos] = await promisePool.query(sql, params);
   const [encarregadosParaFiltro] = await promisePool.query(
-    "SELECT matricula, nome FROM users WHERE nivel >= 2 AND nivel <= 4 AND nivel > 0 ORDER BY nome ASC"
+    "SELECT matricula, nome FROM users WHERE nivel >= ? AND nivel <= ? AND nivel > 0 ORDER BY nome ASC",
+    [NIVEL_ACESSO_MIN, NIVEL_BASICO_MAX]
   );
 
   return { servicos, encarregadosParaFiltro };
@@ -231,7 +238,8 @@ async function obterDadosParaEdicao(id) {
     throw new Error("Serviço não encontrado.");
   }
   const [responsaveis] = await promisePool.query(
-    "SELECT matricula, nome FROM users WHERE nivel >= 7 ORDER BY nome ASC"
+    "SELECT matricula, nome FROM users WHERE nivel >= ? ORDER BY nome ASC",
+    [NIVEL_ADMIN]
   );
   const [anexos] = await promisePool.query(
     "SELECT id, nome_original FROM anexos_servicos_fibra WHERE servico_id = ?",
@@ -344,7 +352,8 @@ async function editarServico(id, dados, files) {
 
 async function listarEncarregados() {
   const [encarregados] = await promisePool.query(
-    "SELECT matricula, nome, cargo FROM users WHERE nivel >= 2 AND nivel <= 4 AND nivel > 0 ORDER BY nome ASC"
+    "SELECT matricula, nome, cargo FROM users WHERE nivel >= ? AND nivel <= ? AND nivel > 0 ORDER BY nome ASC",
+    [NIVEL_ACESSO_MIN, NIVEL_BASICO_MAX]
   );
   return encarregados;
 }

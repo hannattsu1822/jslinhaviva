@@ -1,5 +1,6 @@
 const service = require("./servicos.service");
 const { registrarAuditoria } = require("../../../auth");
+const { assertAcessoServicoRede } = require("../../../shared/accessControl.helper");
 const path = require("path");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 const { chromium } = require("playwright"); // MUDANÇA: Importa o Playwright
@@ -70,6 +71,7 @@ async function handleGerarRelatorio(req, res) {
   let browser;
   try {
     const { id } = req.params;
+    await assertAcessoServicoRede(req.user, id);
     const servico = await service.obterServicoCompletoPorId(id);
 
     const dataForTemplate = {
@@ -155,7 +157,7 @@ async function handleGerarRelatorio(req, res) {
 
 async function handleListarServicos(req, res) {
   try {
-    const servicos = await service.listarServicos();
+    const servicos = await service.listarServicos(req.user);
     res.status(200).json(servicos);
   } catch (error) {
     console.error("Erro ao listar serviços via API:", error);
@@ -165,7 +167,7 @@ async function handleListarServicos(req, res) {
 
 async function handleListarServicosConcluidos(req, res) {
   try {
-    const servicos = await service.listarServicosConcluidos();
+    const servicos = await service.listarServicosConcluidos(req.user);
     res.status(200).json(servicos);
   } catch (error) {
     console.error("Erro ao listar serviços concluídos via API:", error);
@@ -189,11 +191,14 @@ async function handleObterResponsaveis(req, res) {
 
 async function handleObterDadosServico(req, res) {
   try {
+    await assertAcessoServicoRede(req.user, req.params.id);
     const servico = await service.obterServicoCompletoPorId(req.params.id);
     res.status(200).json(servico);
   } catch (error) {
     console.error("Erro ao buscar dados do serviço via API:", error);
-    const statusCode = error.message.includes("não encontrado") ? 404 : 500;
+    const statusCode =
+      error.statusCode ||
+      (error.message.includes("não encontrado") ? 404 : 500);
     res.status(statusCode).json({ message: error.message });
   }
 }
@@ -202,10 +207,13 @@ async function handleObterDadosPonto(req, res) {
   try {
     const { idPonto } = req.params;
     const ponto = await service.obterPontoCompletoPorId(idPonto);
+    await assertAcessoServicoRede(req.user, ponto.id_servico);
     res.status(200).json({ ponto });
   } catch (error) {
     console.error("Erro ao buscar dados do ponto via API:", error);
-    const statusCode = error.message.includes("não encontrado") ? 404 : 500;
+    const statusCode =
+      error.statusCode ||
+      (error.message.includes("não encontrado") ? 404 : 500);
     res.status(statusCode).json({ message: error.message });
   }
 }
@@ -235,6 +243,7 @@ async function handleCriarServico(req, res) {
 async function handleAdicionarAnexosGerais(req, res) {
   try {
     const { id } = req.params;
+    await assertAcessoServicoRede(req.user, id);
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "Nenhum arquivo foi enviado." });
     }
@@ -247,7 +256,9 @@ async function handleAdicionarAnexosGerais(req, res) {
     res.status(200).json({ message: "Anexo(s) adicionado(s) com sucesso!" });
   } catch (error) {
     console.error("Erro ao adicionar anexos gerais:", error);
-    const statusCode = error.message.includes("não encontrado") ? 404 : 500;
+    const statusCode =
+      error.statusCode ||
+      (error.message.includes("não encontrado") ? 404 : 500);
     res.status(statusCode).json({ message: error.message });
   }
 }
@@ -321,6 +332,7 @@ async function handleDeletarServico(req, res) {
 async function handleAdicionarPonto(req, res) {
   try {
     const { id: idServico } = req.params;
+    await assertAcessoServicoRede(req.user, idServico);
     const novoPonto = await service.adicionarPonto(idServico, req.body);
     await registrarAuditoria(
       req.session.user.matricula,
@@ -341,6 +353,8 @@ async function handleAdicionarPonto(req, res) {
 async function handleAtualizarPonto(req, res) {
   try {
     const { idPonto } = req.params;
+    const pontoExistente = await service.obterPontoCompletoPorId(idPonto);
+    await assertAcessoServicoRede(req.user, pontoExistente.id_servico);
     const pontoAtualizado = await service.atualizarPonto(idPonto, req.body);
     await registrarAuditoria(
       req.session.user.matricula,
@@ -353,11 +367,13 @@ async function handleAtualizarPonto(req, res) {
     });
   } catch (error) {
     console.error("Erro ao atualizar ponto de inspeção:", error);
-    const statusCode = error.message.includes("obrigatórios")
-      ? 400
-      : error.message.includes("não encontrado")
-      ? 404
-      : 500;
+    const statusCode =
+      error.statusCode ||
+      (error.message.includes("obrigatórios")
+        ? 400
+        : error.message.includes("não encontrado")
+        ? 404
+        : 500);
     res.status(statusCode).json({ message: error.message });
   }
 }
@@ -384,6 +400,7 @@ async function handleDeletarPonto(req, res) {
 async function handleSincronizarPontos(req, res) {
   try {
     const { idServico } = req.params;
+    await assertAcessoServicoRede(req.user, idServico);
     const syncData = req.body;
 
     const result = await service.sincronizarPontos(idServico, syncData);
@@ -406,7 +423,7 @@ async function handleSincronizarPontos(req, res) {
     });
   } catch (error) {
     console.error("Erro no controller ao sincronizar pontos:", error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       message: error.message || "Erro interno ao sincronizar pontos.",
     });
   }
@@ -415,6 +432,7 @@ async function handleSincronizarPontos(req, res) {
 async function handleAdicionarAnexos(req, res) {
   try {
     const { idServico, idPonto } = req.params;
+    await assertAcessoServicoRede(req.user, idServico);
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "Nenhum arquivo foi enviado." });
     }
@@ -451,6 +469,7 @@ async function handleDeletarAnexo(req, res) {
 async function handleFinalizarServico(req, res) {
   try {
     const { id } = req.params;
+    await assertAcessoServicoRede(req.user, id);
     const { data_finalizacao } = req.body;
     await service.finalizarServico(id, data_finalizacao);
     await registrarAuditoria(

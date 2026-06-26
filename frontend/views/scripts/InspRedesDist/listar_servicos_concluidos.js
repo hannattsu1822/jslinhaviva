@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
+  const P = () => window.RedePermissions || {};
+  let currentUser = null;
+
   const tabelaServicosBody = document.querySelector(
     "#tabela-servicos-concluidos tbody"
   );
@@ -30,6 +33,8 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    const isAdmin = P().temControleTotal?.(currentUser);
+
     servicos.forEach((servico) => {
       const dataFormatada = new Date(servico.data_servico).toLocaleDateString(
         "pt-BR",
@@ -58,12 +63,16 @@ document.addEventListener("DOMContentLoaded", function () {
           }/relatorio" class="btn btn-outline-dark btn-icon" title="Gerar Relatório PDF" target="_blank">
             <span class="material-icons">picture_as_pdf</span>
           </a>
-          <button class="btn btn-outline-warning btn-icon btn-reativar" title="Reativar Inspeção">
+          ${
+            isAdmin
+              ? `<button class="btn btn-outline-warning btn-icon btn-reativar" title="Reativar Inspeção">
             <span class="material-icons">replay</span>
           </button>
           <button class="btn btn-outline-primary btn-icon btn-anexar-apr" title="Anexar APR">
             <span class="material-icons">attach_file</span>
-          </button>
+          </button>`
+              : ""
+          }
         </td>
       `;
       tabelaServicosBody.appendChild(tr);
@@ -72,6 +81,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function inicializarPagina() {
     try {
+      const userResponse = await fetch("/api/me", { credentials: "same-origin" });
+      if (userResponse.ok) {
+        currentUser = await userResponse.json();
+      }
+
       const response = await fetch("/inspecoes/api/servicos/concluidos");
       if (!response.ok) {
         throw new Error("Falha ao carregar a lista de inspeções concluídas.");

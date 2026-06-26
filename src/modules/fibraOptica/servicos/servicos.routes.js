@@ -3,7 +3,7 @@ const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../auth");
 const { upload } = require("../../../infrastructure/uploads");
 const {
-  NIVEL_ADMIN,
+  NIVEL_ADMIN_FIBRA,
   NIVEL_ACESSO_MIN,
 } = require("../fibra.permissions");
 const controller = require("./servicos.controller");
@@ -11,13 +11,13 @@ const controller = require("./servicos.controller");
 router.get(
   "/registro_projeto_fibra",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   controller.obterResponsaveis
 );
 router.post(
   "/registro_projeto_fibra",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   upload.array("anexos", 10),
   controller.registrarProjeto
 );
@@ -42,26 +42,26 @@ router.get(
 router.get(
   "/fibra/servico/:id/editar",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   controller.obterDadosParaEdicao
 );
 router.post(
   "/fibra/servico/:id/editar",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   upload.array("anexos", 10),
   controller.editarServico
 );
 router.get(
   "/api/fibra/encarregados",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   controller.listarEncarregados
 );
 router.post(
   "/api/fibra/modificar-atribuicao",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   controller.modificarAtribuicao
 );
 router.post(
@@ -74,20 +74,20 @@ router.post(
 router.post(
   "/api/fibra/reabrir-servico",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   controller.reabrirServico
 );
 router.post(
   "/api/fibra/upload-apr",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   upload.array("anexosAPR", 5),
   controller.anexarAPR
 );
 router.delete(
   "/api/fibra/servico/:id",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   controller.excluirServico
 );
 router.get(
@@ -99,7 +99,7 @@ router.get(
 router.delete(
   "/api/fibra/anexo-apr/:id",
   autenticar,
-  verificarNivel(NIVEL_ADMIN),
+  verificarNivel(NIVEL_ADMIN_FIBRA),
   controller.excluirAnexoAPR
 );
 

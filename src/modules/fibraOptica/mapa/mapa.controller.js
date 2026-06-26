@@ -1,5 +1,6 @@
 const service = require("./mapa.service");
 const { registrarAuditoria } = require("../../../auth");
+const { buildPermissoesFibra } = require("../fibra.view.helper");
 
 async function carregarPaginaMapa(req, res) {
   try {
@@ -7,6 +8,7 @@ async function carregarPaginaMapa(req, res) {
     res.render("pages/fibra_optica/mapa_fibra.html", {
       user: req.session.user,
       ultimosPontos: ultimosPontos,
+      permissoes: buildPermissoesFibra(req.user),
     });
   } catch (error) {
     console.error("Erro ao carregar a página do mapa de fibra:", error);
@@ -49,6 +51,7 @@ async function carregarPaginaEdicao(req, res) {
     res.render("pages/fibra_optica/editar_ponto_fibra.html", {
       user: req.session.user,
       ponto: ponto,
+      permissoes: buildPermissoesFibra(req.user),
     });
   } catch (error) {
     console.error("Erro ao carregar página de edição de ponto:", error);

@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (!FibraPermissions.podeVisualizarMapaFibra?.(user)) {
+        window.location.replace("/fibra-optica");
+      }
+    })
+    .catch(() => {});
+
   const mapElement = document.getElementById("map");
   if (!mapElement) {
     console.error("Elemento do mapa não encontrado!");

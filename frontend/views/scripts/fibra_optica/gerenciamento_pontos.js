@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (!FibraPermissions.podeGerenciarPontosFibra?.(user)) {
+        window.location.replace("/fibra-optica");
+      }
+    })
+    .catch(() => {});
+
   const confirmationModalEl = document.getElementById("confirmation-modal");
   const confirmationModal = confirmationModalEl
     ? new bootstrap.Modal(confirmationModalEl)

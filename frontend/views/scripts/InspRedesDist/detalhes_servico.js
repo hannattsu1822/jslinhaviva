@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
+  const P = () => window.RedePermissions || {};
+  let currentUser = null;
+
   const servicoId = window.location.pathname.split("/")[3];
   let servicoCache = null;
 
@@ -170,9 +173,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 <button class="btn btn-outline-primary btn-sm btn-editar-ponto" data-ponto-dados='${JSON.stringify(
                   ponto
                 )}'>Editar Ponto</button>
-                <button class="btn btn-outline-danger btn-sm btn-deletar-ponto" data-ponto-id="${
-                  ponto.id
-                }">Excluir Ponto</button>
+                ${
+                  P().temControleTotal?.(currentUser)
+                    ? `<button class="btn btn-outline-danger btn-sm btn-deletar-ponto" data-ponto-id="${ponto.id}">Excluir Ponto</button>`
+                    : ""
+                }
               </div>
             </div>
           </div>
@@ -184,12 +189,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function inicializarPagina() {
     try {
+      const userResponse = await fetch("/api/me", { credentials: "same-origin" });
+      if (userResponse.ok) {
+        currentUser = await userResponse.json();
+      }
+
+      const isAdmin = P().temControleTotal?.(currentUser);
+      const btnEditarHeader = document.getElementById(
+        "btn-editar-servico-header"
+      );
+      if (btnEditarHeader && !isAdmin) {
+        btnEditarHeader.style.display = "none";
+      }
+
+      const requests = [
+        fetch(`/inspecoes/api/servicos/${servicoId}/dados`),
+        fetch("/inspecoes/api/codigos/tags"),
+      ];
+      if (isAdmin) {
+        requests.push(fetch("/inspecoes/api/responsaveis"));
+      }
+
       const [servicoResponse, tagsResponse, responsaveisResponse] =
-        await Promise.all([
-          fetch(`/inspecoes/api/servicos/${servicoId}/dados`),
-          fetch("/inspecoes/api/codigos/tags"),
-          fetch("/inspecoes/api/responsaveis"),
-        ]);
+        await Promise.all(requests);
 
       if (!servicoResponse.ok) {
         throw new Error("Falha ao carregar os dados do serviço.");
@@ -211,13 +233,15 @@ document.addEventListener("DOMContentLoaded", function () {
         selectTagDefeito.add(option);
       });
 
-      const allResponsaveis = await responsaveisResponse.json();
-      selectEditCriador.innerHTML =
-        '<option value="" selected disabled>Selecione...</option>';
-      allResponsaveis.forEach((user) => {
-        const option = new Option(user.nome, user.matricula);
-        selectEditCriador.add(option);
-      });
+      if (responsaveisResponse?.ok) {
+        const allResponsaveis = await responsaveisResponse.json();
+        selectEditCriador.innerHTML =
+          '<option value="" selected disabled>Selecione...</option>';
+        allResponsaveis.forEach((user) => {
+          const option = new Option(user.nome, user.matricula);
+          selectEditCriador.add(option);
+        });
+      }
     } catch (error) {
       console.error(error);
       document.body.innerHTML = `<div class="alert alert-danger m-4">${error.message}</div>`;
