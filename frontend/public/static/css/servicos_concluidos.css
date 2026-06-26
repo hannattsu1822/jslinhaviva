@@ -55,3 +55,135 @@
   vertical-align: middle;
   margin-right: 8px;
 }
+
+/* ── Modal anexos posteriores ─────────────────────────────────── */
+.servicos-page--concluidos .anexos-posteriores-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 120px;
+  padding: 1.25rem;
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--lv-radius-md);
+  background: #f8fafc;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.servicos-page--concluidos .anexos-posteriores-upload-area:hover,
+.servicos-page--concluidos .anexos-posteriores-upload-area:focus-visible {
+  border-color: var(--lv-primary);
+  background: rgba(30, 86, 160, 0.05);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(30, 86, 160, 0.12);
+}
+
+.servicos-page--concluidos .anexos-posteriores-upload-area.dragover {
+  border-color: var(--lv-primary);
+  background: rgba(30, 86, 160, 0.08);
+}
+
+.servicos-page--concluidos .anexos-posteriores-upload-area__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: rgba(30, 86, 160, 0.1);
+  color: var(--lv-primary);
+  font-size: 1.25rem;
+}
+
+.servicos-page--concluidos .anexos-posteriores-upload-area__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--lv-text);
+}
+
+.servicos-page--concluidos .anexos-posteriores-vazio {
+  border: 1px dashed #e2e8f0;
+  border-radius: var(--lv-radius-sm);
+  background: #fafbfc;
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .anexo-preview-card {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--lv-radius-sm);
+  background: #fff;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .anexo-preview-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 130px;
+  background: #f1f5f9;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .anexo-preview-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.servicos-page--concluidos
+  .anexos-posteriores-preview
+  .anexo-preview-card:hover
+  .anexo-preview-thumb
+  img {
+  transform: scale(1.03);
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .anexo-preview-thumb i {
+  font-size: 2.5rem;
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .anexo-preview-body {
+  padding: 0.5rem 0.65rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .anexo-preview-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--lv-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .anexo-preview-size {
+  font-size: 0.72rem;
+  color: var(--lv-text-muted);
+}
+
+.servicos-page--concluidos .anexos-posteriores-preview .btn-remover-anexo {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.servicos-page--concluidos #anexosPosterioresModal .btn .material-symbols-outlined {
+  font-size: 1.1rem;
+  vertical-align: middle;
+  margin-right: 2px;
+}

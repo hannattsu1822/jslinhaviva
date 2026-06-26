@@ -287,7 +287,7 @@
       aria-labelledby="anexosPosterioresModalLabel"
       aria-hidden="true"
     >
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content glass-modal">
           <div class="modal-header">
             <h5 class="modal-title" id="anexosPosterioresModalLabel">
@@ -301,30 +301,80 @@
             ></button>
           </div>
           <div class="modal-body">
-            <p class="text-muted small mb-3">
+            <p class="anexos-posteriores-helper text-muted small mb-3">
               Adicione fotos ou documentos complementares sem reabrir o serviço.
               Máximo de 5 arquivos por envio, 10MB cada.
             </p>
             <form id="formAnexosPosteriores" enctype="multipart/form-data">
               <input type="hidden" id="anexosPosterioresServicoId" name="servicoId" />
-              <div class="mb-3">
-                <label for="anexosPosterioresFiles" class="form-label"
-                  >Selecionar arquivos</label
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="btnAnexosPosterioresCamera"
                 >
-                <input
-                  class="form-control glass-input"
-                  type="file"
-                  id="anexosPosterioresFiles"
-                  name="anexos"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx,.csv,.doc,.docx"
-                  multiple
-                  required
-                />
+                  <span class="material-symbols-outlined">photo_camera</span>
+                  Tirar foto
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  id="btnAnexosPosterioresArquivos"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                  Anexar arquivos
+                </button>
               </div>
-              <ul
+              <input
+                type="file"
+                class="d-none"
+                id="inputAnexosPosterioresCamera"
+                accept="image/*"
+                capture="environment"
+              />
+              <input
+                type="file"
+                class="d-none"
+                id="inputAnexosPosterioresArquivos"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx,.csv,.doc,.docx"
+                multiple
+              />
+              <div
+                class="anexos-posteriores-upload-area"
+                id="anexosPosterioresUploadArea"
+                role="button"
+                tabindex="0"
+                aria-label="Arrastar arquivos para anexar"
+              >
+                <div class="anexos-posteriores-upload-area__icon">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <p class="anexos-posteriores-upload-area__title mb-1">
+                  Arraste arquivos aqui ou clique para procurar
+                </p>
+                <small class="anexos-posteriores-upload-area__hint text-muted">
+                  PDF, imagens, Excel, Word e CSV
+                </small>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                <span class="form-label mb-0">Arquivos selecionados</span>
+                <span class="badge bg-secondary" id="anexosPosterioresContador"
+                  >0 / 5</span
+                >
+              </div>
+              <div
+                id="anexosPosterioresVazio"
+                class="anexos-posteriores-vazio text-muted text-center py-4"
+              >
+                <span class="material-symbols-outlined d-block mb-2" style="font-size: 2.5rem; opacity: 0.4"
+                  >folder_open</span
+                >
+                Nenhum arquivo selecionado. Use os botões acima ou arraste arquivos.
+              </div>
+              <div
                 id="anexosPosterioresPreview"
-                class="list-group list-group-flush small"
-              ></ul>
+                class="row g-3 anexos-posteriores-preview"
+              ></div>
             </form>
           </div>
           <div class="modal-footer">
@@ -336,6 +386,7 @@
               class="btn glass-btn btn-primary"
               id="btnConfirmarAnexosPosteriores"
             >
+              <span class="material-symbols-outlined">cloud_upload</span>
               Enviar anexos
             </button>
           </div>

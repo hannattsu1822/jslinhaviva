@@ -19,6 +19,10 @@ let developmentModalInstance;
 let currentServicoId = null;
 let aprUploadModalInstance;
 let anexosPosterioresModalInstance;
+const MAX_ANEXOS_POSTERIORES = 5;
+const MAX_TAMANHO_ANEXO_POSTERIOR = 10 * 1024 * 1024;
+let anexosPosterioresSelecionados = [];
+let anexosPosterioresObjectUrls = [];
 
 const elementos = {
   toastEl: null,
@@ -91,11 +95,63 @@ function configurarEventListeners() {
       submeterAnexosPosteriores
     );
 
-  const anexosPosterioresFiles = document.getElementById(
-    "anexosPosterioresFiles"
+  document
+    .getElementById("btnAnexosPosterioresCamera")
+    ?.addEventListener("click", () =>
+      document.getElementById("inputAnexosPosterioresCamera")?.click()
+    );
+  document
+    .getElementById("btnAnexosPosterioresArquivos")
+    ?.addEventListener("click", () =>
+      document.getElementById("inputAnexosPosterioresArquivos")?.click()
+    );
+  document
+    .getElementById("inputAnexosPosterioresCamera")
+    ?.addEventListener("change", (e) => {
+      adicionarAnexosPosteriores(e.target.files);
+      e.target.value = "";
+    });
+  document
+    .getElementById("inputAnexosPosterioresArquivos")
+    ?.addEventListener("change", (e) => {
+      adicionarAnexosPosteriores(e.target.files);
+      e.target.value = "";
+    });
+
+  const uploadArea = document.getElementById("anexosPosterioresUploadArea");
+  if (uploadArea) {
+    uploadArea.addEventListener("click", () =>
+      document.getElementById("inputAnexosPosterioresArquivos")?.click()
+    );
+    uploadArea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        document.getElementById("inputAnexosPosterioresArquivos")?.click();
+      }
+    });
+    uploadArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      uploadArea.classList.add("dragover");
+    });
+    uploadArea.addEventListener("dragleave", () => {
+      uploadArea.classList.remove("dragover");
+    });
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+      if (e.dataTransfer?.files?.length) {
+        adicionarAnexosPosteriores(e.dataTransfer.files);
+      }
+    });
+  }
+
+  const anexosPosterioresModalEl = document.getElementById(
+    "anexosPosterioresModal"
   );
-  if (anexosPosterioresFiles) {
-    anexosPosterioresFiles.addEventListener("change", atualizarPreviewAnexosPosteriores);
+  if (anexosPosterioresModalEl) {
+    anexosPosterioresModalEl.addEventListener("hidden.bs.modal", () => {
+      limparAnexosPosterioresSelecionados();
+    });
   }
 }
 
@@ -381,51 +437,164 @@ window.abrirModalUploadAPR = (id) => {
 window.abrirModalAnexosPosteriores = (id) => {
   currentServicoId = id;
   document.getElementById("anexosPosterioresServicoId").value = id;
-  const input = document.getElementById("anexosPosterioresFiles");
-  if (input) input.value = "";
-  atualizarPreviewAnexosPosteriores();
+  limparAnexosPosterioresSelecionados();
   anexosPosterioresModalInstance.show();
 };
 
-function atualizarPreviewAnexosPosteriores() {
-  const input = document.getElementById("anexosPosterioresFiles");
-  const preview = document.getElementById("anexosPosterioresPreview");
-  if (!input || !preview) return;
-  preview.innerHTML = "";
-  if (!input.files?.length) return;
-
-  Array.from(input.files).forEach((file) => {
-    const item = document.createElement("li");
-    item.className = "list-group-item";
-    item.textContent = `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
-    preview.appendChild(item);
-  });
+function limparAnexosPosterioresSelecionados() {
+  revogarUrlsAnexosPosteriores();
+  anexosPosterioresSelecionados = [];
+  renderizarPreviewAnexosPosteriores();
 }
 
-async function submeterAnexosPosteriores() {
-  const form = document.getElementById("formAnexosPosteriores");
-  const input = document.getElementById("anexosPosterioresFiles");
-  const servicoId = document.getElementById("anexosPosterioresServicoId").value;
-  const btn = document.getElementById("btnConfirmarAnexosPosteriores");
+function revogarUrlsAnexosPosteriores() {
+  anexosPosterioresObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  anexosPosterioresObjectUrls = [];
+}
 
-  if (!input?.files?.length) {
-    mostrarNotificacao("Selecione pelo menos um arquivo.", "warning");
+function arquivoJaSelecionado(file) {
+  return anexosPosterioresSelecionados.some(
+    (f) => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified
+  );
+}
+
+function obterIconeArquivoPosterior(file) {
+  const tipo = file.type || "";
+  const nome = file.name.toLowerCase();
+  if (tipo.includes("pdf") || nome.endsWith(".pdf")) {
+    return { icon: "fa-file-pdf", color: "text-danger" };
+  }
+  if (
+    tipo.includes("spreadsheet") ||
+    tipo.includes("excel") ||
+    /\.xls/.test(nome)
+  ) {
+    return { icon: "fa-file-excel", color: "text-success" };
+  }
+  if (tipo.includes("word") || /\.doc/.test(nome)) {
+    return { icon: "fa-file-word", color: "text-primary" };
+  }
+  if (tipo.includes("csv") || nome.endsWith(".csv")) {
+    return { icon: "fa-file-csv", color: "text-success" };
+  }
+  return { icon: "fa-file", color: "text-secondary" };
+}
+
+function formatarTamanhoArquivo(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function adicionarAnexosPosteriores(fileList) {
+  if (!fileList?.length) return;
+
+  const novos = Array.from(fileList).filter((file) => !arquivoJaSelecionado(file));
+  if (!novos.length) {
+    mostrarNotificacao("Arquivo(s) já adicionado(s).", "warning");
     return;
   }
-  if (input.files.length > 5) {
-    mostrarNotificacao("Envie no máximo 5 arquivos por vez.", "warning");
+
+  if (
+    anexosPosterioresSelecionados.length + novos.length >
+    MAX_ANEXOS_POSTERIORES
+  ) {
+    mostrarNotificacao(
+      `Máximo de ${MAX_ANEXOS_POSTERIORES} arquivos por envio.`,
+      "warning"
+    );
     return;
   }
 
-  for (const file of input.files) {
-    if (file.size > 10 * 1024 * 1024) {
-      mostrarNotificacao(`O arquivo ${file.name} excede 10MB.`, "warning");
+  for (const file of novos) {
+    if (file.size > MAX_TAMANHO_ANEXO_POSTERIOR) {
+      mostrarNotificacao(
+        `O arquivo "${file.name}" excede 10MB.`,
+        "warning"
+      );
       return;
     }
   }
 
+  anexosPosterioresSelecionados.push(...novos);
+  renderizarPreviewAnexosPosteriores();
+}
+
+window.removerAnexoPosterior = (index) => {
+  anexosPosterioresSelecionados.splice(index, 1);
+  renderizarPreviewAnexosPosteriores();
+};
+
+function renderizarPreviewAnexosPosteriores() {
+  const preview = document.getElementById("anexosPosterioresPreview");
+  const vazio = document.getElementById("anexosPosterioresVazio");
+  const contador = document.getElementById("anexosPosterioresContador");
+  if (!preview) return;
+
+  revogarUrlsAnexosPosteriores();
+  preview.innerHTML = "";
+
+  const total = anexosPosterioresSelecionados.length;
+  if (contador) contador.textContent = `${total} / ${MAX_ANEXOS_POSTERIORES}`;
+  if (vazio) vazio.style.display = total ? "none" : "block";
+
+  anexosPosterioresSelecionados.forEach((file, index) => {
+    const col = document.createElement("div");
+    col.className = "col-md-4 col-sm-6";
+
+    const isImage = file.type.startsWith("image/");
+    const previewUrl = isImage ? URL.createObjectURL(file) : null;
+    if (previewUrl) anexosPosterioresObjectUrls.push(previewUrl);
+
+    const { icon, color } = obterIconeArquivoPosterior(file);
+    const thumbHtml = isImage
+      ? `<img src="${previewUrl}" alt="${file.name}">`
+      : `<i class="fas ${icon} ${color}"></i>`;
+
+    col.innerHTML = `
+      <div class="anexo-preview-card">
+        <div class="anexo-preview-thumb" data-preview-index="${index}" title="Clique para visualizar">
+          ${thumbHtml}
+        </div>
+        <div class="anexo-preview-body">
+          <span class="anexo-preview-name" title="${file.name}">${file.name}</span>
+          <span class="anexo-preview-size">${formatarTamanhoArquivo(file.size)}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger btn-remover-anexo w-100">
+            <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">delete</span>
+            Remover
+          </button>
+        </div>
+      </div>
+    `;
+
+    col.querySelector(".anexo-preview-thumb")?.addEventListener("click", () => {
+      visualizarAnexoPosterior(file);
+    });
+    col.querySelector(".btn-remover-anexo")?.addEventListener("click", () => {
+      removerAnexoPosterior(index);
+    });
+
+    preview.appendChild(col);
+  });
+}
+
+function visualizarAnexoPosterior(file) {
+  const url = URL.createObjectURL(file);
+  window.open(url, "_blank", "noopener,noreferrer");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+async function submeterAnexosPosteriores() {
+  const servicoId = document.getElementById("anexosPosterioresServicoId").value;
+  const btn = document.getElementById("btnConfirmarAnexosPosteriores");
+
+  if (!anexosPosterioresSelecionados.length) {
+    mostrarNotificacao("Selecione pelo menos um arquivo.", "warning");
+    return;
+  }
+
   const formData = new FormData();
-  Array.from(input.files).forEach((file) => {
+  anexosPosterioresSelecionados.forEach((file) => {
     formData.append("anexos", file);
   });
 
@@ -443,6 +612,7 @@ async function submeterAnexosPosteriores() {
       throw new Error(result.message || `Erro HTTP: ${response.status}`);
     }
     mostrarNotificacao(result.message || "Anexos enviados com sucesso!", "success");
+    limparAnexosPosterioresSelecionados();
     anexosPosterioresModalInstance.hide();
   } catch (error) {
     mostrarNotificacao("Erro ao enviar anexos: " + error.message, "danger");
