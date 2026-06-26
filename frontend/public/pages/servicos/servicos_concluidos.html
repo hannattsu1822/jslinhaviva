@@ -23,7 +23,10 @@
     <link rel="stylesheet" href="/static/css/servicos_concluidos.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
   <body class="servicos-page servicos-page--concluidos">
     <div class="page-container">
       <div id="sidebar-root"></div>
@@ -46,9 +49,9 @@
                 <i class="fa-solid fa-arrow-left"></i>
                 Voltar
               </a>
-              <button
+              <button data-action="carregarServicosConcluidos"
                 class="btn glass-btn"
-                onclick="carregarServicosConcluidos()"
+               
               >
                 <span class="material-symbols-outlined">refresh</span>
                 Atualizar

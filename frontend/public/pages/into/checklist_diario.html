@@ -204,7 +204,10 @@
       }
     </style>
       <link rel="stylesheet" href="/shared/css/sidebar.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body>
     <div id="sidebar-root"></div>
@@ -354,19 +357,19 @@
                   />
 
                   <div class="upload-btn-wrapper">
-                    <button
+                    <button data-action="open-file" data-input="fileInput"
                       type="button"
                       class="btn-upload-custom btn-gallery"
-                      onclick="document.getElementById('fileInput').click()"
+                     
                     >
                       <i class="fas fa-images"></i>
                       Galeria
                     </button>
 
-                    <button
+                    <button data-action="open-file" data-input="cameraInput"
                       type="button"
                       class="btn-upload-custom btn-camera"
-                      onclick="document.getElementById('cameraInput').click()"
+                     
                     >
                       <i class="fas fa-camera"></i>
                       Câmera

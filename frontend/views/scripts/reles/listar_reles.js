@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             relesAtivos.forEach(rele => {
                 const card = document.createElement('div');
                 card.className = 'rele-select-card';
-                card.innerHTML = `
+                card.innerHTML = safeHtml`
                     <a href="/visualizar-reles/${rele.id}">
                         <h3><span class="material-icons">bolt</span>${rele.nome_rele}</h3>
                         <p>Tag: ${rele.local_tag || 'N/A'} &bull; IP: ${rele.ip_address}</p>

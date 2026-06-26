@@ -2,9 +2,16 @@ const service = require("./inspecoes.service");
 const { registrarAuditoria } = require("../../../auth");
 const { verifyReportToken } = require("../../../shared/reportToken.helper");
 
+function statusFromError(err, fallback = 500) {
+  if (err.statusCode) return err.statusCode;
+  if (err.message.includes("não encontrada")) return 404;
+  if (err.message.includes("Acesso negado")) return 403;
+  return fallback;
+}
+
 async function listarInspecoes(req, res) {
   try {
-    const inspecoes = await service.listarInspecoes();
+    const inspecoes = await service.listarInspecoes(req.user);
     res.status(200).json(inspecoes);
   } catch (err) {
     console.error("Erro ao buscar inspeções:", err);
@@ -14,18 +21,18 @@ async function listarInspecoes(req, res) {
 
 async function obterInspecaoPorId(req, res) {
   try {
-    const inspecao = await service.obterInspecaoPorId(req.params.id);
+    const inspecao = await service.obterInspecaoPorId(req.params.id, req.user);
     res.status(200).json(inspecao);
   } catch (err) {
     console.error("Erro ao buscar inspeção:", err);
-    const statusCode = err.message.includes("não encontrada") ? 404 : 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusFromError(err)).json({ message: err.message });
   }
 }
 
 async function salvarInspecao(req, res) {
   try {
-    await service.salvarInspecao(req.body);
+    const dados = { ...req.body, matricula: req.user.matricula };
+    await service.salvarInspecao(dados);
     await registrarAuditoria(
       req.user.matricula,
       "Salvar Inspeção",
@@ -59,7 +66,7 @@ async function filtrarInspecoes(req, res) {
 
 async function excluirInspecao(req, res) {
   try {
-    await service.excluirInspecao(req.params.id);
+    await service.excluirInspecao(req.params.id, req.user);
     await registrarAuditoria(
       req.user.matricula,
       "Excluir Inspeção",
@@ -68,14 +75,13 @@ async function excluirInspecao(req, res) {
     res.status(200).json({ message: "Inspeção excluída com sucesso!" });
   } catch (err) {
     console.error("Erro ao excluir inspeção:", err);
-    const statusCode = err.message.includes("não encontrada") ? 404 : 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusFromError(err)).json({ message: err.message });
   }
 }
 
 async function atualizarInspecao(req, res) {
   try {
-    await service.atualizarInspecao(req.params.id, req.body);
+    await service.atualizarInspecao(req.params.id, req.body, req.user);
     await registrarAuditoria(
       req.user.matricula,
       "Editar Inspeção",
@@ -89,9 +95,7 @@ async function atualizarInspecao(req, res) {
       err.message.includes("positivos") ||
       err.message.includes("Nenhum dado")
         ? 400
-        : err.message.includes("não encontrada")
-        ? 404
-        : 500;
+        : statusFromError(err);
     res.status(statusCode).json({ message: err.message });
   }
 }
@@ -116,7 +120,8 @@ async function gerarPdfInspecao(req, res) {
     const { nomeArquivo, pdfBuffer } = await service.gerarPdfInspecao(
       req.params.id,
       req.protocol,
-      req.get("host")
+      req.get("host"),
+      req.user
     );
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -127,8 +132,7 @@ async function gerarPdfInspecao(req, res) {
   } catch (err) {
     console.error("Erro ao gerar PDF de inspeção de veículo:", err);
     if (!res.headersSent) {
-      const statusCode = err.message.includes("não encontrada") ? 404 : 500;
-      res.status(statusCode).json({
+      res.status(statusFromError(err)).json({
         message: err.message,
         error: process.env.NODE_ENV === "development" ? err.message : undefined,
       });

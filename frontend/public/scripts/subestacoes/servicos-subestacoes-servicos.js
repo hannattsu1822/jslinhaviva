@@ -276,7 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>`
         : "";
 
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
           <td data-label="ID">${serv.id || "-"}</td>
           <td data-label="Processo">${serv.processo || "-"}</td>
           <td data-label="Subestação">${serv.subestacao_sigla || "-"}</td>

@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         previewHTML = `<i class="${fileTypeIcon}"></i>`;
       }
-      card.innerHTML = `
+      card.innerHTML = safeHtml`
         <div class="file-preview-thumbnail">${previewHTML}</div>
         <div class="file-preview-info"><span class="file-preview-name">${file.name}</span></div>
         <button type="button" class="remove-file-btn" data-index="${index}" aria-label="Remover arquivo">

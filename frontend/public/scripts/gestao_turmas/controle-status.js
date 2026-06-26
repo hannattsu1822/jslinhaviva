@@ -373,7 +373,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     btnSalvarStatus.disabled = true;
-    btnSalvarStatus.innerHTML = `<i class="material-icons spin">sync</i> ${
+    btnSalvarStatus.innerHTML = safeHtml`<i class="material-icons spin">sync</i> ${
       id ? "Atualizando..." : "Salvando..."
     }`;
     try {

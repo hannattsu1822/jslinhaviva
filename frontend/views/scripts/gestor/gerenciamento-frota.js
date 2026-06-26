@@ -109,13 +109,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (veiculos.length === 0) {
       const colCount =
         veiculoTableBody.previousElementSibling.querySelectorAll("th").length;
-      veiculoTableBody.innerHTML = `<tr><td colspan="${colCount}" class="text-center p-5"><i class="fa-solid fa-truck-arrow-right fa-2x text-muted mb-2"></i><p>Nenhum veículo encontrado.</p></td></tr>`;
+      veiculoTableBody.innerHTML = safeHtml`<tr><td colspan="${colCount}" class="text-center p-5"><i class="fa-solid fa-truck-arrow-right fa-2x text-muted mb-2"></i><p>Nenhum veículo encontrado.</p></td></tr>`;
       return;
     }
 
     veiculos.forEach((veiculo) => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
         <td>${veiculo.modelo}</td>
         <td>${veiculo.placa}</td>
         <td>${veiculo.tipo || ""}</td>

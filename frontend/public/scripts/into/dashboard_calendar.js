@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       "Erro ao carregar agendamentos para o calendário do dashboard:",
       error
     );
-    calendarEl.innerHTML = `<p class="text-center text-danger py-5">Erro ao carregar agendamentos: ${error.message}</p>`;
+    calendarEl.innerHTML = safeHtml`<p class="text-center text-danger py-5">Erro ao carregar agendamentos: ${error.message}</p>`;
     return;
   }
 

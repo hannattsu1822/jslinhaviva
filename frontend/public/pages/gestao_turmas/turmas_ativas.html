@@ -19,7 +19,10 @@
     <link rel="stylesheet" href="/static/css/turmas_ativas.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="turmas-page turmas-page--ativas">
     <div class="page-container">
@@ -46,7 +49,7 @@
               <button
                 id="addMemberBtn"
                 class="btn btn-primary"
-                onclick="window.openAddModal()"
+                data-action="openAddModal"
               >
                 <i class="fa-solid fa-user-plus"></i>
                 Adicionar Membro
@@ -252,7 +255,7 @@
             <button
               type="button"
               class="btn btn-primary turmas-btn"
-              onclick="window.saveEdit()"
+              data-action="saveEdit"
             >
               Salvar Alterações
             </button>

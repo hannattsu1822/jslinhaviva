@@ -136,7 +136,7 @@ function showSuccess(result) {
           </div>
         </div>`;
 
-  messageArea.innerHTML = `
+  messageArea.innerHTML = safeHtml`
         <div class="message-icon">
           <i class="fa-solid fa-circle-check"></i>
         </div>
@@ -144,10 +144,10 @@ function showSuccess(result) {
           <h4>${result.message || "Importação Concluída!"}</h4>
           ${successDetails}
           <div class="action-buttons mt-4">
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-action="reload">
               <i class="fa-solid fa-rotate-right me-2"></i>Nova Importação
             </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="window.location.href='/transformadores'">
+            <button type="button" class="btn btn-primary btn-sm" data-action="navigate" data-href="/transformadores">
               <i class="fa-solid fa-bolt me-2"></i>Voltar ao Hub
             </button>
           </div>
@@ -165,14 +165,14 @@ function showError(message) {
   const messageArea = document.getElementById("messageArea");
   if (!messageArea) return;
 
-  messageArea.innerHTML = `
+  messageArea.innerHTML = safeHtml`
         <div class="message-icon">
           <i class="fa-solid fa-circle-exclamation"></i>
         </div>
         <div class="message-content">
           <h4>Erro na Importação</h4>
           <p>${message || "Ocorreu um erro desconhecido."}</p>
-          <button type="button" class="btn btn-outline-danger mt-3 btn-sm" onclick="location.reload()">
+          <button type="button" class="btn btn-outline-danger mt-3 btn-sm" data-action="reload">
             <i class="fa-solid fa-rotate-right me-2"></i>Tentar Novamente
           </button>
         </div>`;

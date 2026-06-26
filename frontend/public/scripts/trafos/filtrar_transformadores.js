@@ -259,7 +259,7 @@ async function gerarPDFTabela() {
 }
 
 async function gerarPDF(id) {
-  const btnPDF = document.querySelector(`button[onclick="gerarPDF('${id}')"]`);
+  const btnPDF = document.querySelector(`button[data-action="gerarPDF" data-target="${id}"]`);
   if (!btnPDF) return;
   const originalHTML = btnPDF.innerHTML;
   btnPDF.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -336,7 +336,7 @@ function exibirResultados(dados) {
   dados.forEach((item) => {
     const row = document.createElement("tr");
     row.className = "glass-table-row";
-    row.innerHTML = `
+    row.innerHTML = safeHtml`
       <td data-label="ID">${item.id || "-"}</td>
       <td data-label="Número de Série">${item.numero_serie || "-"}</td>
       <td data-label="Potência (kVA)">${item.potencia || "-"}</td>
@@ -350,19 +350,13 @@ function exibirResultados(dados) {
       <td data-label="Destinado">${item.transformador_destinado || "Não informado"}</td>
       <td data-label="Ações">
         <div class="d-flex gap-2 justify-content-center">
-          <button onclick="excluirTransformador('${
-            item.id
-          }')" class="btn btn-sm btn-danger glass-btn" title="Excluir">
+          <button data-action="excluirTransformador" data-target="${item.id}" class="btn btn-sm btn-danger glass-btn" title="Excluir">
             <i class="fas fa-trash"></i>
           </button>
-          <button onclick="abrirRelatorio('${
-            item.id
-          }')" class="btn btn-sm btn-success glass-btn" title="Relatório">
+          <button data-action="abrirRelatorio" data-target="${item.id}" class="btn btn-sm btn-success glass-btn" title="Relatório">
             <i class="fas fa-file-alt"></i>
           </button>
-          <button onclick="gerarPDF('${
-            item.id
-          }')" class="btn btn-sm btn-pdf glass-btn" title="Gerar PDF">
+          <button data-action="gerarPDF" data-target="${item.id}" class="btn btn-sm btn-pdf glass-btn" title="Gerar PDF">
             <i class="fas fa-file-pdf"></i>
           </button>
         </div>

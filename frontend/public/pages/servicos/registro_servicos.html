@@ -18,7 +18,10 @@
     />
     <link rel="stylesheet" href="/static/css/registro_servicos.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="servicos-page servicos-page--registro">
     <div class="page-container">
@@ -69,14 +72,14 @@
                 <button
                   type="button"
                   class="btn btn-danger"
-                  onclick="setEmergencial(true)"
+                  data-action="setEmergencial" data-bool="true"
                 >
                   <i class="fas fa-exclamation-triangle me-2"></i>Emergencial
                 </button>
                 <button
                   type="button"
                   class="btn btn-primary"
-                  onclick="setEmergencial(false)"
+                  data-action="setEmergencial" data-bool="false"
                 >
                   <i class="fas fa-file-alt me-2"></i>Normal
                 </button>

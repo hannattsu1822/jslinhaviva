@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const tr = document.createElement("tr");
       tr.className = "insp-redes-table-row";
       tr.dataset.servicoId = servico.id;
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
         <td data-label="ID/Processo" class="insp-redes-cell-processo"><strong>${
           servico.processo
         }</strong><br /><small>ID: ${servico.id}</small></td>
@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", function () {
       renderizarTabela(allServicosConcluidos);
     } catch (error) {
       console.error(error);
-      tabelaServicosBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${error.message}</td></tr>`;
+      tabelaServicosBody.innerHTML = safeHtml`<tr><td colspan="7" class="text-center text-danger py-4">${error.message}</td></tr>`;
     }
   }
 

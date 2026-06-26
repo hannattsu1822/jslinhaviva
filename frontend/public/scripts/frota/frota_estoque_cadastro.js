@@ -31,9 +31,10 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function showToast(title, message, isError = false) {
+    const esc = window.escapeHtml || ((v) => String(v ?? ""));
     const toast = document.createElement("div");
     toast.className = `toast ${isError ? "error" : "success"}`;
-    toast.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>`;
+    toast.innerHTML = safeHtml`<div class="toast-title">${esc(title)}</div><div>${esc(message)}</div>`;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.classList.add("show"), 10);
     setTimeout(() => {
@@ -60,12 +61,12 @@ document.addEventListener("DOMContentLoaded", function () {
           queryParams && queryParams !== "?"
             ? "Nenhuma peça encontrada com os critérios fornecidos."
             : "Utilize os filtros para buscar as peças.";
-        itensEstoqueTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center;">${message}</td></tr>`;
+        itensEstoqueTableBody.innerHTML = safeHtml`<tr><td colspan="5" style="text-align: center;">${message}</td></tr>`;
         return;
       }
       itens.forEach((item) => {
         const row = document.createElement("tr");
-        row.innerHTML = `
+        row.innerHTML = safeHtml`
                     <td>${item.id}</td>
                     <td>${item.cod || ""}</td>
                     <td>${item.nome || ""}</td>

@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const isImage = anexo.tipo === "imagem";
       const iconClass = isImage ? "" : "fas fa-file-alt fa-2x";
 
-      anexoItem.innerHTML = `
+      anexoItem.innerHTML = safeHtml`
         ${
           isImage
             ? `<img src="${anexo.caminho}" alt="${anexo.nomeOriginal}">`
@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const iconClass = isImage ? "" : "fas fa-file-alt fa-2x";
       const previewSrc = isImage ? URL.createObjectURL(file) : "";
 
-      anexoItem.innerHTML = `
+      anexoItem.innerHTML = safeHtml`
         ${
           isImage
             ? `<img src="${previewSrc}" alt="${file.name}">`

@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const fileItem = document.createElement("div");
       fileItem.className =
         "list-group-item d-flex justify-content-between align-items-center";
-      fileItem.innerHTML = `
+      fileItem.innerHTML = safeHtml`
         <span>
           <i class="fa-solid fa-file me-2"></i>
           ${file.name}

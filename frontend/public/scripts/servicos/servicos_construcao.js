@@ -234,7 +234,7 @@ function renderTable() {
   currentServices.forEach((service) => {
     const row = document.createElement("tr");
 
-    row.innerHTML = `
+    row.innerHTML = safeHtml`
       <td><strong>#${service.id}</strong></td>
       <td>${service.processo || "—"}</td>
       <td>${service.nomes_responsaveis || "Sem equipe"}</td>
@@ -254,7 +254,7 @@ function renderTable() {
         </a>
         <button
           class="btn btn-sm btn-outline-secondary"
-          onclick="window.open('/api/servicos/${service.id}/consolidar-pdfs', '_blank')"
+          data-action="open-url" data-url="/api/servicos/${service.id}/consolidar-pdfs"
           title="Gerar Relatório PDF"
         >
           <i class="fas fa-file-pdf"></i>
@@ -372,12 +372,12 @@ async function carregarServicos() {
     console.error("[FRONTEND] Erro ao carregar serviços:", error);
 
     if (tbody) {
-      tbody.innerHTML = `
+      tbody.innerHTML = safeHtml`
         <tr>
           <td colspan="10" class="text-center py-4 text-danger">
             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
             <p>Erro ao carregar serviços: ${error.message}</p>
-            <button class="btn btn-sm btn-primary" onclick="carregarServicos()">
+            <button class="btn btn-sm btn-primary" data-action="carregarServicos">
               <i class="fas fa-redo me-1"></i>Tentar novamente
             </button>
           </td>

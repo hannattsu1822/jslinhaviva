@@ -227,7 +227,7 @@ async function loadHistorico(veiculoId = null) {
                 timeZone: "UTC",
               })
             : "N/A");
-        row.innerHTML = `
+        row.innerHTML = safeHtml`
             <td>${dataTroca}</td>
             <td>${item.placa || "N/A"}</td>
             <td>${item.modelo || "N/A"}</td>
@@ -240,9 +240,7 @@ async function loadHistorico(veiculoId = null) {
             <td>${dataRegistro}</td>
             <td>${item.observacoes || "-"}</td>
             <td>
-                <button class="btn btn-sm btn-delete" onclick="excluirTrocaOleo(${
-                  item.id
-                }, this)" title="Excluir">
+                <button class="btn btn-sm btn-delete" data-action="excluirTrocaOleo" data-id="${item.id}" title="Excluir">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </td>`;
@@ -254,7 +252,7 @@ async function loadHistorico(veiculoId = null) {
     }
   } catch (error) {
     console.error("Erro em loadHistorico:", error);
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Erro ao carregar histórico: ${error.message}</td></tr>`;
+    tbody.innerHTML = safeHtml`<tr><td colspan="8" class="text-center text-danger">Erro ao carregar histórico: ${error.message}</td></tr>`;
     noHistoryDiv.style.display = "none";
   }
 }

@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const esc = window.escapeHtml || ((v) => String(v ?? ""));
   const userTableBody = document.getElementById("user-table-body");
   const loadingMessage = document.getElementById("loading-message");
   const addUserBtn = document.getElementById("add-user-btn");
@@ -102,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (users.length === 0) {
       const colCount =
         userTableBody.previousElementSibling.querySelectorAll("th").length;
-      userTableBody.innerHTML = `<tr><td colspan="${colCount}" class="text-center p-5"><i class="fa-solid fa-user-slash fa-2x text-muted mb-2"></i><p>Nenhum usuário encontrado.</p></td></tr>`;
+      userTableBody.innerHTML = safeHtml`<tr><td colspan="${colCount}" class="text-center p-5"><i class="fa-solid fa-user-slash fa-2x text-muted mb-2"></i><p>Nenhum usuário encontrado.</p></td></tr>`;
       return;
     }
 
@@ -119,13 +120,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const toggleTitle = isAtivo ? "Desativar" : "Ativar";
       const toggleClass = isAtivo ? "text-secondary" : "text-success";
 
-      tr.innerHTML = `
-        <td>${user.nome}</td>
-        <td>${user.matricula}</td>
-        <td>${user.cargo}</td>
+      tr.innerHTML = safeHtml`
+        <td>${esc(user.nome)}</td>
+        <td>${esc(user.matricula)}</td>
+        <td>${esc(user.cargo)}</td>
         <td><span class="badge ${
           isAtivo ? "bg-primary" : "bg-secondary"
-        }">Nível ${user.nivel}</span></td>
+        }">Nível ${esc(user.nivel)}</span></td>
         <td class="text-end">
             <button class="btn btn-sm btn-outline-secondary toggle-status" data-user-id="${
               user.id
@@ -137,9 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }" title="Editar"><i class="fa-solid fa-pencil"></i></button>
             <button class="btn btn-sm btn-outline-danger delete" data-user-id="${
               user.id
-            }" data-user-name="${
-        user.nome
-      }" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+            }" data-user-name="${esc(user.nome)}" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
         </td>
       `;
       userTableBody.appendChild(tr);

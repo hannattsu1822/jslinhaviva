@@ -175,7 +175,7 @@
       openPdfExternally(item);
       const box = document.createElement("div");
       box.className = "anexo-galeria-pdf";
-      box.innerHTML = `
+      box.innerHTML = safeHtml`
         <span class="material-symbols-outlined">picture_as_pdf</span>
         <p>${item.nome}</p>
         <p class="anexo-galeria-pdf-hint">O PDF foi aberto em uma nova aba para leitura completa do documento.</p>
@@ -192,7 +192,7 @@
 
     const box = document.createElement("div");
     box.className = "anexo-galeria-arquivo";
-    box.innerHTML = `
+    box.innerHTML = safeHtml`
       <span class="material-symbols-outlined">description</span>
       <p>${item.nome}</p>
       <a href="${item.url}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">

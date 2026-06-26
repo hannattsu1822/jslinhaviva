@@ -1,16 +1,23 @@
 const express = require("express");
 const path = require("path");
 const { applySecurityMiddleware } = require("./config/security");
+const { cspNonceMiddleware, createStaticWithHtmlNonce } = require("./middleware/cspNonce");
 const { frontendDir, publicDir, viewsDir } = require("./shared/path.helper");
 
 function createBaseApp(logger) {
   const app = express();
   app.set("trust proxy", 1);
 
+  app.use(cspNonceMiddleware);
   applySecurityMiddleware(app);
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: process.env.REQUEST_BODY_LIMIT || "15mb" }));
+  app.use(
+    express.urlencoded({
+      limit: process.env.REQUEST_BODY_LIMIT || "15mb",
+      extended: true,
+    })
+  );
 
   app.engine("html", require("ejs").renderFile);
   app.set("view engine", "html");
@@ -19,7 +26,7 @@ function createBaseApp(logger) {
   const serveFrontend = process.env.SERVE_FRONTEND !== "false";
 
   if (serveFrontend) {
-    app.use(express.static(publicDir));
+    app.use(createStaticWithHtmlNonce(publicDir));
     logger.info(`[Static] Servindo frontend/public: ${publicDir}`);
 
     app.use("/scripts", express.static(path.join(viewsDir, "scripts")));

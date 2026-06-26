@@ -25,6 +25,7 @@ router.get("/dashboard-gestor", autenticar, verificarNivel(4), (req, res) => {
 router.get(
   "/logbox-devices",
   autenticar,
+  verificarNivel(4),
   controller.renderizarPaginaLogboxDevices
 );
 

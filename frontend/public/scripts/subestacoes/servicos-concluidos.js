@@ -246,14 +246,16 @@ document.addEventListener("DOMContentLoaded", () => {
               }" title="Anexar Documento Posterior"><span class="material-symbols-outlined">attach_file_add</span></button>`
         : "";
 
-      tr.innerHTML = `
+      const esc = window.escapeHtml || ((v) => String(v ?? ""));
+
+      tr.innerHTML = safeHtml`
           <td data-label="ID">${serv.id || "-"}</td>
-          <td data-label="Processo">${serv.processo || "-"}</td>
-          <td data-label="Subestação">${serv.subestacao_sigla || "-"}</td>
-          <td data-label="Motivo / Origem" title="${serv.motivo || ""}">${motivoDisplay}</td>
-          <td data-label="Tipo Ordem">${serv.tipo_ordem || "-"}</td>
+          <td data-label="Processo">${esc(serv.processo || "-")}</td>
+          <td data-label="Subestação">${esc(serv.subestacao_sigla || "-")}</td>
+          <td data-label="Motivo / Origem" title="${esc(serv.motivo || "")}">${motivoDisplay}</td>
+          <td data-label="Tipo Ordem">${esc(serv.tipo_ordem || "-")}</td>
           <td data-label="Data Conclusão" class="text-center">${dataConclusaoFormatada}</td>
-          <td data-label="Responsável">${serv.responsavel_nome || "-"}</td>
+          <td data-label="Responsável">${esc(serv.responsavel_nome || "-")}</td>
           <td data-label="Status" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
           <td data-label="APR" class="actions-column text-center">${aprButtonHtml}</td>
           <td data-label="Ações" class="actions-column text-center">
@@ -421,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
       anexos.forEach((anexo) => {
         const li = document.createElement("li");
         li.className = "apr-anexo-item";
-        li.innerHTML = `
+        li.innerHTML = safeHtml`
           <a href="${anexo.caminho_servidor}" target="_blank">
             <span class="material-symbols-outlined">description</span>
             ${anexo.nome_original}

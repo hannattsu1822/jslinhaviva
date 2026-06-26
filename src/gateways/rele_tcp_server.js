@@ -7,6 +7,13 @@ const mqtt = require("mqtt");
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 const port = process.env.TCP_SERVER_PORT || 4000;
+const RELE_DEVICE_PASSWORD = process.env.RELE_DEVICE_PASSWORD;
+const RELE_TCP_BIND_HOST = process.env.RELE_TCP_BIND_HOST || "127.0.0.1";
+
+if (!RELE_DEVICE_PASSWORD) {
+  console.error("[TCP] RELE_DEVICE_PASSWORD não definido no .env");
+  process.exit(1);
+}
 
 // --- CONFIGURAÇÕES ---
 const pollInterval = 300000; // 5 Minutos
@@ -157,7 +164,7 @@ async function handleSocketData(socket) {
                 if (passIndex !== -1) {
                     socket.textBuffer = socket.textBuffer.substring(passIndex + 9);
                     socket.state = 'LOGGING_IN_OTTER';
-                    socket.write("OTTER\r\n");
+                    socket.write(`${RELE_DEVICE_PASSWORD}\r\n`);
                 } else if (promptIndexCheck !== -1) {
                     socket.state = 'LOGGING_IN_OTTER';
                 } else {
@@ -301,7 +308,7 @@ function createLegacyServer(listenPort) {
         }
     });
 
-    legacyServer.listen(listenPort, '0.0.0.0', () => {
+    legacyServer.listen(listenPort, RELE_TCP_BIND_HOST, () => {
         console.log(`[TCP] Porta ${listenPort} aberta para ${portToDeviceMap.get(listenPort).deviceId}`);
     });
 
@@ -311,7 +318,7 @@ function createLegacyServer(listenPort) {
 async function startServer() {
     await loadDeviceCaches();
 
-    mainServer.listen(port, '0.0.0.0', () => {
+    mainServer.listen(port, RELE_TCP_BIND_HOST, () => {
         console.log(`[TCP] Main Server na porta ${port}`);
     });
 

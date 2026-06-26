@@ -5,6 +5,7 @@ const { PDFDocument } = require("pdf-lib");
 const playwright = require("playwright");
 const { promisePool } = require("../../../infrastructure/database");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
+const { escapeHtml } = require("../../../shared/htmlEscape.helper");
 
 async function processarImagensParaBase64(imagens) {
   const imagensProcessadas = await Promise.all(
@@ -49,8 +50,8 @@ function gerarGaleriaHtml(imagens) {
     chunk.forEach((img) => {
       galleryHtml += `
                 <div class="gallery-item">
-                    <img src="${img.src}" alt="${img.nome}">
-                    <p class="caption">${img.nome}</p>
+                    <img src="${img.src}" alt="${escapeHtml(img.nome)}">
+                    <p class="caption">${escapeHtml(img.nome)}</p>
                 </div>
             `;
     });
@@ -93,7 +94,10 @@ async function preencherTemplateHtml(servicoData) {
   const listaAnexosPdfHtml =
     anexosPDF.length > 0
       ? `<ul>${anexosPDF
-          .map((pdf) => `<li>${pdf.nomeOriginal} (Tipo: ${pdf.tipo})</li>`)
+          .map(
+            (pdf) =>
+              `<li>${escapeHtml(pdf.nomeOriginal)} (Tipo: ${escapeHtml(pdf.tipo)})</li>`
+          )
           .join("")}</ul>`
       : '<p class="no-content">Nenhum documento PDF foi anexado a este serviço.</p>';
 
@@ -107,9 +111,9 @@ async function preencherTemplateHtml(servicoData) {
     servicoData.responsaveis.forEach((resp) => {
       listaResponsaveisHtml += `
             <tr>
-                <td>${resp.nome || "N/A"}</td>
-                <td>${resp.responsavel_matricula || "N/A"}</td>
-                <td>${resp.status_individual || "N/A"}</td>
+                <td>${escapeHtml(resp.nome || "N/A")}</td>
+                <td>${escapeHtml(resp.responsavel_matricula || "N/A")}</td>
+                <td>${escapeHtml(resp.status_individual || "N/A")}</td>
                 <td>${
                   resp.data_conclusao_individual
                     ? new Date(resp.data_conclusao_individual).toLocaleString(
@@ -117,7 +121,7 @@ async function preencherTemplateHtml(servicoData) {
                       )
                     : "N/A"
                 }</td>
-                <td>${resp.observacoes_individuais || ""}</td>
+                <td>${escapeHtml(resp.observacoes_individuais || "")}</td>
             </tr>
         `;
     });
@@ -125,20 +129,20 @@ async function preencherTemplateHtml(servicoData) {
   }
 
   const dadosParaTemplate = {
-    processo: servicoData.processo || "N/A",
+    processo: escapeHtml(servicoData.processo || "N/A"),
     id: servicoData.id,
-    tipo: servicoData.tipo || "N/A",
+    tipo: escapeHtml(servicoData.tipo || "N/A"),
     data_prevista_execucao: formatarData(servicoData.data_prevista_execucao),
-    subestacao: servicoData.subestacao || "N/A",
-    alimentador: servicoData.alimentador || "N/A",
-    chave_montante: servicoData.chave_montante || "N/A",
-    desligamento: `${servicoData.desligamento || "N/A"} ${
+    subestacao: escapeHtml(servicoData.subestacao || "N/A"),
+    alimentador: escapeHtml(servicoData.alimentador || "N/A"),
+    chave_montante: escapeHtml(servicoData.chave_montante || "N/A"),
+    desligamento: escapeHtml(`${servicoData.desligamento || "N/A"} ${
       servicoData.desligamento === "SIM"
         ? `(${servicoData.hora_inicio || ""} - ${servicoData.hora_fim || ""})`
         : ""
-    }`,
-    descricao_servico: servicoData.descricao_servico || "Nenhuma.",
-    observacoes: servicoData.observacoes || "Nenhuma.",
+    }`),
+    descricao_servico: escapeHtml(servicoData.descricao_servico || "Nenhuma."),
+    observacoes: escapeHtml(servicoData.observacoes || "Nenhuma."),
     status_final_classe:
       servicoData.status === "concluido"
         ? "status-concluido"
@@ -146,16 +150,16 @@ async function preencherTemplateHtml(servicoData) {
     status_final_texto:
       servicoData.status === "concluido" ? "Concluído" : "Não Concluído",
     data_finalizacao: formatarData(servicoData.data_conclusao, true),
-    responsavel_finalizacao: `${servicoData.responsavel_nome || "N/A"} (${
+    responsavel_finalizacao: escapeHtml(`${servicoData.responsavel_nome || "N/A"} (${
       servicoData.responsavel_matricula || "N/A"
-    })`,
+    })`),
     motivo_nao_conclusao_html:
       servicoData.status === "nao_concluido"
-        ? `<div class="grid-item full-width"><strong>Motivo da Não Conclusão</strong><div class="text-area">${
+        ? `<div class="grid-item full-width"><strong>Motivo da Não Conclusão</strong><div class="text-area">${escapeHtml(
             servicoData.motivo_nao_conclusao || "Nenhum."
-          }</div></div>`
+          )}</div></div>`
         : "",
-    observacoes_conclusao: servicoData.observacoes_conclusao || "Nenhuma.",
+    observacoes_conclusao: escapeHtml(servicoData.observacoes_conclusao || "Nenhuma."),
     galeria_geral: galeriaGeralHtml,
     lista_anexos_pdf: listaAnexosPdfHtml,
     lista_responsaveis: listaResponsaveisHtml,

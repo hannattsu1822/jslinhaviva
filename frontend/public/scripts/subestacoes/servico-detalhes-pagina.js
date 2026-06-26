@@ -284,12 +284,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (detalheStatus) {
       const statusCls = (servico.status || "desconhecido").toLowerCase();
       const statusTxt = (servico.status || "DESCONHECIDO").replace(/_/g, " ");
-      detalheStatus.innerHTML = `<span class="status-badge status-${statusCls}">${statusTxt}</span>`;
+      detalheStatus.innerHTML = safeHtml`<span class="status-badge status-${statusCls}">${statusTxt}</span>`;
     }
     if (detalhePrioridade) {
       const prioridade = servico.prioridade || "MEDIA";
       const prioridadeClasse = `prioridade-${prioridade.toLowerCase()}`;
-      detalhePrioridade.innerHTML = `<span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span>`;
+      detalhePrioridade.innerHTML = safeHtml`<span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span>`;
     }
     if (detalheMotivo)
       detalheMotivo.textContent = servico.motivo || "Não informado";
@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
         item.descricao_item_servico;
 
       const detailsContainer = itemCard.querySelector(".item-details-grid");
-      detailsContainer.innerHTML = `
+      detailsContainer.innerHTML = safeHtml`
         ${
           item.catalogo_equipamento_nome
             ? `<div><strong>Equipamento:</strong><span>${item.catalogo_equipamento_nome}</span></div>`

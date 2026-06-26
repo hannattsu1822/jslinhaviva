@@ -30,7 +30,8 @@ router.get(
           acao LIKE 'Editar%' OR
           acao LIKE 'Salvar%' OR
           acao LIKE 'Registro%' OR
-          acao LIKE 'Registrar%'
+          acao LIKE 'Registrar%' OR
+          acao LIKE 'LOGIN%'
         ORDER BY timestamp DESC
       `;
       const [rows] = await promisePool.query(query);

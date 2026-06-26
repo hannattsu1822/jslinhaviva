@@ -23,7 +23,10 @@
     <link rel="stylesheet" href="/static/css/servicos_ativos.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
   <body class="servicos-page servicos-page--ativos">
     <div class="page-container">
       <div id="sidebar-root"></div>
@@ -46,7 +49,7 @@
                 <i class="fa-solid fa-arrow-left"></i>
                 Voltar
               </a>
-              <button class="btn glass-btn" onclick="carregarServicosAtivos()">
+              <button data-action="carregarServicosAtivos" class="btn glass-btn">
                 <span class="material-symbols-outlined">refresh</span>
                 Atualizar
               </button>
@@ -217,10 +220,10 @@
           <div class="modal-footer">
             <button type="button" class="btn glass-btn" data-bs-dismiss="modal">
               Fechar</button
-            ><button
+            ><button data-action="salvarResponsaveis"
               type="button"
               class="btn glass-btn btn-primary"
-              onclick="salvarResponsaveis()"
+             
             >
               Salvar
             </button>
@@ -311,10 +314,10 @@
                       type="time"
                       class="form-control glass-input"
                       id="horaConclusao"
-                    /><button
+                    /><button data-action="usarDataAtual"
                       type="button"
                       class="btn glass-btn"
-                      onclick="usarDataAtual()"
+                     
                     >
                       <span class="material-symbols-outlined">update</span> Usar
                       agora

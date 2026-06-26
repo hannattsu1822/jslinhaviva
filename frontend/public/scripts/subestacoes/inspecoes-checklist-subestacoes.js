@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const paginaTitulo = document.getElementById("paginaTitulo");
   const setPaginaTitulo = (texto, icone = "fa-clipboard-check") => {
     if (!paginaTitulo) return;
-    paginaTitulo.innerHTML = `<i class="fa-solid ${icone}"></i> ${texto}`;
+    paginaTitulo.innerHTML = safeHtml`<i class="fa-solid ${icone}"></i> ${texto}`;
   };
   const formChecklistInspecao = document.getElementById(
     "formChecklistInspecao"
@@ -306,12 +306,12 @@ document.addEventListener("DOMContentLoaded", () => {
       inspecaoSubestacaoSelect.innerHTML =
         '<option value="">Selecione...</option>';
       subestacoes.forEach((sub) => {
-        inspecaoSubestacaoSelect.innerHTML += `<option value="${sub.Id}">${sub.sigla} - ${sub.nome}</option>`;
+        inspecaoSubestacaoSelect.innerHTML += safeHtml`<option value="${sub.Id}">${sub.sigla} - ${sub.nome}</option>`;
       });
       inspecaoResponsavelSelect.innerHTML =
         '<option value="">Selecione...</option>';
       usuarios.forEach((user) => {
-        inspecaoResponsavelSelect.innerHTML += `<option value="${user.id}">${user.nome}</option>`;
+        inspecaoResponsavelSelect.innerHTML += safeHtml`<option value="${user.id}">${user.nome}</option>`;
       });
     } catch (error) {
       console.error("Erro ao popular selects:", error);
@@ -872,7 +872,7 @@ document.addEventListener("DOMContentLoaded", () => {
     checklistTemplateFromAPI.forEach((grupo) => {
       const grupoSection = document.createElement("div");
       grupoSection.className = "checklist-grupo";
-      grupoSection.innerHTML = `<div class="checklist-grupo-header"><h3><span class="material-symbols-outlined">${
+      grupoSection.innerHTML = safeHtml`<div class="checklist-grupo-header"><h3><span class="material-symbols-outlined">${
         grupo.icone || "inventory_2"
       }</span> ${grupo.nome_grupo}</h3></div>`;
       const itensList = document.createElement("div");
@@ -881,7 +881,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const itemDiv = document.createElement("div");
         itemDiv.className = "checklist-item";
         itemDiv.setAttribute("data-item-id", item.id);
-        itemDiv.innerHTML = `
+        itemDiv.innerHTML = safeHtml`
           <div class="item-numero">${itemCounter++}.</div>
           <div class="item-descricao">${item.descricao_item}</div>
           <div class="item-controls">
@@ -1277,7 +1277,7 @@ document.addEventListener("DOMContentLoaded", () => {
     generalAttachments.forEach((anexo, index) => {
       const anexoEl = document.createElement("div");
       anexoEl.className = "anexo-item-bloco";
-      anexoEl.innerHTML = `
+      anexoEl.innerHTML = safeHtml`
         <img src="${anexo.previewUrl}" class="anexo-preview-img" alt="Preview">
         <div class="anexo-info">
             <div class="anexo-nome-original">${anexo.originalName}</div>
@@ -1499,7 +1499,7 @@ document.addEventListener("DOMContentLoaded", () => {
       alert(`Falha ao salvar inspeção: ${error.message}`);
     } finally {
       btnSalvarInspecao.disabled = false;
-      btnSalvarInspecao.innerHTML = `<span class="material-symbols-outlined">save</span> ${
+      btnSalvarInspecao.innerHTML = safeHtml`<span class="material-symbols-outlined">save</span> ${
         isEditMode ? "Salvar Alterações" : "Salvar Inspeção"
       }`;
     }

@@ -131,7 +131,7 @@ async function carregarTrafos(page = 1) {
     }
   } catch (error) {
     if (tbody)
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro ao carregar dados: ${error.message}</td></tr>`;
+      tbody.innerHTML = safeHtml`<tr><td colspan="8" class="text-center text-danger py-4">Erro ao carregar dados: ${error.message}</td></tr>`;
     if (paginationInfoEl)
       paginationInfoEl.textContent = "Falha ao carregar dados";
   }
@@ -317,21 +317,19 @@ function preencherTabela(trafos) {
     }
 
     const actionButtonsHtml = `
-        <button onclick="window.abrirModalAvaliacao(${trafo.id})" 
+        <button data-action="abrirModalAvaliacao" data-id="${trafo.id}" 
                 class="btn btn-sm btn-primary" 
                 title="Avaliar">
             <i class="fas fa-clipboard-check"></i>
         </button>
-        <button onclick="window.confirmarExclusao(${
-          trafo.id
-        }, '${trafo.numero_serie.replace(/'/g, "\\'")}')" 
+        <button data-action="confirmarExclusao" data-id="${trafo.id}" data-target="${String(trafo.numero_serie).replace(/"/g, "&quot;")}" 
                 class="btn btn-sm btn-danger" title="Excluir">
             <i class="fas fa-trash-alt"></i>
         </button>
     `;
 
     const tr = document.createElement("tr");
-    tr.innerHTML = `
+    tr.innerHTML = safeHtml`
       <td data-label="ID">${trafo.id}</td>
       <td data-label="Nº de Série">${trafo.numero_serie}</td>
       <td data-label="Fabricante">${trafo.fabricante || "-"}</td>

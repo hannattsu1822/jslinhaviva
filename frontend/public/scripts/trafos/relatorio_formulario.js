@@ -123,7 +123,7 @@ async function carregarRelatorio() {
       return "";
     };
 
-    relatorioContent.innerHTML = `
+    relatorioContent.innerHTML = safeHtml`
         <div class="divisao">
           <h2>Informações Gerais do Checklist</h2>
           <div class="relatorio-grid">
@@ -272,7 +272,7 @@ async function carregarRelatorio() {
   } catch (error) {
     console.error("Erro ao carregar relatório:", error);
     if (relatorioContent) {
-      relatorioContent.innerHTML = `<p class="erro">Erro ao carregar o relatório: ${error.message}. Verifique o ID ou tente novamente mais tarde.</p>`;
+      relatorioContent.innerHTML = safeHtml`<p class="erro">Erro ao carregar o relatório: ${error.message}. Verifique o ID ou tente novamente mais tarde.</p>`;
     }
   }
 }

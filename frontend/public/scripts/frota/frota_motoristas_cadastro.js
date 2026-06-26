@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function showToast(title, message, isError = false) {
     const toast = document.createElement("div");
     toast.className = `toast ${isError ? "error" : "success"}`;
-    toast.innerHTML = `<div class="toast-title">${title}</div><div>${message}</div>`;
+    toast.innerHTML = safeHtml`<div class="toast-title">${title}</div><div>${message}</div>`;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.classList.add("show"), 10);
     setTimeout(() => {
@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       drivers.forEach((driver) => {
         const row = document.createElement("tr");
-        row.innerHTML = `
+        row.innerHTML = safeHtml`
                     <td>${driver.id}</td>
                     <td>${driver.matricula || ""}</td>
                     <td>${driver.nome || ""}</td>

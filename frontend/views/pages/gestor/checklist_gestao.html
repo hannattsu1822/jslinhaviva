@@ -18,7 +18,10 @@
     />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/gestor/checklist_gestao.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
   <body class="gestor-page gestor-page--checklist">
     <div class="page-container">
       <div id="sidebar-root"></div>
@@ -186,6 +189,8 @@
     <!-- Adicionado SweetAlert para confirmações bonitas -->
 
     <script>
+      const checklistCache = new Map();
+
       document.addEventListener("DOMContentLoaded", () => {
         carregarDados();
       });
@@ -247,31 +252,24 @@
             statusText = "Crítico";
           }
 
-          // Serializar o objeto para passar no onclick (escapando aspas)
-          const itemString = JSON.stringify(item).replace(/"/g, "&quot;");
+          checklistCache.set(item.id, item);
 
           const tr = document.createElement("tr");
-          tr.innerHTML = `
-                    <td>${dataFormatada} <small class="text-muted">${
-            item.hora_registro
-          }</small></td>
+          tr.innerHTML = safeHtml`
+                    <td>${dataFormatada} <small class="text-muted">${item.hora_registro}</small></td>
                     <td class="fw-bold">${item.placa_veiculo}</td>
                     <td>${item.nome_motorista || item.matricula_usuario}</td>
                     <td>${item.quilometragem} km</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td class="text-end pe-4">
                         <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-info text-white" title="Ver Detalhes" onclick="abrirDetalhes(${itemString})">
+                            <button class="btn btn-sm btn-info text-white" title="Ver Detalhes" data-action="abrirDetalhesFromCache" data-id="${item.id}">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-sm btn-warning text-dark" title="Reenviar (Solicitar Novo)" onclick="reenviarChecklist(${
-                              item.id
-                            })">
+                            <button class="btn btn-sm btn-warning text-dark" title="Reenviar (Solicitar Novo)" data-action="reenviarChecklist" data-id="${item.id}">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger text-white" title="Excluir Registro" onclick="excluirChecklist(${
-                              item.id
-                            })">
+                            <button class="btn btn-sm btn-danger text-white" title="Excluir Registro" data-action="excluirChecklist" data-id="${item.id}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -280,6 +278,11 @@
           tbody.appendChild(tr);
         });
       }
+
+      window.abrirDetalhesFromCache = function (id) {
+        const item = checklistCache.get(Number(id));
+        if (item) abrirDetalhes(item);
+      };
 
       async function abrirDetalhes(item) {
         // Preencher Cabeçalho

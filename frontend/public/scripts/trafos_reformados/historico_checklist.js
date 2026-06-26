@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       gerarPDFLista(checklists, { numero_serie: numeroSerie })
     );
   } catch (error) {
-    historyListEl.innerHTML = `<div class="list-group-item text-danger">Erro ao carregar: ${error.message}</div>`;
+    historyListEl.innerHTML = safeHtml`<div class="list-group-item text-danger">Erro ao carregar: ${error.message}</div>`;
   }
 });
 
@@ -88,7 +88,7 @@ function renderHistoryList(checklists) {
     const statusClass =
       checklist.conclusao_checklist === "APROVADO" ? "bg-success" : "bg-danger";
 
-    item.innerHTML = `
+    item.innerHTML = safeHtml`
             <div class="d-flex w-100 justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-1">Avaliação do Registro ID: ${

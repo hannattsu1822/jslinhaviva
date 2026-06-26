@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusTexto = (
       inspecaoInfo.status_inspecao || "DESCONHECIDO"
     ).replace(/_/g, " ");
-    infoGeraisContainer.innerHTML = `
+    infoGeraisContainer.innerHTML = safeHtml`
       <div class="detail-card">
         <h2 class="detail-card-header">
           <span class="material-symbols-outlined">info</span>
@@ -159,7 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
       obsGeraisContainer.innerHTML = "";
       return;
     }
-    obsGeraisContainer.innerHTML = `
+    obsGeraisContainer.innerHTML = safeHtml`
       <div class="detail-card">
         <h2 class="detail-card-header">
           <span class="material-symbols-outlined">speaker_notes</span>
@@ -329,7 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
       container.innerHTML = "";
       return;
     }
-    container.innerHTML = `
+    container.innerHTML = safeHtml`
       <div class="detail-card">
         <h2 class="detail-card-header">
           <span class="material-symbols-outlined">${icone}</span>

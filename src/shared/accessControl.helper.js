@@ -82,6 +82,27 @@ async function assertAcessoServicoRede(user, servicoId) {
   }
 }
 
+const { obterNivel } = require("../shared/moduloNivel.permissions");
+
+const NIVEL_GESTOR = 4;
+
+function isGestorOuSuperior(user) {
+  return obterNivel(user) >= NIVEL_GESTOR;
+}
+
+function assertAcessoRecursoProprio(
+  user,
+  matriculaRecurso,
+  mensagem = "Acesso negado a este recurso."
+) {
+  if (isGestorOuSuperior(user)) return;
+  if (!user?.matricula || user.matricula !== matriculaRecurso) {
+    const err = new Error(mensagem);
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 module.exports = {
   extrairServicoIdDoIdentificador,
   usuarioTemAcessoServicoGestao,
@@ -90,4 +111,6 @@ module.exports = {
   assertAcessoServicoFibra,
   usuarioTemAcessoServicoRede,
   assertAcessoServicoRede,
+  isGestorOuSuperior,
+  assertAcessoRecursoProprio,
 };

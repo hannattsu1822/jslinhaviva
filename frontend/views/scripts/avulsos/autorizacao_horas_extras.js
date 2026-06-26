@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function adicionarLinha() {
     contadorLinha++;
     const newRow = corpoTabelaHorasExtras.insertRow();
-    newRow.innerHTML = `
+    newRow.innerHTML = safeHtml`
             <td><input type="date" name="detalhe_${contadorLinha}_dia" class="form-control form-control-sm" required></td>
             <td><input type="time" name="detalhe_${contadorLinha}_inicioPrevisto" class="form-control form-control-sm hora-inicio-prevista"></td>
             <td><input type="time" name="detalhe_${contadorLinha}_terminoPrevisto" class="form-control form-control-sm hora-termino-prevista"></td>

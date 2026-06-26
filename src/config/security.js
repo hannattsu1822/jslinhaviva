@@ -26,14 +26,14 @@ function applySecurityMiddleware(app) {
           defaultSrc: ["'self'"],
           scriptSrc: [
             "'self'",
-            "'unsafe-inline'",
+            (req, res) => `'nonce-${res.locals.cspNonce}'`,
             "https://cdn.jsdelivr.net",
             "https://cdnjs.cloudflare.com",
             "https://unpkg.com",
             "https://code.jquery.com",
             "https://cdn.datatables.net",
           ],
-          scriptSrcAttr: ["'unsafe-inline'"],
+          scriptSrcAttr: ["'none'"],
           styleSrc: [
             "'self'",
             "'unsafe-inline'",

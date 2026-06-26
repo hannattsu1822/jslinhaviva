@@ -264,12 +264,12 @@ function atualizarTabela() {
       let reativarButtonHtml = "";
       const P = window.ServicosPermissions || {};
       if (P.podeReativarServico?.(user)) {
-        reativarButtonHtml = `<button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${servico.id})" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>`;
+        reativarButtonHtml = `<button class="btn btn-sm glass-btn btn-warning" data-action="reativarServico" data-id="${servico.id}" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>`;
       }
 
       let aprButtonHtml = "";
       if (P.podeAnexarAPR?.(user)) {
-        aprButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR"><span class="material-symbols-outlined">attach_file</span> Anexar</button>`;
+        aprButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-primary w-100" data-action="abrirModalUploadAPR" data-id="${servico.id}" title="Anexar APR"><span class="material-symbols-outlined">attach_file</span> Anexar</button>`;
         if (servico.caminho_apr_anexo) {
           aprButtonHtml = `
           <div class="d-flex flex-column align-items-center">
@@ -278,9 +278,7 @@ function atualizarTabela() {
               }" target="_blank" class="btn btn-sm glass-btn btn-success mb-1 w-100" title="Ver APR: ${
             servico.nome_original_apr_anexo || ""
           }"><span class="material-symbols-outlined">description</span> Ver</a>
-              <button class="btn btn-sm glass-btn btn-warning w-100" onclick="abrirModalUploadAPR(${
-                servico.id
-              })" title="Substituir APR"><span class="material-symbols-outlined">upload_file</span> Subst.</button>
+              <button class="btn btn-sm glass-btn btn-warning w-100" data-action="abrirModalUploadAPR" data-id="${servico.id}" title="Substituir APR"><span class="material-symbols-outlined">upload_file</span> Subst.</button>
           </div>`;
         }
       } else if (servico.caminho_apr_anexo) {
@@ -289,10 +287,10 @@ function atualizarTabela() {
 
       let anexosPosterioresButtonHtml = "";
       if (P.podeAnexarPosterior?.(user)) {
-        anexosPosterioresButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-secondary me-1" onclick="abrirModalAnexosPosteriores(${servico.id})" title="Anexar documentos posteriores"><span class="material-symbols-outlined">attach_file_add</span></button>`;
+        anexosPosterioresButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-secondary me-1" data-action="abrirModalAnexosPosteriores" data-id="${servico.id}" title="Anexar documentos posteriores"><span class="material-symbols-outlined">attach_file_add</span></button>`;
       }
 
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
         <td data-label="ID">${servico.id}</td>
         <td data-label="Processo">${servico.processo || "N/A"}</td>
         <td data-label="Subestação">${servico.subestacao || "N/A"}</td>
@@ -305,12 +303,8 @@ function atualizarTabela() {
         <td data-label="Ações" class="text-center">
           <div class="btn-group">
             ${anexosPosterioresButtonHtml}
-            <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
-              servico.id
-            }')" title="Visualizar"><span class="material-symbols-outlined">visibility</span></button>
-            <button class="btn btn-sm glass-btn btn-success me-1" onclick="solicitarRelatorioCompleto(${
-              servico.id
-            })" title="Gerar Relatório PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button>
+            <button class="btn btn-sm glass-btn me-1" data-action="navigate" data-href="/detalhes_servico?id=${servico.id}" title="Visualizar"><span class="material-symbols-outlined">visibility</span></button>
+            <button class="btn btn-sm glass-btn btn-success me-1" data-action="solicitarRelatorioCompleto" data-id="${servico.id}" title="Gerar Relatório PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button>
             ${reativarButtonHtml}
           </div>
         </td>`;
@@ -351,9 +345,16 @@ function atualizarPaginacao() {
     li.className = `page-item ${disabled ? "disabled" : ""} ${
       active ? "active" : ""
     }`;
-    li.innerHTML = `<a class="page-link glass-btn" href="#" onclick="event.preventDefault(); ${
-      !disabled ? `mudarPagina(${page})` : ""
-    }">${text}</a>`;
+    const link = document.createElement("a");
+    link.className = "page-link glass-btn";
+    link.href = "#";
+    link.textContent = text;
+    if (!disabled) {
+      link.dataset.action = "paginate";
+      link.dataset.handler = "mudarPagina";
+      link.dataset.page = String(page);
+    }
+    li.appendChild(link);
     return li;
   };
 
@@ -551,7 +552,7 @@ function renderizarPreviewAnexosPosteriores() {
       ? `<img src="${previewUrl}" alt="${file.name}">`
       : `<i class="fas ${icon} ${color}"></i>`;
 
-    col.innerHTML = `
+    col.innerHTML = safeHtml`
       <div class="anexo-preview-card">
         <div class="anexo-preview-thumb" data-preview-index="${index}" title="Clique para visualizar">
           ${thumbHtml}

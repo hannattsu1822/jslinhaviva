@@ -345,16 +345,16 @@ function atualizarTabela() {
         : '<span class="badge-desligamento-nao">Não</span>';
 
     const botoesEquipe = podeAtribuirEquipe
-      ? `<button class="btn btn-sm btn-equipe w-100 mb-1" onclick="abrirModalResponsavel(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe</button>`
+      ? `<button class="btn btn-sm btn-equipe w-100 mb-1" data-action="abrirModalResponsavel" data-id="${servico.id}"><span class="material-symbols-outlined" style="font-size:16px">group</span> Equipe</button>`
       : "";
     const botaoConcluirAdmin = podeConcluirAdmin
-      ? `<button class="btn btn-sm btn-admin w-100 mb-1" onclick="abrirModalConcluirAdmin(${servico.id})" data-bs-toggle="tooltip" title="Conclusão Administrativa (Sem Equipe)"><span class="material-symbols-outlined" style="font-size:16px">admin_panel_settings</span> Admin</button>`
+      ? `<button class="btn btn-sm btn-admin w-100 mb-1" data-action="abrirModalConcluirAdmin" data-id="${servico.id}" data-bs-toggle="tooltip" title="Conclusão Administrativa (Sem Equipe)"><span class="material-symbols-outlined" style="font-size:16px">admin_panel_settings</span> Admin</button>`
       : "";
     const botaoExcluir = podeExcluir
-      ? `<button class="btn btn-sm btn-excluir w-100" onclick="confirmarExclusao(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">delete</span> Excluir</button>`
+      ? `<button class="btn btn-sm btn-excluir w-100" data-action="confirmarExclusao" data-id="${servico.id}"><span class="material-symbols-outlined" style="font-size:16px">delete</span> Excluir</button>`
       : "";
 
-    tr.innerHTML = `
+    tr.innerHTML = safeHtml`
             <td data-label="ID">${servico.id}</td>
             <td data-label="Processo">${servico.processo || "—"}</td>
             <td data-label="Subestação">${servico.subestacao || "—"}</td>
@@ -363,10 +363,10 @@ function atualizarTabela() {
             <td data-label="Data Prevista">${dataPrevista}</td>
             <td data-label="Desligamento" class="col-desligamento text-center">${desligamentoHtml}</td>
             <td data-label="Equipe / Progresso">${equipeHtml}</td>
-            <td data-label="APR">${podeAnexarAPR ? `<button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button>` : "—"}</td>
+            <td data-label="APR">${podeAnexarAPR ? `<button class="btn btn-sm btn-anexar w-100" data-action="abrirModalUploadAPR" data-id="${servico.id}"><span class="material-symbols-outlined">attach_file</span> Anexar</button>` : "—"}</td>
             <td data-label="Ações">
-                <button class="btn btn-sm btn-detalhes w-100 mb-1" onclick="abrirDetalhes(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">visibility</span> Detalhes</button>
-                <button class="btn btn-sm btn-concluir w-100 mb-1" onclick="abrirModalConcluir(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir</button>
+                <button class="btn btn-sm btn-detalhes w-100 mb-1" data-action="abrirDetalhes" data-id="${servico.id}"><span class="material-symbols-outlined" style="font-size:16px">visibility</span> Detalhes</button>
+                <button class="btn btn-sm btn-concluir w-100 mb-1" data-action="abrirModalConcluir" data-id="${servico.id}"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir</button>
                 ${botoesEquipe}
                 ${botaoConcluirAdmin}
                 ${botaoExcluir}
@@ -586,7 +586,7 @@ function renderizarListaEncarregados(lista) {
     const selecionado = responsaveisSelecionados.includes(enc.matricula);
     const div = document.createElement("div");
     div.className = `d-flex align-items-center justify-content-between p-2 mb-1 rounded ${selecionado ? "bg-success bg-opacity-10 border border-success" : "bg-light border"}`;
-    div.innerHTML = `<div><strong>${enc.nome}</strong><br><small class="text-muted">Mat: ${enc.matricula} — ${enc.cargo || ""}</small></div><button class="btn btn-sm ${selecionado ? "btn-danger" : "btn-success"}" onclick="toggleResponsavel('${enc.matricula}')">${selecionado ? "Remover" : "Adicionar"}</button>`;
+    div.innerHTML = safeHtml`<div><strong>${enc.nome}</strong><br><small class="text-muted">Mat: ${enc.matricula} — ${enc.cargo || ""}</small></div><button class="btn btn-sm ${selecionado ? "btn-danger" : "btn-success"}" data-action="toggleResponsavel" data-target="${enc.matricula}">${selecionado ? "Remover" : "Adicionar"}</button>`;
     container.appendChild(div);
   });
 }
@@ -703,7 +703,7 @@ function renderizarPreviewFotos() {
     const col = document.createElement("div");
     col.className = "col-md-3 col-sm-4 col-6 position-relative preview-item";
     const imgUrl = URL.createObjectURL(file);
-    col.innerHTML = `<div class="card h-100"><img src="${imgUrl}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview"><div class="card-body p-2 text-center"><small class="text-muted">${file.name.substring(0, 20)}${file.name.length > 20 ? "..." : ""}</small><button type="button" class="btn btn-sm btn-danger mt-1 w-100" onclick="removerFoto(${index})"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span> Remover</button></div></div>`;
+    col.innerHTML = safeHtml`<div class="card h-100"><img src="${imgUrl}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview"><div class="card-body p-2 text-center"><small class="text-muted">${file.name.substring(0, 20)}${file.name.length > 20 ? "..." : ""}</small><button type="button" class="btn btn-sm btn-danger mt-1 w-100" data-action="removerFoto" data-id="${index}"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span> Remover</button></div></div>`;
     container.appendChild(col);
   });
 }
@@ -716,7 +716,7 @@ function renderizarPreviewFotosAdmin() {
     const col = document.createElement("div");
     col.className = "col-md-3 col-sm-4 col-6 position-relative preview-item";
     const imgUrl = URL.createObjectURL(file);
-    col.innerHTML = `<div class="card h-100"><img src="${imgUrl}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview"><div class="card-body p-2 text-center"><small class="text-muted">${file.name.substring(0, 20)}${file.name.length > 20 ? "..." : ""}</small><button type="button" class="btn btn-sm btn-danger mt-1 w-100" onclick="removerFotoAdmin(${index})"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span> Remover</button></div></div>`;
+    col.innerHTML = safeHtml`<div class="card h-100"><img src="${imgUrl}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview"><div class="card-body p-2 text-center"><small class="text-muted">${file.name.substring(0, 20)}${file.name.length > 20 ? "..." : ""}</small><button type="button" class="btn btn-sm btn-danger mt-1 w-100" data-action="removerFotoAdmin" data-id="${index}"><span class="material-symbols-outlined" style="font-size: 16px;">delete</span> Remover</button></div></div>`;
     container.appendChild(col);
   });
 }

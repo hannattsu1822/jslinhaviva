@@ -24,9 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const notification = document.createElement("div");
     notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
+    notification.innerHTML = safeHtml`
       <span>${message}</span>
-      <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+      <button class="notification-close" data-action="dismiss-parent">×</button>
     `;
     
     notificationContainer.appendChild(notification);
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (quantidade > 0) {
       const aviso = document.createElement("div");
       aviso.className = "data-quality-warning";
-      aviso.innerHTML = `
+      aviso.innerHTML = safeHtml`
         <span class="data-quality-warning-icon">⚠️</span>
         <p class="data-quality-warning-text">
           <strong>Atenção:</strong> ${quantidade} leitura(s) com temperatura inválida foram filtradas do relatório 
@@ -336,19 +336,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (tableData.length === 0) {
-      tableBody.innerHTML = `<tr><td colspan="${headers.length}" style="text-align: center;">Nenhum dado disponível para o período selecionado</td></tr>`;
+      tableBody.innerHTML = safeHtml`<tr><td colspan="${headers.length}" style="text-align: center;">Nenhum dado disponível para o período selecionado</td></tr>`;
     } else {
       tableData.forEach(item => {
         const tr = document.createElement("tr");
 
         if (data.filters.reportType === 'detailed') {
-          tr.innerHTML = `
+          tr.innerHTML = safeHtml`
             <td>${new Date(item.timestamp_inicio).toLocaleString("pt-BR")}</td>
             <td>${item.timestamp_fim ? new Date(item.timestamp_fim).toLocaleString("pt-BR") : "Em andamento"}</td>
             <td>${formatarDuracao(item.duracao_segundos)}</td>
           `;
         } else {
-          tr.innerHTML = `
+          tr.innerHTML = safeHtml`
             <td>${item.dia}</td>
             <td>${item.count}</td>
             <td>${formatarDuracao(item.total_duration)}</td>

@@ -1,6 +1,24 @@
 const service = require("./checklist.service");
 const { registrarAuditoria } = require("../../../auth");
 const { verifyReportToken } = require("../../../shared/reportToken.helper");
+const { assertAcessoRecursoProprio } = require("../../../shared/accessControl.helper");
+
+function statusFromError(err, fallback = 500) {
+  if (err.statusCode) return err.statusCode;
+  if (err.message.includes("não encontrado")) return 404;
+  if (err.message.includes("Acesso negado")) return 403;
+  return fallback;
+}
+
+async function assertAcessoChecklist(id, user) {
+  const checklist = await service.obterChecklistPublico(id);
+  assertAcessoRecursoProprio(
+    user,
+    checklist.matricula_responsavel,
+    "Acesso negado a este checklist."
+  );
+  return checklist;
+}
 
 async function listarTrafosSemChecklist(req, res) {
   try {
@@ -45,7 +63,11 @@ async function obterHistoricoRemessas(req, res) {
 
 async function salvarChecklist(req, res) {
   try {
-    await service.salvarChecklist(req.body);
+    const dados = {
+      ...req.body,
+      matricula_responsavel: req.user.matricula,
+    };
+    await service.salvarChecklist(dados);
     await registrarAuditoria(
       req.user.matricula,
       "Salvar Checklist",
@@ -84,17 +106,17 @@ async function obterChecklistPublico(req, res) {
 
 async function obterChecklistAutenticado(req, res) {
   try {
-    const checklist = await service.obterChecklistPublico(req.params.id);
+    const checklist = await assertAcessoChecklist(req.params.id, req.user);
     res.status(200).json(checklist);
   } catch (err) {
     console.error("Erro API /checklist_transformadores:", err);
-    const statusCode = err.message.includes("não encontrado") ? 404 : 500;
-    res.status(statusCode).json({ message: err.message });
+    res.status(statusFromError(err)).json({ message: err.message });
   }
 }
 
 async function excluirChecklist(req, res) {
   try {
+    await assertAcessoChecklist(req.params.id, req.user);
     await service.excluirChecklist(req.params.id);
     await registrarAuditoria(
       req.user.matricula,
@@ -131,6 +153,7 @@ async function gerarPdfChecklist(req, res) {
   let browser;
   try {
     const { id } = req.params;
+    await assertAcessoChecklist(id, req.user);
     const { nomeArquivo, pdfBuffer } = await service.gerarPdfChecklist(
       id,
       req.protocol,

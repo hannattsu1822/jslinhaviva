@@ -20,7 +20,10 @@
     <link rel="stylesheet" href="/static/css/gestao-servicos.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="servicos-page servicos-page--hub">
     <div class="page-container">
@@ -49,9 +52,9 @@
               id="card-registro-servico"
               style="display: none"
             >
-              <div
+              <div data-action="navigateTo" data-target="registro_servicos"
                 class="card servicos-module-card h-100"
-                onclick="navigateTo('registro_servicos')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -70,9 +73,9 @@
               id="card-servicos-ativos"
               style="display: none"
             >
-              <div
+              <div data-action="navigateTo" data-target="servicos_ativos"
                 class="card servicos-module-card h-100"
-                onclick="navigateTo('servicos_ativos')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -91,9 +94,9 @@
               id="card-servicos-concluidos"
               style="display: none"
             >
-              <div
+              <div data-action="navigateTo" data-target="servicos_concluidos"
                 class="card servicos-module-card h-100"
-                onclick="navigateTo('servicos_concluidos')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -112,9 +115,9 @@
               id="card-relatorios"
               style="display: none"
             >
-              <div
+              <div data-action="navigateTo" data-target="relatorios-servicos"
                 class="card servicos-module-card h-100"
-                onclick="navigateTo('relatorios-servicos')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -133,9 +136,9 @@
               id="card-acompanhamento-construcao"
               style="display: none"
             >
-              <div
+              <div data-action="navigateTo" data-target="acompanhamento_construcao"
                 class="card servicos-module-card h-100"
-                onclick="navigateTo('acompanhamento_construcao')"
+               
                 role="button"
                 tabindex="0"
               >

@@ -45,6 +45,11 @@ Thumbs.db
 .idea/
 
 # ============================================
+# EXPORTS (dados sensíveis de infraestrutura)
+# ============================================
+exports/
+
+# ============================================
 # SCRIPTS DE INSTALAÇÃO (muito específicos)
 # ============================================
 install.sh

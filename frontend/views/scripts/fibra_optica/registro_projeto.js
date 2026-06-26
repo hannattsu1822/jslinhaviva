@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const fileItem = document.createElement("div");
       fileItem.className =
         "list-group-item d-flex justify-content-between align-items-center";
-      fileItem.innerHTML = `
+      fileItem.innerHTML = safeHtml`
         <span>
           <i class="fa-solid fa-file me-2"></i>
           ${file.name}
@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
     const limitMB = (MAX_TOTAL_SIZE / (1024 * 1024)).toFixed(2);
-    fileSizeInfo.innerHTML = `<span>Tamanho total: <strong>${totalSizeMB} MB / ${limitMB} MB</strong></span>`;
+    fileSizeInfo.innerHTML = safeHtml`<span>Tamanho total: <strong>${totalSizeMB} MB / ${limitMB} MB</strong></span>`;
 
     if (totalSize > MAX_TOTAL_SIZE) {
       fileSizeInfo.classList.add("text-danger");

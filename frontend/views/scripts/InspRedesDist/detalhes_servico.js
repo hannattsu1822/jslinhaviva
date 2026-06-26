@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
         : '<span class="text-muted">Pendente de atribuição</span>';
 
     pageTitle.textContent = `Inspeção: ${servico.processo}`;
-    infoGeraisContainer.innerHTML = `
+    infoGeraisContainer.innerHTML = safeHtml`
       <div class="row">
         <div class="col-md-4 mb-3"><strong>Processo:</strong> <span id="info-processo">${
           servico.processo
@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     } catch (error) {
       console.error(error);
-      document.body.innerHTML = `<div class="alert alert-danger m-4">${error.message}</div>`;
+      document.body.innerHTML = safeHtml`<div class="alert alert-danger m-4">${error.message}</div>`;
     }
   }
 

@@ -4,14 +4,21 @@ const { createReportToken } = require("../../../shared/reportToken.helper");
 const path = require("path");
 const { projectRootDir } = require("../../../shared/path.helper");
 
-async function listarInspecoes() {
+async function listarInspecoes(user) {
+  if (user?.nivel >= 4) {
+    const [rows] = await promisePool.query(
+      "SELECT * FROM inspecoes ORDER BY data_inspecao DESC"
+    );
+    return rows;
+  }
   const [rows] = await promisePool.query(
-    "SELECT * FROM inspecoes ORDER BY data_inspecao DESC"
+    "SELECT * FROM inspecoes WHERE matricula = ? ORDER BY data_inspecao DESC",
+    [user.matricula]
   );
   return rows;
 }
 
-async function obterInspecaoPorId(id) {
+async function obterInspecaoPorId(id, user = null) {
   const [rows] = await promisePool.query(
     "SELECT * FROM inspecoes WHERE id = ?",
     [id]
@@ -19,7 +26,12 @@ async function obterInspecaoPorId(id) {
   if (rows.length === 0) {
     throw new Error("Inspeção não encontrada!");
   }
-  return rows[0];
+  const inspecao = rows[0];
+  if (user) {
+    const { assertAcessoRecursoProprio } = require("../../../shared/accessControl.helper");
+    assertAcessoRecursoProprio(user, inspecao.matricula, "Acesso negado a esta inspeção.");
+  }
+  return inspecao;
 }
 
 async function salvarInspecao(dadosInspecao) {
@@ -163,7 +175,8 @@ async function filtrarInspecoes(filtros) {
   return rows;
 }
 
-async function excluirInspecao(id) {
+async function excluirInspecao(id, user) {
+  await obterInspecaoPorId(id, user);
   const [result] = await promisePool.query(
     "DELETE FROM inspecoes WHERE id = ?",
     [id]
@@ -173,16 +186,21 @@ async function excluirInspecao(id) {
   }
 }
 
-async function atualizarInspecao(id, dadosInspecao) {
+async function atualizarInspecao(id, dadosInspecao, user) {
+  const existente = await obterInspecaoPorId(id, user);
   const {
     placa,
-    matricula,
     data_inspecao,
     km_atual,
     horimetro,
     observacoes,
     ...checklistFields
   } = dadosInspecao;
+
+  const matricula =
+    user?.nivel >= 4 && dadosInspecao.matricula
+      ? dadosInspecao.matricula
+      : existente.matricula;
 
   if (!matricula || !placa || !data_inspecao || !km_atual || !horimetro) {
     throw new Error("Dados básicos da inspeção faltando!");
@@ -236,7 +254,8 @@ async function obterUltimoHorimetro(placa) {
   return rows[0];
 }
 
-async function gerarPdfInspecao(id, protocol, host) {
+async function gerarPdfInspecao(id, protocol, host, user) {
+  await obterInspecaoPorId(id, user);
   const [rows] = await promisePool.query(
     "SELECT placa FROM inspecoes WHERE id = ?",
     [id]

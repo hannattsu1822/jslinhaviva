@@ -20,7 +20,10 @@
     <link rel="stylesheet" href="/static/css/gestao-turmas.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="turmas-page turmas-page--hub">
     <div class="page-container">
@@ -45,9 +48,9 @@
 
           <div class="row g-4">
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="diarias"
                 class="card turmas-module-card h-100"
-                onclick="navigateTo('diarias')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -62,9 +65,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="turmas_ativas"
                 class="card turmas-module-card h-100"
-                onclick="navigateTo('turmas_ativas')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -81,9 +84,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="controle-status"
                 class="card turmas-module-card h-100"
-                onclick="navigateTo('controle-status')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -100,9 +103,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="showDevelopmentModal"
                 class="card turmas-module-card h-100"
-                onclick="showDevelopmentModal()"
+               
                 role="button"
                 tabindex="0"
               >

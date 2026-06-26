@@ -132,7 +132,7 @@ async function carregarRelatorio() {
       }
     }
 
-    relatorioContent.innerHTML = `
+    relatorioContent.innerHTML = safeHtml`
       <div class="divisao">
         <h2>Informações Gerais</h2>
         <div class="relatorio-grid">
@@ -255,7 +255,7 @@ async function carregarRelatorio() {
   } catch (error) {
     console.error("Erro ao carregar relatório:", error);
     if (relatorioContent)
-      relatorioContent.innerHTML = `<p class="erro" style="color: var(--sys-color-error, red); text-align:center;">Erro ao carregar o relatório: ${error.message}. Verifique o ID ou tente novamente mais tarde.</p>`;
+      relatorioContent.innerHTML = safeHtml`<p class="erro" style="color: var(--sys-color-error, red); text-align:center;">Erro ao carregar o relatório: ${error.message}. Verifique o ID ou tente novamente mais tarde.</p>`;
   }
 }
 

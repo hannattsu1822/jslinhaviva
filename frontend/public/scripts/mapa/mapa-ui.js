@@ -2,7 +2,7 @@ export function showLoading(mensagem = 'Carregando...') {
     const loadingElement = document.getElementById('mapa-loading');
     if (loadingElement) {
         loadingElement.style.display = 'flex';
-        loadingElement.innerHTML = `
+        loadingElement.innerHTML = safeHtml`
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Carregando...</span>
             </div>
@@ -29,7 +29,7 @@ export function showMessage(mensagem, tipo = 'info') {
     const alert = document.createElement('div');
     alert.className = `alert alert-${tipo} alert-dismissible fade show`;
     alert.role = 'alert';
-    alert.innerHTML = `
+    alert.innerHTML = safeHtml`
         ${mensagem}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;

@@ -51,7 +51,7 @@ async function carregarProximasTrocas() {
         statusText = "ATENÇÃO";
       }
 
-      card.innerHTML = `
+      card.innerHTML = safeHtml`
                 <div class="card-header ${statusClass}">
                     <h3><i class="fas fa-truck me-2"></i>${
                       veiculo.placa || "N/A"
@@ -89,7 +89,7 @@ async function carregarProximasTrocas() {
     });
   } catch (error) {
     console.error("Erro ao carregar próximas trocas:", error);
-    container.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar dados dos veículos: ${error.message}</div>`;
+    container.innerHTML = safeHtml`<div class="error"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar dados dos veículos: ${error.message}</div>`;
   }
 }
 

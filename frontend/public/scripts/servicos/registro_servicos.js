@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
           : file.type.includes("pdf")
           ? "fa-file-pdf"
           : "fa-file";
-        fileInfo.innerHTML = `
+        fileInfo.innerHTML = safeHtml`
                     <i class="fas ${iconClass} me-2"></i>
                     ${file.name} <small>(${(file.size / (1024 * 1024)).toFixed(
           2

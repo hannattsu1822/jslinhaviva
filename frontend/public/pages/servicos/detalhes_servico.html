@@ -107,7 +107,10 @@
         background-color: #f8f9fa;
       }
     </style>
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
   <body class="servicos-page servicos-page--detalhes">
     <div class="page-container">
       <div id="sidebar-root"></div>
@@ -143,7 +146,7 @@
           <div class="action-buttons no-print mt-2 mt-md-0">
             <button
               class="btn btn-outline-secondary me-2"
-              onclick="window.history.back();"
+              data-action="back"
             >
               <i class="fas fa-arrow-left me-1"></i> Voltar
             </button>
@@ -153,7 +156,7 @@
             <button class="btn btn-danger me-2" id="btn-excluir">
               <i class="fas fa-trash me-1"></i> Excluir
             </button>
-            <button onclick="window.print()" class="btn btn-info">
+            <button data-action="print" class="btn btn-info">
               <i class="fas fa-print me-1"></i> Imprimir
             </button>
           </div>

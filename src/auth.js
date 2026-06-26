@@ -17,6 +17,33 @@ const loginLimiter = rateLimit({
   },
 });
 
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
+const failedLoginAttempts = new Map();
+
+function isAccountLocked(matricula) {
+  const entry = failedLoginAttempts.get(matricula);
+  if (!entry?.lockedUntil) return false;
+  if (Date.now() >= entry.lockedUntil) {
+    failedLoginAttempts.delete(matricula);
+    return false;
+  }
+  return true;
+}
+
+function recordFailedLogin(matricula) {
+  const entry = failedLoginAttempts.get(matricula) || { count: 0, lockedUntil: null };
+  entry.count += 1;
+  if (entry.count >= MAX_FAILED_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOCKOUT_MS;
+  }
+  failedLoginAttempts.set(matricula, entry);
+}
+
+function clearFailedLogin(matricula) {
+  failedLoginAttempts.delete(matricula);
+}
+
 function isApiRequest(req) {
   const url = req.originalUrl || req.url || "";
   return (
@@ -77,6 +104,12 @@ async function loginSeguro(req, res) {
     return res.status(400).json({ message: "Matrícula e senha não podem ser vazios." });
   }
 
+  if (isAccountLocked(matriculaLimpa)) {
+    return res.status(429).json({
+      message: "Conta temporariamente bloqueada por tentativas inválidas. Tente novamente em 15 minutos.",
+    });
+  }
+
   try {
     const [rows] = await promisePool.query(
       "SELECT *, nivel FROM users WHERE matricula = ?",
@@ -84,6 +117,8 @@ async function loginSeguro(req, res) {
     );
 
     if (rows.length === 0) {
+      recordFailedLogin(matriculaLimpa);
+      await registrarAuditoria(matriculaLimpa, "LOGIN_FALHA", "Tentativa com matrícula inexistente");
       return res.status(401).json({ message: "Matrícula ou senha inválida." });
     }
 
@@ -104,8 +139,12 @@ async function loginSeguro(req, res) {
     const senhaValida = await bcrypt.compare(senhaLimpa, usuario.senha);
 
     if (!senhaValida) {
+      recordFailedLogin(matriculaLimpa);
+      await registrarAuditoria(matriculaLimpa, "LOGIN_FALHA", "Senha incorreta");
       return res.status(401).json({ message: "Matrícula ou senha inválida." });
     }
+
+    clearFailedLogin(matriculaLimpa);
 
     const ultimoAcessoAnterior = usuario.ultimo_login || null;
 

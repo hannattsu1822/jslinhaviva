@@ -20,7 +20,10 @@
     <link rel="stylesheet" href="/static/css/gestao-frota.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="frota-page frota-page--hub">
     <div class="page-container">
@@ -45,9 +48,9 @@
 
           <div class="row g-4">
             <div class="col-md-6 col-lg-4 col-xl-3">
-              <div
+              <div data-action="navigateTo" data-target="/checklist_veiculos"
                 class="card frota-module-card h-100"
-                onclick="navigateTo('/checklist_veiculos')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -62,9 +65,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4 col-xl-3">
-              <div
+              <div data-action="navigateTo" data-target="/agendar_checklist"
                 class="card frota-module-card h-100"
-                onclick="navigateTo('/agendar_checklist')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -79,9 +82,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4 col-xl-3">
-              <div
+              <div data-action="navigateTo" data-target="/filtrar_veiculos"
                 class="card frota-module-card h-100"
-                onclick="navigateTo('/filtrar_veiculos')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -96,9 +99,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4 col-xl-3">
-              <div
+              <div data-action="navigateTo" data-target="/proxima_troca_oleo"
                 class="card frota-module-card h-100"
-                onclick="navigateTo('/proxima_troca_oleo')"
+               
                 role="button"
                 tabindex="0"
                 data-bs-toggle="tooltip"
@@ -116,9 +119,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4 col-xl-3">
-              <div
+              <div data-action="navigateTo" data-target="/registro_oleo"
                 class="card frota-module-card h-100"
-                onclick="navigateTo('/registro_oleo')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -133,9 +136,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4 col-xl-3">
-              <div
+              <div data-action="navigateTo" data-target="/frota_controle"
                 class="card frota-module-card h-100"
-                onclick="navigateTo('/frota_controle')"
+               
                 role="button"
                 tabindex="0"
               >

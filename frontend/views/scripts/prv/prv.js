@@ -125,7 +125,7 @@ function normalizeKmPayload(payload) {
       tipoLancamentoChegada.checked = true;
       toggleFormFields("chegada");
       const saida = currentState.viagemAberta;
-      infoViagemAbertaEl.innerHTML = `
+      infoViagemAbertaEl.innerHTML = safeHtml`
         <strong>Viagem em andamento:</strong><br>
         Saindo de: <strong>${saida.saida_local}</strong><br>
         KM de Saída: <strong>${
@@ -174,7 +174,7 @@ function normalizeKmPayload(payload) {
         r.chegada_horario ? r.chegada_horario.substring(0, 5) : ""
       } - ${r.chegada_km || ""} KM</small>`;
       const tr = document.createElement("tr");
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
         <td data-label="Dia">${formatarDiaPrv(r)}</td>
         <td data-label="Saída">${saidaInfo}</td>
         <td data-label="Chegada">${chegadaInfo}</td>
@@ -230,7 +230,7 @@ function normalizeKmPayload(payload) {
       veiculoSelect.innerHTML =
         '<option value="" selected>Selecione um veículo...</option>';
       veiculos.forEach((v) => {
-        veiculoSelect.innerHTML += `<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
+        veiculoSelect.innerHTML += safeHtml`<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
       });
     } catch (error) {
       showToast(error.message, "error");

@@ -130,21 +130,17 @@ function populateTable(data) {
 
   data.forEach((membro) => {
     const row = document.createElement("tr");
-    row.innerHTML = `
+    row.innerHTML = safeHtml`
             <td data-label="ID">${membro.id || ""}</td>
             <td data-label="Matrícula">${membro.matricula || ""}</td>
             <td data-label="Nome">${membro.nome || ""}</td>
             <td data-label="Cargo">${membro.cargo || ""}</td>
             <td data-label="Turma/Encarregado">${membro.turma_encarregado || "Não atribuído"}</td>
             <td class="text-end" data-label="Ações">
-                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.editMember(${
-                  membro.id
-                })" title="Editar/Mover Turma">
+                <button class="btn btn-sm btn-outline-primary me-1" data-action="editMember" data-id="${membro.id}" title="Editar/Mover Turma">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="window.confirmDelete(${
-                  membro.id
-                })" title="Remover Membro">
+                <button class="btn btn-sm btn-outline-danger" data-action="confirmDelete" data-id="${membro.id}" title="Remover Membro">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </td>`;
@@ -262,7 +258,7 @@ window.saveEdit = function () {
   }
 
   const saveBtn = document.querySelector(
-    '#editMemberModal button[onclick="window.saveEdit()"]'
+    '#editMemberModal button[data-action="saveEdit"]'
   );
   const originalBtnHTML = saveBtn ? saveBtn.innerHTML : "Salvar Alterações";
   if (saveBtn) {
@@ -325,7 +321,7 @@ window.confirmDelete = function (id) {
 
   if (modalTitle) modalTitle.textContent = "Confirmar Remoção de Membro";
   if (modalBody)
-    modalBody.innerHTML = `<p>Tem certeza que deseja remover <strong>${nomeMembro}</strong> da turma?</p> <p class="text-muted small">Esta ação apenas desvincula o membro da turma, não exclui o usuário.</p>`;
+    modalBody.innerHTML = safeHtml`<p>Tem certeza que deseja remover <strong>${nomeMembro}</strong> da turma?</p> <p class="text-muted small">Esta ação apenas desvincula o membro da turma, não exclui o usuário.</p>`;
 
   if (confirmBtn) {
     const newConfirmBtn = confirmBtn.cloneNode(true);

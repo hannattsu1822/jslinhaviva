@@ -677,7 +677,7 @@ class MapaDinamico {
     this.arquivosCarregados.forEach((arquivo) => {
       const item = document.createElement("div");
       item.className = "form-check";
-      item.innerHTML = `
+      item.innerHTML = safeHtml`
                 <input class="form-check-input" type="checkbox" id="arquivo-${arquivo.nome}" checked>
                 <label class="form-check-label" for="arquivo-${arquivo.nome}">
                     ${arquivo.nome} <small class="text-muted">(${arquivo.quantidade})</small>
@@ -691,7 +691,7 @@ class MapaDinamico {
     Array.from(this.tiposDisponiveis).forEach((tipo) => {
       const item = document.createElement("div");
       item.className = "form-check";
-      item.innerHTML = `
+      item.innerHTML = safeHtml`
                 <input class="form-check-input" type="checkbox" id="tipo-${tipo}" checked>
                 <label class="form-check-label" for="tipo-${tipo}">
                     ${this.formatarTipoLegenda(tipo)}
@@ -756,7 +756,7 @@ class MapaDinamico {
       const itemLegenda = document.createElement("div");
       itemLegenda.className = "legenda-item";
 
-      itemLegenda.innerHTML = `
+      itemLegenda.innerHTML = safeHtml`
                 <div class="legenda-icone">
                     <svg width="24" height="24" viewBox="0 0 24 24">
                         ${this.getSvgShape(config.forma, config.cor)}
@@ -856,7 +856,7 @@ class MapaDinamico {
     const modalTitulo = document.getElementById("detalhes-titulo");
     const modalConteudo = document.getElementById("detalhes-conteudo");
 
-    modalTitulo.innerHTML = `<i class="bi bi-info-circle"></i> Detalhes do ${this.formatarTipoLegenda(
+    modalTitulo.innerHTML = safeHtml`<i class="bi bi-info-circle"></i> Detalhes do ${this.formatarTipoLegenda(
       ativo.tipo
     )}`;
 

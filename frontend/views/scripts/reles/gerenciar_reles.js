@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     reles.forEach((rele) => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
                 <td data-label="Nome do Relé">${rele.nome_rele}</td>
                 <td data-label="Local Tag">${rele.local_tag || "N/A"}</td>
                 <td data-label="Endereço IP">${rele.ip_address}</td>

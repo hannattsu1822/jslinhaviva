@@ -239,7 +239,7 @@ function loadDiarias() {
       if (error.name !== "AbortError") {
         console.error("Erro ao carregar diárias:", error);
         showAlert("Erro ao carregar diárias: " + error.message, "danger");
-        tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro ao carregar diárias: ${error.message}</td></tr>`;
+        tableBody.innerHTML = safeHtml`<tr><td colspan="8" class="text-center text-danger py-4">Erro ao carregar diárias: ${error.message}</td></tr>`;
       }
     });
 }
@@ -268,7 +268,7 @@ function renderDiariasTable(diarias) {
       groupHeaderRow.style.backgroundColor = "var(--light-blue-diarias)";
       groupHeaderRow.style.color = "var(--primary-blue-diarias)";
       groupHeaderRow.style.fontWeight = "bold";
-      groupHeaderRow.innerHTML = `
+      groupHeaderRow.innerHTML = safeHtml`
         <td colspan="3">Funcionário: ${diaria.nome || "N/A"} (${
         diaria.matricula || "N/A"
       }) - Cargo: ${diaria.cargo || "N/A"}</td>
@@ -283,7 +283,7 @@ function renderDiariasTable(diarias) {
       (diaria.data
         ? new Date(diaria.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })
         : "N/A");
-    row.innerHTML = `
+    row.innerHTML = safeHtml`
       <td data-label="Matrícula">${diaria.matricula || "N/A"}</td>
       <td data-label="Nome">${diaria.nome || "N/A"}</td>
       <td data-label="Cargo">${diaria.cargo || "N/A"}</td>
@@ -296,9 +296,9 @@ function renderDiariasTable(diarias) {
       }</td>
       <td data-label="Processo">${diaria.processo || "N/A"}</td>
       <td class="text-end" data-label="Ações">
-        <button onclick="window.confirmDelete(${diaria.id}, '${String(
+        <button data-action="confirmDelete" data-id="${diaria.id}" data-target="${String(
       diaria.nome || ""
-    ).replace(/'/g, "\\'")}')"
+    ).replace(/"/g, "&quot;")}"
             class="btn btn-sm btn-outline-danger" title="Remover diária">
             <i class="fas fa-trash-alt"></i>
         </button>
@@ -629,11 +629,11 @@ async function loadTurmasDisponiveis() {
       } else {
         const errorMsg = "Turma do encarregado não identificada.";
         if (filtroTurmaSelect) {
-          filtroTurmaSelect.innerHTML = `<option value="">${errorMsg}</option>`;
+          filtroTurmaSelect.innerHTML = safeHtml`<option value="">${errorMsg}</option>`;
           filtroTurmaSelect.disabled = true;
         }
         if (selectTurmaModal) {
-          selectTurmaModal.innerHTML = `<option value="">${errorMsg}</option>`;
+          selectTurmaModal.innerHTML = safeHtml`<option value="">${errorMsg}</option>`;
           selectTurmaModal.disabled = true;
         }
         console.warn(errorMsg);

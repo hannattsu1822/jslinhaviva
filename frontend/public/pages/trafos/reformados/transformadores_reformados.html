@@ -21,7 +21,10 @@
     <link rel="stylesheet" href="/static/css/transformadores.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="trafos-page trafos-page--reformados-hub">
     <div class="page-container">
@@ -50,9 +53,9 @@
 
           <div class="row g-4">
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="trafos_reformados_importar.html"
                 class="card trafos-module-card h-100"
-                onclick="navigateTo('trafos_reformados_importar.html')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -69,9 +72,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="trafos_reformados_filtrar.html"
                 class="card trafos-module-card h-100"
-                onclick="navigateTo('trafos_reformados_filtrar.html')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -88,9 +91,9 @@
             </div>
 
             <div class="col-md-12 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="consultar_historicos.html"
                 class="card trafos-module-card h-100"
-                onclick="navigateTo('consultar_historicos.html')"
+               
                 role="button"
                 tabindex="0"
               >

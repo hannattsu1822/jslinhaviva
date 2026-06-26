@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", function () {
       servico.processo || "Serviço Offline"
     }`;
 
-    infoServicoContainer.innerHTML = `
+    infoServicoContainer.innerHTML = safeHtml`
       <div class="card">
         <div class="card-header"><h5 class="mb-0">Informações Gerais do Serviço</h5></div>
         <div class="card-body">
@@ -440,9 +440,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const removeButton = `<button type="button" class="btn-remove-preview" data-file-id="${fileId}" data-file-name="${fileName}">&times;</button>`;
 
     if (isImage) {
-      previewElement.innerHTML = `<img src="${url}" class="preview-thumbnail"><div class="preview-info"><strong>${fileName}</strong></div>${removeButton}`;
+      previewElement.innerHTML = safeHtml`<img src="${url}" class="preview-thumbnail"><div class="preview-info"><strong>${fileName}</strong></div>${removeButton}`;
     } else {
-      previewElement.innerHTML = `<div class="preview-icon"><span class="material-icons">description</span></div><div class="preview-info"><strong>${fileName}</strong></div>${removeButton}`;
+      previewElement.innerHTML = safeHtml`<div class="preview-icon"><span class="material-icons">description</span></div><div class="preview-info"><strong>${fileName}</strong></div>${removeButton}`;
     }
     previewArea.appendChild(previewElement);
   }

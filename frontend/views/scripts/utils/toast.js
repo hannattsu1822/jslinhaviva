@@ -76,13 +76,22 @@ function showToast(message, type = "success", duration = 4000) {
 
   const toastBody = document.createElement("div");
   toastBody.className = "d-flex";
-  toastBody.innerHTML = `
-    <div class="toast-body">
-      <i class="fa-solid ${iconName} me-2"></i>
-      ${message}
-    </div>
-    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-  `;
+
+  const bodyContent = document.createElement("div");
+  bodyContent.className = "toast-body";
+  const icon = document.createElement("i");
+  icon.className = `fa-solid ${iconName} me-2`;
+  bodyContent.appendChild(icon);
+  bodyContent.append(document.createTextNode(String(message)));
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "btn-close btn-close-white me-2 m-auto";
+  closeBtn.setAttribute("data-bs-dismiss", "toast");
+  closeBtn.setAttribute("aria-label", "Close");
+
+  toastBody.appendChild(bodyContent);
+  toastBody.appendChild(closeBtn);
 
   toast.appendChild(toastBody);
   container.appendChild(toast);

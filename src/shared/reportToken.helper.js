@@ -1,9 +1,13 @@
 const crypto = require("crypto");
 
+function getReportTokenSecret() {
+  return process.env.REPORT_TOKEN_SECRET || process.env.SESSION_SECRET;
+}
+
 function createReportToken(scope, resourceId, ttlSec = 300) {
-  const secret = process.env.SESSION_SECRET;
+  const secret = getReportTokenSecret();
   if (!secret) {
-    throw new Error("SESSION_SECRET não configurado.");
+    throw new Error("REPORT_TOKEN_SECRET ou SESSION_SECRET não configurado.");
   }
 
   const exp = Date.now() + ttlSec * 1000;
@@ -26,7 +30,7 @@ function verifyReportToken(token, scope, resourceId) {
     const exp = parseInt(expStr, 10);
     if (!Number.isFinite(exp) || Date.now() > exp) return false;
 
-    const secret = process.env.SESSION_SECRET;
+    const secret = getReportTokenSecret();
     if (!secret) return false;
 
     const payload = `${scopePart}:${idPart}:${expStr}`;

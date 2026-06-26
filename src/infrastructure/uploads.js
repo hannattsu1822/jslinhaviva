@@ -42,7 +42,7 @@ const storage = multer.diskStorage({
 
 const multerInstance = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024, files: 25 },
+  limits: { fileSize: 15 * 1024 * 1024, files: 25 },
   fileFilter: createUploadFileFilter(),
 });
 

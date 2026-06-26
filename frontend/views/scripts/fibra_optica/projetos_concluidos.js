@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const fileItem = document.createElement("div");
       fileItem.className =
         "list-group-item d-flex justify-content-between align-items-center";
-      fileItem.innerHTML = `
+      fileItem.innerHTML = safeHtml`
         <span>
           <i class="fa-solid fa-file-lines me-2"></i>
           ${file.name}
@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const listItem = document.createElement("li");
           listItem.className =
             "list-group-item d-flex justify-content-between align-items-center";
-          listItem.innerHTML = `
+          listItem.innerHTML = safeHtml`
             <span>
               <i class="fa-solid fa-file-shield me-2"></i>
               <a href="${anexo.caminho_servidor}" target="_blank" class="anexo-nome">${anexo.nome_original}</a>
@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
         aprExistentesList.appendChild(list);
       }
     } catch (error) {
-      aprExistentesList.innerHTML = `<p class="text-danger text-center p-3 mb-0">${error.message}</p>`;
+      aprExistentesList.innerHTML = safeHtml`<p class="text-danger text-center p-3 mb-0">${error.message}</p>`;
     }
   };
 

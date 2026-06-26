@@ -19,7 +19,10 @@
     <link rel="stylesheet" href="/static/css/fibra_optica_principal.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/toast.css" />
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="fibra-page fibra-page--hub">
     <div class="page-container">
@@ -44,9 +47,9 @@
 
           <div class="row g-4">
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="registro_projeto_fibra"
                 class="card fibra-module-card h-100"
-                onclick="navigateTo('registro_projeto_fibra')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -61,9 +64,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="projetos_fibra_andamento"
                 class="card fibra-module-card h-100"
-                onclick="navigateTo('projetos_fibra_andamento')"
+               
                 role="button"
                 tabindex="0"
               >
@@ -78,9 +81,9 @@
             </div>
 
             <div class="col-md-6 col-lg-4">
-              <div
+              <div data-action="navigateTo" data-target="projetos_fibra_concluidos"
                 class="card fibra-module-card h-100"
-                onclick="navigateTo('projetos_fibra_concluidos')"
+               
                 role="button"
                 tabindex="0"
               >

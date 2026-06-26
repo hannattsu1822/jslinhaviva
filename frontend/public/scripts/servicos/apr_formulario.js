@@ -252,7 +252,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       definicoesAPR.perguntasARC.forEach((pergunta) => {
         const div = document.createElement("div");
         div.className = "mb-3 p-2 border rounded";
-        div.innerHTML = `
+        div.innerHTML = safeHtml`
                     <p class="mb-1"><strong>${pergunta.texto}</strong></p>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="${pergunta.chave}" id="${pergunta.chave}_sim" value="sim" required>
@@ -278,7 +278,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       definicoesAPR.riscosEspecificos.forEach((risco) => {
         const div = document.createElement("div");
         div.className = "form-check";
-        div.innerHTML = `
+        div.innerHTML = safeHtml`
                     <input class="form-check-input" type="checkbox" name="${risco.chave}" id="${risco.chave}" value="true">
                     <label class="form-check-label" for="${risco.chave}">${risco.texto}</label>
                 `;
@@ -294,7 +294,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       definicoesAPR.medidasControle.forEach((medida) => {
         const div = document.createElement("div");
         div.className = "form-check";
-        div.innerHTML = `
+        div.innerHTML = safeHtml`
                     <input class="form-check-input" type="checkbox" name="${medida.chave}" id="${medida.chave}" value="true">
                     <label class="form-check-label" for="${medida.chave}">${medida.texto}</label>
                 `;
@@ -354,7 +354,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.error("Erro ao carregar informações do serviço:", error);
       const infoServicoCard = document.getElementById("infoServicoCard");
       if (infoServicoCard)
-        infoServicoCard.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+        infoServicoCard.innerHTML = safeHtml`<div class="alert alert-danger">${error.message}</div>`;
     }
   }
 
@@ -528,7 +528,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const div = document.createElement("div");
     div.className = "row mb-2 align-items-center row-participante";
     div.dataset.matricula = empregado.matricula;
-    div.innerHTML = `
+    div.innerHTML = safeHtml`
             <div class="col-5">
                 <span class="selected-item-display">${
                   empregado.matricula || "N/A"
@@ -564,7 +564,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     atividadeIdx++;
     const div = document.createElement("div");
     div.className = "row mb-2 align-items-center row-atividade";
-    div.innerHTML = `
+    div.innerHTML = safeHtml`
             <div class="col-md-3">
                 <input type="text" class="form-control form-control-sm" name="atividade_codigo_${atividadeIdx}" placeholder="Cód. Atividade" value="${
       atividade.codigo_bd || ""
@@ -608,7 +608,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     materialIdx++;
     const div = document.createElement("div");
     div.className = "row mb-2 align-items-center row-material";
-    div.innerHTML = `
+    div.innerHTML = safeHtml`
             <div class="col-3">
                 <input type="text" class="form-control form-control-sm" name="material_codigo_${materialIdx}" placeholder="Cód. Material" value="${
       material.codigo_bd || ""
@@ -718,7 +718,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     itemsFiltrados.forEach((item) => {
       const div = document.createElement("div");
       div.className = "form-check";
-      div.innerHTML = `
+      div.innerHTML = safeHtml`
                 <input class="form-check-input" type="checkbox" value="${item.matricula}" id="func_${item.matricula}" data-nome="${item.nome}">
                 <label class="form-check-label" for="func_${item.matricula}">
                     ${item.matricula} - ${item.nome} (${item.cargo})

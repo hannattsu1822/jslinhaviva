@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     } catch (error) {
       console.error(error);
-      selectCriador.innerHTML = `<option value="" disabled>${error.message}</option>`;
+      selectCriador.innerHTML = safeHtml`<option value="" disabled>${error.message}</option>`;
     }
   }
 
@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        previewElement.innerHTML = `
+        previewElement.innerHTML = safeHtml`
           <img src="${e.target.result}" alt="${
           file.name
         }" class="preview-thumbnail">
@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
       };
       reader.readAsDataURL(file);
     } else {
-      previewElement.innerHTML = `
+      previewElement.innerHTML = safeHtml`
         <div class="preview-icon"><span class="material-icons">description</span></div>
         <div class="preview-info">
           <strong>${file.name}</strong>

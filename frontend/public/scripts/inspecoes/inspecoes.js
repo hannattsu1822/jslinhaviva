@@ -201,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ? `<span class="badge bg-secondary"><i class="bi bi-camera-fill"></i> ${ponto.fotoNome}</span>`
       : '<span class="badge bg-light text-dark">Sem foto</span>';
 
-    listItem.innerHTML = `
+    listItem.innerHTML = safeHtml`
             <div>
                 <strong>Motivo:</strong> ${ponto.motivo}<br>
                 <small>Lat: ${ponto.latitude.toFixed(

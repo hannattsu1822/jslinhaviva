@@ -154,7 +154,7 @@ function showSuccess(result) {
             </div>`;
   }
 
-  messageArea.innerHTML = `
+  messageArea.innerHTML = safeHtml`
         <div class="message-icon">
           <i class="fas fa-check-circle"></i>
         </div>
@@ -163,10 +163,10 @@ function showSuccess(result) {
           ${successDetails}
           ${errorsDetailSection}
           <div class="action-buttons mt-4">
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-action="reload">
               <i class="fas fa-redo me-2"></i>Nova Importação
             </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="window.location.href='/trafos_reformados_filtrar.html'">
+            <button type="button" class="btn btn-primary btn-sm" data-action="navigate" data-href="/trafos_reformados_filtrar.html">
               <i class="fas fa-clipboard-check me-2"></i>Ir para Avaliações
             </button>
           </div>
@@ -184,14 +184,14 @@ function showError(message) {
   const messageArea = document.getElementById("messageArea");
   if (!messageArea) return;
 
-  messageArea.innerHTML = `
+  messageArea.innerHTML = safeHtml`
         <div class="message-icon">
           <i class="fas fa-exclamation-circle"></i>
         </div>
         <div class="message-content">
           <h4>Erro na Importação</h4>
           <p>${message || "Ocorreu um erro desconhecido."}</p>
-          <button type="button" class="btn btn-outline-danger mt-3 btn-sm" onclick="location.reload()">
+          <button type="button" class="btn btn-outline-danger mt-3 btn-sm" data-action="reload">
             <i class="fas fa-redo me-2"></i>Tentar Novamente
           </button>
         </div>`;

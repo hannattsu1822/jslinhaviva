@@ -63,7 +63,10 @@
         line-height: 1.4;
       }
     </style>
-  </head>
+  
+    <script src="/shared/utils/dom-safe.js"></script>
+    <script src="/shared/utils/ui-actions.js"></script>
+</head>
 
   <body class="trafos-page trafos-page--relatorio">
     <div class="relatorio-container">
@@ -81,13 +84,13 @@
 
       <div class="no-print" style="text-align: center; margin-top: 30px">
         <button
-          onclick="window.location.href = document.referrer && document.referrer !== window.location.href ? document.referrer : '/filtrar_transformadores'"
+          data-action="navigate-referrer" data-fallback="/filtrar_transformadores"
           class="back-btn"
           type="button"
         >
           <i class="fa-solid fa-arrow-left"></i> Voltar
         </button>
-        <button onclick="gerarPDF()" class="pdf-btn" type="button">
+        <button data-action="gerarPDF" class="pdf-btn" type="button">
           <i class="fa-solid fa-file-pdf"></i> Gerar PDF Novamente
         </button>
       </div>

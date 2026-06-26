@@ -106,7 +106,7 @@ function exibirResultados(inspecoes) {
 
   inspecoes.forEach((inspecao) => {
     const row = document.createElement("tr");
-    row.innerHTML = `
+    row.innerHTML = safeHtml`
       <td data-label="ID">${inspecao.id}</td>
       <td data-label="Placa">${inspecao.placa || "N/A"}</td>
       <td data-label="Matrícula">${inspecao.matricula_motorista || inspecao.matricula || "N/A"}</td>
@@ -120,24 +120,22 @@ function exibirResultados(inspecoes) {
       <td data-label="KM Atual">${inspecao.km_atual || "N/A"}</td>
       <td data-label="Horímetro">${inspecao.horimetro || "N/A"}</td>
       <td data-label="Relatório">
-        <button onclick="window.navigateTo('/relatorio_publico_veiculos?id=${
-          inspecao.id
-        }')" 
+        <button data-action="navigate" data-href="/relatorio_publico_veiculos?id=${inspecao.id}" 
                 class="btn btn-sm btn-success" title="Ver Relatório Detalhado">
           <i class="fas fa-file-alt"></i>
         </button>
       </td>
       <td data-label="Ações" class="text-center">
         <div class="d-flex gap-1 justify-content-center">
-          <button onclick="window.editarInspecao(${inspecao.id})" 
+          <button data-action="editarInspecao" data-id="${inspecao.id}" 
                   class="btn btn-sm btn-primary" title="Editar">
             <i class="fas fa-edit"></i>
           </button>
-          <button onclick="window.excluirInspecao(${inspecao.id}, this)" 
+          <button data-action="excluirInspecao" data-id="${inspecao.id}" 
                   class="btn btn-sm btn-danger" title="Excluir">
             <i class="fas fa-trash"></i>
           </button>
-          <button onclick="window.gerarPDF(${inspecao.id}, this)" 
+          <button data-action="gerarPDF" data-id="${inspecao.id}" 
                   class="btn btn-sm btn-pdf" title="Gerar PDF">
             <i class="fas fa-file-pdf"></i>
           </button>

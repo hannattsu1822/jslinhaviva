@@ -232,7 +232,7 @@ function preencherEquipeResponsavel(responsaveis, statusServico) {
 
   const table = document.createElement("table");
   table.className = "table table-sm table-borderless responsaveis-table";
-  table.innerHTML = `
+  table.innerHTML = safeHtml`
     <thead>
       <tr>
         <th>Nome</th>
@@ -274,7 +274,7 @@ function preencherEquipeResponsavel(responsaveis, statusServico) {
          </td>`
       : "";
 
-    tr.innerHTML = `
+    tr.innerHTML = safeHtml`
       <td>${resp.nome || "N/A"}</td>
       <td>${matricula}</td>
       <td>${statusBadge}</td>
@@ -363,7 +363,7 @@ function abrirModalForcarConclusao(servicoId) {
   modalEl.id = "modalForcarConclusao";
   modalEl.className = "modal fade";
   modalEl.setAttribute("tabindex", "-1");
-  modalEl.innerHTML = `
+  modalEl.innerHTML = safeHtml`
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-warning">
@@ -449,7 +449,7 @@ function preencherAnexos(anexos) {
       previewHTML = `<img src="${caminhoCorretoAnexo}" alt="Preview" class="attachment-preview-img">`;
     }
 
-    anexoElement.innerHTML = `
+    anexoElement.innerHTML = safeHtml`
       <div class="attachment-card card h-100 w-100 attachment-card--galeria"
         role="button"
         tabindex="0"
@@ -464,7 +464,7 @@ function preencherAnexos(anexos) {
             <p class="attachment-size small text-muted mb-2">${anexo.tamanho || ""}</p>
           </div>
           <div class="btn-group mt-auto">
-            <a href="${caminhoCorretoAnexo}?download=true" class="btn btn-sm btn-outline-secondary" title="Baixar" onclick="event.stopPropagation()"><i class="fas fa-download"></i></a>
+            <a href="${caminhoCorretoAnexo}?download=true" class="btn btn-sm btn-outline-secondary" title="Baixar" data-stop-propagation="true"><i class="fas fa-download"></i></a>
           </div>
         </div>
       </div>
@@ -503,7 +503,7 @@ function getFileIcon(filename) {
 function mostrarErroDetalhes(mensagem) {
   const container = document.getElementById("alerta-container-detalhes");
   if (container) {
-    container.innerHTML = `<div class="alert alert-danger" role="alert">${mensagem}</div>`;
+    container.innerHTML = safeHtml`<div class="alert alert-danger" role="alert">${mensagem}</div>`;
   }
 }
 

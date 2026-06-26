@@ -11,6 +11,14 @@ function ensureCsrfToken(req) {
   return req.session.csrfToken;
 }
 
+function tokensMatch(sessionToken, requestToken) {
+  if (!sessionToken || !requestToken) return false;
+  const a = Buffer.from(String(sessionToken));
+  const b = Buffer.from(String(requestToken));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 function csrfProtection(req, res, next) {
   if (SAFE_METHODS.has(req.method)) return next();
 
@@ -23,7 +31,7 @@ function csrfProtection(req, res, next) {
     req.headers["x-xsrf-token"] ||
     req.body?._csrf;
 
-  if (!sessionToken || !requestToken || requestToken !== sessionToken) {
+  if (!tokensMatch(sessionToken, requestToken)) {
     return res.status(403).json({
       success: false,
       message: "Token CSRF inválido ou ausente.",

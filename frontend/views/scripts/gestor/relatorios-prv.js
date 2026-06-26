@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       registros.forEach((r) => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
+        tr.innerHTML = safeHtml`
           <td>${r.dia ? formatDateForDisplay(r.dia) : ""}</td>
           <td>${r.saida_horario ? r.saida_horario.substring(0, 5) : ""}</td>
           <td>${r.saida_local || ""}</td>
@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
       veiculoSelect.innerHTML =
         '<option value="" selected>Selecione um veículo...</option>';
       veiculos.forEach((v) => {
-        veiculoSelect.innerHTML += `<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
+        veiculoSelect.innerHTML += safeHtml`<option value="${v.id}">${v.modelo} - ${v.placa}</option>`;
       });
     } catch (error) {
       showToast(error.message, "error");

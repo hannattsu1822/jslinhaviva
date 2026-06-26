@@ -284,7 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
     itemCard.className = "item-card";
     itemCard.dataset.tempId = item.temp_id;
 
-    itemCard.innerHTML = `
+    itemCard.innerHTML = safeHtml`
         <div class="item-card-content">
           <p class="item-card-title">${item.descricao}</p>
           <p class="item-card-details">
@@ -529,7 +529,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       inspecoes.forEach((insp) => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
+        tr.innerHTML = safeHtml`
                   <td data-label="Seleção"><input type="checkbox" class="inspecao-checkbox" data-id="${
                     insp.id
                   }"></td>

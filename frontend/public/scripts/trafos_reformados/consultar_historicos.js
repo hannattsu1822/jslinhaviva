@@ -143,7 +143,7 @@ async function buscarChecklistsAvaliados(page = 1) {
     }
   } catch (error) {
     if (tbody)
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">Erro ao buscar dados: ${error.message}</td></tr>`;
+      tbody.innerHTML = safeHtml`<tr><td colspan="8" class="text-center text-danger py-4">Erro ao buscar dados: ${error.message}</td></tr>`;
     if (paginationInfoEl)
       paginationInfoEl.textContent = "Falha ao carregar dados";
   }
@@ -321,22 +321,22 @@ function preencherTabela(trafos) {
     const dataAvaliacao = trafo.data_avaliacao
       ? new Date(trafo.data_avaliacao).toLocaleDateString("pt-BR")
       : "-";
-    const historicoButtonHtml = `<button class="btn btn-sm btn-outline-info" onclick="window.location.href='/transformadores/historico/${trafo.numero_serie}'" title="Ver todos os históricos para este Nº de Série"><i class="fas fa-history"></i> (${trafo.total_ciclos})</button>`;
+    const historicoButtonHtml = `<button class="btn btn-sm btn-outline-info" data-action="navigate" data-href="/transformadores/historico/${trafo.numero_serie}" title="Ver todos os históricos para este Nº de Série"><i class="fas fa-history"></i> (${trafo.total_ciclos})</button>`;
 
     const actionButtonsHtml = `
-        <button class="btn btn-sm btn-info" onclick="visualizarChecklist(${trafo.id})" title="Visualizar Detalhes">
+        <button class="btn btn-sm btn-info" data-action="visualizarChecklist" data-id="${trafo.id}" title="Visualizar Detalhes">
             <i class="fas fa-eye"></i>
         </button>
-        <button class="btn btn-sm btn-secondary" onclick="gerarPDFChecklist(${trafo.id})" title="Gerar PDF do Checklist">
+        <button class="btn btn-sm btn-secondary" data-action="gerarPDFChecklist" data-id="${trafo.id}" title="Gerar PDF do Checklist">
             <i class="fas fa-file-pdf"></i>
         </button>
-        <button class="btn btn-sm btn-warning" onclick="reverterParaPendente(${trafo.id})" title="Reverter para Pendente">
+        <button class="btn btn-sm btn-warning" data-action="reverterParaPendente" data-id="${trafo.id}" title="Reverter para Pendente">
             <i class="fas fa-undo"></i>
         </button>
     `;
 
     const tr = document.createElement("tr");
-    tr.innerHTML = `
+    tr.innerHTML = safeHtml`
       <td data-label="ID do Registro">${trafo.id}</td>
       <td data-label="Nº de Série">${trafo.numero_serie}</td>
       <td data-label="Fabricante">${trafo.fabricante || "-"}</td>
@@ -395,7 +395,7 @@ async function visualizarChecklist(registroId) {
       `;
     }
 
-    container.innerHTML = `
+    container.innerHTML = safeHtml`
             <p><strong>ID do Teste:</strong> ${checklistData.id}</p>
             <p><strong>Data do Teste:</strong> ${new Date(
               checklistData.data_teste
@@ -436,7 +436,7 @@ async function visualizarChecklist(registroId) {
             ${anexoHtml}
         `;
   } catch (error) {
-    container.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+    container.innerHTML = safeHtml`<div class="alert alert-danger">${error.message}</div>`;
   }
 }
 

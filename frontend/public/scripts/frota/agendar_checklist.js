@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           statusClass = "status-concluido";
         }
 
-        row.innerHTML = `
+        row.innerHTML = safeHtml`
           <td>${agendamento.id}</td>
           <td>${agendamento.placa || "N/A"}</td>
           <td>${new Date(agendamento.data_agendamento).toLocaleDateString(
@@ -308,7 +308,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     } catch (error) {
       console.error("Erro ao carregar agendamentos:", error);
-      agendamentosTableBody.innerHTML = `<tr><td colspan="9" class="text-center error-message">Erro ao carregar agendamentos: ${error.message}</td></tr>`;
+      agendamentosTableBody.innerHTML = safeHtml`<tr><td colspan="9" class="text-center error-message">Erro ao carregar agendamentos: ${error.message}</td></tr>`;
       noRecordsMessage.style.display = "none";
     }
   }

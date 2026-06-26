@@ -6,6 +6,7 @@ const { uploadsSubestacoesDir } = require("../../../../infrastructure/uploads");
   const playwright = require("playwright");
   const { PDFDocument } = require("pdf-lib");
   const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../../shared/path.helper");
+  const { escapeHtml } = require("../../../../shared/htmlEscape.helper");
 
   async function processarImagensParaUrlLocal(anexos) {
     if (!anexos || anexos.length === 0) {
@@ -35,7 +36,7 @@ const { uploadsSubestacoesDir } = require("../../../../infrastructure/uploads");
       galleryHtml +=
         '<div class="photo-grid-container"><div class="photo-grid-4">';
       chunk.forEach((img) => {
-        galleryHtml += `<div class="gallery-item"><img src="${img.src}" alt="${img.nome}"><p class="caption">${img.nome}</p></div>`;
+        galleryHtml += `<div class="gallery-item"><img src="${img.src}" alt="${escapeHtml(img.nome)}"><p class="caption">${escapeHtml(img.nome)}</p></div>`;
       });
       galleryHtml += "</div></div>";
     }
@@ -54,7 +55,7 @@ const { uploadsSubestacoesDir } = require("../../../../infrastructure/uploads");
     }
     let listHtml = '<ul class="doc-list">';
     documentos.forEach((doc) => {
-      listHtml += `<li>${doc.nome_original}</li>`;
+      listHtml += `<li>${escapeHtml(doc.nome_original)}</li>`;
     });
     listHtml += "</ul>";
     return listHtml;
@@ -92,18 +93,18 @@ const { uploadsSubestacoesDir } = require("../../../../infrastructure/uploads");
         const galeriaItemHtml = gerarGaleriaHtml(imagensItemLocal);
         itensEscopoHtml += `
                   <div class="item-card">
-                      <p class="item-card-header">${
+                      <p class="item-card-header">${escapeHtml(
                         item.descricao_item_servico
-                      }</p>
+                      )}</p>
                       <div class="item-card-details">
-                          <p><strong>TAG:</strong> ${
+                          <p><strong>TAG:</strong> ${escapeHtml(
                             item.tag_equipamento_alvo || "N/A"
-                          } | <strong>Encarregado:</strong> ${
+                          )} | <strong>Encarregado:</strong> ${escapeHtml(
           item.encarregado_item_nome || "N/A"
-        } | <strong>Status:</strong> <span class="status-badge status-${statusClasse}">${statusTexto}</span></p>
+        )} | <strong>Status:</strong> <span class="status-badge status-${statusClasse}">${escapeHtml(statusTexto)}</span></p>
                           ${
                             item.observacoes_conclusao_item
-                              ? `<p><strong>Obs. Conclusão:</strong> ${item.observacoes_conclusao_item}</p>`
+                              ? `<p><strong>Obs. Conclusão:</strong> ${escapeHtml(item.observacoes_conclusao_item)}</p>`
                               : ""
                           }
                           ${galeriaItemHtml}
@@ -126,23 +127,23 @@ const { uploadsSubestacoesDir } = require("../../../../infrastructure/uploads");
     ).toLowerCase();
 
     const dadosParaTemplate = {
-      processo: servicoData.processo || "N/A",
-      subestacao_nome: servicoData.subestacao_nome,
-      subestacao_sigla: servicoData.subestacao_sigla,
-      tipo_ordem: servicoData.tipo_ordem || "N/A",
-      prioridade: servicoData.prioridade || "N/A",
-      responsavel_nome: servicoData.responsavel_nome || "N/A",
+      processo: escapeHtml(servicoData.processo || "N/A"),
+      subestacao_nome: escapeHtml(servicoData.subestacao_nome),
+      subestacao_sigla: escapeHtml(servicoData.subestacao_sigla),
+      tipo_ordem: escapeHtml(servicoData.tipo_ordem || "N/A"),
+      prioridade: escapeHtml(servicoData.prioridade || "N/A"),
+      responsavel_nome: escapeHtml(servicoData.responsavel_nome || "N/A"),
       data_prevista: formatarData(servicoData.data_prevista),
       horario_previsto: `${formatarHora(
         servicoData.horario_inicio
       )} às ${formatarHora(servicoData.horario_fim)}`,
-      motivo: servicoData.motivo || "Nenhum.",
+      motivo: escapeHtml(servicoData.motivo || "Nenhum."),
       itens_escopo_html: itensEscopoHtml,
       status_final_classe: `status-${statusFinalClasse}`,
-      status_final_texto: statusFinalTexto,
+      status_final_texto: escapeHtml(statusFinalTexto),
       data_conclusao: formatarData(servicoData.data_conclusao),
       horario_fim: formatarHora(servicoData.horario_fim),
-      observacoes_conclusao: servicoData.observacoes_conclusao || "Nenhuma.",
+      observacoes_conclusao: escapeHtml(servicoData.observacoes_conclusao || "Nenhuma."),
       galeria_anexos_gerais: galeriaAnexosGerais,
       lista_documentos_gerais: listaDocumentosGerais,
       data_geracao: new Date().toLocaleString("pt-BR"),

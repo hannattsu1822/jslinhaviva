@@ -195,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     catalogo.forEach((item) => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
           <td data-label="Código">${item.codigo}</td>
           <td data-label="Nome">${item.nome}</td>
           <td data-label="Categoria">${item.categoria || "-"}</td>

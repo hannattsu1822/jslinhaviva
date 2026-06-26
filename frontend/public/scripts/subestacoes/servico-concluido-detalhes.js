@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
       thumbnailHtml = `<img src="${anexo.caminho_servidor}" alt="Preview de ${anexo.nome_original}" class="anexo-preview-img" />`;
     }
 
-    card.innerHTML = `
+    card.innerHTML = safeHtml`
       <div class="anexo-thumbnail">${thumbnailHtml}</div>
       <div class="file-info">
           <span class="file-name">${anexo.nome_original}</span>
@@ -147,13 +147,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (detalheStatus) {
         const statusCls = (servico.status || "desconhecido").toLowerCase();
         const statusTxt = (servico.status || "DESCONHECIDO").replace(/_/g, " ");
-        detalheStatus.innerHTML = `<span class="status-badge status-${statusCls}">${statusTxt}</span>`;
+        detalheStatus.innerHTML = safeHtml`<span class="status-badge status-${statusCls}">${statusTxt}</span>`;
       }
 
       if (detalhePrioridade) {
         const prioridade = servico.prioridade || "MEDIA";
         const prioridadeClasse = `prioridade-${prioridade.toLowerCase()}`;
-        detalhePrioridade.innerHTML = `<span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span>`;
+        detalhePrioridade.innerHTML = safeHtml`<span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span>`;
       }
 
       if (detalheMotivo)
@@ -255,7 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<div class="item-obs-conclusao"><p><strong>Observações de Conclusão do Item:</strong></p><p>${item.observacoes_conclusao_item}</p></div>`
         : "";
 
-      itemCard.innerHTML = `
+      itemCard.innerHTML = safeHtml`
             <p class="item-description">${item.descricao_item_servico}</p>
             ${origemHtml}
             <div class="item-details-grid">

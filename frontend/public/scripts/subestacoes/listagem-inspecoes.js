@@ -321,7 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `<button class="btn text-primary btn-editar-inspecao" data-id="${insp.id}" title="Editar Inspeção"><span class="material-symbols-outlined">edit</span></button>`
         : "";
 
-      tr.innerHTML = `
+      tr.innerHTML = safeHtml`
         <td data-label="ID" class="text-center">${formNumId}</td>
         <td data-label="Processo">${insp.processo || "-"}</td>
         <td data-label="Subestação">${insp.subestacao_sigla}</td>
@@ -428,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
       mensagemConfirmacaoGeral.textContent = `Tem certeza que deseja ${tipoAcao.toLowerCase()} a Inspeção ${formNumReferencia}?`;
     if (btnConfirmarAcaoGeral) {
       btnConfirmarAcaoGeral.className = `btn btn-sm btn-${classeBtnContextual}`;
-      btnConfirmarAcaoGeral.innerHTML = `<span class="material-symbols-outlined">${icone}</span> Confirmar ${acaoCapitalizada}`;
+      btnConfirmarAcaoGeral.innerHTML = safeHtml`<span class="material-symbols-outlined">${icone}</span> Confirmar ${acaoCapitalizada}`;
     }
 
     if (tipoAcao === "concluir")
@@ -715,7 +715,7 @@ document.addEventListener("DOMContentLoaded", () => {
       anexos.forEach((anexo) => {
         const li = document.createElement("li");
         li.className = "apr-anexo-item";
-        li.innerHTML = `
+        li.innerHTML = safeHtml`
             <a href="${anexo.caminho_servidor}" target="_blank">
               <span class="material-symbols-outlined">description</span>
               ${anexo.nome_original}

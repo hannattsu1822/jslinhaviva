@@ -12,9 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const notification = document.createElement("div");
     notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
+    notification.innerHTML = safeHtml`
       <span>${message}</span>
-      <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+      <button class="notification-close" data-action="dismiss-parent">×</button>
     `;
     
     notificationContainer.appendChild(notification);
