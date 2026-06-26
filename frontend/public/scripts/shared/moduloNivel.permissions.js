@@ -43,5 +43,6 @@
     podeRegistrar: temControleTotal,
     podeForcarConclusao: temControleTotal,
     podeConcluirAdministrativo: temControleTotal,
+    podeAnexarPosterior: podeOperacaoBasica,
   };
 })(typeof window !== "undefined" ? window : globalThis);

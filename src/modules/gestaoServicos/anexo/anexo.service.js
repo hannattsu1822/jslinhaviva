@@ -6,6 +6,7 @@ const { projectRootDir } = require("../../../shared/path.helper");
 const {
   determinarNomePastaParaServicoExistente,
 } = require("../utils/servico.helpers");
+const { assertAcessoServicoGestao } = require("../../../shared/accessControl.helper");
 
 async function anexarAPR(servicoId, file) {
   const connection = await promisePool.getConnection();
@@ -128,6 +129,94 @@ async function uploadFotoConclusao(servicoId, status_final, file) {
   }
 }
 
+async function anexarPosteriores(servicoId, files, user) {
+  if (!files || files.length === 0) {
+    throw new Error("Nenhum arquivo enviado.");
+  }
+  if (files.length > 5) {
+    throw new Error("Máximo de 5 arquivos por envio.");
+  }
+
+  await assertAcessoServicoGestao(user, servicoId);
+
+  const connection = await promisePool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [servicoRows] = await connection.query(
+      "SELECT status_geral FROM processos WHERE id = ?",
+      [servicoId]
+    );
+    if (servicoRows.length === 0) {
+      throw new Error("Serviço não encontrado.");
+    }
+    const status = servicoRows[0].status_geral;
+    if (status !== "concluido" && status !== "nao_concluido") {
+      throw new Error(
+        "Anexos posteriores só podem ser adicionados em serviços finalizados."
+      );
+    }
+
+    const nomeDaPastaParaAnexos = await determinarNomePastaParaServicoExistente(
+      connection,
+      servicoId
+    );
+    const diretorioDoProcesso = path.join(
+      projectRootDir,
+      "upload_arquivos",
+      nomeDaPastaParaAnexos
+    );
+    if (!fs.existsSync(diretorioDoProcesso)) {
+      fs.mkdirSync(diretorioDoProcesso, { recursive: true });
+    }
+
+    const anexosSalvos = [];
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error(`O arquivo ${file.originalname} excede o limite de 10MB.`);
+      }
+
+      const extensao = path.extname(file.originalname).toLowerCase();
+      const novoNomeArquivo = `anexo_posterior_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 8)}${extensao}`;
+      const caminhoCompleto = path.join(diretorioDoProcesso, novoNomeArquivo);
+
+      if (!fs.existsSync(file.path)) {
+        throw new Error(
+          "Erro no processamento do arquivo, arquivo temporário não encontrado."
+        );
+      }
+      await fsPromises.rename(file.path, caminhoCompleto);
+
+      const tipoAnexo = [".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(
+        extensao
+      )
+        ? "imagem"
+        : "documento";
+      const caminhoServidor = `/api/upload_arquivos/${nomeDaPastaParaAnexos}/${novoNomeArquivo}`;
+
+      await connection.query(
+        `INSERT INTO processos_anexos (processo_id, nome_original, caminho_servidor, tamanho, tipo_anexo) VALUES (?, ?, ?, ?, ?)`,
+        [servicoId, file.originalname, caminhoServidor, file.size, tipoAnexo]
+      );
+
+      anexosSalvos.push({
+        nomeOriginal: file.originalname,
+        caminho: caminhoServidor,
+      });
+    }
+
+    await connection.commit();
+    return anexosSalvos;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
 async function deletarAnexo(servicoId, anexoId) {
   const connection = await promisePool.getConnection();
   try {
@@ -165,5 +254,6 @@ async function deletarAnexo(servicoId, anexoId) {
 module.exports = {
   anexarAPR,
   uploadFotoConclusao,
+  anexarPosteriores,
   deletarAnexo,
 };

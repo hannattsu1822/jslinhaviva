@@ -175,6 +175,14 @@ router.post(
   anexoController.uploadFotoConclusao,
 );
 
+router.post(
+  "/api/servicos/:servicoId/anexos-posteriores",
+  autenticar,
+  verificarNivel(NIVEL_ACESSO_MIN),
+  upload.array("anexos", 5),
+  anexoController.anexarPosteriores,
+);
+
 router.patch(
   "/api/servicos/:id/reativar",
   autenticar,

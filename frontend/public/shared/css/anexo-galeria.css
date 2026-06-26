@@ -88,6 +88,34 @@
   background: #0f172a;
 }
 
+.anexo-galeria-overlay--pdf .anexo-galeria-stage {
+  min-height: 220px;
+}
+
+.anexo-galeria-pdf {
+  text-align: center;
+  color: #f8fafc;
+  padding: 2rem 1.5rem;
+  max-width: 420px;
+}
+
+.anexo-galeria-pdf .material-symbols-outlined {
+  font-size: 4rem;
+  margin-bottom: 0.75rem;
+  color: #f87171;
+}
+
+.anexo-galeria-pdf p {
+  margin: 0 0 0.75rem;
+  word-break: break-word;
+}
+
+.anexo-galeria-pdf-hint {
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  margin-bottom: 1.25rem !important;
+}
+
 .anexo-galeria-arquivo {
   text-align: center;
   color: #f8fafc;

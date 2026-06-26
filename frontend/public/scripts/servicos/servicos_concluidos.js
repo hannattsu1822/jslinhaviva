@@ -18,6 +18,7 @@ let accessDeniedModalInstance;
 let developmentModalInstance;
 let currentServicoId = null;
 let aprUploadModalInstance;
+let anexosPosterioresModalInstance;
 
 const elementos = {
   toastEl: null,
@@ -57,6 +58,13 @@ function inicializarElementos() {
     const aprUploadModalEl = document.getElementById("aprUploadModal");
     if (aprUploadModalEl)
       aprUploadModalInstance = new bootstrap.Modal(aprUploadModalEl);
+    const anexosPosterioresModalEl = document.getElementById(
+      "anexosPosterioresModal"
+    );
+    if (anexosPosterioresModalEl)
+      anexosPosterioresModalInstance = new bootstrap.Modal(
+        anexosPosterioresModalEl
+      );
   }
 }
 
@@ -73,6 +81,22 @@ function configurarEventListeners() {
   );
   if (btnConfirmarUploadAPR)
     btnConfirmarUploadAPR.addEventListener("click", submeterArquivoAPR);
+
+  const btnConfirmarAnexosPosteriores = document.getElementById(
+    "btnConfirmarAnexosPosteriores"
+  );
+  if (btnConfirmarAnexosPosteriores)
+    btnConfirmarAnexosPosteriores.addEventListener(
+      "click",
+      submeterAnexosPosteriores
+    );
+
+  const anexosPosterioresFiles = document.getElementById(
+    "anexosPosterioresFiles"
+  );
+  if (anexosPosterioresFiles) {
+    anexosPosterioresFiles.addEventListener("change", atualizarPreviewAnexosPosteriores);
+  }
 }
 
 function aplicarFiltrosEAtualizar() {
@@ -207,6 +231,11 @@ function atualizarTabela() {
         aprButtonHtml = `<a href="${servico.caminho_apr_anexo}" target="_blank" class="btn btn-sm glass-btn btn-success w-100" title="Ver APR"><span class="material-symbols-outlined">description</span> Ver</a>`;
       }
 
+      let anexosPosterioresButtonHtml = "";
+      if (P.podeAnexarPosterior?.(user)) {
+        anexosPosterioresButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-secondary me-1" onclick="abrirModalAnexosPosteriores(${servico.id})" title="Anexar documentos posteriores"><span class="material-symbols-outlined">attach_file_add</span></button>`;
+      }
+
       tr.innerHTML = `
         <td data-label="ID">${servico.id}</td>
         <td data-label="Processo">${servico.processo || "N/A"}</td>
@@ -219,6 +248,7 @@ function atualizarTabela() {
         <td data-label="Ordem">${servico.ordem_obra || "N/A"}</td>
         <td data-label="Ações" class="text-center">
           <div class="btn-group">
+            ${anexosPosterioresButtonHtml}
             <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
               servico.id
             }')" title="Visualizar"><span class="material-symbols-outlined">visibility</span></button>
@@ -347,6 +377,79 @@ window.abrirModalUploadAPR = (id) => {
   document.getElementById("aprFile").value = "";
   aprUploadModalInstance.show();
 };
+
+window.abrirModalAnexosPosteriores = (id) => {
+  currentServicoId = id;
+  document.getElementById("anexosPosterioresServicoId").value = id;
+  const input = document.getElementById("anexosPosterioresFiles");
+  if (input) input.value = "";
+  atualizarPreviewAnexosPosteriores();
+  anexosPosterioresModalInstance.show();
+};
+
+function atualizarPreviewAnexosPosteriores() {
+  const input = document.getElementById("anexosPosterioresFiles");
+  const preview = document.getElementById("anexosPosterioresPreview");
+  if (!input || !preview) return;
+  preview.innerHTML = "";
+  if (!input.files?.length) return;
+
+  Array.from(input.files).forEach((file) => {
+    const item = document.createElement("li");
+    item.className = "list-group-item";
+    item.textContent = `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+    preview.appendChild(item);
+  });
+}
+
+async function submeterAnexosPosteriores() {
+  const form = document.getElementById("formAnexosPosteriores");
+  const input = document.getElementById("anexosPosterioresFiles");
+  const servicoId = document.getElementById("anexosPosterioresServicoId").value;
+  const btn = document.getElementById("btnConfirmarAnexosPosteriores");
+
+  if (!input?.files?.length) {
+    mostrarNotificacao("Selecione pelo menos um arquivo.", "warning");
+    return;
+  }
+  if (input.files.length > 5) {
+    mostrarNotificacao("Envie no máximo 5 arquivos por vez.", "warning");
+    return;
+  }
+
+  for (const file of input.files) {
+    if (file.size > 10 * 1024 * 1024) {
+      mostrarNotificacao(`O arquivo ${file.name} excede 10MB.`, "warning");
+      return;
+    }
+  }
+
+  const formData = new FormData();
+  Array.from(input.files).forEach((file) => {
+    formData.append("anexos", file);
+  });
+
+  btn.disabled = true;
+  try {
+    const response = await fetch(
+      `/api/servicos/${servicoId}/anexos-posteriores`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.message || `Erro HTTP: ${response.status}`);
+    }
+    mostrarNotificacao(result.message || "Anexos enviados com sucesso!", "success");
+    anexosPosterioresModalInstance.hide();
+  } catch (error) {
+    mostrarNotificacao("Erro ao enviar anexos: " + error.message, "danger");
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 async function submeterArquivoAPR() {
   const form = document.getElementById("formUploadAPR");

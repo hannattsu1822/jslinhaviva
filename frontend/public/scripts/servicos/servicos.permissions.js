@@ -13,6 +13,7 @@
     podeConcluirAdministrativo: base.podeConcluirAdministrativo,
     podeGerenciarEquipe: base.podeGerenciarEquipe,
     podeAnexarAPR: base.podeAnexarAPR,
+    podeAnexarPosterior: base.podeAnexarPosterior,
     podeDeletarAnexo: base.podeDeletarAnexo,
     podeReativarServico: base.podeReativar,
     podeRegistrarServico: base.podeRegistrar,

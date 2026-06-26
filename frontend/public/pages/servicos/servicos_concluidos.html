@@ -280,6 +280,69 @@
       </div>
     </div>
 
+    <div
+      class="modal fade"
+      id="anexosPosterioresModal"
+      tabindex="-1"
+      aria-labelledby="anexosPosterioresModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content glass-modal">
+          <div class="modal-header">
+            <h5 class="modal-title" id="anexosPosterioresModalLabel">
+              Anexar documentos posteriores
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted small mb-3">
+              Adicione fotos ou documentos complementares sem reabrir o serviço.
+              Máximo de 5 arquivos por envio, 10MB cada.
+            </p>
+            <form id="formAnexosPosteriores" enctype="multipart/form-data">
+              <input type="hidden" id="anexosPosterioresServicoId" name="servicoId" />
+              <div class="mb-3">
+                <label for="anexosPosterioresFiles" class="form-label"
+                  >Selecionar arquivos</label
+                >
+                <input
+                  class="form-control glass-input"
+                  type="file"
+                  id="anexosPosterioresFiles"
+                  name="anexos"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.xls,.xlsx,.csv,.doc,.docx"
+                  multiple
+                  required
+                />
+              </div>
+              <ul
+                id="anexosPosterioresPreview"
+                class="list-group list-group-flush small"
+              ></ul>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn glass-btn" data-bs-dismiss="modal">
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn glass-btn btn-primary"
+              id="btnConfirmarAnexosPosteriores"
+            >
+              Enviar anexos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1056">
       <div
         id="liveToast"

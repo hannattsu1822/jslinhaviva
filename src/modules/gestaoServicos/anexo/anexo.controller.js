@@ -46,6 +46,37 @@ async function uploadFotoConclusao(req, res) {
   }
 }
 
+async function anexarPosteriores(req, res) {
+  try {
+    const { servicoId } = req.params;
+    const anexos = await service.anexarPosteriores(
+      servicoId,
+      req.files,
+      req.user
+    );
+    await registrarAuditoria(
+      req.user.matricula,
+      "Anexos posteriores",
+      `${anexos.length} anexo(s) posterior(es) no Serviço ID: ${servicoId}`
+    );
+    res.status(201).json({
+      success: true,
+      message: `${anexos.length} anexo(s) adicionado(s) com sucesso.`,
+      anexos,
+    });
+  } catch (error) {
+    if (req.files?.length) {
+      limparArquivosTemporarios(req.files);
+    }
+    console.error("Erro ao anexar documentos posteriores:", error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || "Erro ao anexar documentos posteriores.",
+    });
+  }
+}
+
 async function deletarAnexo(req, res) {
   try {
     const { servicoId, anexoId } = req.params;
@@ -72,5 +103,6 @@ async function deletarAnexo(req, res) {
 module.exports = {
   anexarAPR,
   uploadFotoConclusao,
+  anexarPosteriores,
   deletarAnexo,
 };

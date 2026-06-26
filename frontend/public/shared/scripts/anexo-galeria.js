@@ -154,8 +154,12 @@
     });
   }
 
+  function openPdfExternally(item) {
+    window.open(item.url, "_blank", "noopener,noreferrer");
+  }
+
   function renderItem(item) {
-    stage.querySelectorAll("img, iframe, .anexo-galeria-arquivo").forEach((el) => {
+    stage.querySelectorAll("img, iframe, .anexo-galeria-arquivo, .anexo-galeria-pdf").forEach((el) => {
       if (!el.classList.contains("anexo-galeria-nav")) el.remove();
     });
 
@@ -168,12 +172,23 @@
     }
 
     if (isPdf(item)) {
-      const iframe = document.createElement("iframe");
-      iframe.src = item.url;
-      iframe.title = item.nome;
-      stage.insertBefore(iframe, btnPrev);
+      openPdfExternally(item);
+      const box = document.createElement("div");
+      box.className = "anexo-galeria-pdf";
+      box.innerHTML = `
+        <span class="material-symbols-outlined">picture_as_pdf</span>
+        <p>${item.nome}</p>
+        <p class="anexo-galeria-pdf-hint">O PDF foi aberto em uma nova aba para leitura completa do documento.</p>
+        <a href="${item.url}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+          Abrir PDF novamente
+        </a>
+      `;
+      stage.insertBefore(box, btnPrev);
+      overlay?.classList.add("anexo-galeria-overlay--pdf");
       return;
     }
+
+    overlay?.classList.remove("anexo-galeria-overlay--pdf");
 
     const box = document.createElement("div");
     box.className = "anexo-galeria-arquivo";
@@ -204,6 +219,9 @@
     currentIndex = Math.max(0, Math.min(index, items.length - 1));
     const item = items[currentIndex];
     nomeEl.textContent = item.nome;
+    if (!isPdf(item)) {
+      overlay?.classList.remove("anexo-galeria-overlay--pdf");
+    }
     renderItem(item);
     updateNav();
   }
@@ -232,10 +250,10 @@
 
   function close() {
     if (!overlay) return;
-    overlay.classList.remove("is-open");
+    overlay.classList.remove("is-open", "anexo-galeria-overlay--pdf");
     document.body.style.overflow = "";
     stage
-      ?.querySelectorAll("img, iframe, .anexo-galeria-arquivo")
+      ?.querySelectorAll("img, iframe, .anexo-galeria-arquivo, .anexo-galeria-pdf")
       .forEach((el) => el.remove());
   }
 
@@ -259,7 +277,13 @@
         e.preventDefault();
         e.stopPropagation();
         const parsed = parseInt(el.dataset.galeriaIndex, 10);
-        open(list, Number.isFinite(parsed) ? parsed : idx);
+        const index = Number.isFinite(parsed) ? parsed : idx;
+        const item = list[index];
+        if (isPdf(item) && !list.some(isImage)) {
+          openPdfExternally(item);
+          return;
+        }
+        open(list, index);
       });
     });
   }
