@@ -65,6 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let encarregadosCache = [];
   let currentUser = null;
+  let usuarioEhAdmin = false;
   let anexosConclusaoTemporarios = [];
 
   function mostrarModal(modalEl) {
@@ -223,6 +224,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function aplicarPermissoesPagina() {
+    const user = await fetchCurrentUser();
+    usuarioEhAdmin = (user?.nivel ?? 0) >= 7;
+    if (btnNovoServico && !usuarioEhAdmin) {
+      btnNovoServico.style.display = "none";
+    }
+  }
+
   function popularTabelaServicos(servicos) {
     corpoTabelaServicosElem.innerHTML = "";
     if (!servicos || servicos.length === 0) {
@@ -253,6 +262,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const prioridade = serv.prioridade || "MEDIA";
       const prioridadeClasse = `prioridade-${prioridade.toLowerCase()}`;
 
+      const botoesAdmin = usuarioEhAdmin
+        ? `<button class="btn text-primary btn-editar-servico" title="Editar Serviço"><span class="material-symbols-outlined">edit</span></button>
+                  <button class="btn text-secondary btn-gerenciar-itens" data-id="${
+                    serv.id
+                  }" data-processo="${
+        serv.processo
+      }" title="Gerenciar Itens/Encarregados"><span class="material-symbols-outlined">manage_accounts</span></button>
+                  <button class="btn text-danger btn-excluir-servico" data-id="${
+                    serv.id
+                  }" data-processo="${
+        serv.processo
+      }" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>`
+        : "";
+
       tr.innerHTML = `
           <td>${serv.id || "-"}</td>
           <td>${serv.processo || "-"}</td>
@@ -266,12 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td class="actions-column">
               <div class="actions-wrapper">
                   <button class="btn text-info btn-ver-detalhes" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-                  <button class="btn text-primary btn-editar-servico" title="Editar Serviço"><span class="material-symbols-outlined">edit</span></button>
-                  <button class="btn text-secondary btn-gerenciar-itens" data-id="${
-                    serv.id
-                  }" data-processo="${
-        serv.processo
-      }" title="Gerenciar Itens/Encarregados"><span class="material-symbols-outlined">manage_accounts</span></button>
+                  ${botoesAdmin}
                   <button class="btn text-success btn-concluir-servico" data-id="${
                     serv.id
                   }" data-processo="${
@@ -281,11 +299,6 @@ document.addEventListener("DOMContentLoaded", () => {
           ? "disabled"
           : ""
       }><span class="material-symbols-outlined">check_circle</span></button>
-                  <button class="btn text-danger btn-excluir-servico" data-id="${
-                    serv.id
-                  }" data-processo="${
-        serv.processo
-      }" title="Excluir Serviço"><span class="material-symbols-outlined">delete</span></button>
               </div>
           </td>`;
 
@@ -608,6 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function init() {
+    await aplicarPermissoesPagina();
     await fetchCurrentUser();
     await popularFiltroSubestacoes();
     await carregarServicos(1);

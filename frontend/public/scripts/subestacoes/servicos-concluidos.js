@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let acaoConfirmadaCallback = null;
   let anexosPosteriorTemporarios = [];
   let anexosAPRTemporarios = [];
+  let usuarioEhAdmin = false;
 
   function mostrarModal(modalEl) {
     if (modalEl) modalEl.classList.remove("hidden");
@@ -214,15 +215,36 @@ document.addEventListener("DOMContentLoaded", () => {
       const aprCount = serv.apr_count || 0;
 
       let aprButtonHtml = "";
-      if (aprCount > 0) {
+      if (usuarioEhAdmin) {
+        if (aprCount > 0) {
+          aprButtonHtml = `<button class="btn btn-success btn-ver-apr" data-processo="${
+            serv.processo
+          }" data-anexos='${JSON.stringify(
+            aprAnexos
+          )}' title="Ver APRs Anexadas"><span class="material-symbols-outlined">visibility</span> APR (${aprCount})</button>`;
+        } else {
+          aprButtonHtml = `<button class="btn btn-primary btn-anexar-apr" data-id="${serv.id}" data-processo="${serv.processo}" title="Anexar APR"><span class="material-symbols-outlined">upload_file</span> APR</button>`;
+        }
+      } else if (aprCount > 0) {
         aprButtonHtml = `<button class="btn btn-success btn-ver-apr" data-processo="${
           serv.processo
         }" data-anexos='${JSON.stringify(
           aprAnexos
         )}' title="Ver APRs Anexadas"><span class="material-symbols-outlined">visibility</span> APR (${aprCount})</button>`;
-      } else {
-        aprButtonHtml = `<button class="btn btn-primary btn-anexar-apr" data-id="${serv.id}" data-processo="${serv.processo}" title="Anexar APR"><span class="material-symbols-outlined">upload_file</span> APR</button>`;
       }
+
+      const botoesAdmin = usuarioEhAdmin
+        ? `<button class="btn text-warning btn-reabrir-servico" data-id="${
+            serv.id
+          }" data-processo="${
+            serv.processo
+          }" title="Reabrir Serviço"><span class="material-symbols-outlined">history</span></button>
+              <button class="btn text-secondary btn-anexar" data-id="${
+                serv.id
+              }" data-processo="${
+                serv.processo
+              }" title="Anexar Documento Posterior"><span class="material-symbols-outlined">attach_file_add</span></button>`
+        : "";
 
       tr.innerHTML = `
           <td>${serv.id || "-"}</td>
@@ -242,16 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <button class="btn text-danger btn-gerar-relatorio" data-id="${
                 serv.id
               }" title="Gerar Relatório PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button>
-              <button class="btn text-warning btn-reabrir-servico" data-id="${
-                serv.id
-              }" data-processo="${
-        serv.processo
-      }" title="Reabrir Serviço"><span class="material-symbols-outlined">history</span></button>
-              <button class="btn text-secondary btn-anexar" data-id="${
-                serv.id
-              }" data-processo="${
-        serv.processo
-      }" title="Anexar Documento Posterior"><span class="material-symbols-outlined">attach_file_add</span></button>
+              ${botoesAdmin}
             </div>
           </td>`;
 
@@ -569,6 +582,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function init() {
+    try {
+      const user = await fetch("/api/me", { credentials: "same-origin" }).then((r) =>
+        r.ok ? r.json() : null
+      );
+      usuarioEhAdmin = (user?.nivel ?? 0) >= 7;
+    } catch {
+      usuarioEhAdmin = false;
+    }
     await popularFiltroSubestacoes();
     await carregarServicos(1);
   }

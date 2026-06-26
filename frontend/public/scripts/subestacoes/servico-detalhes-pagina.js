@@ -711,7 +711,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function init() {
     await popularSelectsEdicao();
+    const user = await fetch("/api/me", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    const ehAdmin = (user?.nivel ?? 0) >= 7;
+    if (btnEditarServicoPagina && !ehAdmin) {
+      btnEditarServicoPagina.style.display = "none";
+    }
     await carregarDetalhesIniciais();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("modo") === "editar" && !ehAdmin) {
+      window.location.replace(window.location.pathname);
+      return;
+    }
 
     setupAutocomplete(
       modalItemDefeitoInput,

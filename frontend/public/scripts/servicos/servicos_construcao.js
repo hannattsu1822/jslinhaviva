@@ -388,6 +388,15 @@ async function carregarServicos() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if ((user?.nivel ?? 0) < 7) {
+        window.location.replace("/gestao-servicos");
+      }
+    })
+    .catch(() => {});
+
   carregarServicos();
 
   const filtroProcesso = document.getElementById("filtro-processo");
@@ -456,9 +465,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const user = JSON.parse(userRaw);
       const linkConstrucao = document.getElementById("sidebar-construcao-link");
-      const cargosPermitidos = ["Construção", "Engenheiro", "ADMIN", "ADM"];
+      const P = window.ServicosPermissions || {};
 
-      if (linkConstrucao && cargosPermitidos.includes(user.cargo)) {
+      if (linkConstrucao && P.temControleTotal?.(user)) {
         linkConstrucao.style.display = "block";
       }
     } catch (error) {

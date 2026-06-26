@@ -2,7 +2,11 @@ const express = require("express");
 const path = require("path");
 const { promisePool } = require("../../infrastructure/database");
 const { upload } = require("../../infrastructure/uploads");
-const { autenticar, verificarNivel, verificarCargo } = require("../../auth");
+const { autenticar, verificarNivel } = require("../../auth");
+const {
+  NIVEL_ADMIN_SERVICOS,
+  NIVEL_ACESSO_MIN,
+} = require("./servicos.permissions");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 const { resolvePathWithinBase, sendSafeFile } = require("../../shared/pathSecurity.helper");
 const {
@@ -17,19 +21,19 @@ const relatorioController = require("./relatorio/relatorio.controller");
 
 const router = express.Router();
 
-router.get("/gestao-servicos", autenticar, verificarNivel(2), (req, res) => {
+router.get("/gestao-servicos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
   res.sendFile(
     publicPage("servicos/gestao_servico.html"),
   );
 });
 
-router.get("/registro_servicos", autenticar, verificarNivel(4), (req, res) => {
+router.get("/registro_servicos", autenticar, verificarNivel(NIVEL_ADMIN_SERVICOS), (req, res) => {
   res.sendFile(
     publicPage("servicos/registro_servicos.html"),
   );
 });
 
-router.get("/servicos_ativos", autenticar, verificarNivel(3), (req, res) => {
+router.get("/servicos_ativos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
   res.sendFile(
     publicPage("servicos/servicos_ativos.html"),
   );
@@ -38,7 +42,7 @@ router.get("/servicos_ativos", autenticar, verificarNivel(3), (req, res) => {
 router.get(
   "/servicos_concluidos",
   autenticar,
-  verificarNivel(2),
+  verificarNivel(NIVEL_ACESSO_MIN),
   (req, res) => {
     res.sendFile(
       publicPage("servicos/servicos_concluidos.html"),
@@ -46,7 +50,7 @@ router.get(
   },
 );
 
-router.get("/detalhes_servico", autenticar, verificarNivel(2), (req, res) => {
+router.get("/detalhes_servico", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
   res.sendFile(
     publicPage("servicos/detalhes_servico.html"),
   );
@@ -55,7 +59,7 @@ router.get("/detalhes_servico", autenticar, verificarNivel(2), (req, res) => {
 router.get(
   "/servicos_atribuidos",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   (req, res) => {
     res.sendFile(
       publicPage("servicos/servicos_atribuidos.html"),
@@ -63,7 +67,7 @@ router.get(
   },
 );
 
-router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
+router.get("/editar_servico", autenticar, verificarNivel(NIVEL_ADMIN_SERVICOS), (req, res) => {
   res.sendFile(
     publicPage("servicos/editar_servico.html"),
   );
@@ -72,7 +76,7 @@ router.get("/editar_servico", autenticar, verificarNivel(4), (req, res) => {
 router.get(
   "/acompanhamento_construcao",
   autenticar,
-  verificarCargo(["Construção", "ADM", "ADMIN", "Engenheiro"]),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   (req, res) => {
     res.sendFile(
       publicPage("servicos/servicos_construcao.html"),
@@ -83,7 +87,7 @@ router.get(
 router.post(
   "/api/servicos",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   upload.array("anexos", 5),
   coreController.criarServico,
 );
@@ -91,14 +95,14 @@ router.post(
 router.get(
   "/api/servicos",
   autenticar,
-  verificarNivel(2),
+  verificarNivel(NIVEL_ACESSO_MIN),
   coreController.listarServicos,
 );
 
 router.get(
   "/api/servicos/origem/:origem",
   autenticar,
-  verificarCargo(["Construção", "ADM", "ADMIN", "Engenheiro"]),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   (req, res, next) => {
     const origemOriginal = req.params.origem;
     const origemDecoded = decodeURIComponent(origemOriginal);
@@ -111,14 +115,14 @@ router.get(
 router.get(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(2),
+  verificarNivel(NIVEL_ACESSO_MIN),
   coreController.obterDetalhesServico,
 );
 
 router.put(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   upload.array("anexos", 5),
   coreController.atualizarServico,
 );
@@ -126,7 +130,7 @@ router.put(
 router.post(
   "/api/servicos/:servicoId/upload-apr",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   upload.single("apr_file"),
   anexoController.anexarAPR,
 );
@@ -134,35 +138,35 @@ router.post(
 router.delete(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(7),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   coreController.deletarServico,
 );
 
 router.post(
   "/api/servicos/:id/concluir",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   lifecycleController.atualizarStatusParteServico,
 );
 
 router.post(
   "/api/servicos/:id/forcar-conclusao",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   lifecycleController.forcarConclusaoServico,
 );
 
 router.post(
   "/api/servicos/:id/concluir-admin",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   lifecycleController.concluirServicoAdministrativo,
 );
 
 router.post(
   "/api/servicos/:servicoId/upload-foto-conclusao",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   upload.single("foto_conclusao"),
   anexoController.uploadFotoConclusao,
 );
@@ -170,14 +174,14 @@ router.post(
 router.patch(
   "/api/servicos/:id/reativar",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   lifecycleController.reativarServico,
 );
 
 router.get(
   "/api/upload_arquivos/:identificador/:filename",
   autenticar,
-  verificarNivel(2),
+  verificarNivel(NIVEL_ACESSO_MIN),
   async (req, res) => {
     const { identificador, filename } = req.params;
     const servicoId = extrairServicoIdDoIdentificador(identificador);
@@ -224,49 +228,49 @@ router.get(
 router.delete(
   "/api/servicos/:servicoId/anexos/:anexoId",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   anexoController.deletarAnexo,
 );
 
 router.get(
   "/api/servicos/contador",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   queryController.contarServicos,
 );
 
 router.get(
   "/api/encarregados",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   queryController.listarEncarregados,
 );
 
 router.get(
   "/api/subestacoes",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   queryController.listarSubestacoes,
 );
 
 router.patch(
   "/api/servicos/:id/responsavel",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   lifecycleController.atribuirResponsavel,
 );
 
 router.delete(
   "/api/servicos/:id/responsavel/:matricula",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   lifecycleController.removerResponsavelUnico,
 );
 
 router.get(
   "/api/servicos/:id/consolidar-pdfs",
   autenticar,
-  verificarNivel(2),
+  verificarNivel(NIVEL_ACESSO_MIN),
   relatorioController.gerarPdfConsolidado,
 );
 

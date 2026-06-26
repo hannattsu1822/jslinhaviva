@@ -91,18 +91,18 @@ function applySecurityMiddleware(app) {
     })
   );
 
-  app.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 200,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: {
-        success: false,
-        message: "Muitas requisições. Tente novamente em alguns minutos.",
-      },
-    })
-  );
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: process.env.NODE_ENV === "production" ? 500 : 2000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: "Muitas requisições. Tente novamente em alguns minutos.",
+    },
+  });
+
+  app.use("/api", apiLimiter);
 }
 
 module.exports = { applySecurityMiddleware };

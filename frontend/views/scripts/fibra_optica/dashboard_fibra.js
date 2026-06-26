@@ -18,4 +18,22 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  function aplicarPermissoesDashboard(user) {
+    if (!user) return;
+    const isAdmin = (user.nivel ?? 0) >= 7;
+    const cardRegistro = document.getElementById("card-fibra-registro");
+    if (cardRegistro && isAdmin) {
+      cardRegistro.style.display = "";
+    }
+  }
+
+  document.addEventListener("sidebar:ready", (event) => {
+    aplicarPermissoesDashboard(event.detail?.user);
+  });
+
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then(aplicarPermissoesDashboard)
+    .catch(() => {});
 });

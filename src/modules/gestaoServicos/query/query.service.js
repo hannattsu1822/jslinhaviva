@@ -19,7 +19,7 @@ async function contarServicos(status) {
 
 async function listarEncarregados() {
   const [rows] = await promisePool.query(
-    "SELECT DISTINCT matricula, nome FROM users WHERE cargo IN ('Encarregado', 'Engenheiro', 'Técnico', 'ADM', 'ADMIN', 'Inspetor') ORDER BY nome",
+    "SELECT DISTINCT matricula, nome, cargo FROM users WHERE nivel >= 2 AND nivel <= 4 AND nivel > 0 ORDER BY nome",
   );
   return rows;
 }

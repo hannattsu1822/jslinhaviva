@@ -99,7 +99,7 @@
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <form class="row g-3 align-items-end" method="GET" action="/projetos_fibra_concluidos">
-                            <% if (user.nivel >= 4) { %>
+                            <% if (user.nivel >= 7) { %>
                             <div class="col-md-3">
                                 <label for="encarregado" class="form-label">Encarregado</label>
                                 <select id="encarregado" name="encarregado" class="form-select">
@@ -168,10 +168,10 @@
                                                 <a href="/fibra/servico/<%= servico.id %>" class="btn btn-sm btn-secondary" title="Ver Detalhes">
                                                     <i class="fa-solid fa-eye"></i>
                                                 </a>
+                                                <% if (user.nivel >= 7) { %>
                                                 <button class="btn btn-sm btn-orange btn-apr <%= servico.apr_count > 0 ? 'has-aprs' : '' %>" title="Gerenciar APRs">
                                                     <i class="fa-solid fa-file-signature"></i>
                                                 </button>
-                                                <% if (user.nivel >= 4) { %>
                                                 <button class="btn btn-sm btn-purple btn-reabrir" title="Reabrir Serviço">
                                                     <i class="fa-solid fa-arrow-rotate-left"></i>
                                                 </button>

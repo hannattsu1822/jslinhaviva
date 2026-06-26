@@ -8,6 +8,7 @@ const {
 } = require("../utils/servico.helpers");
 const { formatarTamanhoArquivo } = require("../utils/file.helpers");
 const { assertAcessoServicoGestao } = require("../../../shared/accessControl.helper");
+const { temControleTotal } = require("../servicos.permissions");
 
 async function criarServico(servicoData, files) {
   const connection = await promisePool.getConnection();
@@ -205,7 +206,7 @@ async function listarServicos(status, user) {
     }
   }
 
-  if (user && user.nivel < 5) {
+  if (user && !temControleTotal(user)) {
     whereClauses.push(
       "EXISTS (SELECT 1 FROM servicos_responsaveis sr_filter WHERE sr_filter.servico_id = p.id AND sr_filter.responsavel_matricula = ?)"
     );

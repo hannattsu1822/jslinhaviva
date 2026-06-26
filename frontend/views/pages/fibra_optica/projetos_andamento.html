@@ -131,7 +131,7 @@
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <form id="filter-form" class="row g-3 align-items-end" method="GET" action="/projetos_fibra_andamento">
-                            <% const podeGerenciar = user.nivel >= 4; %>
+                            <% const podeGerenciar = user.nivel >= 7; %>
                             <div class="col-md-3">
                                 <label for="filtro-encarregado" class="form-label">Encarregado</label>
                                 <select id="filtro-encarregado" name="encarregado" class="form-select" <%= !podeGerenciar ? 'disabled' : '' %>>
@@ -215,17 +215,17 @@
                                                 <a href="/fibra/servico/<%= servico.id %>" class="btn btn-sm btn-secondary" title="Ver Detalhes">
                                                     <i class="fa-solid fa-eye"></i>
                                                 </a>
-                                                <% if (user.nivel >= 4) { %>
+                                                <% if (user.nivel >= 7) { %>
                                                     <button class="btn btn-sm btn-primary btn-assign" title="Modificar Atribuição">
                                                         <i class="fa-solid fa-user-tag"></i>
                                                     </button>
                                                 <% } %>
-                                                <% if (user.nivel >= 3) { %>
-                                                    <button class="btn btn-sm btn-success btn-concluir" title="Finalizar Serviço">
-                                                        <i class="fa-solid fa-check-circle"></i>
-                                                    </button>
+                                                <% if (user.nivel >= 2) { %>
+                                                <button class="btn btn-sm btn-success btn-concluir" title="Finalizar Serviço">
+                                                    <i class="fa-solid fa-check-circle"></i>
+                                                </button>
                                                 <% } %>
-                                                <% if (user.nivel >= 5) { %>
+                                                <% if (user.nivel >= 7) { %>
                                                     <button class="btn btn-sm btn-danger btn-excluir" title="Excluir Serviço">
                                                         <i class="fa-solid fa-trash-can"></i>
                                                     </button>

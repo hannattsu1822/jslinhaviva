@@ -1,13 +1,5 @@
 const { promisePool } = require("../infrastructure/database");
-
-const CARGOS_FIBRA_VISAO_TOTAL = new Set([
-  "TÉCNICO",
-  "ENGENHEIRO",
-  "GERENTE",
-  "ADM",
-  "ADMIN",
-  "INSPETOR",
-]);
+const { temControleTotal } = require("../shared/moduloNivel.permissions");
 
 function extrairServicoIdDoIdentificador(identificador) {
   const part = String(identificador || "").split("_")[0];
@@ -17,7 +9,7 @@ function extrairServicoIdDoIdentificador(identificador) {
 
 async function usuarioTemAcessoServicoGestao(user, servicoId) {
   if (!user?.matricula) return false;
-  if (user.nivel >= 5) return true;
+  if (temControleTotal(user)) return true;
 
   const id = parseInt(servicoId, 10);
   if (!Number.isFinite(id) || id <= 0) return false;
@@ -42,11 +34,7 @@ async function assertAcessoServicoGestao(user, servicoId) {
 
 async function usuarioTemAcessoServicoFibra(user, servicoId) {
   if (!user?.matricula) return false;
-
-  const cargo = (user.cargo || "").toUpperCase();
-  if (CARGOS_FIBRA_VISAO_TOTAL.has(cargo) || user.nivel >= 5) {
-    return true;
-  }
+  if (temControleTotal(user)) return true;
 
   const id = parseInt(servicoId, 10);
   if (!Number.isFinite(id) || id <= 0) return false;
@@ -70,7 +58,6 @@ async function assertAcessoServicoFibra(user, servicoId) {
 }
 
 module.exports = {
-  CARGOS_FIBRA_VISAO_TOTAL,
   extrairServicoIdDoIdentificador,
   usuarioTemAcessoServicoGestao,
   assertAcessoServicoGestao,

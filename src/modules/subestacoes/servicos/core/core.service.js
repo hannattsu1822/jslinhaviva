@@ -4,11 +4,19 @@ const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const { publicDir } = require("../../../../shared/path.helper");
+const { temControleTotal } = require("../../subestacoes.permissions");
 
-async function listarUsuariosPorCargo(cargos) {
-  const placeholders = cargos.map(() => "?").join(",");
-  const query = `SELECT DISTINCT id, nome FROM users WHERE cargo IN (${placeholders}) ORDER BY nome ASC`;
-  const [rows] = await promisePool.query(query, cargos);
+async function listarUsuariosPorNivelBasico() {
+  const [rows] = await promisePool.query(
+    "SELECT DISTINCT id, nome, matricula FROM users WHERE nivel >= 2 AND nivel <= 4 AND nivel > 0 ORDER BY nome ASC"
+  );
+  return rows;
+}
+
+async function listarUsuariosResponsaveisAdmin() {
+  const [rows] = await promisePool.query(
+    "SELECT DISTINCT id, nome, matricula FROM users WHERE nivel >= 7 ORDER BY nome ASC"
+  );
   return rows;
 }
 
@@ -273,12 +281,7 @@ async function listarServicos(filtros, usuario) {
     params.push(filtros.data_conclusao_ate);
   }
 
-  const cargosComVisaoTotal = ["ADMIN", "Gerente", "Engenheiro", "ADM"];
-  if (
-    usuario &&
-    (usuario.cargo === "Encarregado" || usuario.cargo === "Inspetor") &&
-    !cargosComVisaoTotal.includes(usuario.cargo)
-  ) {
+  if (usuario && !temControleTotal(usuario)) {
     whereClauses +=
       " AND EXISTS (SELECT 1 FROM servico_itens_escopo sie_filter WHERE sie_filter.servico_id = ss.id AND sie_filter.encarregado_item_id = ?)";
     params.push(usuario.id);
@@ -625,7 +628,8 @@ async function excluirServico(servicoId) {
 }
 
 module.exports = {
-  listarUsuariosPorCargo,
+  listarUsuariosPorNivelBasico,
+  listarUsuariosResponsaveisAdmin,
   listarCatalogoDefeitos,
   criarServico,
   listarServicos,

@@ -3,6 +3,10 @@ const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
 const { promisePool } = require("../../../../infrastructure/database");
 const { upload } = require("../../../../infrastructure/uploads");
+const {
+  NIVEL_ADMIN,
+  NIVEL_ACESSO_MIN,
+} = require("../../subestacoes.permissions");
 const controller = require("./core.controller");
 
 async function verificarServicoExiste(req, res, next) {
@@ -32,46 +36,45 @@ async function verificarServicoExiste(req, res, next) {
 router.get(
   "/usuarios-responsaveis-para-servicos",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   controller.listarUsuariosResponsaveis
 );
 router.get(
   "/usuarios-encarregados-e-inspetores",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   controller.listarEncarregadosInspetores
 );
 router.get(
   "/api/catalogo-defeitos-servicos",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   controller.listarCatalogoDefeitos
 );
 router.post(
   "/api/servicos-subestacoes",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   upload.any(),
   controller.criarServico
 );
 router.get(
   "/api/servicos-subestacoes",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   controller.listarServicos
 );
 router.get(
   "/api/servicos-subestacoes/:servicoId",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   controller.obterServicoPorId
 );
 
-// Rota adicionada para permitir a edição/atualização completa de um serviço.
 router.put(
   "/api/servicos-subestacoes/:servicoId",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   verificarServicoExiste,
   upload.any(),
   controller.atualizarServico
@@ -80,14 +83,14 @@ router.put(
 router.put(
   "/api/servicos-subestacoes/:servicoId/reabrir",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   verificarServicoExiste,
   controller.reabrirServico
 );
 router.delete(
   "/api/servicos-subestacoes/:servicoId",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   controller.excluirServico
 );
 

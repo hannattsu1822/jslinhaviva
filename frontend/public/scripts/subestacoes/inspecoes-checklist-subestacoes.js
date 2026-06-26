@@ -171,6 +171,15 @@ document.addEventListener("DOMContentLoaded", () => {
   editInspecaoId = urlParams.get("editarId");
   isEditMode = !!editInspecaoId;
 
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if ((user?.nivel ?? 0) < 7) {
+        window.location.replace("/pagina-listagem-inspecoes-subestacoes");
+      }
+    })
+    .catch(() => {});
+
   async function uploadFile(file) {
     const formData = new FormData();
     formData.append("anexo", file);

@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
 const { upload } = require("../../../../infrastructure/uploads");
+const {
+  NIVEL_ADMIN,
+  NIVEL_ACESSO_MIN,
+} = require("../../subestacoes.permissions");
 const controller = require("./anexos.controller");
 const { promisePool } = require("../../../../infrastructure/database");
 
@@ -33,28 +37,28 @@ async function verificarInspecaoExiste(req, res, next) {
 router.post(
   "/api/inspecoes/upload-temporario",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   upload.single("anexo"),
   controller.uploadTemporario
 );
 router.post(
   "/inspecoes-subestacoes/:inspecaoId/anexos-escritorio",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   verificarInspecaoExiste,
   controller.anexarEscritorio
 );
 router.post(
   "/inspecoes-subestacoes/:inspecaoId/item/:itemChecklistId/anexos-termografia",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   verificarInspecaoExiste,
   controller.anexarTermografia
 );
 router.post(
   "/inspecoes-subestacoes/:inspecaoId/anexar-apr",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   verificarInspecaoExiste,
   upload.array("anexosAPR", 5),
   controller.anexarAPR
@@ -62,7 +66,7 @@ router.post(
 router.delete(
   "/inspecoes-subestacoes/anexos/:anexoId",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   controller.excluirAnexo
 );
 

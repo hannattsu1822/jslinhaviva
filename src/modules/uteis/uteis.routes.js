@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../auth");
+const {
+  NIVEL_ADMIN_SERVICOS,
+} = require("../gestaoServicos/servicos.permissions");
 const controller = require("./uteis.controller");
 const path = require("path");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
@@ -35,7 +38,7 @@ router.get("/monitoramento-hub", autenticar, verificarNivel(4), (req, res) => {
 router.get(
   "/relatorios-servicos",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   (req, res) => {
     res.sendFile(
       publicPage("servicos/relatorios_servicos.html")
@@ -47,25 +50,25 @@ router.get(
 router.get(
   "/api/relatorios/servicos-por-encarregado",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   controller.relatorioServicosPorEncarregado
 );
 router.get(
   "/api/relatorios/servicos-por-desligamento",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   controller.relatorioServicosPorDesligamento
 );
 router.get(
   "/api/relatorios/servicos-concluidos-por-mes",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   controller.relatorioServicosConcluidosPorMes
 );
 router.get(
   "/api/relatorios/status-finalizacao",
   autenticar,
-  verificarNivel(4),
+  verificarNivel(NIVEL_ADMIN_SERVICOS),
   controller.relatorioStatusFinalizacao
 );
 

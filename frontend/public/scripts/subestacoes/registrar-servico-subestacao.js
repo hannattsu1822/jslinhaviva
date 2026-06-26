@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if ((user?.nivel ?? 0) < 7) {
+        window.location.replace("/subestacoes-dashboard");
+      }
+    })
+    .catch(() => {});
+
   const paginaTitulo = document.getElementById("paginaTitulo");
   const formServico = document.getElementById("formServico");
   const servicoSubestacaoSelect = document.getElementById("servicoSubestacao");

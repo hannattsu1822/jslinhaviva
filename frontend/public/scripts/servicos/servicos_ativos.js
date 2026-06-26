@@ -24,6 +24,8 @@ let adminSelectedFiles = [];
 let todosEncarregados = [];
 let responsaveisSelecionados = [];
 
+const P = () => window.ServicosPermissions || {};
+
 function showToast(message, type = "success") {
   const toastLiveEl = document.getElementById("liveToast");
   if (!toastLiveEl) return;
@@ -186,10 +188,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function carregarDadosIniciais() {
   try {
     await carregarServicosAtivos();
-    const [subestacoesRes, encarregadosRes] = await Promise.all([
-      fetch("/api/subestacoes"),
-      fetch("/api/encarregados"),
-    ]);
+    const isAdmin = P().temControleTotal?.(user);
+
+    const subestacoesRes = await fetch("/api/subestacoes");
     if (subestacoesRes.ok) {
       const subestacoes = await subestacoesRes.json();
       const select = document.getElementById("filtroSubestacao");
@@ -198,13 +199,23 @@ async function carregarDadosIniciais() {
           select.add(new Option(sub.nome, sub.nome)),
         );
     }
-    if (encarregadosRes.ok) {
-      const encarregados = await encarregadosRes.json();
-      const select = document.getElementById("filtroEncarregado");
-      if (select)
-        encarregados.forEach((enc) =>
-          select.add(new Option(enc.nome, enc.matricula)),
-        );
+
+    if (isAdmin) {
+      const encarregadosRes = await fetch("/api/encarregados");
+      if (encarregadosRes.ok) {
+        const encarregados = await encarregadosRes.json();
+        const select = document.getElementById("filtroEncarregado");
+        if (select)
+          encarregados.forEach((enc) =>
+            select.add(new Option(enc.nome, enc.matricula)),
+          );
+      }
+    } else {
+      const filtroEncarregado = document.getElementById("filtroEncarregado");
+      if (filtroEncarregado) {
+        const grupo = filtroEncarregado.closest(".col-md-3, .col-lg-3, .filter-group");
+        if (grupo) grupo.style.display = "none";
+      }
     }
   } catch (error) {
     showToast("Erro ao carregar dados iniciais: " + error.message, "danger");
@@ -301,27 +312,10 @@ function atualizarTabela() {
     return;
   }
 
-  const podeAtribuirEquipe =
-    (user &&
-      (user.nivel >= 6 ||
-        ["ADMIN", "TÉCNICO", "ADM", "ENGENHEIRO", "GERENTE"].includes(
-          user.cargo?.toUpperCase(),
-        ))) ||
-    false;
-  const podeConcluirAdmin =
-    (user &&
-      (user.nivel >= 7 ||
-        ["ADMIN", "TÉCNICO", "ADM", "ENGENHEIRO", "GERENTE"].includes(
-          user.cargo?.toUpperCase(),
-        ))) ||
-    false;
-  const podeExcluir =
-    (user &&
-      (user.nivel >= 7 ||
-        ["ADMIN", "TÉCNICO", "ADM", "ENGENHEIRO", "GERENTE"].includes(
-          user.cargo?.toUpperCase(),
-        ))) ||
-    false;
+  const podeAtribuirEquipe = P().podeGerenciarEquipe?.(user) ?? false;
+  const podeConcluirAdmin = P().podeConcluirAdministrativo?.(user) ?? false;
+  const podeExcluir = P().podeExcluirServico?.(user) ?? false;
+  const podeAnexarAPR = P().podeAnexarAPR?.(user) ?? false;
 
   servicosFiltrados.forEach((servico) => {
     const tr = document.createElement("tr");
@@ -369,7 +363,7 @@ function atualizarTabela() {
             <td>${dataPrevista}</td>
             <td class="col-desligamento text-center">${desligamentoHtml}</td>
             <td>${equipeHtml}</td>
-            <td><button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button></td>
+            <td>${podeAnexarAPR ? `<button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button>` : "—"}</td>
             <td>
                 <button class="btn btn-sm btn-detalhes w-100 mb-1" onclick="abrirDetalhes(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">visibility</span> Detalhes</button>
                 <button class="btn btn-sm btn-concluir w-100 mb-1" onclick="abrirModalConcluir(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir</button>
@@ -546,6 +540,10 @@ async function salvarFinalizacao() {
 
 async function abrirModalResponsavel(servicoId) {
   currentServicoId = servicoId;
+  if (!P().podeGerenciarEquipe?.(user)) {
+    showToast("Sem permissão para gerenciar equipe.", "warning");
+    return;
+  }
   try {
     const [encRes, servRes] = await Promise.all([
       fetch("/api/encarregados"),

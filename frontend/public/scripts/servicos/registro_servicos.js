@@ -70,6 +70,15 @@ window.toggleHorariosDesligamento = function () {
 };
 
 document.addEventListener("DOMContentLoaded", function () {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if ((user?.nivel ?? 0) < 7) {
+        window.location.replace("/gestao-servicos");
+      }
+    })
+    .catch(() => {});
+
   const tipoServicoModalEl = document.getElementById("tipoServicoModal");
   if (
     tipoServicoModalEl &&

@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const { autenticar, verificarNivel } = require("../../auth");
+const {
+  NIVEL_ADMIN,
+  NIVEL_ACESSO_MIN,
+} = require("./subestacoes.permissions");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 
 const infraRoutes = require("./infra/infra.routes");
@@ -11,7 +15,7 @@ const checklistRoutes = require("./checklist");
 router.get(
   "/subestacoes-dashboard",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   (req, res) => {
     res.sendFile(
       publicPage("subestacoes/subestacoes-dashboard.html")
@@ -22,7 +26,7 @@ router.get(
 router.get(
   "/pagina-subestacoes-admin",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   (req, res) => {
     res.sendFile(
       publicPage("subestacoes/subestacoes.html")

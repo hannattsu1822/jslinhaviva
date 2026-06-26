@@ -59,17 +59,20 @@
   loadCsrfToken();
 })();
 
+const NIVEL_ADMIN = 7;
+const NIVEL_ACESSO_MIN = 2;
+
 const SIDEBAR_PARTIAL_URL = "/shared/partials/sidebar.html";
 
 const SIDEBAR_PERMISSIONS_BY_LEVEL = {
-  "sidebar-subestacoes-link": 3,
+  "sidebar-subestacoes-link": NIVEL_ACESSO_MIN,
   "sidebar-transformadores-link": 5,
-  "sidebar-frota-link": 2,
-  "sidebar-gestao-servicos-link": 2,
+  "sidebar-frota-link": NIVEL_ACESSO_MIN,
+  "sidebar-gestao-servicos-link": NIVEL_ACESSO_MIN,
   "sidebar-gestao-turmas-link": 3,
-  "sidebar-fibra-optica-link": 3,
+  "sidebar-fibra-optica-link": NIVEL_ACESSO_MIN,
   "sidebar-inspecoes-redes-link": 3,
-  "sidebar-avulsos-link": 2,
+  "sidebar-avulsos-link": NIVEL_ACESSO_MIN,
   "sidebar-monitoramento-link": 5,
   "sidebar-gestao-link": 5,
   "sidebar-auditoria-link": 10,
@@ -299,11 +302,8 @@ function applySidebarPermissions(user) {
   const sidebarConstrucaoLink = document.getElementById(
     "sidebar-construcao-link"
   );
-  if (sidebarConstrucaoLink) {
-    const cargosPermitidos = ["Construção", "Engenheiro", "ADMIN", "ADM"];
-    if (cargosPermitidos.includes(user.cargo)) {
-      showSidebarItem("sidebar-construcao-link");
-    }
+  if (sidebarConstrucaoLink && (user.nivel ?? 0) >= NIVEL_ADMIN) {
+    showSidebarItem("sidebar-construcao-link");
   }
 }
 

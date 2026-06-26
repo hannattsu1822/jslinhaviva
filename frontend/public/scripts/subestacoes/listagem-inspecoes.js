@@ -91,6 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let callbackAcaoConfirmada = null;
   let filesToUpload = [];
   let anexosAPRTemporarios = [];
+  let usuarioEhAdmin = false;
 
   async function uploadFile(file) {
     const formData = new FormData();
@@ -288,24 +289,37 @@ document.addEventListener("DOMContentLoaded", () => {
         btnConcluirHtml = `<button class="btn text-success btn-concluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Concluir Inspeção"><span class="material-symbols-outlined">task_alt</span></button>`;
       }
 
-      let btnRecoveryHtml = `<button class="btn" title="Inspeção não pode ser reaberta" disabled><span class="material-symbols-outlined">history</span></button>`;
-      if (podeRecuperar) {
+      let btnRecoveryHtml = "";
+      if (podeRecuperar && usuarioEhAdmin) {
         btnRecoveryHtml = `<button class="btn text-warning btn-recovery-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Reabrir Inspeção"><span class="material-symbols-outlined">history</span></button>`;
       }
 
-      let btnExcluirHtml = `<button class="btn text-danger btn-excluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Excluir Inspeção"><span class="material-symbols-outlined">delete</span></button>`;
+      let btnExcluirHtml = "";
+      if (usuarioEhAdmin) {
+        btnExcluirHtml = `<button class="btn text-danger btn-excluir-inspecao" data-id="${insp.id}" data-form-num="${formNumId}" title="Excluir Inspeção"><span class="material-symbols-outlined">delete</span></button>`;
+      }
 
       const aprAnexos = insp.apr_anexos ? JSON.parse(insp.apr_anexos) : [];
       const aprCount = insp.apr_count || 0;
 
       let aprButtonHtml = "";
-      if (aprCount > 0) {
+      if (usuarioEhAdmin) {
+        if (aprCount > 0) {
+          aprButtonHtml = `<button class="btn btn-sm btn-success btn-ver-apr" data-form-num="${formNumId}" data-anexos='${JSON.stringify(
+            aprAnexos
+          )}' title="Ver APRs Anexadas"><span class="material-symbols-outlined">visibility</span> APR (${aprCount})</button>`;
+        } else {
+          aprButtonHtml = `<button class="btn btn-sm btn-primary btn-anexar-apr" data-id="${insp.id}" data-form-num="${formNumId}" title="Anexar APR"><span class="material-symbols-outlined">upload_file</span> APR</button>`;
+        }
+      } else if (aprCount > 0) {
         aprButtonHtml = `<button class="btn btn-sm btn-success btn-ver-apr" data-form-num="${formNumId}" data-anexos='${JSON.stringify(
           aprAnexos
         )}' title="Ver APRs Anexadas"><span class="material-symbols-outlined">visibility</span> APR (${aprCount})</button>`;
-      } else {
-        aprButtonHtml = `<button class="btn btn-sm btn-primary btn-anexar-apr" data-id="${insp.id}" data-form-num="${formNumId}" title="Anexar APR"><span class="material-symbols-outlined">upload_file</span> APR</button>`;
       }
+
+      const btnEditarHtml = usuarioEhAdmin
+        ? `<button class="btn text-primary btn-editar-inspecao" data-id="${insp.id}" title="Editar Inspeção"><span class="material-symbols-outlined">edit</span></button>`
+        : "";
 
       tr.innerHTML = `
         <td class="text-center">${formNumId}</td>
@@ -321,9 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <button class="btn text-info btn-ver-detalhes-inspecao" data-id="${
               insp.id
             }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-            <button class="btn text-primary btn-editar-inspecao" data-id="${
-              insp.id
-            }" title="Editar Inspeção"><span class="material-symbols-outlined">edit</span></button>
+            ${btnEditarHtml}
             <button class="btn text-secondary btn-anexar-escritorio" data-id="${
               insp.id
             }" title="Anexar Documentos"><span class="material-symbols-outlined">attach_file</span></button>
@@ -807,9 +819,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function init() {
-    popularFiltroSubestacoes();
-    popularFiltroResponsaveis();
-    carregarInspecoes(1);
+    fetch("/api/me", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((user) => {
+        usuarioEhAdmin = (user?.nivel ?? 0) >= 7;
+        const btnNova = document.getElementById("btnNovaInspecaoRedirect");
+        if (btnNova && !usuarioEhAdmin) btnNova.style.display = "none";
+        popularFiltroSubestacoes();
+        popularFiltroResponsaveis();
+        carregarInspecoes(1);
+      })
+      .catch(() => carregarInspecoes(1));
   }
 
   init();

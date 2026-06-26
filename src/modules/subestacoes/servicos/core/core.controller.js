@@ -4,15 +4,7 @@ const fs = require("fs");
 
 async function listarUsuariosResponsaveis(req, res) {
   try {
-    const cargos = [
-      "Técnico",
-      "Engenheiro",
-      "Gerente",
-      "ADMIN",
-      "ADM",
-      "Inspetor",
-    ];
-    const usuarios = await service.listarUsuariosPorCargo(cargos);
+    const usuarios = await service.listarUsuariosResponsaveisAdmin();
     res.json(usuarios);
   } catch (error) {
     res.status(500).json({ message: "Erro ao buscar usuários responsáveis." });
@@ -21,8 +13,7 @@ async function listarUsuariosResponsaveis(req, res) {
 
 async function listarEncarregadosInspetores(req, res) {
   try {
-    const cargos = ["Encarregado", "Inspetor", "Técnico"];
-    const usuarios = await service.listarUsuariosPorCargo(cargos);
+    const usuarios = await service.listarUsuariosPorNivelBasico();
     res.json(usuarios);
   } catch (error) {
     res

@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if ((user?.nivel ?? 0) < 7) {
+        window.location.replace("/gestao-servicos");
+      }
+    })
+    .catch(() => {});
+
   const ctxEncarregado = document
     .getElementById("graficoServicosPorEncarregado")
     ?.getContext("2d");

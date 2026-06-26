@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
+const {
+  NIVEL_ADMIN,
+  NIVEL_ACESSO_MIN,
+} = require("../../subestacoes.permissions");
 const controller = require("./core.controller");
 const { promisePool } = require("../../../../infrastructure/database");
 
@@ -32,52 +36,52 @@ async function verificarInspecaoExiste(req, res, next) {
 router.get(
   "/api/checklist/modelo/padrao",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   controller.obterModeloPadrao
 );
 router.post(
   "/inspecoes-subestacoes",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   controller.criarInspecao
 );
 router.put(
   "/inspecoes-subestacoes/:id",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   verificarInspecaoExiste,
   controller.atualizarInspecao
 );
 router.get(
   "/inspecoes-subestacoes",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   controller.listarInspecoes
 );
 router.get(
   "/inspecoes-subestacoes/:id",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   controller.obterInspecaoCompleta
 );
 router.put(
   "/inspecoes-subestacoes/:inspecaoId/concluir",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   verificarInspecaoExiste,
   controller.concluirInspecao
 );
 router.put(
   "/inspecoes-subestacoes/:inspecaoId/reabrir",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   verificarInspecaoExiste,
   controller.reabrirInspecao
 );
 router.delete(
   "/inspecoes-subestacoes/:inspecaoId",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   verificarInspecaoExiste,
   controller.deletarInspecao
 );

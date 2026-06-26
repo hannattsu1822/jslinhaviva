@@ -3,11 +3,7 @@ let accessDeniedModalInstance;
 let developmentModalInstance;
 let user = null;
 
-const CARGOS_GESTAO = ["GERENTE", "ENGENHEIRO", "ADM", "ADMIN", "TÉCNICO"];
-
-function normalizarCargo(cargo) {
-  return (cargo || "").trim().toUpperCase();
-}
+const P = () => window.ServicosPermissions || {};
 
 async function resolverUsuario() {
   try {
@@ -30,18 +26,15 @@ async function resolverUsuario() {
 }
 
 function podeEditarServico() {
-  return Boolean(user && user.nivel >= 4);
+  return P().podeEditarServico?.(user) ?? false;
 }
 
 function podeExcluirServico() {
-  return Boolean(user && user.nivel >= 7);
+  return P().podeExcluirServico?.(user) ?? false;
 }
 
 function podeGerenciarEquipe() {
-  if (!user) return false;
-  if (user.nivel >= 5) return true;
-  if (user.nivel < 4) return false;
-  return CARGOS_GESTAO.includes(normalizarCargo(user.cargo));
+  return P().podeGerenciarEquipe?.(user) ?? false;
 }
 
 function aplicarPermissoesInterface() {

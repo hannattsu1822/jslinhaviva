@@ -35,7 +35,7 @@
       <main class="dashboard-main">
         <div class="row g-4">
           <!-- Card: Gerenciar Subestações e Equipamentos -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-4" id="card-subestacao-infra" style="display: none">
             <a
               href="/pagina-subestacoes-admin"
               class="dashboard-card text-decoration-none"
@@ -58,7 +58,7 @@
           </div>
 
           <!-- Card: Listagem de Serviços Ativos -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-4" id="card-subestacao-ativos" style="display: none">
             <a
               href="/pagina-servicos-subestacoes"
               class="dashboard-card text-decoration-none"
@@ -79,7 +79,7 @@
           </div>
 
           <!-- Card: Histórico de Serviços Concluídos -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-4" id="card-subestacao-historico" style="display: none">
             <a
               href="/pagina-servicos-concluidos"
               class="dashboard-card text-decoration-none"
@@ -100,7 +100,7 @@
           </div>
 
           <!-- Card: Registrar Novo Serviço -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-4" id="card-subestacao-registrar" style="display: none">
             <a
               href="/registrar-servico-subestacao"
               class="dashboard-card text-decoration-none"
@@ -122,7 +122,7 @@
           </div>
 
           <!-- Card: Nova Inspeção -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-4" id="card-subestacao-nova-inspecao" style="display: none">
             <a
               href="/pagina-checklist-inspecao-subestacao"
               class="dashboard-card text-decoration-none"
@@ -145,7 +145,7 @@
           </div>
 
           <!-- Card: Listagem de Inspeções -->
-          <div class="col-md-6 col-lg-4">
+          <div class="col-md-6 col-lg-4" id="card-subestacao-ver-inspecoes" style="display: none">
             <a
               href="/pagina-listagem-inspecoes-subestacoes"
               class="dashboard-card text-decoration-none"
@@ -212,6 +212,21 @@
       }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/scripts/shared/moduloNivel.permissions.js"></script>
+    <script src="/scripts/shared/uiPermissoes.js"></script>
     <script src="/shared/scripts/sidebar.js"></script>
+    <script>
+      UiPermissoes.aguardarUsuario((user) => {
+        if (!user) return;
+        UiPermissoes.aplicarCardsPorId(user, {
+          "card-subestacao-infra": UiPermissoes.isAdmin,
+          "card-subestacao-ativos": UiPermissoes.podeAcessarModulo,
+          "card-subestacao-historico": UiPermissoes.podeAcessarModulo,
+          "card-subestacao-registrar": UiPermissoes.isAdmin,
+          "card-subestacao-nova-inspecao": UiPermissoes.isAdmin,
+          "card-subestacao-ver-inspecoes": UiPermissoes.podeAcessarModulo,
+        });
+      });
+    </script>
   </body>
 </html>

@@ -1,24 +1,24 @@
-// src/routes/subestacoes/servicos/itens/itens.routes.js
-
 const express = require("express");
 const router = express.Router();
 const { autenticar, verificarNivel } = require("../../../../auth");
 const { upload } = require("../../../../infrastructure/uploads");
+const {
+  NIVEL_ADMIN,
+  NIVEL_ACESSO_MIN,
+} = require("../../subestacoes.permissions");
 const controller = require("./itens.controller");
 
-// Rota para atualizar os encarregados de múltiplos itens de um serviço
 router.put(
   "/api/servicos/:servicoId/itens/encarregados",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ADMIN),
   controller.atualizarEncarregados
 );
 
-// Rota para concluir um item de serviço
 router.put(
   "/api/servicos/itens/:itemEscopoId/concluir",
   autenticar,
-  verificarNivel(3),
+  verificarNivel(NIVEL_ACESSO_MIN),
   upload.any(),
   controller.concluirItem
 );

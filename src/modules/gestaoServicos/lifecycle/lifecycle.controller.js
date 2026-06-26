@@ -1,5 +1,10 @@
 const service = require("./lifecycle.service");
 const { registrarAuditoria } = require("../../../auth");
+const {
+  podeForcarConclusao,
+  podeGerenciarEquipe,
+  podeConcluirAdministrativo,
+} = require("../servicos.permissions");
 
 async function atualizarStatusParteServico(req, res) {
   try {
@@ -52,26 +57,16 @@ async function forcarConclusaoServico(req, res) {
   try {
     const { id: servicoId } = req.params;
     const matriculaGestor = req.session?.user?.matricula;
-    const nivel = req.session?.user?.nivel ?? 0;
-    const cargo = req.session?.user?.cargo?.toUpperCase() || "";
     if (!matriculaGestor) {
       return res
         .status(401)
         .json({ success: false, message: "Sessão inválida ou expirada." });
     }
-    const cargosPermitidos = [
-      "ADMIN",
-      "TÉCNICO",
-      "ADM",
-      "ENGENHEIRO",
-      "GERENTE",
-    ];
-    const podeForcar = nivel >= 8 || cargosPermitidos.includes(cargo);
-    if (!podeForcar) {
+    if (!podeForcarConclusao(req.session?.user)) {
       return res.status(403).json({
         success: false,
         message:
-          "Apenas usuários com nível 8 ou superior, ou cargos autorizados, podem forçar a conclusão.",
+          "Apenas usuários com nível 7 ou superior podem forçar a conclusão.",
       });
     }
     await service.forcarConclusaoServico(servicoId, {
@@ -119,21 +114,11 @@ async function atribuirResponsavel(req, res) {
   try {
     const { id } = req.params;
     const { responsaveis } = req.body;
-    const nivel = req.session?.user?.nivel ?? 0;
-    const cargo = req.session?.user?.cargo?.toUpperCase() || "";
-    const cargosPermitidos = [
-      "ADMIN",
-      "TÉCNICO",
-      "ADM",
-      "ENGENHEIRO",
-      "GERENTE",
-    ];
-    const podeAtribuir = nivel >= 6 || cargosPermitidos.includes(cargo);
-    if (!podeAtribuir) {
+    if (!podeGerenciarEquipe(req.session?.user)) {
       return res.status(403).json({
         success: false,
         message:
-          "Apenas usuários com nível 6 ou superior, ou cargos autorizados, podem atribuir responsáveis.",
+          "Apenas usuários com nível 7 ou superior podem atribuir responsáveis.",
       });
     }
     if (!responsaveis || !Array.isArray(responsaveis)) {
@@ -168,21 +153,11 @@ async function atribuirResponsavel(req, res) {
 async function removerResponsavelUnico(req, res) {
   try {
     const { id: servicoId, matricula } = req.params;
-    const nivel = req.session?.user?.nivel ?? 0;
-    const cargo = req.session?.user?.cargo?.toUpperCase() || "";
-    const cargosPermitidos = [
-      "ADMIN",
-      "TÉCNICO",
-      "ADM",
-      "ENGENHEIRO",
-      "GERENTE",
-    ];
-    const podeRemover = nivel >= 6 || cargosPermitidos.includes(cargo);
-    if (!podeRemover) {
+    if (!podeGerenciarEquipe(req.session?.user)) {
       return res.status(403).json({
         success: false,
         message:
-          "Apenas usuários com nível 6 ou superior, ou cargos autorizados, podem remover responsáveis.",
+          "Apenas usuários com nível 7 ou superior podem remover responsáveis.",
       });
     }
     await service.removerResponsavelUnico(servicoId, matricula);
@@ -210,23 +185,13 @@ async function concluirServicoAdministrativo(req, res) {
   try {
     const { id: servicoId } = req.params;
     const matriculaGestor = req.session?.user?.matricula;
-    const nivel = req.session?.user?.nivel ?? 0;
-    const cargo = req.session?.user?.cargo?.toUpperCase() || "";
     if (!matriculaGestor) {
       return res.status(401).json({
         success: false,
         message: "Sessão inválida ou expirada.",
       });
     }
-    const cargosPermitidos = [
-      "ADMIN",
-      "TÉCNICO",
-      "ADM",
-      "ENGENHEIRO",
-      "GERENTE",
-    ];
-    const podeConcluirAdmin = nivel >= 7 || cargosPermitidos.includes(cargo);
-    if (!podeConcluirAdmin) {
+    if (!podeConcluirAdministrativo(req.session?.user)) {
       return res.status(403).json({
         success: false,
         message:

@@ -3,6 +3,29 @@
 let accessDeniedModalInstance;
 let developmentModalInstance;
 
+function aplicarCardsGestaoServicos(user) {
+  if (!user) return;
+  const P = window.ServicosPermissions || {};
+  const cardPermissions = {
+    "card-registro-servico": { check: () => P.podeRegistrarServico?.(user) },
+    "card-servicos-ativos": { check: () => P.podeAcessarModuloServicos?.(user) },
+    "card-servicos-concluidos": {
+      check: () => P.podeAcessarModuloServicos?.(user),
+    },
+    "card-relatorios": { check: () => P.temControleTotal?.(user) },
+    "card-acompanhamento-construcao": {
+      check: () => P.temControleTotal?.(user),
+    },
+  };
+
+  for (const cardId in cardPermissions) {
+    const card = document.getElementById(cardId);
+    if (card && cardPermissions[cardId].check()) {
+      card.style.display = "block";
+    }
+  }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   if (
     typeof bootstrap !== "undefined" &&
@@ -15,38 +38,25 @@ document.addEventListener("DOMContentLoaded", function () {
     if (devmEl) developmentModalInstance = new bootstrap.Modal(devmEl);
   }
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user) {
-    const cardPermissions = {
-      "card-registro-servico": { nivel: 5 },
-      "card-servicos-ativos": { nivel: 3 },
-      "card-servicos-concluidos": { nivel: 3 },
-      "card-relatorios": { nivel: 5 },
-      "card-acompanhamento-construcao": {
-        cargos: ["Construção", "Engenheiro", "ADMIN", "ADM"],
-      },
-    };
+  document.addEventListener("sidebar:ready", (event) => {
+    aplicarCardsGestaoServicos(event.detail?.user);
+  });
 
-    for (const cardId in cardPermissions) {
-      const card = document.getElementById(cardId);
-      if (card) {
-        const perm = cardPermissions[cardId];
-        let hasPermission = false;
-
-        if (perm.nivel && user.nivel >= perm.nivel) {
-          hasPermission = true;
-        }
-
-        if (perm.cargos && perm.cargos.includes(user.cargo)) {
-          hasPermission = true;
-        }
-
-        if (hasPermission) {
-          card.style.display = "block";
-        }
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+        aplicarCardsGestaoServicos(user);
       }
-    }
-  }
+    })
+    .catch(() => {
+      try {
+        aplicarCardsGestaoServicos(JSON.parse(localStorage.getItem("user")));
+      } catch {
+        /* ignora */
+      }
+    });
 });
 
 window.navigateTo = async function (pageNameOrUrl) {

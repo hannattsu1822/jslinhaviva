@@ -182,23 +182,29 @@ function atualizarTabela() {
             }</small>`;
 
       let reativarButtonHtml = "";
-      if (user && user.nivel >= 4) {
+      const P = window.ServicosPermissions || {};
+      if (P.podeReativarServico?.(user)) {
         reativarButtonHtml = `<button class="btn btn-sm glass-btn btn-warning" onclick="reativarServico(${servico.id})" title="Retornar para Ativos"><span class="material-symbols-outlined">undo</span></button>`;
       }
 
-      let aprButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR"><span class="material-symbols-outlined">attach_file</span> Anexar</button>`;
-      if (servico.caminho_apr_anexo) {
-        aprButtonHtml = `
+      let aprButtonHtml = "";
+      if (P.podeAnexarAPR?.(user)) {
+        aprButtonHtml = `<button class="btn btn-sm glass-btn btn-outline-primary w-100" onclick="abrirModalUploadAPR(${servico.id})" title="Anexar APR"><span class="material-symbols-outlined">attach_file</span> Anexar</button>`;
+        if (servico.caminho_apr_anexo) {
+          aprButtonHtml = `
           <div class="d-flex flex-column align-items-center">
               <a href="${
                 servico.caminho_apr_anexo
               }" target="_blank" class="btn btn-sm glass-btn btn-success mb-1 w-100" title="Ver APR: ${
-          servico.nome_original_apr_anexo || ""
-        }"><span class="material-symbols-outlined">description</span> Ver</a>
+            servico.nome_original_apr_anexo || ""
+          }"><span class="material-symbols-outlined">description</span> Ver</a>
               <button class="btn btn-sm glass-btn btn-warning w-100" onclick="abrirModalUploadAPR(${
                 servico.id
               })" title="Substituir APR"><span class="material-symbols-outlined">upload_file</span> Subst.</button>
           </div>`;
+        }
+      } else if (servico.caminho_apr_anexo) {
+        aprButtonHtml = `<a href="${servico.caminho_apr_anexo}" target="_blank" class="btn btn-sm glass-btn btn-success w-100" title="Ver APR"><span class="material-symbols-outlined">description</span> Ver</a>`;
       }
 
       tr.innerHTML = `
