@@ -162,6 +162,23 @@ button.anexo-preview-card {
   width: 100%;
 }
 
+button.anexo-thumbnail,
+button.attachment-card {
+  font: inherit;
+  color: inherit;
+}
+
+button.anexo-thumbnail {
+  padding: 0;
+}
+
+button.attachment-card {
+  display: block;
+  width: 100%;
+  text-align: inherit;
+  background: inherit;
+}
+
 @media (max-width: 575.98px) {
   .anexo-galeria-nav {
     width: 2.25rem;

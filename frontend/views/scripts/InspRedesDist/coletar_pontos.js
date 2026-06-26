@@ -153,32 +153,15 @@ document.addEventListener("DOMContentLoaded", function () {
           '<span class="material-icons text-warning me-2" title="Modificado, pendente de sincronização">edit_circle</span>';
       }
 
-      let anexosHtml =
-        '<p class="text-muted">Nenhum anexo para este ponto.</p>';
       const anexosServidor = dados.anexos || [];
-
-      if (anexosServidor.length > 0) {
-        anexosHtml = anexosServidor
-          .map((anexo) => {
-            const isImage =
-              anexo.tipo_arquivo && anexo.tipo_arquivo.startsWith("image/");
-            const url = anexo.caminho_arquivo;
-            const nome = anexo.nome_original;
-
-            if (isImage) {
-              return `
-                <a href="${url}" class="anexo-thumbnail" data-bs-toggle="modal" data-bs-target="#image-viewer-modal" title="${nome}">
-                    <img src="${url}" alt="${nome}">
-                </a>`;
-            } else {
-              return `
-                <a href="${url}" target="_blank" class="anexo-thumbnail" title="${nome}">
-                    <span class="material-icons">description</span>
-                    <span class="anexo-thumbnail-caption">${nome}</span>
-                </a>`;
-            }
+      let anexosHtml = window.AnexoGaleria
+        ? window.AnexoGaleria.renderListHtml(anexosServidor, {
+            fileIcon: "material-icons",
           })
-          .join("");
+        : "";
+      if (!anexosHtml) {
+        anexosHtml =
+          '<p class="text-muted">Nenhum anexo para este ponto.</p>';
       }
 
       const pontoHtml = `
@@ -208,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {
               }</p>
               <div class="anexos-container mb-3">
                 <strong>Anexos:</strong>
-                <div class="anexos-list mt-2">
+                <div class="mt-2">
                   ${anexosHtml}
                 </div>
               </div>
@@ -226,6 +209,10 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
       accordionPontos.insertAdjacentHTML("beforeend", pontoHtml);
     });
+
+    if (window.AnexoGaleria) {
+      window.AnexoGaleria.bindAllGalerias(accordionPontos);
+    }
   }
 
   function renderizarTudo(servico) {
@@ -728,16 +715,6 @@ document.addEventListener("DOMContentLoaded", function () {
       handleDeletarPonto(parseInt(button.dataset.localId));
     }
   });
-
-  const imageViewerModal = document.getElementById("image-viewer-modal");
-  if (imageViewerModal) {
-    imageViewerModal.addEventListener("show.bs.modal", function (event) {
-      const triggerElement = event.relatedTarget;
-      const imageUrl = triggerElement.getAttribute("href");
-      const imageElement = imageViewerModal.querySelector("#image-viewer-img");
-      imageElement.setAttribute("src", imageUrl);
-    });
-  }
 
   window.addEventListener("online", sincronizarComServidor);
   window.addEventListener("offline", updateOnlineStatus);

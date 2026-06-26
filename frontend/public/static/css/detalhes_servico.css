@@ -351,6 +351,18 @@ body {
   height: 100%;
 }
 
+.attachment-card--galeria {
+  cursor: pointer;
+}
+
+.attachment-card--galeria:hover,
+.attachment-card--galeria:focus-visible {
+  border-color: var(--cor-primaria);
+  transform: translateY(-2px);
+  outline: none;
+  box-shadow: 0 4px 12px rgba(42, 82, 152, 0.12);
+}
+
 .attachment-card:hover {
   border-color: var(--cor-primaria);
   transform: translateY(-2px);

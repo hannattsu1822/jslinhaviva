@@ -437,7 +437,7 @@ function preencherAnexos(anexos) {
     return;
   }
 
-  anexos.forEach((anexo) => {
+  anexos.forEach((anexo, index) => {
     const anexoElement = document.createElement("div");
     anexoElement.className = "col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12 mb-3 d-flex align-items-stretch";
 
@@ -450,7 +450,13 @@ function preencherAnexos(anexos) {
     }
 
     anexoElement.innerHTML = `
-      <div class="attachment-card card h-100 w-100">
+      <div class="attachment-card card h-100 w-100 attachment-card--galeria"
+        role="button"
+        tabindex="0"
+        data-galeria-index="${index}"
+        data-galeria-url="${caminhoCorretoAnexo}"
+        data-galeria-nome="${nomeOriginalDoAnexo}"
+        title="Ver ${nomeOriginalDoAnexo}">
         <div class="card-body text-center d-flex flex-column justify-content-between align-items-center">
           <div class="attachment-thumbnail mb-2">${previewHTML}</div>
           <div>
@@ -458,14 +464,17 @@ function preencherAnexos(anexos) {
             <p class="attachment-size small text-muted mb-2">${anexo.tamanho || ""}</p>
           </div>
           <div class="btn-group mt-auto">
-            <a href="${caminhoCorretoAnexo}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></a>
-            <a href="${caminhoCorretoAnexo}?download=true" class="btn btn-sm btn-outline-secondary"><i class="fas fa-download"></i></a>
+            <a href="${caminhoCorretoAnexo}?download=true" class="btn btn-sm btn-outline-secondary" title="Baixar" onclick="event.stopPropagation()"><i class="fas fa-download"></i></a>
           </div>
         </div>
       </div>
     `;
     anexosContainer.appendChild(anexoElement);
   });
+
+  if (window.AnexoGaleria) {
+    window.AnexoGaleria.bindContainer(anexosContainer, anexos);
+  }
 }
 
 function truncateFilename(filename, maxLength = 22) {

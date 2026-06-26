@@ -24,8 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const attachmentCards = document.querySelectorAll(".attachment-card");
     attachmentCards.forEach((card) => {
       const previewContainer = card.querySelector(".attachment-preview");
-      const filename = card.dataset.filename || "";
-      const fileUrl = card.href;
+      const filename = card.dataset.filename || card.dataset.galeriaNome || "";
+      const fileUrl = card.dataset.galeriaUrl || "";
       const extension = filename.split(".").pop();
 
       const fileType = getFileIcon(extension);
@@ -45,4 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   generatePreviews();
+
+  const galeriaContainer = document.querySelector(".anexos-galeria-container");
+  if (galeriaContainer && window.AnexoGaleria) {
+    window.AnexoGaleria.bindContainer(galeriaContainer);
+  }
 });

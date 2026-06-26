@@ -62,35 +62,28 @@ document.addEventListener("DOMContentLoaded", function () {
     `;
   }
 
-  function renderAnexosGerais(anexos) {
+  function renderAnexosBlock(anexos, emptyMessage) {
     if (!anexos || anexos.length === 0) {
-      anexosGeraisContainer.innerHTML =
-        '<p class="text-muted mb-0">Nenhum anexo geral para este serviço.</p>';
-      return;
+      return `<p class="text-muted mb-0">${emptyMessage}</p>`;
     }
-    const anexosHtml = anexos
-      .map((anexo) => {
-        const isImage =
-          anexo.tipo_arquivo && anexo.tipo_arquivo.startsWith("image/");
-        const url = anexo.caminho_arquivo;
-        const nome = anexo.nome_original;
+    if (!window.AnexoGaleria) {
+      return `<p class="text-muted mb-0">Galeria de anexos indisponível.</p>`;
+    }
+    return (
+      window.AnexoGaleria.renderListHtml(anexos, {
+        fileIcon: "material-icons",
+      }) || `<p class="text-muted mb-0">${emptyMessage}</p>`
+    );
+  }
 
-        if (isImage) {
-          return `
-            <a href="${url}" class="anexo-thumbnail" data-bs-toggle="modal" data-bs-target="#image-viewer-modal" title="${nome}">
-                <img src="${url}" alt="${nome}">
-            </a>`;
-        } else {
-          return `
-            <a href="${url}" target="_blank" class="anexo-thumbnail" title="${nome}">
-                <span class="material-icons">description</span>
-                <span class="anexo-thumbnail-caption">${nome}</span>
-            </a>`;
-        }
-      })
-      .join("");
-
-    anexosGeraisContainer.innerHTML = `<div class="anexos-list">${anexosHtml}</div>`;
+  function renderAnexosGerais(anexos) {
+    anexosGeraisContainer.innerHTML = renderAnexosBlock(
+      anexos,
+      "Nenhum anexo geral para este serviço."
+    );
+    if (window.AnexoGaleria) {
+      window.AnexoGaleria.bindAllGalerias(anexosGeraisContainer);
+    }
   }
 
   function renderPontos(pontos) {
@@ -101,31 +94,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     pontos.forEach((ponto) => {
-      let anexosHtml =
-        '<p class="text-muted">Nenhum anexo para este ponto.</p>';
-      if (ponto.anexos && ponto.anexos.length > 0) {
-        anexosHtml = ponto.anexos
-          .map((anexo) => {
-            const isImage =
-              anexo.tipo_arquivo && anexo.tipo_arquivo.startsWith("image/");
-            const url = anexo.caminho_arquivo;
-            const nome = anexo.nome_original;
-
-            if (isImage) {
-              return `
-                <a href="${url}" class="anexo-thumbnail" data-bs-toggle="modal" data-bs-target="#image-viewer-modal" title="${nome}">
-                    <img src="${url}" alt="${nome}">
-                </a>`;
-            } else {
-              return `
-                <a href="${url}" target="_blank" class="anexo-thumbnail" title="${nome}">
-                    <span class="material-icons">description</span>
-                    <span class="anexo-thumbnail-caption">${nome}</span>
-                </a>`;
-            }
-          })
-          .join("");
-      }
+      const anexosHtml = renderAnexosBlock(
+        ponto.anexos,
+        "Nenhum anexo para este ponto."
+      );
 
       let mapsButton = "";
       if (ponto.coordenada_y && ponto.coordenada_x) {
@@ -164,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
               }</p>
               <div class="anexos-container mb-3">
                 <strong>Anexos:</strong>
-                <div class="anexos-list mt-2">${anexosHtml}</div>
+                <div class="mt-2">${anexosHtml}</div>
               </div>
               <div class="text-end">
                 <button class="btn btn-outline-secondary btn-sm btn-gerenciar-anexos" data-ponto-id="${
@@ -185,6 +157,10 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
       accordionPontos.insertAdjacentHTML("beforeend", pontoHtml);
     });
+
+    if (window.AnexoGaleria) {
+      window.AnexoGaleria.bindAllGalerias(accordionPontos);
+    }
   }
 
   async function inicializarPagina() {
@@ -395,16 +371,6 @@ document.addEventListener("DOMContentLoaded", function () {
       );
     }
   });
-
-  const imageViewerModal = document.getElementById("image-viewer-modal");
-  if (imageViewerModal) {
-    imageViewerModal.addEventListener("show.bs.modal", function (event) {
-      const triggerElement = event.relatedTarget;
-      const imageUrl = triggerElement.getAttribute("href");
-      const imageElement = imageViewerModal.querySelector("#image-viewer-img");
-      imageElement.setAttribute("src", imageUrl);
-    });
-  }
 
   inicializarPagina();
 });

@@ -20,6 +20,7 @@
   overflow: hidden;
   position: relative;
   cursor: pointer;
+  padding: 0;
 }
 
 .anexo-thumbnail img {
@@ -53,15 +54,8 @@
   text-align: center;
 }
 
-#image-viewer-modal .modal-content {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-#image-viewer-img {
-  max-height: 90vh;
-  border-radius: var(--lv-radius-sm);
+.accordion-body p {
+  margin-bottom: 0.75rem;
 }
 
 .btn-maps {
@@ -75,8 +69,4 @@
 
 .btn-maps .material-icons {
   font-size: 1rem;
-}
-
-.accordion-body p {
-  margin-bottom: 0.75rem;
 }

@@ -1,6 +1,11 @@
 (function () {
-  const IMAGE_EXT = /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i;
+  const IMAGE_EXT = /\.(jpe?g|png|gif|webp|heic|heif|bmp|svg)$/i;
   const PDF_EXT = /\.pdf$/i;
+  const IMAGE_TIPOS = new Set([
+    "imagem",
+    "foto_conclusao",
+    "foto_nao_conclusao",
+  ]);
 
   let overlay = null;
   let stage = null;
@@ -13,12 +18,31 @@
   let keyHandler = null;
 
   function getUrl(anexo) {
-    return anexo?.caminho_servidor || anexo?.url || "";
+    return (
+      anexo?.url ||
+      anexo?.caminho_servidor ||
+      anexo?.caminho_arquivo ||
+      anexo?.caminho ||
+      ""
+    );
+  }
+
+  function getMime(anexo) {
+    const tipo = anexo?.tipo || anexo?.raw?.tipo || "";
+    return (
+      anexo?.tipo_mime ||
+      anexo?.tipo_arquivo ||
+      anexo?.type ||
+      (typeof tipo === "string" && tipo.includes("/") ? tipo : "") ||
+      ""
+    );
   }
 
   function getNome(anexo) {
     return (
+      anexo?.nome ||
       anexo?.nome_original ||
+      anexo?.nomeOriginal ||
       anexo?.name ||
       anexo?.descricao_anexo ||
       "Anexo"
@@ -27,14 +51,16 @@
 
   function isImage(anexo) {
     const url = getUrl(anexo);
-    const mime = anexo?.tipo_mime || anexo?.type || "";
+    const mime = getMime(anexo);
+    const tipo = anexo?.tipo || anexo?.raw?.tipo || "";
     if (mime.startsWith("image/")) return true;
+    if (IMAGE_TIPOS.has(tipo)) return true;
     return IMAGE_EXT.test(url);
   }
 
   function isPdf(anexo) {
     const url = getUrl(anexo);
-    const mime = anexo?.tipo_mime || anexo?.type || "";
+    const mime = getMime(anexo);
     if (mime === "application/pdf") return true;
     return PDF_EXT.test(url);
   }
@@ -42,13 +68,47 @@
   function normalizeList(anexos) {
     if (!Array.isArray(anexos)) return [];
     return anexos
-      .filter((a) => a && getUrl(a))
       .map((a) => ({
         url: getUrl(a),
         nome: getNome(a),
-        tipo_mime: a.tipo_mime || a.type || "",
+        tipo_mime: getMime(a),
+        tipo: a?.tipo || "",
         raw: a,
-      }));
+      }))
+      .filter((a) => a.url);
+  }
+
+  function escapeAttr(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
+  }
+
+  function renderListHtml(anexos, options = {}) {
+    const list = normalizeList(anexos);
+    if (!list.length) return options.emptyHtml || "";
+    const fileIcon =
+      options.fileIcon === "material-icons"
+        ? '<span class="material-icons">description</span>'
+        : '<span class="material-symbols-outlined">description</span>';
+
+    const itemsHtml = list
+      .map((item, index) => {
+        const nome = escapeAttr(item.nome);
+        const url = escapeAttr(item.url);
+        const tipo = escapeAttr(item.tipo_mime);
+        const tipoAttr = tipo ? ` data-galeria-tipo="${tipo}"` : "";
+
+        if (isImage(item)) {
+          return `<button type="button" class="anexo-thumbnail" data-galeria-index="${index}" data-galeria-url="${url}" data-galeria-nome="${nome}"${tipoAttr} title="${nome}"><img src="${url}" alt="${nome}" loading="lazy"></button>`;
+        }
+
+        return `<button type="button" class="anexo-thumbnail anexo-thumbnail--file" data-galeria-index="${index}" data-galeria-url="${url}" data-galeria-nome="${nome}"${tipoAttr} title="${nome}">${fileIcon}<span class="anexo-thumbnail-caption">${item.nome}</span></button>`;
+      })
+      .join("");
+
+    return `<div class="anexos-list">${itemsHtml}</div>`;
   }
 
   function ensureDom() {
@@ -204,10 +264,23 @@
     });
   }
 
+  function bindAllGalerias(root) {
+    const scope = root || document;
+    scope
+      .querySelectorAll(".anexos-list, .anexos-container, .anexos-galeria-container")
+      .forEach((container) => {
+        if (container.querySelector("[data-galeria-index]")) {
+          bindContainer(container);
+        }
+      });
+  }
+
   window.AnexoGaleria = {
     open,
     close,
     bindContainer,
+    bindAllGalerias,
+    renderListHtml,
     normalizeList,
     isImage,
     isPdf,
