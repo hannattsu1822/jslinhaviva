@@ -286,23 +286,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
       statusRegistros.forEach((reg) => {
         const row = tabelaStatusBody.insertRow();
-        row.insertCell().textContent = reg.nome_funcionario || "N/A";
-        row.insertCell().textContent = reg.matricula_funcionario;
-        row.insertCell().textContent = reg.cargo_funcionario || "N/A";
-        row.insertCell().textContent = reg.turma_encarregado || "N/A";
-        const tipoStatusFormatado = reg.tipo_status
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (l) => l.toUpperCase());
-        row.insertCell().textContent = tipoStatusFormatado;
-        row.insertCell().textContent = reg.data_inicio_formatada;
-        row.insertCell().textContent = reg.data_fim_formatada;
-        row.insertCell().textContent = reg.observacao || "";
-        row.insertCell().textContent = reg.registrado_por_matricula;
-        row.insertCell().textContent = new Date(
-          reg.registrado_em
-        ).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+        const cells = [
+          { label: "Funcionário", value: reg.nome_funcionario || "N/A" },
+          { label: "Matrícula", value: reg.matricula_funcionario },
+          { label: "Cargo", value: reg.cargo_funcionario || "N/A" },
+          { label: "Turma Enc.", value: reg.turma_encarregado || "N/A" },
+          {
+            label: "Tipo Status",
+            value: reg.tipo_status
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (l) => l.toUpperCase()),
+          },
+          { label: "Data Início", value: reg.data_inicio_formatada },
+          { label: "Data Fim", value: reg.data_fim_formatada },
+          { label: "Observação", value: reg.observacao || "" },
+          { label: "Registrado Por", value: reg.registrado_por_matricula },
+          {
+            label: "Registrado Em",
+            value: new Date(reg.registrado_em).toLocaleString("pt-BR", {
+              dateStyle: "short",
+              timeStyle: "short",
+            }),
+          },
+        ];
+
+        cells.forEach(({ label, value }) => {
+          const cell = row.insertCell();
+          cell.dataset.label = label;
+          cell.textContent = value;
+        });
 
         const actionsCell = row.insertCell();
+        actionsCell.dataset.label = "Ações";
         actionsCell.classList.add("actions-cell");
 
         const editButton = document.createElement("button");

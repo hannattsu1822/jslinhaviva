@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Autorização de Serviço Extraordinário</title>
+    <title>Horas Extras | Avulsos | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
 
     <link
       rel="stylesheet"
@@ -19,27 +20,26 @@
       crossorigin="anonymous"
     />
 
-    <link
-      rel="stylesheet"
-      href="/static/css/components/bootstrap-overrides.css"
-    />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-    <link
-      rel="stylesheet"
-      href="/static/css/avulsos/autorizacao_horas_extras.css"
-    />
+    <link rel="stylesheet" href="/static/css/avulsos/autorizacao_horas_extras.css" />
   </head>
-  <body>
+  <body class="avulsos-page avulsos-page--horas">
     <div class="page-container">
       <div id="sidebar-root"></div>
 
       <main class="main-content">
         <header class="main-header">
           <div class="header-content">
-            <h1 class="page-title">
-              <i class="fa-solid fa-user-clock"></i>
-              Autorização de Serviço Extraordinário
-            </h1>
+            <div>
+              <div class="avulsos-header__badge">
+                <i class="fa-solid fa-hand-sparkles"></i>
+                Avulsos
+              </div>
+              <h1 class="page-title">
+                <i class="fa-solid fa-user-clock"></i>
+                Autorização de Serviço Extraordinário
+              </h1>
+            </div>
             <a href="/avulsos-dashboard" class="btn btn-secondary">
               <i class="fa-solid fa-arrow-left"></i>
               Voltar

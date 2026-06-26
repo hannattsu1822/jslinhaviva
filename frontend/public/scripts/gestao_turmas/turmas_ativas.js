@@ -131,12 +131,12 @@ function populateTable(data) {
   data.forEach((membro) => {
     const row = document.createElement("tr");
     row.innerHTML = `
-            <td>${membro.id || ""}</td>
-            <td>${membro.matricula || ""}</td>
-            <td>${membro.nome || ""}</td>
-            <td>${membro.cargo || ""}</td>
-            <td>${membro.turma_encarregado || "Não atribuído"}</td>
-            <td class="text-end">
+            <td data-label="ID">${membro.id || ""}</td>
+            <td data-label="Matrícula">${membro.matricula || ""}</td>
+            <td data-label="Nome">${membro.nome || ""}</td>
+            <td data-label="Cargo">${membro.cargo || ""}</td>
+            <td data-label="Turma/Encarregado">${membro.turma_encarregado || "Não atribuído"}</td>
+            <td class="text-end" data-label="Ações">
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="window.editMember(${
                   membro.id
                 })" title="Editar/Mover Turma">

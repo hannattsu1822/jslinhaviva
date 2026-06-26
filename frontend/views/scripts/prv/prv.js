@@ -162,15 +162,15 @@ function normalizeKmPayload(payload) {
       } - ${r.chegada_km || ""} KM</small>`;
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${new Date(r.dia).toLocaleDateString("pt-BR", {
+        <td data-label="Dia">${new Date(r.dia).toLocaleDateString("pt-BR", {
           timeZone: "UTC",
         })}</td>
-        <td>${saidaInfo}</td>
-        <td>${chegadaInfo}</td>
-        <td>${kmPercorrido}</td>
-        <td>${r.motorista_matricula}</td>
-        <td>${r.tipo_servico || ""}</td>
-        <td>
+        <td data-label="Saída">${saidaInfo}</td>
+        <td data-label="Chegada">${chegadaInfo}</td>
+        <td data-label="KM">${kmPercorrido}</td>
+        <td data-label="Motorista">${r.motorista_matricula}</td>
+        <td data-label="Serviço">${r.tipo_servico || ""}</td>
+        <td data-label="Ações">
           <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${
             r.id
           }" title="Excluir">

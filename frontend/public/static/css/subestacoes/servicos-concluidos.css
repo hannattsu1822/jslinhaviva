@@ -1,3 +1,5 @@
+@import url("./subestacoes-base.css");
+
 :root {
   --cor-primaria: #0d47a1;
   --cor-primaria-escura: #0b3a82;
@@ -26,51 +28,8 @@
   padding: 0;
 }
 
-body {
-  font-family: var(--fonte-principal);
-  background-color: var(--cor-fundo-pagina);
-  color: var(--cor-texto-primario);
-  line-height: 1.6;
-  font-size: 14px;
-}
-
 .hidden {
   display: none !important;
-}
-
-.page-container {
-  max-width: 1400px;
-  margin: calc(var(--espacamento-unidade) * 3) auto;
-  padding: 0 calc(var(--espacamento-unidade) * 2);
-}
-
-.page-header {
-  background-color: var(--cor-secundaria);
-  color: var(--cor-texto-claro);
-  padding: calc(var(--espacamento-unidade) * 2)
-    calc(var(--espacamento-unidade) * 3);
-  border-radius: var(--raio-borda);
-  margin-bottom: calc(var(--espacamento-unidade) * 3);
-  box-shadow: var(--sombra-padrao);
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: var(--espacamento-unidade);
-}
-
-.page-title .material-symbols-outlined {
-  font-size: 2.2rem;
-}
-
-.page-footer {
-  text-align: center;
-  margin-top: calc(var(--espacamento-unidade) * 4);
-  padding-top: calc(var(--espacamento-unidade) * 2);
-  border-top: 1px solid var(--cor-borda);
 }
 
 .card {

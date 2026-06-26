@@ -284,18 +284,18 @@ function renderDiariasTable(diarias) {
         ? new Date(diaria.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })
         : "N/A");
     row.innerHTML = `
-      <td>${diaria.matricula || "N/A"}</td>
-      <td>${diaria.nome || "N/A"}</td>
-      <td>${diaria.cargo || "N/A"}</td>
-      <td>${dataFormatada}</td>
-      <td class="text-center">${
+      <td data-label="Matrícula">${diaria.matricula || "N/A"}</td>
+      <td data-label="Nome">${diaria.nome || "N/A"}</td>
+      <td data-label="Cargo">${diaria.cargo || "N/A"}</td>
+      <td data-label="Data">${dataFormatada}</td>
+      <td class="text-center" data-label="QS">${
         diaria.qs ? '<i class="fas fa-check text-success"></i>' : ""
       }</td>
-      <td class="text-center">${
+      <td class="text-center" data-label="QD">${
         diaria.qd ? '<i class="fas fa-check text-success"></i>' : ""
       }</td>
-      <td>${diaria.processo || "N/A"}</td>
-      <td class="text-end">
+      <td data-label="Processo">${diaria.processo || "N/A"}</td>
+      <td class="text-end" data-label="Ações">
         <button onclick="window.confirmDelete(${diaria.id}, '${String(
       diaria.nome || ""
     ).replace(/'/g, "\\'")}')"

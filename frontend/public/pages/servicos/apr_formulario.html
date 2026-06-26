@@ -3,16 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>APR - Formulário</title>
+    <title>APR - Formulário | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
     <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
+      crossorigin="anonymous"
     />
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
     />
     <link rel="stylesheet" href="/static/css/apr_form.css" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <style>
       .card-header {
         font-weight: bold;
@@ -37,31 +42,39 @@
         border-radius: 0.25rem;
       }
     </style>
-      <link rel="stylesheet" href="/shared/css/sidebar.css" />
   </head>
-  <body>
-    <div id="sidebar-root"></div>
-    <div class="main-content">
-<div class="container mt-4 mb-5">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>
-          <i class="fas fa-shield-alt"></i> Análise Preliminar de Risco (APR)
-        </h2>
-        <div>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary me-2"
-            id="btnEditarAPR"
-            style="display: none"
-            title="Habilitar Edição"
-          >
-            <i class="fas fa-edit"></i> Editar APR
-          </button>
-          <a href="/servicos_ativos" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Voltar para Serviços
-          </a>
-        </div>
-      </div>
+  <body class="servicos-page servicos-page--apr">
+    <div class="page-container">
+      <div id="sidebar-root"></div>
+
+      <main class="main-content">
+        <div class="container-fluid servicos-shell py-4">
+          <header class="main-header page-header-servicos d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div>
+              <div class="servicos-header__badge">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                Gestão de Serviços
+              </div>
+              <h1 class="page-title mb-0">
+                <i class="fa-solid fa-shield-halved"></i>
+                Análise Preliminar de Risco (APR)
+              </h1>
+            </div>
+            <div class="header-actions-stack">
+              <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                id="btnEditarAPR"
+                style="display: none"
+                title="Habilitar Edição"
+              >
+                <i class="fa-solid fa-pen"></i> Editar APR
+              </button>
+              <a href="/servicos_ativos" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
+              </a>
+            </div>
+          </header>
 
       <div class="card form-section" id="infoServicoCard">
         <div class="card-header">Informações do Serviço Associado</div>
@@ -528,6 +541,8 @@
           </button>
         </div>
       </form>
+        </div>
+      </main>
     </div>
 
     <div
@@ -790,9 +805,8 @@
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/scripts/servicos/apr_formulario.js"></script>
-    </div>
-      <script src="/shared/scripts/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

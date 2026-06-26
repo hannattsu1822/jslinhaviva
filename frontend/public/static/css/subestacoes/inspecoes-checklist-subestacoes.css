@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
+@import url("./subestacoes-base.css");
 
 :root {
   --c-primary: #0d47a1;
@@ -22,43 +22,8 @@
   --spacing-unit: 8px;
 }
 
-body {
-  background-color: var(--bg-page);
-  font-family: var(--font-family);
-  font-size: var(--base-font-size);
-  color: var(--text-primary);
-  line-height: 1.6;
-}
-
-.container {
+.subestacoes-page--inspecao-form .subestacoes-shell {
   max-width: 1140px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0 15px;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.page-header {
-  background-color: var(--bg-component);
-  border-bottom: 1px solid var(--border-color);
-  padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 3);
-  border-radius: var(--border-radius);
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  font-size: calc(var(--base-font-size) * 1.5);
-  font-weight: 500;
-  color: var(--c-primary);
-  margin: 0;
-  display: flex;
-  align-items: center;
-}
-.page-header .material-symbols-outlined {
-  font-size: 2.2rem;
-  margin-right: var(--spacing-unit);
-  color: var(--c-primary);
-  font-variation-settings: "wght" 300;
 }
 
 .custom-card {

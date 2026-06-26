@@ -1,62 +1,294 @@
-.header { display: flex; justify-content: space-between; align-items: center; }
-.status-box { display: flex; align-items: center; padding: 8px 15px; border-radius: 20px; font-weight: 500; }
-.status-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
-.status-box.status-online { background-color: #e8f5e9; color: #2e7d32; }
-.status-box.status-online .status-dot { background-color: #4caf50; }
-.status-box.status-offline { background-color: #ffebee; color: #c62828; }
-.status-box.status-offline .status-dot { background-color: #f44336; }
-.status-box.status-no-data { background-color: #f5f5f5; color: #616161; }
-.status-box.status-no-data .status-dot { background-color: #9e9e9e; }
-.info-panel, .live-data-panel, .history-panel { background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-top: 2rem; }
-h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-.live-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
-.live-data-point .label { font-size: 0.9rem; color: #666; }
-.live-data-point .value { font-size: 1.8rem; font-weight: 500; color: #1a237e; }
-.timestamp { text-align: right; color: #888; font-size: 0.8rem; margin-top: 20px; }
-.table-container { max-height: 400px; overflow-y: auto; }
-#history-table { width: 100%; border-collapse: collapse; }
-#history-table th, #history-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-#history-table th { background-color: #f9f9f9; }
-#history-table tbody tr:first-child { background-color: #e3f2fd; }
+@import url("../monitoramento/monitoramento-base.css");
 
-/* Estilos para os campos de status de texto */
-.live-data-point .status-text {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #3f51b5;
-}
-.status-text.ok { color: #2e7d32; }
-.status-text.fail, .status-text.alarm { color: #c62828; }
-
-
-/* Adicione estas regras ao final do seu arquivo CSS */
-.charts-panel {
-    background-color: #fff;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    margin-top: 2rem;
+.monitoramento-page--reles-live .monitoramento-shell {
+  padding: 1rem 0 2rem;
 }
 
-.charts-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Uma coluna por padrão */
-    gap: 30px;
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
 }
 
-.chart-container {
-    position: relative;
-    height: 300px; /* Altura fixa para os gráficos */
-    width: 100%;
+.rele-card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  border-top: 3px solid #94a3b8;
 }
 
-/* Em telas maiores, mostrar 2 gráficos por linha */
+.rele-card.status-online {
+  border-top-color: #22c55e;
+}
+
+.rele-card.status-offline {
+  border-top-color: #ef4444;
+}
+
+.rele-card.just-updated {
+  animation: mon-rele-pulse 0.7s ease;
+}
+
+@keyframes mon-rele-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(56, 189, 248, 0); }
+}
+
+.rele-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.rele-card .card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rele-card .card-header h3 .material-icons {
+  color: #f59e0b;
+  font-size: 1.2rem;
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-indicator.online {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.status-indicator.offline {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+
+.status-indicator.no-data {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.rele-card .card-body {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+}
+
+.rele-card .data-point {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.rele-card .data-point .label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--lv-text-muted);
+}
+
+.rele-card .data-point .value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--lv-primary);
+  word-break: break-word;
+}
+
+.rele-card .card-footer {
+  padding: 0.65rem 1.1rem 0.85rem;
+  font-size: 0.78rem;
+  color: var(--lv-text-muted);
+  border-top: 1px solid #f1f5f9;
+}
+
+#loading-message {
+  color: var(--lv-text-muted);
+  text-align: center;
+  padding: 2rem;
+  grid-column: 1 / -1;
+}
+
+/* Painéis de detalhe (visualizar_rele_detalhe compartilhado) */
+.monitoramento-page--reles-live .status-box {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.monitoramento-page--reles-live .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.monitoramento-page--reles-live .status-box.status-online {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.monitoramento-page--reles-live .status-box.status-online .status-dot {
+  background: #22c55e;
+}
+
+.monitoramento-page--reles-live .status-box.status-offline {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+
+.monitoramento-page--reles-live .status-box.status-offline .status-dot {
+  background: #ef4444;
+}
+
+.monitoramento-page--reles-live .status-box.status-no-data {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.monitoramento-page--reles-live .status-box.status-no-data .status-dot {
+  background: #94a3b8;
+}
+
+.monitoramento-page--reles-live .info-panel,
+.monitoramento-page--reles-live .live-data-panel,
+.monitoramento-page--reles-live .history-panel,
+.monitoramento-page--reles-live .charts-panel {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.monitoramento-page--reles-live h3 {
+  margin-top: 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.65rem;
+  margin-bottom: 1rem;
+  font-weight: 800;
+  color: var(--lv-text);
+}
+
+.monitoramento-page--reles-live .live-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.monitoramento-page--reles-live .live-data-point .label {
+  font-size: 0.78rem;
+  color: var(--lv-text-muted);
+  font-weight: 600;
+}
+
+.monitoramento-page--reles-live .live-data-point .value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--lv-primary);
+}
+
+.monitoramento-page--reles-live .timestamp {
+  text-align: right;
+  color: var(--lv-text-muted);
+  font-size: 0.8rem;
+  margin-top: 1rem;
+}
+
+.monitoramento-page--reles-live #history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.monitoramento-page--reles-live #history-table th {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 10px;
+}
+
+.monitoramento-page--reles-live #history-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.monitoramento-page--reles-live .live-data-point .status-text {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--lv-primary);
+}
+
+.monitoramento-page--reles-live .status-text.ok {
+  color: #15803d;
+}
+
+.monitoramento-page--reles-live .status-text.fail,
+.monitoramento-page--reles-live .status-text.alarm {
+  color: #b91c1c;
+}
+
+.monitoramento-page--reles-live .charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.monitoramento-page--reles-live .chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
 @media (min-width: 1200px) {
-    .charts-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-    /* Faz o terceiro gráfico ocupar a linha inteira */
-    .charts-grid .chart-container:last-child {
-        grid-column: 1 / -1;
-    }
+  .monitoramento-page--reles-live .charts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .monitoramento-page--reles-live .charts-grid .chart-container:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rele-card .card-body {
+    grid-template-columns: 1fr;
+  }
+
+  .rele-card .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

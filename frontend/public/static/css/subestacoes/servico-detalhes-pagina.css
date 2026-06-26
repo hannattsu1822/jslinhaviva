@@ -1,43 +1,8 @@
-body {
-  font-family: "Poppins", sans-serif;
-  background-color: #ffffff;
-  color: #333;
-  margin: 0;
-  line-height: 1.6;
-}
-
-.page-container {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #eee;
-  margin-bottom: 2rem;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: #2c3e50;
-}
+@import url("./subestacoes-base.css");
 
 .header-id {
   font-weight: 400;
   color: #007bff;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
 }
 
 .btn {
@@ -412,13 +377,6 @@ body {
   object-fit: contain;
 }
 
-.page-footer {
-  text-align: center;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid #eee;
-}
-
 .edit-mode.hidden,
 .view-mode.hidden {
   display: none !important;
@@ -474,13 +432,13 @@ body {
   body {
     background-color: #fff;
   }
-  .page-container {
+  .subestacoes-shell {
     max-width: 100%;
     margin: 0;
     padding: 0;
   }
-  .page-header,
-  .page-footer,
+  .main-header,
+  .header-actions-stack,
   .edit-mode {
     display: none !important;
   }

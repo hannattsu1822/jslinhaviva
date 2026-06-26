@@ -1,5 +1,23 @@
-.ocorrencias-box {
-  white-space: pre-wrap; /* Mantém as quebras de linha do texto das ocorrências */
+@import url("./gestor-base.css");
+
+.gestor-page--prv .ocorrencias-box {
+  white-space: pre-wrap;
   max-height: 200px;
   overflow-y: auto;
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  border-radius: var(--lv-radius-sm);
+  font-size: 0.88rem;
+  color: var(--lv-text);
+}
+
+.gestor-page--prv #loading-message .spinner-border {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+@media (max-width: 575.98px) {
+  .gestor-page--prv .row.g-3.align-items-end > [class*="col-"] {
+    margin-bottom: 0.25rem;
+  }
 }

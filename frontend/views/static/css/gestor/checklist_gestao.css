@@ -1,0 +1,109 @@
+@import url("./gestor-base.css");
+
+.gestor-page--checklist .container-fluid {
+  max-width: 1400px;
+}
+
+.gestor-page--checklist .gestor-checklist-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.status-badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.status-ok {
+  background: var(--lv-success-bg);
+  color: #166534;
+  border: 1px solid var(--lv-success-border);
+}
+
+.status-warn {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.status-danger {
+  background: var(--lv-error-bg);
+  color: #991b1b;
+  border: 1px solid var(--lv-error-border);
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.photo-item {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: var(--lv-radius-sm);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid #e2e8f0;
+}
+
+.photo-item:hover {
+  transform: scale(1.03);
+  box-shadow: var(--lv-shadow-sm);
+}
+
+.info-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lv-text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.info-value {
+  font-weight: 700;
+  color: var(--lv-text);
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+.gestor-page--checklist .modal-body .card.bg-light {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: var(--lv-radius-sm);
+}
+
+.gestor-page--checklist #checklist-table {
+  min-width: 680px;
+}
+
+@media (max-width: 767.98px) {
+  .gestor-page--checklist .btn-group {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .gestor-page--checklist .gestor-checklist-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gestor-page--checklist .gestor-checklist-header .btn {
+    width: 100%;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

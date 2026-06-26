@@ -368,13 +368,30 @@ function initSidebarInteractions() {
   }
 }
 
+function getUserInitials(name) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
 function populateUserInfo(user) {
   const userNameElement = document.getElementById("user-name");
+  const userAvatarElement = document.getElementById("sidebar-user-avatar");
   const userMatriculaElement = document.getElementById("user-matricula");
   const userCargoElement = document.getElementById("user-cargo");
 
+  const displayName = user.nome || "Usuário Desconhecido";
+
   if (userNameElement) {
-    userNameElement.textContent = user.nome || "Usuário Desconhecido";
+    userNameElement.textContent = displayName;
+  }
+  if (userAvatarElement) {
+    userAvatarElement.textContent = getUserInitials(displayName);
   }
   if (userMatriculaElement) {
     const matricula = user.matricula || "N/A";

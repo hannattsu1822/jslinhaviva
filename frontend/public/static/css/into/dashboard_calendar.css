@@ -1,120 +1,176 @@
-/* public/static/css/into/dashboard_calendar.css */
+/* Calendário da dashboard — design system Linha Viva */
 
 .dashboard-calendar-card {
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 20px;
+  background: var(--lv-surface, rgba(255, 255, 255, 0.94));
+  border: 1px solid var(--lv-surface-border, rgba(255, 255, 255, 0.55));
+  border-radius: var(--lv-radius-md, 16px);
+  box-shadow: var(--lv-shadow-sm, 0 4px 14px rgba(15, 23, 42, 0.06));
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.dashboard-calendar-card .card-title {
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+  color: var(--lv-text, #0f172a) !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.dashboard-calendar-card .card-title i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  border-radius: 10px;
+  background: rgba(30, 86, 160, 0.1);
+  color: var(--lv-primary, #1e56a0);
+  font-size: 0.9rem;
+  vertical-align: middle;
 }
 
 .fc .fc-toolbar-title {
-  font-size: 1.8em;
-  font-weight: 600;
-  color: var(--primary-blue-filter, #007bff);
+  font-size: 1.5em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--lv-text, #0f172a);
 }
 
 .fc-event {
-  color: white; /* Cor do texto padrão para eventos */
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-size: 0.85em;
-  font-weight: 500; /* Padrão para todos os eventos */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Sombra sutil para todos os eventos */
-  border: none; /* Remove a borda padrão do FullCalendar */
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.82em;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+  border: none;
 }
 
 .fc-event-title {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .fc-daygrid-event-dot {
-  color: white;
+  color: #fff;
 }
 
 .fc-button {
-  background-color: var(--primary-blue-filter, #007bff) !important;
-  border-color: var(--primary-blue-filter, #007bff) !important;
-  color: white !important;
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light, #2d6cb5),
+    var(--lv-primary, #1e56a0)
+  ) !important;
+  border: none !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(30, 86, 160, 0.2) !important;
 }
 
 .fc-button:hover {
-  background-color: #0056b3 !important;
-  border-color: #0056b3 !important;
+  filter: brightness(1.06);
 }
 
-/* ESTILOS ESPECÍFICOS PARA CADA STATUS DO AGENDAMENTO */
+.fc-button-active,
+.fc-button:active {
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary, #1e56a0),
+    var(--lv-primary-dark, #163d72)
+  ) !important;
+}
 
-/* Agendado (padrão, não atrasado nem pra vencer) */
+.fc .fc-daygrid-day.fc-day-today {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: #e2e8f0;
+}
+
+.fc-col-header-cell {
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--lv-text-muted, #64748b);
+  font-size: 0.85em;
+}
+
 .fc-event.status-agendado {
-  background-color: #007bff; /* Azul */
-  border-color: #007bff;
+  background: linear-gradient(135deg, var(--lv-primary-light, #2d6cb5), var(--lv-primary, #1e56a0));
+  border-color: var(--lv-primary, #1e56a0);
 }
 
-/* Concluído */
 .fc-event.status-concluido {
-  background-color: #28a745; /* Verde */
-  border-color: #28a745;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border-color: #16a34a;
 }
 
-/* Atrasado */
 .fc-event.status-atrasado {
-  background-color: #dc3545; /* Vermelho */
-  border-color: #dc3545;
-  animation: pulse-red 1.5s infinite alternate; /* Animação de pulso */
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border-color: #dc2626;
+  animation: pulse-red 1.5s infinite alternate;
 }
 
-/* Pra Vencer (Amarelo) */
 .fc-event.status-pra-vencer {
-  background-color: #ffc107; /* Amarelo */
-  border-color: #ffc107;
-  color: #333; /* Texto mais escuro para contraste no amarelo */
-  font-weight: bold; /* Deixa o texto mais forte */
-  animation: pulse-yellow 1.5s infinite alternate; /* Animação de pulso */
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  border-color: #f59e0b;
+  color: #1e293b;
+  font-weight: 700;
+  animation: pulse-yellow 1.5s infinite alternate;
 }
 
-/* Animações de pulso para chamar atenção */
 @keyframes pulse-red {
   from {
     transform: scale(1);
-    box-shadow: 0 0 0 rgba(220, 53, 69, 0.4);
+    box-shadow: 0 0 0 rgba(220, 38, 38, 0.35);
   }
   to {
     transform: scale(1.03);
-    box-shadow: 0 0 8px rgba(220, 53, 69, 0.8);
-  }
-}
-@keyframes pulse-yellow {
-  from {
-    transform: scale(1);
-    box-shadow: 0 0 0 rgba(255, 193, 7, 0.4);
-  }
-  to {
-    transform: scale(1.03);
-    box-shadow: 0 0 8px rgba(255, 193, 7, 0.8);
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.55);
   }
 }
 
-/* Regras de mídia para responsividade */
+@keyframes pulse-yellow {
+  from {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  to {
+    transform: scale(1.03);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.55);
+  }
+}
+
 @media (max-width: 768px) {
+  .dashboard-calendar-card {
+    padding: 1.1rem;
+  }
+
   .fc-event {
-    font-size: 0.75em;
-    padding: 1px 3px;
+    font-size: 0.72em;
+    padding: 1px 4px;
   }
+
   .fc .fc-toolbar-title {
-    font-size: 1.4em;
+    font-size: 1.2em;
   }
+
   .fc .fc-button {
     font-size: 0.8em;
-    padding: 0.3em 0.6em;
+    padding: 0.35em 0.65em;
   }
 }
 
 @media (max-width: 576px) {
   .fc-event {
-    font-size: 0.65em;
-    padding: 0px 2px;
+    font-size: 0.62em;
+    padding: 0 3px;
   }
+
   .fc .fc-toolbar-title {
-    font-size: 1.2em;
+    font-size: 1.05em;
   }
 }

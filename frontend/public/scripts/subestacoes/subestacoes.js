@@ -196,11 +196,11 @@ document.addEventListener("DOMContentLoaded", () => {
     catalogo.forEach((item) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-          <td>${item.codigo}</td>
-          <td>${item.nome}</td>
-          <td>${item.categoria || "-"}</td>
-          <td>${item.descricao || "-"}</td>
-          <td class="actions-column">
+          <td data-label="Código">${item.codigo}</td>
+          <td data-label="Nome">${item.nome}</td>
+          <td data-label="Categoria">${item.categoria || "-"}</td>
+          <td data-label="Descrição">${item.descricao || "-"}</td>
+          <td data-label="Ações" class="actions-column">
               <button class="btn btn-icon btn-editar-catalogo" data-id="${
                 item.id
               }" title="Editar Item">

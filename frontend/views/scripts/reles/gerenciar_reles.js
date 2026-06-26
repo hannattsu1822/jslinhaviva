@@ -75,20 +75,20 @@ document.addEventListener("DOMContentLoaded", () => {
     reles.forEach((rele) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-                <td>${rele.nome_rele}</td>
-                <td>${rele.local_tag || "N/A"}</td>
-                <td>${rele.ip_address}</td>
-                <td>${rele.port}</td>
-                <td>${rele.listen_port || "N/A"}</td>
-                <td>${rele.custom_id || "N/A"}</td>
-                <td>
+                <td data-label="Nome do Relé">${rele.nome_rele}</td>
+                <td data-label="Local Tag">${rele.local_tag || "N/A"}</td>
+                <td data-label="Endereço IP">${rele.ip_address}</td>
+                <td data-label="Porta (Dispositivo)">${rele.port}</td>
+                <td data-label="Porta (Servidor)">${rele.listen_port || "N/A"}</td>
+                <td data-label="Registration Packet ID">${rele.custom_id || "N/A"}</td>
+                <td data-label="Status">
                     <span class="status-badge ${
                       rele.ativo ? "ativo" : "inativo"
                     }">
                         ${rele.ativo ? "Ativo" : "Inativo"}
                     </span>
                 </td>
-                <td class="action-buttons">
+                <td data-label="Ações" class="action-buttons">
                     <button class="btn-icon btn-edit" title="Editar"><span class="material-icons">edit</span></button>
                     <button class="btn-icon btn-delete" title="Excluir"><span class="material-icons">delete</span></button>
                 </td>

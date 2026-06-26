@@ -73,6 +73,10 @@ router.get("/editar_servico", autenticar, verificarNivel(NIVEL_ADMIN_SERVICOS), 
   );
 });
 
+router.get("/apr_formulario", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
+  res.sendFile(publicPage("servicos/apr_formulario.html"));
+});
+
 router.get(
   "/acompanhamento_construcao",
   autenticar,

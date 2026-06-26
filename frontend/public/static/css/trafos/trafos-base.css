@@ -1,0 +1,459 @@
+﻿@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("/static/css/base/variables.css");
+
+/* â”€â”€ Base GestÃ£o de Turmas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+body.trafos-page {
+  font-family: var(--lv-font);
+  color: var(--lv-text);
+  background: var(--lv-bg-deep);
+}
+
+.trafos-page .page-container {
+  min-height: 100vh;
+}
+
+.trafos-page .main-content {
+  background:
+    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(56, 189, 248, 0.07), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgba(30, 86, 160, 0.06), transparent 50%),
+    #f1f5f9;
+}
+
+.trafos-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.trafos-page .main-header {
+  margin-bottom: 1.5rem;
+}
+
+.trafos-page .header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.trafos-page .header-actions-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.trafos-header__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 7px 14px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(30, 86, 160, 0.08);
+  border: 1px solid rgba(30, 86, 160, 0.14);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lv-primary);
+}
+
+.trafos-page .page-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.trafos-page .page-title > i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+  flex-shrink: 0;
+}
+
+/* â”€â”€ Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.trafos-page .card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.trafos-page .card-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.9rem 1.15rem;
+  font-weight: 700;
+  color: var(--lv-text);
+}
+
+.trafos-page .filter-card .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.trafos-page .card-body {
+  padding: 1.15rem;
+}
+
+/* â”€â”€ FormulÃ¡rios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.trafos-page .form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--lv-text);
+}
+
+.trafos-page .form-control,
+.trafos-page .form-select,
+.trafos-page select,
+.trafos-page input[type="text"],
+.trafos-page input[type="date"],
+.trafos-page textarea {
+  border: 1.5px solid var(--lv-input-border);
+  border-radius: var(--lv-radius-sm);
+  padding: 0.6rem 0.85rem;
+  background: var(--lv-input-bg);
+  color: var(--lv-text);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.trafos-page .form-control:focus,
+.trafos-page .form-select:focus,
+.trafos-page select:focus,
+.trafos-page input:focus,
+.trafos-page textarea:focus {
+  border-color: var(--lv-input-focus);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+
+.trafos-page .form-group label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--lv-text);
+  margin-bottom: 6px;
+}
+
+/* â”€â”€ BotÃµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.trafos-page .btn {
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--lv-radius-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trafos-page .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light) 0%,
+    var(--lv-primary) 55%,
+    var(--lv-primary-dark) 100%
+  );
+  border: none;
+  box-shadow: 0 8px 20px rgba(30, 86, 160, 0.25);
+  color: #fff;
+}
+
+.trafos-page .btn-primary:hover,
+.trafos-page .btn-primary:focus {
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.trafos-page .btn-secondary {
+  background: #64748b;
+  border: none;
+  color: #fff;
+}
+
+.trafos-page .btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border: none;
+  color: #fff;
+}
+
+.trafos-page .btn-danger {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border: none;
+  color: #fff;
+}
+
+.trafos-page .btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  border: none;
+  color: #1e293b;
+}
+
+/* â”€â”€ Tabelas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.trafos-page .table-responsive {
+  border-radius: var(--lv-radius-sm);
+  border: 1px solid #e2e8f0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.trafos-page .table {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+}
+
+.trafos-page .table thead th,
+.trafos-page #tabelaStatus thead th {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff !important;
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  white-space: nowrap;
+}
+
+.trafos-page .table tbody td,
+.trafos-page #tabelaStatus tbody td {
+  border-color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.trafos-page .table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.trafos-page .table-hover tbody tr:hover,
+.trafos-page #tabelaStatus tbody tr:hover {
+  background: #f1f5f9;
+}
+
+/* â”€â”€ PainÃ©is (controle-status) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.trafos-page .content-card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.trafos-page .content-card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--lv-text);
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.trafos-page .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.trafos-page .form-group {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.trafos-page .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.trafos-page .actions-cell button {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.trafos-page .actions-cell .btn-edit .material-icons {
+  color: #f59e0b;
+}
+
+.trafos-page .actions-cell .btn-delete .material-icons {
+  color: #dc2626;
+}
+
+/* â”€â”€ Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.trafos-page .modal-content,
+.trafos-page .glass-modal {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-lg);
+  box-shadow: var(--lv-shadow-lg);
+  overflow: hidden;
+}
+
+.trafos-page .modal-header,
+.trafos-page .trafos-modal-header,
+.trafos-page .trafos-modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.trafos-page .trafos-modal-header,
+.trafos-page .trafos-modal-header {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff;
+}
+
+.trafos-page .trafos-modal-header .btn-close,
+.trafos-page .trafos-modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.trafos-page .modal-title {
+  font-weight: 800;
+  color: inherit;
+}
+
+/* â”€â”€ Toast custom (controle-status) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.trafos-page #toast.toast {
+  visibility: hidden;
+  min-width: 280px;
+  background: #1e293b;
+  color: #fff;
+  border-radius: var(--lv-radius-sm);
+  padding: 14px 18px;
+  position: fixed;
+  z-index: 1050;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.5s, visibility 0.5s, bottom 0.5s;
+}
+
+.trafos-page #toast.toast.show {
+  visibility: visible;
+  opacity: 1;
+  bottom: 50px;
+}
+
+.trafos-page #toast.toast.error {
+  background: #dc2626;
+}
+
+.trafos-page #toast.toast.success {
+  background: #16a34a;
+}
+
+.trafos-page .material-icons.spin {
+  animation: trafos-spin 1s linear infinite;
+}
+
+@keyframes trafos-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* â”€â”€ Responsivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@media (max-width: 991.98px) {
+  .trafos-page .main-content {
+    padding-top: 3.5rem;
+  }
+
+  .trafos-page .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trafos-page .header-actions-stack {
+    width: 100%;
+  }
+
+  .trafos-page .header-actions-stack .btn,
+  .trafos-page .header-content > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .trafos-page .page-header-trafos,
+  .trafos-page .page-header-trafos {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .trafos-page .page-header-trafos > div:last-child {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .trafos-page .page-header-trafos > div:last-child .btn,
+  .trafos-page .page-header-trafos > .btn {
+    width: 100%;
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .trafos-page .trafos-data-table thead,
+  .trafos-page #tabelaResultados thead,
+  .trafos-page #tabelaStatus thead {
+    display: none;
+  }
+
+  .trafos-page .trafos-data-table tbody tr,
+  .trafos-page #tabelaResultados tbody tr,
+  .trafos-page #tabelaStatus tbody tr {
+    display: block;
+    margin-bottom: 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--lv-radius-sm);
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .trafos-page .trafos-data-table tbody td,
+  .trafos-page #tabelaResultados tbody td,
+  .trafos-page #tabelaStatus tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .trafos-page .trafos-data-table tbody td::before,
+  .trafos-page #tabelaResultados tbody td::before,
+  .trafos-page #tabelaStatus tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--lv-text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+}
+
+
+

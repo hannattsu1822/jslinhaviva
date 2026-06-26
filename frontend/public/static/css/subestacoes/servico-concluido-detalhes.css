@@ -1,3 +1,5 @@
+@import url("./subestacoes-base.css");
+
 :root {
   --cor-primaria: #0d47a1;
   --cor-primaria-escura: #0b3a82;
@@ -26,66 +28,15 @@
   padding: 0;
 }
 
-body {
-  font-family: var(--fonte-principal);
-  background-color: var(--cor-fundo-pagina);
-  color: var(--cor-texto-primario);
-  line-height: 1.6;
-  font-size: 14px;
-}
-
 .hidden {
   display: none !important;
 }
 
-.page-container {
-  max-width: 1200px;
-  margin: calc(var(--espacamento-unidade) * 3) auto;
-  padding: 0 calc(var(--espacamento-unidade) * 2);
-}
-
-.page-header {
-  background-color: var(--cor-secundaria);
-  color: var(--cor-texto-claro);
-  padding: calc(var(--espacamento-unidade) * 2)
-    calc(var(--espacamento-unidade) * 3);
-  border-radius: var(--raio-borda);
-  margin-bottom: calc(var(--espacamento-unidade) * 3);
-  box-shadow: var(--sombra-padrao);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: var(--espacamento-unidade);
-}
-
-.page-title .material-symbols-outlined {
-  font-size: 2.2rem;
-}
-
 .header-id {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(30, 86, 160, 0.1);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.9em;
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--espacamento-unidade);
-}
-
-.page-footer {
-  text-align: center;
-  margin-top: calc(var(--espacamento-unidade) * 4);
-  padding-top: calc(var(--espacamento-unidade) * 2);
-  border-top: 1px solid var(--cor-borda);
 }
 
 .card {
@@ -150,10 +101,35 @@ body {
 }
 
 .service-item-card {
-  background-color: var(--cor-fundo-sutil);
+  background-color: var(--cor-fundo-componente);
   border: 1px solid var(--cor-borda);
+  border-left-width: 4px;
+  border-left-color: #94a3b8;
   border-radius: var(--raio-borda);
   padding: calc(var(--espacamento-unidade) * 2);
+}
+
+.service-item-card--concluido {
+  border-left-color: var(--cor-sucesso);
+}
+
+.service-item-card--em-andamento {
+  border-left-color: var(--cor-aviso);
+}
+
+.service-item-card--programado,
+.service-item-card--pendente,
+.service-item-card--pendente-aprovacao {
+  border-left-color: var(--cor-secundaria);
+}
+
+.service-item-card--cancelado {
+  border-left-color: var(--cor-perigo);
+}
+
+.service-item-card--concluido-com-pendencia,
+.service-item-card--concluido-com-ressalvas {
+  border-left-color: var(--cor-aviso);
 }
 
 .item-description {
@@ -373,20 +349,24 @@ body {
   text-align: center;
 }
 
-.status-concluido {
+.status-badge.status-concluido {
   background-color: var(--cor-sucesso);
 }
-.status-em_andamento {
+.status-badge.status-em_andamento {
   background-color: var(--cor-aviso);
 }
-.status-programado {
+.status-badge.status-programado {
   background-color: var(--cor-secundaria);
 }
-.status-pendente_aprovacao {
+.status-badge.status-pendente_aprovacao {
   background-color: var(--cor-info);
 }
-.status-cancelado {
+.status-badge.status-cancelado {
   background-color: var(--cor-perigo);
+}
+.status-badge.status-concluidocompendencia,
+.status-badge.status-concluidocomressalvas {
+  background-color: var(--cor-aviso);
 }
 
 .prioridade-grave {

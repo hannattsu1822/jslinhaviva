@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
   const paginaTitulo = document.getElementById("paginaTitulo");
+  const setPaginaTitulo = (texto, icone = "fa-clipboard-check") => {
+    if (!paginaTitulo) return;
+    paginaTitulo.innerHTML = `<i class="fa-solid ${icone}"></i> ${texto}`;
+  };
   const formChecklistInspecao = document.getElementById(
     "formChecklistInspecao"
   );
@@ -226,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnInspecaoNormal.addEventListener("click", () => {
     currentInspectionType = "checklist";
-    paginaTitulo.innerHTML = `<span class="material-symbols-outlined">checklist_rtl</span> Checklist de Inspeção Padrão`;
+    setPaginaTitulo("Checklist de Inspeção Padrão");
     hidePreSelectionModal();
     checklistContainer.classList.remove("hidden");
     formInspecaoAvulsaContainer.classList.add("hidden");
@@ -235,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnInspecaoAvulsa.addEventListener("click", () => {
     currentInspectionType = "avulsa";
-    paginaTitulo.innerHTML = `<span class="material-symbols-outlined">post_add</span> Inspeção Avulsa`;
+    setPaginaTitulo("Inspeção Avulsa", "fa-file-circle-plus");
     tipoInspecaoSelect.value = "AVULSA";
     hidePreSelectionModal();
     checklistContainer.classList.add("hidden");
@@ -324,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function carregarDadosParaEdicao(id) {
-    paginaTitulo.innerHTML = `<span class="material-symbols-outlined">edit</span> Editando Inspeção #${id}`;
+    setPaginaTitulo(`Editando Inspeção #${id}`, "fa-pen-to-square");
     btnSalvarInspecao.innerHTML =
       '<span class="material-symbols-outlined">save</span> Salvar Alterações';
     
@@ -352,12 +356,12 @@ document.addEventListener("DOMContentLoaded", () => {
       currentInspectionType = inspecao.modo_inspecao.toLowerCase();
 
       if (currentInspectionType === "checklist") {
-        paginaTitulo.innerHTML = `<span class="material-symbols-outlined">edit</span> Editando Inspeção Padrão #${id}`;
+        setPaginaTitulo(`Editando Inspeção Padrão #${id}`, "fa-pen-to-square");
         checklistContainer.classList.remove("hidden");
         formInspecaoAvulsaContainer.classList.add("hidden");
         await initChecklistForm(inspecao);
       } else if (currentInspectionType === "avulsa") {
-        paginaTitulo.innerHTML = `<span class="material-symbols-outlined">edit</span> Editando Inspeção Avulsa #${id}`;
+        setPaginaTitulo(`Editando Inspeção Avulsa #${id}`, "fa-pen-to-square");
         checklistContainer.classList.add("hidden");
         formInspecaoAvulsaContainer.classList.remove("hidden");
         avulsoItems = inspecao.itens_avulsos.map((item) => ({

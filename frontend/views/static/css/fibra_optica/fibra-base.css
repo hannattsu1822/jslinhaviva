@@ -1,0 +1,390 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("/static/css/base/variables.css");
+
+/* ── Base Fibra Óptica ────────────────────────────────────────── */
+body.fibra-page {
+  font-family: var(--lv-font);
+  color: var(--lv-text);
+  background: var(--lv-bg-deep);
+}
+
+.fibra-page .page-container {
+  min-height: 100vh;
+}
+
+.fibra-page .main-content {
+  background:
+    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(56, 189, 248, 0.07), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgba(30, 86, 160, 0.06), transparent 50%),
+    #f1f5f9;
+}
+
+.fibra-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.fibra-page .main-header {
+  margin-bottom: 1.5rem;
+}
+
+.fibra-page .header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.fibra-page .header-actions-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.fibra-header__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 7px 14px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(30, 86, 160, 0.08);
+  border: 1px solid rgba(30, 86, 160, 0.14);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lv-primary);
+}
+
+.fibra-page .page-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fibra-page .page-title > i,
+.fibra-page .page-title > .material-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+  flex-shrink: 0;
+}
+
+.fibra-page .info-box {
+  padding: 0.65rem 1rem;
+  border-radius: var(--lv-radius-sm);
+  background: rgba(30, 86, 160, 0.06);
+  border: 1px solid rgba(30, 86, 160, 0.12);
+  font-size: 0.9rem;
+  color: var(--lv-text-muted);
+}
+
+.fibra-page .info-box strong {
+  color: var(--lv-primary);
+}
+
+/* ── Cards ────────────────────────────────────────────────────── */
+.fibra-page .card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.fibra-page .card-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.9rem 1.15rem;
+}
+
+.fibra-page .card-header .card-title,
+.fibra-page .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+}
+
+.fibra-page .card-body {
+  padding: 1.15rem;
+}
+
+/* ── Formulários ──────────────────────────────────────────────── */
+.fibra-page .form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--lv-text);
+}
+
+.fibra-page .form-label.required::after {
+  content: " *";
+  color: #dc2626;
+}
+
+.fibra-page .form-control,
+.fibra-page .form-select {
+  border: 1.5px solid var(--lv-input-border);
+  border-radius: var(--lv-radius-sm);
+  padding: 0.6rem 0.85rem;
+  background: var(--lv-input-bg);
+  color: var(--lv-text);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.fibra-page .form-control:focus,
+.fibra-page .form-select:focus {
+  border-color: var(--lv-input-focus);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* ── Botões ───────────────────────────────────────────────────── */
+.fibra-page .btn {
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--lv-radius-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fibra-page .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light) 0%,
+    var(--lv-primary) 55%,
+    var(--lv-primary-dark) 100%
+  );
+  border: none;
+  box-shadow: 0 8px 20px rgba(30, 86, 160, 0.25);
+  color: #fff;
+}
+
+.fibra-page .btn-primary:hover,
+.fibra-page .btn-primary:focus {
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.fibra-page .btn-secondary {
+  background: #64748b;
+  border: none;
+  color: #fff;
+}
+
+.fibra-page .btn-secondary:hover {
+  background: #475569;
+  color: #fff;
+}
+
+.fibra-page .btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border: none;
+  color: #fff;
+}
+
+.fibra-page .btn-danger {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border: none;
+  color: #fff;
+}
+
+.fibra-page .btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  border: none;
+  color: #1e293b;
+}
+
+.fibra-page .btn-outline-secondary {
+  border-color: #cbd5e1;
+  color: var(--lv-text-muted);
+  background: #fff;
+}
+
+.fibra-page .btn-outline-primary {
+  border-color: rgba(30, 86, 160, 0.35);
+  color: var(--lv-primary);
+  background: #fff;
+}
+
+.fibra-page .btn-purple,
+.fibra-page .btn-purple:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  border: none;
+}
+
+.fibra-page .btn-orange,
+.fibra-page .btn-orange:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #f59e0b, #fb923c);
+  border: none;
+}
+
+/* ── Tabelas ──────────────────────────────────────────────────── */
+.fibra-page .table-responsive {
+  border-radius: var(--lv-radius-sm);
+  border: 1px solid #e2e8f0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fibra-page .table,
+.fibra-page table.dataTable {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+}
+
+.fibra-page .table thead th,
+.fibra-page table.dataTable thead th {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff !important;
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  white-space: nowrap;
+}
+
+.fibra-page .table tbody td {
+  border-color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.fibra-page .table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.fibra-page .table-hover tbody tr:hover {
+  background: #f1f5f9;
+}
+
+/* ── Upload / drop zone ───────────────────────────────────────── */
+.fibra-page .file-drop-zone {
+  border: 2px dashed var(--lv-input-border);
+  border-radius: var(--lv-radius-sm);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: #f8fafc;
+}
+
+.fibra-page .file-drop-zone:hover,
+.fibra-page .file-drop-zone:focus {
+  border-color: var(--lv-primary);
+  background: rgba(30, 86, 160, 0.05);
+}
+
+/* ── Modal ────────────────────────────────────────────────────── */
+.fibra-page .modal-content {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-lg);
+  box-shadow: var(--lv-shadow-lg);
+  overflow: hidden;
+}
+
+.fibra-page .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fibra-page .modal-title {
+  font-weight: 800;
+  color: var(--lv-text);
+}
+
+/* ── Tabela responsiva (data-table) ─────────────────────────────── */
+@media (max-width: 767.98px) {
+  .fibra-page .data-table thead {
+    display: none;
+  }
+
+  .fibra-page .data-table tr {
+    display: block;
+    margin-bottom: 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--lv-radius-sm);
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .fibra-page .data-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: right;
+  }
+
+  .fibra-page .data-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--lv-text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .fibra-page .data-table td[data-label="Ações"] .btn-group {
+    width: 100%;
+  }
+}
+
+/* ── Responsivo geral ───────────────────────────────────────────── */
+@media (max-width: 991.98px) {
+  .fibra-page .main-content {
+    padding-top: 3.5rem;
+  }
+
+  .fibra-page .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fibra-page .header-actions-stack,
+  .fibra-page .d-flex.justify-content-end.mb-4 {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .fibra-page .header-actions-stack .btn,
+  .fibra-page .header-content > .btn,
+  .fibra-page .d-flex.justify-content-end.mb-4 .btn,
+  .fibra-page .d-flex.justify-content-end.mb-4.gap-2 .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .fibra-page .card-header.d-flex {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.65rem;
+  }
+
+  .fibra-page .card-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

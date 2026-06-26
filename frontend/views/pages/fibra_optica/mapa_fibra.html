@@ -19,31 +19,30 @@
       crossorigin="anonymous"
     />
 
-    <link
-      rel="stylesheet"
-      href="/static/css/components/bootstrap-overrides.css"
-    />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/fibra_optica/mapa_fibra.css" />
   </head>
-  <body>
+  <body class="fibra-page fibra-page--map-collect">
     <div class="page-container">
       <div id="sidebar-root"></div>
 
       <main class="main-content">
+        <div class="container-fluid fibra-shell py-4">
         <header class="main-header">
           <div class="header-content">
+            <div>
+              <div class="fibra-header__badge">
+                <i class="fa-solid fa-ethernet"></i>
+                Fibra Óptica
+              </div>
             <h1 class="page-title">
               <i class="fa-solid fa-map-pin"></i>
               Coleta de Pontos no Mapa
             </h1>
-          </div>
-        </header>
-
-        <div class="container-fluid">
-          <div class="d-flex justify-content-end mb-4 gap-2">
+            </div>
+            <div class="header-actions-stack">
             <a href="/fibra-optica" class="btn btn-secondary">
-              <i class="fa-solid fa-arrow-left me-2"></i>
+              <i class="fa-solid fa-arrow-left"></i>
               Voltar
             </a>
             <button
@@ -52,10 +51,13 @@
               class="btn btn-primary"
               form="map-points-form"
             >
-              <i class="fa-solid fa-save me-2"></i> Salvar Pontos
+              <i class="fa-solid fa-save"></i> Salvar Pontos
             </button>
+            </div>
           </div>
+        </header>
 
+        <div class="container-fluid px-0">
           <div class="row g-4">
             <div class="col-lg-7">
               <div class="card shadow-sm h-100">
@@ -148,6 +150,7 @@
               </div>
             </div>
           </div>
+        </div>
         </div>
       </main>
     </div>

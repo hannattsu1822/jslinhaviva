@@ -322,16 +322,16 @@ document.addEventListener("DOMContentLoaded", () => {
         : "";
 
       tr.innerHTML = `
-        <td class="text-center">${formNumId}</td>
-        <td>${insp.processo || "-"}</td>
-        <td>${insp.subestacao_sigla}</td>
-        <td>${modoFormatado}</td>
-        <td>${tipoFormatado}</td>
-        <td class="text-center">${dataAvaliacaoFormatada}</td>
-        <td>${insp.responsavel_nome}</td>
-        <td class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
-        <td class="text-center">${aprButtonHtml}</td>
-        <td class="actions-column">
+        <td data-label="ID" class="text-center">${formNumId}</td>
+        <td data-label="Processo">${insp.processo || "-"}</td>
+        <td data-label="Subestação">${insp.subestacao_sigla}</td>
+        <td data-label="Modo">${modoFormatado}</td>
+        <td data-label="Tipo">${tipoFormatado}</td>
+        <td data-label="Data Avaliação" class="text-center">${dataAvaliacaoFormatada}</td>
+        <td data-label="Responsável">${insp.responsavel_nome}</td>
+        <td data-label="Status" class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
+        <td data-label="APR" class="text-center">${aprButtonHtml}</td>
+        <td data-label="Utilidades" class="actions-column">
             <button class="btn text-info btn-ver-detalhes-inspecao" data-id="${
               insp.id
             }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>

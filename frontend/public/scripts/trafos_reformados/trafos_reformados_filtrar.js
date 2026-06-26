@@ -332,14 +332,14 @@ function preencherTabela(trafos) {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${trafo.id}</td>
-      <td>${trafo.numero_serie}</td>
-      <td>${trafo.fabricante || "-"}</td>
-      <td>${trafo.pot || "-"}</td>
-      <td>${dataImportacao}</td>
-      <td><span class="badge ${statusClass}">${statusText}</span></td>
-      <td>${ultimaAvaliacaoHtml}</td>
-      <td class="text-center">
+      <td data-label="ID">${trafo.id}</td>
+      <td data-label="Nº de Série">${trafo.numero_serie}</td>
+      <td data-label="Fabricante">${trafo.fabricante || "-"}</td>
+      <td data-label="Potência">${trafo.pot || "-"}</td>
+      <td data-label="Data Importação">${dataImportacao}</td>
+      <td data-label="Status"><span class="badge ${statusClass}">${statusText}</span></td>
+      <td data-label="Última Avaliação">${ultimaAvaliacaoHtml}</td>
+      <td data-label="Ações" class="text-center">
         <div class="d-flex gap-1 justify-content-center">
           ${actionButtonsHtml}
         </div>

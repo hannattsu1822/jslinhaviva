@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Inspeções Concluídas</title>
+    <title>Inspeções Concluídas | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -12,38 +13,45 @@
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
     />
     <link
       rel="stylesheet"
-      href="/static/css/InspRedesDist/listar_servicos.css"
+      href="/static/css/InspRedesDist/listar_servicos_concluidos.css"
     />
-      <link rel="stylesheet" href="/shared/css/sidebar.css" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
-  <body>
-    <div id="sidebar-root"></div>
-    <div class="main-content">
-<div class="container my-4">
-      <header
-        class="page-header d-flex justify-content-between align-items-center pb-3 mb-4"
-      >
-        <h1 class="page-title h2 mb-0">
-          <span class="material-icons page-icon">history</span>
-          Histórico de Inspeções Concluídas
-        </h1>
-        <a
-          href="/inspecoes/servicos"
-          class="btn btn-outline-secondary btn-back"
-        >
-          <span class="material-icons">arrow_back</span>
-          Voltar para Inspeções Ativas
-        </a>
-      </header>
+  <body class="insp-redes-page insp-redes-page--completed">
+    <div class="page-container">
+      <div id="sidebar-root"></div>
 
-      <main>
+      <main class="main-content">
+        <div class="container-fluid insp-redes-shell py-4">
+          <header class="main-header">
+            <div class="header-content">
+              <div>
+                <div class="insp-redes-header__badge">
+                  <i class="fa-solid fa-network-wired"></i>
+                  Inspeções de Redes
+                </div>
+                <h1 class="page-title">
+                  <span class="material-icons">history</span>
+                  Histórico de Inspeções Concluídas
+                </h1>
+              </div>
+              <div class="header-actions-stack">
+                <a href="/inspecoes/servicos" class="btn btn-outline-secondary btn-back">
+                  <span class="material-icons">arrow_back</span>
+                  Voltar
+                </a>
+              </div>
+            </div>
+          </header>
+
         <div class="card shadow-sm mb-4">
           <div class="card-body">
             <div class="row g-3 align-items-end">
@@ -79,17 +87,18 @@
           </div>
         </div>
 
-        <div class="card shadow-sm">
+        <div class="card shadow-sm insp-redes-table-card">
           <div class="card-header">
             <h5 class="mb-0">Inspeções Finalizadas</h5>
+            <span class="insp-redes-table-count" id="contador-inspecoes">—</span>
           </div>
           <div class="card-body">
             <div class="table-responsive">
               <table
-                class="table table-hover align-middle"
+                class="table table-hover align-middle mb-0 insp-redes-data-table"
                 id="tabela-servicos-concluidos"
               >
-                <thead class="table-light">
+                <thead>
                   <tr>
                     <th scope="col">ID/Processo</th>
                     <th scope="col">Data Prevista</th>
@@ -119,8 +128,7 @@
             </div>
           </div>
         </div>
-      </main>
-    </div>
+        </div>
 
     <div class="modal fade" id="modal-reativar" tabindex="-1">
       <div class="modal-dialog">
@@ -217,7 +225,8 @@
     <script src="/scripts/shared/uiPermissoes.js"></script>
     <script src="/scripts/InspRedesDist/rede.permissions.js"></script>
     <script src="/scripts/InspRedesDist/listar_servicos_concluidos.js"></script>
+      </main>
     </div>
-      <script src="/shared/scripts/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

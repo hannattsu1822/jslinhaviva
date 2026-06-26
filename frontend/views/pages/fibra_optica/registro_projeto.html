@@ -19,17 +19,10 @@
       crossorigin="anonymous"
     />
 
-    <link
-      rel="stylesheet"
-      href="/static/css/components/bootstrap-overrides.css"
-    />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-    <link
-      rel="stylesheet"
-      href="/static/css/fibra_optica/registro_projeto.css"
-    />
+    <link rel="stylesheet" href="/static/css/fibra_optica/registro_projeto.css" />
   </head>
-  <body>
+  <body class="fibra-page fibra-page--register">
     <div
       class="modal fade"
       id="choice-modal"
@@ -66,12 +59,19 @@
       <div id="sidebar-root"></div>
 
       <main class="main-content">
+        <div class="container-fluid fibra-shell py-4">
         <header class="main-header">
           <div class="header-content">
+            <div>
+              <div class="fibra-header__badge">
+                <i class="fa-solid fa-ethernet"></i>
+                Fibra Óptica
+              </div>
             <h1 class="page-title">
               <i class="fa-solid fa-circle-plus"></i>
               Registrar Novo Serviço de Fibra Óptica
             </h1>
+            </div>
             <div class="info-box">
               <p class="mb-0">
                 Tipo de Geração: <strong id="service-type-display"></strong>
@@ -80,7 +80,7 @@
           </div>
         </header>
 
-        <div id="form-container" class="container-fluid hidden">
+        <div id="form-container" class="container-fluid px-0 hidden">
           <div class="d-flex justify-content-end mb-4 gap-2">
             <button
               type="button"
@@ -314,6 +314,7 @@
               </div>
             </div>
           </form>
+        </div>
         </div>
       </main>
     </div>

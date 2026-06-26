@@ -1,0 +1,431 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("/static/css/base/variables.css");
+
+/* ── Base Inspeções de Redes ──────────────────────────────────── */
+body.insp-redes-page {
+  font-family: var(--lv-font);
+  color: var(--lv-text);
+  background: var(--lv-bg-deep);
+}
+
+.insp-redes-page .page-container {
+  min-height: 100vh;
+}
+
+.insp-redes-page .main-content {
+  background:
+    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(56, 189, 248, 0.07), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgba(30, 86, 160, 0.06), transparent 50%),
+    #f1f5f9;
+}
+
+.insp-redes-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.insp-redes-page .main-header {
+  margin-bottom: 1.5rem;
+}
+
+.insp-redes-page .header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.insp-redes-page .header-actions-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.insp-redes-header__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 7px 14px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(30, 86, 160, 0.08);
+  border: 1px solid rgba(30, 86, 160, 0.14);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lv-primary);
+}
+
+.insp-redes-page .page-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.insp-redes-page .page-title > .material-icons,
+.insp-redes-page .page-title > i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+  color: #fff;
+  font-size: 1.25rem;
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+  flex-shrink: 0;
+}
+
+/* ── Cards ────────────────────────────────────────────────────── */
+.insp-redes-page .card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.insp-redes-page .card-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.9rem 1.15rem;
+}
+
+.insp-redes-page .card-header h5 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+}
+
+.insp-redes-page .card-body {
+  padding: 1.15rem;
+}
+
+.insp-redes-page .card-body strong {
+  color: var(--lv-text-muted);
+}
+
+/* ── Formulários ──────────────────────────────────────────────── */
+.insp-redes-page .form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--lv-text);
+}
+
+.insp-redes-page .form-control,
+.insp-redes-page .form-select {
+  border: 1.5px solid var(--lv-input-border);
+  border-radius: var(--lv-radius-sm);
+  padding: 0.6rem 0.85rem;
+  background: var(--lv-input-bg);
+  color: var(--lv-text);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.insp-redes-page .form-control:focus,
+.insp-redes-page .form-select:focus {
+  border-color: var(--lv-input-focus);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.insp-redes-page .form-check-label {
+  cursor: pointer;
+}
+
+/* ── Botões ───────────────────────────────────────────────────── */
+.insp-redes-page .btn {
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--lv-radius-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.insp-redes-page .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light) 0%,
+    var(--lv-primary) 55%,
+    var(--lv-primary-dark) 100%
+  );
+  border: none;
+  box-shadow: 0 8px 20px rgba(30, 86, 160, 0.25);
+  color: #fff;
+}
+
+.insp-redes-page .btn-primary:hover,
+.insp-redes-page .btn-primary:focus {
+  transform: translateY(-1px);
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light) 0%,
+    var(--lv-primary) 55%,
+    var(--lv-primary-dark) 100%
+  );
+}
+
+.insp-redes-page .btn-secondary {
+  background: #64748b;
+  border: none;
+  color: #fff;
+}
+
+.insp-redes-page .btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border: none;
+  color: #fff;
+}
+
+.insp-redes-page .btn-outline-secondary {
+  border-color: #cbd5e1;
+  color: var(--lv-text-muted);
+  background: #fff;
+}
+
+.insp-redes-page .btn-outline-secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: var(--lv-text);
+}
+
+.insp-redes-page .btn-outline-primary {
+  border-color: rgba(30, 86, 160, 0.35);
+  color: var(--lv-primary);
+  background: #fff;
+}
+
+.insp-redes-page .btn-outline-primary:hover {
+  background: rgba(30, 86, 160, 0.08);
+  border-color: var(--lv-primary);
+  color: var(--lv-primary-dark);
+}
+
+.insp-redes-page .btn-outline-danger {
+  background: #fff;
+}
+
+.insp-redes-page .btn-back {
+  gap: 0.35rem;
+}
+
+/* ── Tabelas ──────────────────────────────────────────────────── */
+.insp-redes-page .table-responsive {
+  border-radius: var(--lv-radius-sm);
+  border: 1px solid #e2e8f0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.insp-redes-page .table {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+}
+
+.insp-redes-page .table thead th {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff;
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.insp-redes-page .table tbody td {
+  border-color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.insp-redes-page .table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.insp-redes-page .table-hover tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.insp-redes-page .insp-redes-data-table thead th:last-child {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.insp-redes-page .insp-redes-data-table .insp-redes-cell-processo strong {
+  color: var(--lv-primary-dark);
+  font-weight: 700;
+}
+
+.insp-redes-page .insp-redes-data-table .insp-redes-cell-processo small {
+  color: var(--lv-text-muted);
+  font-size: 0.78rem;
+}
+
+.insp-redes-page .insp-redes-data-table .col-status {
+  white-space: nowrap;
+}
+
+.insp-redes-page .badge {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ── Acordeão ─────────────────────────────────────────────────── */
+.insp-redes-page .accordion-item {
+  border: 1px solid #e2e8f0;
+  margin-bottom: 0.5rem;
+  border-radius: var(--lv-radius-sm);
+  overflow: hidden;
+}
+
+.insp-redes-page .accordion-button {
+  font-weight: 600;
+  background: #f8fafc;
+  color: var(--lv-text);
+}
+
+.insp-redes-page .accordion-button:not(.collapsed) {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff;
+  box-shadow: none;
+}
+
+.insp-redes-page .accordion-button:focus {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* ── Modal ────────────────────────────────────────────────────── */
+.insp-redes-page .modal-content {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-lg);
+  box-shadow: var(--lv-shadow-lg);
+  overflow: hidden;
+}
+
+.insp-redes-page .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.insp-redes-page .modal-title {
+  font-weight: 800;
+  color: var(--lv-text);
+}
+
+/* ── Alertas ──────────────────────────────────────────────────── */
+.insp-redes-page .alert {
+  border-radius: var(--lv-radius-sm);
+}
+
+/* ── Responsivo geral ─────────────────────────────────────────── */
+@media (max-width: 991.98px) {
+  .insp-redes-page .main-content {
+    padding-top: 3.5rem;
+  }
+
+  .insp-redes-page .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .insp-redes-page .header-actions-stack {
+    width: 100%;
+  }
+
+  .insp-redes-page .header-actions-stack .btn,
+  .insp-redes-page .header-content > .btn,
+  .insp-redes-page .header-content > a.btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .insp-redes-page .header-actions-stack {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .insp-redes-page .insp-redes-data-table thead {
+    display: none;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--lv-radius-md);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: var(--lv-shadow-sm);
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row:hover {
+    background: #fff;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row:nth-child(even) {
+    background: #fff;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: right;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--lv-text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: left;
+    flex-shrink: 0;
+    padding-top: 0.1rem;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row td.insp-redes-cell-processo {
+    display: block;
+    text-align: left;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.9rem 1rem;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row td.insp-redes-cell-processo::before {
+    display: none;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row td.insp-redes-actions {
+    display: block;
+    padding: 0;
+    border-bottom: none;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .insp-redes-page .insp-redes-data-table tbody tr.insp-redes-table-row td.insp-redes-actions::before {
+    display: none;
+  }
+}

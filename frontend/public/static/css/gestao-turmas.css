@@ -1,104 +1,82 @@
-/* public/static/css/gestao-turmas.css */
-:root {
-  --primary-blue-turmas: #2a5298; /* Exemplo de cor, ajuste conforme seu padrão */
-  --text-dark-turmas: #212529;
-  --white-turmas: #ffffff;
-  --border-radius-turmas: 8px;
-}
+@import url("./gestao_turmas/turmas-base.css");
 
-.page-title-gestao-turmas {
-  font-weight: 600;
-  color: var(--text-dark-turmas);
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-}
-.page-title-gestao-turmas i {
-  margin-right: 10px;
-  color: var(--primary-blue-turmas);
-}
-
-.card.action-card-gestao {
-  /* Classe específica para os cards desta página */
-  border: 1px solid #dee2e6;
-  border-radius: var(--border-radius-turmas);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  background-color: var(--white-turmas);
+.turmas-module-card {
   height: 100%;
-  min-height: 200px; /* Ajuste para o conteúdo dos seus cards */
-  color: var(--text-dark-turmas);
-  display: flex;
-  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.card.action-card-gestao:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary-blue-turmas);
+.turmas-module-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--lv-primary-light), var(--lv-accent));
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
 
-.card.action-card-gestao .card-body {
-  padding: 1.75rem; /* Padding generoso */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.turmas-module-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--lv-shadow-md);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.turmas-module-card:hover::before {
+  opacity: 1;
+}
+
+.turmas-module-card .card-body {
+  padding: 1.65rem 1.25rem;
   text-align: center;
-  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.card.action-card-gestao .card-title {
-  font-weight: 600;
-  font-size: 1.15rem;
-  margin-top: 0.5rem; /* Espaço entre ícone e título */
-  color: var(--text-dark-turmas);
-}
-
-.card.action-card-gestao .card-text {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-top: 0.25rem;
-  line-height: 1.4;
-}
-
-.card.action-card-gestao .icon-circle {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+.turmas-module-icon {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 1rem;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.75rem;
-  color: var(--white-turmas);
-  margin-bottom: 1rem;
+  font-size: 1.35rem;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(30, 86, 160, 0.2);
 }
 
-/* Cores de fundo para os icon-circles (podem ser as mesmas do dashboard ou específicas) */
-.action-card-gestao .bg-primary {
-  background-color: #0d6efd !important;
-}
-.action-card-gestao .bg-secondary {
-  background-color: #6c757d !important;
-}
-.action-card-gestao .bg-info {
-  background-color: #0dcaf0 !important;
+.turmas-module-icon--diarias {
+  background: linear-gradient(135deg, #64748b, #94a3b8);
 }
 
-@media (max-width: 576px) {
-  .page-title-gestao-turmas {
-    font-size: 1.5rem;
-  }
-  .card.action-card-gestao {
-    min-height: 180px;
-  }
-  .card.action-card-gestao .card-title {
-    font-size: 1.05rem;
-  }
-  .card.action-card-gestao .icon-circle {
-    width: 50px;
-    height: 50px;
-    font-size: 1.5rem;
-  }
+.turmas-module-icon--ativas {
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+}
+
+.turmas-module-icon--status {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+.turmas-module-icon--relatorios {
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+}
+
+.turmas-module-card .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+  margin-bottom: 0.5rem;
+}
+
+.turmas-module-card .card-text {
+  font-size: 0.88rem;
+  color: var(--lv-text-muted);
+  margin: 0;
 }

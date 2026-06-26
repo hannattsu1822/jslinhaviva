@@ -26,8 +26,17 @@ document.addEventListener("DOMContentLoaded", function () {
     return `<span class="badge bg-secondary">${status}</span>`;
   }
 
+  function atualizarContador(total) {
+    const el = document.getElementById("contador-inspecoes");
+    if (el) {
+      el.textContent = `${total} ${total === 1 ? "inspeção" : "inspeções"}`;
+    }
+  }
+
   function renderizarTabela(servicos) {
     tabelaServicosBody.innerHTML = "";
+    atualizarContador(servicos?.length || 0);
+
     if (!servicos || servicos.length === 0) {
       tabelaServicosBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Nenhuma inspeção concluída encontrada.</td></tr>`;
       return;
@@ -42,37 +51,40 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
       const tr = document.createElement("tr");
+      tr.className = "insp-redes-table-row";
       tr.dataset.servicoId = servico.id;
       tr.innerHTML = `
-        <td><strong>${
+        <td data-label="ID/Processo" class="insp-redes-cell-processo"><strong>${
           servico.processo
-        }</strong><br /><small class="text-muted">ID: ${servico.id}</small></td>
-        <td>${dataFormatada}</td>
-        <td>${getStatusBadge(servico.status)}</td>
-        <td>${servico.responsaveis_execucao}</td>
-        <td>${servico.alimentador || "N/A"}</td>
-        <td>${servico.subestacao || "N/A"}</td>
-        <td class="text-center action-bar">
-          <a href="/inspecoes/servicos/${
-            servico.id
-          }" class="btn btn-outline-info btn-icon" title="Ver Detalhes">
-            <span class="material-icons">visibility</span>
-          </a>
-          <a href="/inspecoes/servicos/${
-            servico.id
-          }/relatorio" class="btn btn-outline-dark btn-icon" title="Gerar Relatório PDF" target="_blank">
-            <span class="material-icons">picture_as_pdf</span>
-          </a>
-          ${
-            isAdmin
-              ? `<button class="btn btn-outline-warning btn-icon btn-reativar" title="Reativar Inspeção">
-            <span class="material-icons">replay</span>
-          </button>
-          <button class="btn btn-outline-primary btn-icon btn-anexar-apr" title="Anexar APR">
-            <span class="material-icons">attach_file</span>
-          </button>`
-              : ""
-          }
+        }</strong><br /><small>ID: ${servico.id}</small></td>
+        <td data-label="Data Prevista">${dataFormatada}</td>
+        <td data-label="Status" class="col-status">${getStatusBadge(servico.status)}</td>
+        <td data-label="Responsável">${servico.responsaveis_execucao}</td>
+        <td data-label="Alimentador">${servico.alimentador || "N/A"}</td>
+        <td data-label="Subestação">${servico.subestacao || "N/A"}</td>
+        <td class="insp-redes-actions" data-label="Ações">
+          <div class="insp-redes-actions__toolbar">
+            <a href="/inspecoes/servicos/${
+              servico.id
+            }" class="btn btn-outline-info btn-icon" title="Ver Detalhes">
+              <span class="material-icons">visibility</span>
+            </a>
+            <a href="/inspecoes/servicos/${
+              servico.id
+            }/relatorio" class="btn btn-outline-dark btn-icon" title="Gerar Relatório PDF" target="_blank">
+              <span class="material-icons">picture_as_pdf</span>
+            </a>
+            ${
+              isAdmin
+                ? `<button type="button" class="btn btn-outline-warning btn-icon btn-reativar" title="Reativar Inspeção">
+              <span class="material-icons">replay</span>
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-icon btn-anexar-apr" title="Anexar APR">
+              <span class="material-icons">attach_file</span>
+            </button>`
+                : ""
+            }
+          </div>
         </td>
       `;
       tabelaServicosBody.appendChild(tr);

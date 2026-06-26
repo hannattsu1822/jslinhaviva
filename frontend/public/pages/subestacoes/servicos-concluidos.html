@@ -3,7 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Serviços Concluídos - Histórico</title>
+    <title>Serviços Concluídos | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
@@ -12,21 +24,36 @@
       rel="stylesheet"
       href="/static/css/subestacoes/servicos-concluidos.css"
     />
-      <link rel="stylesheet" href="/shared/css/sidebar.css" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
+    <link rel="stylesheet" href="/static/css/toast.css" />
   </head>
-  <body>
-    <div id="sidebar-root"></div>
-    <div class="main-content">
-<div class="page-container">
-      <header class="page-header">
-        <h1 class="page-title">
-          <span class="material-symbols-outlined">history</span>
-          Histórico de Serviços
-        </h1>
-      </header>
+  <body class="subestacoes-page subestacoes-page--servicos-concluidos">
+    <div class="page-container">
+      <div id="sidebar-root"></div>
 
-      <main>
+      <main class="main-content">
+        <div class="container-fluid subestacoes-shell py-4">
+          <header
+            class="main-header page-header-subestacoes d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4"
+          >
+            <div>
+              <div class="subestacoes-header__badge">
+                <i class="fa-solid fa-building"></i>
+                Subestações
+              </div>
+              <h1 class="page-title mb-0">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Histórico de Serviços
+              </h1>
+            </div>
+            <div class="header-actions-stack">
+              <a href="/subestacoes-dashboard" class="btn btn-secondary">
+                <i class="fa-solid fa-arrow-left"></i>
+                Voltar
+              </a>
+            </div>
+          </header>
+
         <div class="card">
           <div class="card-header">
             <h2 class="card-title">
@@ -140,14 +167,8 @@
             <div class="pagination-container" id="paginationContainer"></div>
           </div>
         </div>
+        </div>
       </main>
-
-      <footer class="page-footer">
-        <a href="/subestacoes-dashboard" class="btn btn-secondary">
-          <span class="material-symbols-outlined">arrow_back</span> Voltar ao
-          Dashboard
-        </a>
-      </footer>
     </div>
 
     <div id="modalConfirmacao" class="modal-overlay hidden">
@@ -350,7 +371,6 @@
     </template>
 
     <script src="/scripts/subestacoes/servicos-concluidos.js"></script>
-    </div>
-      <script src="/shared/scripts/sidebar.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

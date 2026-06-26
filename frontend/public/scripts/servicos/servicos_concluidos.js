@@ -208,16 +208,16 @@ function atualizarTabela() {
       }
 
       tr.innerHTML = `
-        <td>${servico.id}</td>
-        <td>${servico.processo || "N/A"}</td>
-        <td>${servico.subestacao || "N/A"}</td>
-        <td>${servico.alimentador || "N/A"}</td>
-        <td>${statusHtml}</td>
-        <td>${formatarData(servico.data_conclusao)}</td>
-        <td>${servico.nomes_responsaveis || "Não informado"}</td>
-        <td class="text-center table-actions apr-actions">${aprButtonHtml}</td>
-        <td>${servico.ordem_obra || "N/A"}</td>
-        <td class="text-center">
+        <td data-label="ID">${servico.id}</td>
+        <td data-label="Processo">${servico.processo || "N/A"}</td>
+        <td data-label="Subestação">${servico.subestacao || "N/A"}</td>
+        <td data-label="Alimentador">${servico.alimentador || "N/A"}</td>
+        <td data-label="Status / Motivo">${statusHtml}</td>
+        <td data-label="Data Finalização">${formatarData(servico.data_conclusao)}</td>
+        <td data-label="Equipe">${servico.nomes_responsaveis || "Não informado"}</td>
+        <td data-label="APR" class="text-center table-actions apr-actions">${aprButtonHtml}</td>
+        <td data-label="Ordem">${servico.ordem_obra || "N/A"}</td>
+        <td data-label="Ações" class="text-center">
           <div class="btn-group">
             <button class="btn btn-sm glass-btn me-1" onclick="window.navigateTo('/detalhes_servico?id=${
               servico.id

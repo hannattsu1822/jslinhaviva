@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Relatório de Transformadores</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
       rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
     />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
-    <link rel="stylesheet" href="/static/css/filtrar_transformadores.css" />
     <link rel="stylesheet" href="/static/css/relatorio_transformadores.css" />
     <style>
       @media print {
@@ -66,22 +63,18 @@
         line-height: 1.4;
       }
     </style>
-      <link rel="stylesheet" href="/shared/css/sidebar.css" />
   </head>
 
-  <body>
-    <div id="sidebar-root"></div>
-    <div class="main-content">
-<div class="relatorio-container">
+  <body class="trafos-page trafos-page--relatorio">
+    <div class="relatorio-container">
       <h1>
-        <i class="fas fa-file-alt icon"></i>Relatório de Transformador
+        <i class="fa-solid fa-file-lines"></i>
+        Relatório de Transformador
         <span id="checklistId"></span>
       </h1>
 
       <div id="relatorioContent">
-        <p
-          style="text-align: center; padding: 20px; color: var(--sys-dark-gray)"
-        >
+        <p style="text-align: center; padding: 20px; color: #6c757d">
           Carregando dados do relatório...
         </p>
       </div>
@@ -90,17 +83,16 @@
         <button
           onclick="window.location.href = document.referrer && document.referrer !== window.location.href ? document.referrer : '/filtrar_transformadores'"
           class="back-btn"
+          type="button"
         >
-          <i class="fas fa-arrow-left icon"></i> Voltar
+          <i class="fa-solid fa-arrow-left"></i> Voltar
         </button>
-        <button onclick="gerarPDF()" class="pdf-btn">
-          <i class="fas fa-file-pdf icon"></i> Gerar PDF Novamente
+        <button onclick="gerarPDF()" class="pdf-btn" type="button">
+          <i class="fa-solid fa-file-pdf"></i> Gerar PDF Novamente
         </button>
       </div>
     </div>
 
     <script src="/scripts/trafos/relatorio_formulario.js"></script>
-    </div>
-      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

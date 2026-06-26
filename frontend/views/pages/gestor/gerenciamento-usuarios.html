@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gerenciamento de Usuários</title>
+    <title>Usuários | Gestão | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
 
     <link
       rel="stylesheet"
@@ -20,32 +21,35 @@
       crossorigin="anonymous"
     />
 
-    <link
-      rel="stylesheet"
-      href="/static/css/components/bootstrap-overrides.css"
-    />
-
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-    <link
-      rel="stylesheet"
-      href="/static/css/gestor/gerenciamento-usuarios.css"
-    />
+    <link rel="stylesheet" href="/static/css/gestor/gerenciamento-usuarios.css" />
   </head>
-  <body>
+  <body class="gestor-page gestor-page--crud">
     <div class="page-container">
       <div id="sidebar-root"></div>
 
       <main class="main-content">
         <header class="main-header">
           <div class="header-content">
-            <h1 class="page-title">
-              <i class="fa-solid fa-users-cog"></i>
-              Gerenciamento de Usuários
-            </h1>
-            <button id="add-user-btn" class="btn btn-primary">
-              <i class="fa-solid fa-user-plus me-2"></i>
-              Adicionar Usuário
-            </button>
+            <div>
+              <div class="gestor-header__badge">
+                <i class="fa-solid fa-cogs"></i>
+                Painel de Gestão
+              </div>
+              <h1 class="page-title">
+                <i class="fa-solid fa-users-cog"></i>
+                Gerenciamento de Usuários
+              </h1>
+            </div>
+            <div class="header-actions-stack">
+              <a href="/dashboard-gestor" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left me-2"></i>Voltar
+              </a>
+              <button id="add-user-btn" class="btn btn-primary">
+                <i class="fa-solid fa-user-plus me-2"></i>
+                Adicionar Usuário
+              </button>
+            </div>
           </div>
         </header>
 
@@ -102,8 +106,8 @@
 
           <div class="card shadow-sm">
             <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+              <table class="table table-hover align-middle mb-0 gestor-data-table">
+                <thead>
                   <tr>
                     <th>Nome</th>
                     <th>Matrícula</th>

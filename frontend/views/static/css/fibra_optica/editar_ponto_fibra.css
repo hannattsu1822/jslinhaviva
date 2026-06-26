@@ -1,0 +1,5 @@
+@import url("./fibra-base.css");
+
+.fibra-page--edit-ponto .fibra-shell {
+  max-width: 720px;
+}

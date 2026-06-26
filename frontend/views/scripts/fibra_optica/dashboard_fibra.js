@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const cards = document.querySelectorAll(".dashboard-card");
+  const cards = document.querySelectorAll(".fibra-module-card[data-url]");
 
   cards.forEach((card) => {
     const url = card.dataset.url;

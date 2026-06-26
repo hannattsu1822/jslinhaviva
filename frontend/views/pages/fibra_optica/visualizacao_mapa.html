@@ -30,37 +30,36 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"
     />
 
-    <link
-      rel="stylesheet"
-      href="/static/css/components/bootstrap-overrides.css"
-    />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-    <link
-      rel="stylesheet"
-      href="/static/css/fibra_optica/visualizacao_mapa.css"
-    />
+    <link rel="stylesheet" href="/static/css/fibra_optica/visualizacao_mapa.css" />
   </head>
-  <body>
+  <body class="fibra-page fibra-page--map-view">
     <div class="page-container">
       <div id="sidebar-root"></div>
 
       <main class="main-content">
+        <div class="container-fluid fibra-shell py-4">
         <header class="main-header">
           <div class="header-content">
+            <div>
+              <div class="fibra-header__badge">
+                <i class="fa-solid fa-ethernet"></i>
+                Fibra Óptica
+              </div>
             <h1 class="page-title">
               <i class="fa-solid fa-map-marked-alt"></i>
               Visualização do Mapa de Fibra
             </h1>
+            </div>
+            <div class="header-actions-stack">
+            <a href="/fibra-optica" class="btn btn-secondary">
+              <i class="fa-solid fa-arrow-left"></i>Voltar
+            </a>
+            </div>
           </div>
         </header>
 
-        <div class="container-fluid">
-          <div class="d-flex justify-content-end mb-4">
-            <a href="/fibra-optica" class="btn btn-secondary">
-              <i class="fa-solid fa-arrow-left me-2"></i>Voltar
-            </a>
-          </div>
-
+        <div class="container-fluid px-0">
           <div
             id="route-panel"
             class="alert alert-success d-none mb-3"
@@ -194,6 +193,7 @@
               <div id="map"></div>
             </div>
           </div>
+        </div>
         </div>
       </main>
     </div>

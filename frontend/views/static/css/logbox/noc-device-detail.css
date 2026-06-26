@@ -1,0 +1,151 @@
+@import url("../noc/noc-base.css");
+
+/* Detalhe LogBox — Centro de Operações */
+.noc-page--detail .card {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  background: var(--lv-surface);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.noc-page--detail .card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--lv-shadow-md);
+}
+
+.noc-page--detail .kpi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 1.6rem !important;
+  margin-bottom: 10px;
+  background: rgba(30, 86, 160, 0.1);
+  color: var(--lv-primary);
+}
+
+.noc-page--detail #box-temp .kpi-icon {
+  background: rgba(56, 189, 248, 0.14);
+  color: #0284c7;
+}
+
+.noc-page--detail .diag-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.88rem;
+}
+
+.noc-page--detail .diag-item:last-child {
+  border-bottom: none;
+}
+
+.noc-page--detail .diag-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lv-text-muted);
+  font-weight: 500;
+}
+
+.noc-page--detail .diag-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #f1f5f9;
+  padding: 3px 10px;
+  border-radius: 8px;
+  color: var(--lv-text);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.noc-page--detail .live-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-color: var(--lv-success);
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: noc-pulse-live 2s infinite;
+}
+
+@keyframes noc-pulse-live {
+  0% {
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(22, 163, 74, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+  }
+}
+
+@keyframes flashUpdate {
+  0% {
+    background-color: rgba(56, 189, 248, 0.16);
+  }
+  100% {
+    background-color: var(--lv-surface);
+  }
+}
+
+.noc-page--detail .updated-anim {
+  animation: flashUpdate 1s ease-out;
+}
+
+.noc-page--detail .material-symbols-outlined {
+  vertical-align: middle;
+}
+
+.noc-page--detail .fan-stat-box {
+  text-align: center;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--lv-radius-sm);
+  margin-bottom: 10px;
+}
+
+.noc-page--detail .fan-stat-value {
+  font-weight: 700;
+  color: var(--lv-primary);
+  font-size: 1.05rem;
+}
+
+.noc-page--detail .fan-stat-label {
+  font-size: 0.75rem;
+  color: var(--lv-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.noc-page--detail .card-header {
+  background: #fff !important;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.noc-page--detail .display-5 {
+  color: var(--lv-text);
+  font-weight: 800;
+}
+
+@media (max-width: 767.98px) {
+  .noc-page--detail .container-fluid {
+    padding: 1rem !important;
+  }
+
+  .noc-page--detail .row.g-4 > [class*="col-"] {
+    margin-bottom: 0.25rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .noc-page--detail .display-5 {
+    font-size: 2rem;
+  }
+}

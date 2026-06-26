@@ -1,29 +1,94 @@
-.dashboard-card {
-  font-family: "Poppins", sans-serif;
+@import url("./fibra-base.css");
+
+.fibra-module-card {
+  height: 100%;
   cursor: pointer;
-  border: 1px solid var(--bs-card-border-color);
-  transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.dashboard-card:hover {
-  border-color: var(--bs-primary);
-  background-color: var(--bs-tertiary-bg);
+.fibra-module-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--lv-primary-light), var(--lv-accent));
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
 
-.icon-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+.fibra-module-card:hover,
+.fibra-module-card:focus {
+  transform: translateY(-6px);
+  box-shadow: var(--lv-shadow-md);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.fibra-module-card:hover::before,
+.fibra-module-card:focus::before {
+  opacity: 1;
+}
+
+.fibra-module-card .card-body {
+  padding: 1.65rem 1.25rem;
+  text-align: center;
+}
+
+.fibra-module-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.35rem;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(30, 86, 160, 0.2);
+  transition: transform 0.25s ease;
 }
 
-.dashboard-card .card-title {
-  font-weight: 500;
-  color: var(--bs-body-color);
+.fibra-module-card:hover .fibra-module-icon {
+  transform: scale(1.08) translateY(-2px);
 }
 
-.dashboard-card .card-text {
-  font-size: 0.9rem;
+.fibra-module-icon--register {
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+}
+
+.fibra-module-icon--andamento {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #1e293b;
+}
+
+.fibra-module-icon--concluidos {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+.fibra-module-icon--coletar {
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+}
+
+.fibra-module-icon--mapa {
+  background: linear-gradient(135deg, #64748b, #94a3b8);
+}
+
+.fibra-module-icon--gerenciar {
+  background: linear-gradient(135deg, #1e293b, #475569);
+}
+
+.fibra-module-card .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+  margin-bottom: 0.5rem;
+}
+
+.fibra-module-card .card-text {
+  font-size: 0.88rem;
+  color: var(--lv-text-muted);
+  margin: 0;
 }

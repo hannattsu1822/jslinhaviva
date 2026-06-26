@@ -530,15 +530,15 @@ document.addEventListener("DOMContentLoaded", () => {
       inspecoes.forEach((insp) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-                  <td><input type="checkbox" class="inspecao-checkbox" data-id="${
+                  <td data-label="Seleção"><input type="checkbox" class="inspecao-checkbox" data-id="${
                     insp.id
                   }"></td>
-                  <td>${insp.formulario_inspecao_num}</td>
-                  <td>${insp.subestacao_sigla}</td>
-                  <td>${new Date(insp.data_avaliacao).toLocaleDateString(
+                  <td data-label="Nº Inspeção">${insp.formulario_inspecao_num}</td>
+                  <td data-label="Subestação">${insp.subestacao_sigla}</td>
+                  <td data-label="Data">${new Date(insp.data_avaliacao).toLocaleDateString(
                     "pt-BR"
                   )}</td>
-                  <td>${insp.responsavel_nome}</td>
+                  <td data-label="Responsável">${insp.responsavel_nome}</td>
               `;
         corpoTabelaInspecoes.appendChild(tr);
       });

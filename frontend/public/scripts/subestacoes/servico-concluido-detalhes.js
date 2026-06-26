@@ -262,7 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const statusClasseItem = (item.status_item_escopo || "pendente")
         .toLowerCase()
         .replace(/_/g, "-");
-      itemCard.className = `service-item-card status-${statusClasseItem}`;
+      itemCard.className = `service-item-card service-item-card--${statusClasseItem}`;
 
       const statusClasse = (item.status_item_escopo || "pendente")
         .toLowerCase()

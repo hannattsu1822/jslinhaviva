@@ -4,25 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= pageTitle %></title>
+    <meta name="theme-color" content="#0b1220" />
+
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/logbox/style.css">
-    <link rel="stylesheet" href="/static/css/reles/listar_reles.css">
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  </head>
-<body>
-    <div id="sidebar-root"></div>
-    <div class="main-content">
-<div class="dashboard-container">
-        <div class="header">
-            <h1><span class="material-icons">electrical_services</span> Selecionar Relé</h1>
-        </div>
-        <div id="reles-list" class="reles-grid">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/static/css/reles/listar_reles.css">
+</head>
+<body class="monitoramento-page monitoramento-page--reles-select">
+    <div class="page-container">
+      <div id="sidebar-root"></div>
+
+      <main class="main-content">
+        <div class="container-fluid monitoramento-shell">
+          <header class="main-header">
+            <div class="header-content">
+              <div>
+                <div class="monitoramento-header__badge">
+                  <i class="fa-solid fa-satellite-dish"></i>
+                  Relés TCP
+                </div>
+                <h1 class="page-title">
+                  <span class="material-icons">electrical_services</span>
+                  Selecionar Relé
+                </h1>
+              </div>
+              <div class="header-actions-stack">
+                <a href="/monitoramento-hub" class="mon-btn mon-btn--ghost">
+                  <span class="material-icons">arrow_back</span>
+                  Voltar
+                </a>
+              </div>
+            </div>
+          </header>
+
+          <div id="reles-list" class="reles-grid">
             <p id="loading-message">Carregando dispositivos...</p>
+          </div>
         </div>
-    </div>
-    <script src="/scripts/reles/listar_reles.js"></script>
+
+        <script src="/scripts/reles/listar_reles.js"></script>
+      </main>
     </div>
     <script src="/shared/scripts/sidebar.js"></script>
-  </body>
+</body>
 </html>

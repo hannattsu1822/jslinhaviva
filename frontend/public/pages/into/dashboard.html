@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard</title>
+    <title>Dashboard | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -11,10 +12,6 @@
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
     />
     <link rel="stylesheet" href="/static/css/dashboard.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
@@ -24,91 +21,9 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/static/css/into/dashboard_calendar.css" />
-    <style>
-      .checklist-badge {
-        background: rgba(25, 135, 84, 0.1);
-        border: 1px solid #198754;
-        color: #198754;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 20px;
-        display: none;
-        backdrop-filter: blur(5px);
-      }
-      .checklist-alert-pending {
-        background: rgba(255, 193, 7, 0.15);
-        border: 1px solid #ffc107;
-        color: #856404;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        display: none;
-        backdrop-filter: blur(5px);
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 15px;
-      }
-      .checklist-alert-pending .icon-box {
-        background: #ffc107;
-        color: #000;
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        margin-right: 15px;
-      }
-      .glass-modal .modal-content {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-      }
-      .checklist-placa-card {
-        background: rgba(255, 255, 255, 0.7);
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 16px;
-        backdrop-filter: blur(6px);
-      }
-      .checklist-status-hint {
-        font-size: 0.9rem;
-        color: #6c757d;
-      }
-      .checklist-status-inline {
-        display: none;
-        margin-top: 10px;
-        padding: 10px 12px;
-        border-radius: 10px;
-        border: 1px solid transparent;
-        font-size: 0.95rem;
-      }
-      .checklist-status-inline.info {
-        display: block;
-        background: #e7f1ff;
-        border-color: #b6d4fe;
-        color: #084298;
-      }
-      .checklist-status-inline.success {
-        display: block;
-        background: #d1e7dd;
-        border-color: #badbcc;
-        color: #0f5132;
-      }
-      .checklist-status-inline.error {
-        display: block;
-        background: #f8d7da;
-        border-color: #f5c2c7;
-        color: #842029;
-      }
-    </style>
   </head>
 
-  <body>
+  <body class="dashboard-page">
     <div id="sidebar-root"></div>
 
     <div class="main-content">
@@ -128,7 +43,7 @@
               </div>
             </div>
 
-            <div style="min-width: 240px; max-width: 360px; width: 100%">
+            <div class="checklist-placa-card__select">
               <label for="checklist-veiculo-select" class="form-label fw-bold mb-1">Veículo</label>
               <select id="checklist-veiculo-select" class="form-select"></select>
               <div id="checklist-veiculo-status" class="checklist-status-inline info"></div>
@@ -158,16 +73,23 @@
             <a
               id="checklist-cta-link"
               href="/checklist-diario"
-              class="btn btn-warning fw-bold text-dark px-4 shadow-sm"
+              class="btn btn-warning fw-bold px-4"
             >
               <i class="fas fa-clipboard-check me-2"></i>Realizar Agora
             </a>
           </div>
         </div>
 
-        <h1 class="page-title mb-4">
-          <i class="fas fa-tachometer-alt me-3"></i>Painel de Controle Principal
-        </h1>
+        <header class="dashboard-header">
+          <div class="dashboard-header__badge">
+            <i class="fas fa-tachometer-alt"></i>
+            Dashboard
+          </div>
+          <h1 class="dashboard-header__title">Painel de Controle Principal</h1>
+          <p class="dashboard-header__subtitle">
+            Acesse os módulos disponíveis para o seu perfil.
+          </p>
+        </header>
 
         <div class="row g-4">
           
@@ -306,10 +228,7 @@
                   class="card-body d-flex align-items-center justify-content-center"
                 >
                   <div class="text-center">
-                    <div
-                      class="icon-circle mx-auto mb-2"
-                      style="background-color: #9c27b0 !important"
-                    >
+                    <div class="icon-circle mx-auto mb-2">
                       <i class="fas fa-network-wired"></i>
                     </div>
                     <h3 class="card-title mb-0">Fibra Óptica</h3>
@@ -330,10 +249,7 @@
                   class="card-body d-flex align-items-center justify-content-center"
                 >
                   <div class="text-center">
-                    <div
-                      class="icon-circle mx-auto mb-2"
-                      style="background-color: #ff5722 !important"
-                    >
+                    <div class="icon-circle mx-auto mb-2">
                       <i class="fas fa-broadcast-tower"></i>
                     </div>
                     <h3 class="card-title mb-0">Inspeções de Redes</h3>
@@ -354,10 +270,7 @@
                   class="card-body d-flex align-items-center justify-content-center"
                 >
                   <div class="text-center">
-                    <div
-                      class="icon-circle mx-auto mb-2"
-                      style="background-color: #607d8b !important"
-                    >
+                    <div class="icon-circle mx-auto mb-2">
                       <i class="fas fa-hand-sparkles"></i>
                     </div>
                     <h3 class="card-title mb-0">Avulsos</h3>
@@ -378,10 +291,7 @@
                   class="card-body d-flex align-items-center justify-content-center"
                 >
                   <div class="text-center">
-                    <div
-                      class="icon-circle mx-auto mb-2"
-                      style="background-color: #009688 !important"
-                    >
+                    <div class="icon-circle mx-auto mb-2">
                       <i class="fas fa-satellite-dish"></i>
                     </div>
                     <h3 class="card-title mb-0">Monitoramento</h3>
@@ -398,10 +308,7 @@
                   class="card-body d-flex align-items-center justify-content-center"
                 >
                   <div class="text-center">
-                    <div
-                      class="icon-circle mx-auto mb-2"
-                      style="background-color: #17a2b8 !important"
-                    >
+                    <div class="icon-circle mx-auto mb-2">
                       <i class="fas fa-clipboard-list"></i>
                     </div>
                     <h3 class="card-title mb-0">Roteiro de Viagem</h3>
@@ -452,16 +359,9 @@
 
         <div class="row mt-4">
           <div class="col-12">
-            <div class="card dashboard-calendar-card">
-              <h2
-                class="mb-3 card-title"
-                style="
-                  font-size: 1.5rem;
-                  color: var(--primary-blue-filter, #007bff);
-                "
-              >
-                <i class="fas fa-calendar-alt me-2"></i>Próximos Checklists de
-                Veículos
+            <div class="card dashboard-calendar-card border-0">
+              <h2 class="card-title">
+                <i class="fas fa-calendar-alt"></i>Próximos Checklists de Veículos
               </h2>
               <div id="dashboard-calendar">
                 <p class="text-center text-muted py-5">

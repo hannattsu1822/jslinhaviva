@@ -247,16 +247,16 @@ document.addEventListener("DOMContentLoaded", () => {
         : "";
 
       tr.innerHTML = `
-          <td>${serv.id || "-"}</td>
-          <td>${serv.processo || "-"}</td>
-          <td>${serv.subestacao_sigla || "-"}</td>
-          <td title="${serv.motivo || ""}">${motivoDisplay}</td>
-          <td>${serv.tipo_ordem || "-"}</td>
-          <td class="text-center">${dataConclusaoFormatada}</td>
-          <td>${serv.responsavel_nome || "-"}</td>
-          <td class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
-          <td class="actions-column text-center">${aprButtonHtml}</td>
-          <td class="actions-column text-center">
+          <td data-label="ID">${serv.id || "-"}</td>
+          <td data-label="Processo">${serv.processo || "-"}</td>
+          <td data-label="Subestação">${serv.subestacao_sigla || "-"}</td>
+          <td data-label="Motivo / Origem" title="${serv.motivo || ""}">${motivoDisplay}</td>
+          <td data-label="Tipo Ordem">${serv.tipo_ordem || "-"}</td>
+          <td data-label="Data Conclusão" class="text-center">${dataConclusaoFormatada}</td>
+          <td data-label="Responsável">${serv.responsavel_nome || "-"}</td>
+          <td data-label="Status" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
+          <td data-label="APR" class="actions-column text-center">${aprButtonHtml}</td>
+          <td data-label="Ações" class="actions-column text-center">
             <div class="actions-wrapper">
               <button class="btn text-info btn-ver-detalhes" data-id="${
                 serv.id

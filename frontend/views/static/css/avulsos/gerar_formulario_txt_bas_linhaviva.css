@@ -1,15 +1,11 @@
-a,
-.btn,
-.card {
-  transition: none;
+@import url("./avulsos-base.css");
+
+.avulsos-page--bas-lv .card-body.p-4.p-md-5 {
+  padding: 1.5rem !important;
 }
 
-a:hover,
-.btn:hover {
-  text-decoration: none;
-}
-
-.card:hover {
-  transform: none;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+@media (max-width: 575.98px) {
+  .avulsos-page--bas-lv .card-body.p-4.p-md-5 {
+    padding: 1.15rem !important;
+  }
 }

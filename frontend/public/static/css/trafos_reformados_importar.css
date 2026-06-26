@@ -1,5 +1,8 @@
-:root {
-  --primary-trafos-import: #2a5298;
+@import url("./trafos/trafos-base.css");
+
+.trafos-page--importar,
+.trafos-page--upload {
+  --primary-trafos-import: var(--lv-primary, #1e56a0);
   --primary-light-trafos-import: #3b6cb7;
   --secondary-trafos-import: #6c757d;
   --success-trafos-import: #28a745;
@@ -14,58 +17,8 @@
   --transition-trafos-import: all 0.3s ease;
 }
 
-body {
-  font-family: "Poppins", sans-serif;
-  background-color: #f5f7ff;
-  color: var(--dark-trafos-import);
-  line-height: 1.6;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-}
-
-.main-nav {
-  background: var(--white-trafos-import);
-  padding: 1rem 2rem;
-  box-shadow: var(--box-shadow-trafos-import);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-.nav-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.back-link {
-  color: var(--primary-trafos-import);
-  text-decoration: none;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: var(--transition-trafos-import);
-}
-
-.back-link:hover {
-  color: var(--primary-light-trafos-import);
-  transform: translateX(-3px);
-}
-
-.main-nav h1 {
-  font-size: 1.5rem;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: var(--dark-trafos-import);
-}
-
-.upload-container {
+.trafos-page--importar .upload-container,
+.trafos-page--upload .upload-container {
   max-width: 800px;
   margin: 2rem auto;
   padding: 0 1.5rem;

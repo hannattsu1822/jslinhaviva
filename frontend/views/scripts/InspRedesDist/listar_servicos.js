@@ -45,32 +45,35 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
       const tr = document.createElement("tr");
+      tr.className = "insp-redes-table-row";
       tr.dataset.servicoId = servico.id;
       tr.innerHTML = `
-        <td><strong>${
+        <td data-label="ID/Processo" class="insp-redes-cell-processo"><strong>${
           servico.processo
-        }</strong><br /><small class="text-muted">ID: ${servico.id}</small></td>
-        <td>${dataFormatada}</td>
-        <td class="col-status">${getStatusBadge(servico.status)}</td>
-        <td class="col-responsavel">${servico.responsaveis_execucao}</td>
-        <td>${servico.alimentador || "N/A"}</td>
-        <td>${servico.subestacao || "N/A"}</td>
-        <td class="text-center action-bar">
-          <a href="/inspecoes/servicos/${
-            servico.id
-          }/coletar" class="btn btn-outline-primary btn-icon" title="Coletar Pontos">
-            <span class="material-icons">edit_location_alt</span>
-          </a>
-          ${
-            isAdmin
-              ? `<button class="btn btn-outline-secondary btn-icon btn-atribuir" title="Atribuir Responsável">
-            <span class="material-icons">group_add</span>
-          </button>
-          <button class="btn btn-outline-danger btn-icon btn-excluir" title="Excluir Inspeção">
-            <span class="material-icons">delete</span>
-          </button>`
-              : ""
-          }
+        }</strong><br /><small>ID: ${servico.id}</small></td>
+        <td data-label="Data Prevista">${dataFormatada}</td>
+        <td data-label="Status" class="col-status">${getStatusBadge(servico.status)}</td>
+        <td data-label="Responsável">${servico.responsaveis_execucao}</td>
+        <td data-label="Alimentador">${servico.alimentador || "N/A"}</td>
+        <td data-label="Subestação">${servico.subestacao || "N/A"}</td>
+        <td class="insp-redes-actions" data-label="Ações">
+          <div class="insp-redes-actions__toolbar">
+            <a href="/inspecoes/servicos/${
+              servico.id
+            }/coletar" class="btn btn-outline-primary btn-icon" title="Coletar Pontos">
+              <span class="material-icons">edit_location_alt</span>
+            </a>
+            ${
+              isAdmin
+                ? `<button type="button" class="btn btn-outline-secondary btn-icon btn-atribuir" title="Atribuir Responsável">
+              <span class="material-icons">group_add</span>
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-icon btn-excluir" title="Excluir Inspeção">
+              <span class="material-icons">delete</span>
+            </button>`
+                : ""
+            }
+          </div>
         </td>
       `;
       tabelaServicosBody.appendChild(tr);

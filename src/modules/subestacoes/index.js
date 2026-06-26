@@ -24,6 +24,15 @@ router.get(
 );
 
 router.get(
+  "/subestacao",
+  autenticar,
+  verificarNivel(NIVEL_ACESSO_MIN),
+  (req, res) => {
+    res.redirect("/subestacoes-dashboard");
+  }
+);
+
+router.get(
   "/pagina-subestacoes-admin",
   autenticar,
   verificarNivel(NIVEL_ADMIN),

@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Logs de Auditoria do Sistema</title>
+    <title>Auditoria | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -12,138 +13,117 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="/static/css/auditoria.css" />
-    <style>
-      body {
-        font-family: "Poppins", sans-serif;
-        background-color: #f8f9fa;
-      }
-      .container-custom {
-        background-color: #ffffff;
-        padding: 2rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-        margin-top: 2rem;
-      }
-      .page-title {
-        color: #0d6efd; /* Azul primário do Bootstrap */
-        margin-bottom: 1.5rem;
-      }
-      .table th {
-        background-color: #343a40; /* Dark Bootstrap header */
-        color: #ffffff;
-      }
-      .alert-custom {
-        display: none; /* Escondido por padrão */
-      }
-    </style>
-      <link rel="stylesheet" href="/shared/css/sidebar.css" />
+    <link rel="stylesheet" href="/shared/css/sidebar.css" />
   </head>
-  <body>
+  <body class="auditoria-page">
     <div id="sidebar-root"></div>
+
     <div class="main-content">
-<div class="container-fluid mt-4">
-      <div class="container-custom">
-        <h1 class="page-title text-center mb-4">
-          <i class="fas fa-shield-alt me-2"></i>Logs de Auditoria
-        </h1>
+      <div class="container-fluid py-4">
+        <header class="auditoria-header">
+          <div class="auditoria-header__badge">
+            <i class="fas fa-shield-halved"></i>
+            Segurança e rastreabilidade
+          </div>
+          <h1 class="auditoria-header__title">Logs de Auditoria</h1>
+          <p class="auditoria-header__subtitle">
+            Histórico de ações registradas no sistema para controle e conformidade.
+          </p>
+        </header>
 
-        <div
-          id="loadingMessage"
-          class="alert alert-info alert-custom text-center"
-        >
-          <i class="fas fa-spinner fa-spin me-2"></i>Carregando logs de
-          auditoria...
-        </div>
-        <div
-          id="errorMessage"
-          class="alert alert-danger alert-custom text-center"
-        ></div>
-        <div
-          id="noLogsMessage"
-          class="alert alert-warning alert-custom text-center"
-        >
-          <i class="fas fa-info-circle me-2"></i>Nenhum log de auditoria
-          encontrado.
-        </div>
-
-        <div class="table-responsive">
-          <table
-            class="table table-striped table-hover table-bordered"
-            id="auditoriaTable"
+        <section class="auditoria-panel" aria-label="Registros de auditoria">
+          <div
+            id="loadingMessage"
+            class="auditoria-alert auditoria-alert--info"
+            role="status"
           >
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Matrícula Usuário</th>
-                <th>Ação</th>
-                <th>Detalhes</th>
-                <th>Data/Hora (Registro)</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+            <i class="fas fa-spinner fa-spin me-2"></i>Carregando logs de auditoria...
+          </div>
+
+          <div
+            id="errorMessage"
+            class="auditoria-alert auditoria-alert--error"
+            role="alert"
+          ></div>
+
+          <div
+            id="noLogsMessage"
+            class="auditoria-alert auditoria-alert--warning"
+            role="status"
+          >
+            <i class="fas fa-info-circle me-2"></i>Nenhum log de auditoria encontrado.
+          </div>
+
+          <div class="auditoria-table-wrap" id="tableWrapper" style="display: none">
+            <table class="table mb-0" id="auditoriaTable">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Matrícula</th>
+                  <th scope="col">Ação</th>
+                  <th scope="col">Detalhes</th>
+                  <th scope="col">Data/Hora</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/shared/scripts/sidebar.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        // Verifica se o usuário tem permissão para acessar a auditoria
-        const user = JSON.parse(localStorage.getItem("user"));
-        // Cargos que podem acessar a auditoria. Ajuste conforme o seu auth.js para verificarPermissao.
-        // A verificação no frontend é um UX extra, a segurança real está no backend.
-        const cargosPermitidosCliente = [
-          "Técnico",
-          "Engenheiro",
-          "ADMIN",
-          "ADM",
-          "Encarregado",
-          "Inspetor",
-        ];
+      const CARGOS_PERMITIDOS = [
+        "Técnico",
+        "Engenheiro",
+        "ADMIN",
+        "ADM",
+        "Encarregado",
+        "Inspetor",
+      ];
 
-        if (!user || !cargosPermitidosCliente.includes(user.cargo)) {
-          // Se o acesso for negado, redireciona para o dashboard
-          const errorDiv = document.getElementById("errorMessage");
+      function showAlert(element, visible) {
+        if (!element) return;
+        element.classList.toggle("auditoria-alert--visible", visible);
+        element.style.display = visible ? "block" : "none";
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const user = JSON.parse(localStorage.getItem("user"));
+        const errorDiv = document.getElementById("errorMessage");
+        const tableWrapper = document.getElementById("tableWrapper");
+
+        if (!user || !CARGOS_PERMITIDOS.includes(user.cargo)) {
           errorDiv.textContent =
             "Acesso negado. Seu cargo não tem permissão para visualizar esta página.";
-          errorDiv.style.display = "block";
-
-          // Ocultar tabela e outras mensagens
-          document.querySelector(".table-responsive").style.display = "none";
-          document.getElementById("loadingMessage").style.display = "none";
-          document.getElementById("noLogsMessage").style.display = "none";
-
-          // setTimeout(() => { window.location.href = '/dashboard'; }, 3000); // Opcional: redirecionar após X segundos
-          return; // Interrompe a execução se não tiver permissão
+          showAlert(errorDiv, true);
+          showAlert(document.getElementById("loadingMessage"), false);
+          showAlert(document.getElementById("noLogsMessage"), false);
+          if (tableWrapper) tableWrapper.style.display = "none";
+          return;
         }
 
         carregarAuditoria();
       });
 
-      // Função para carregar os logs de auditoria
       async function carregarAuditoria() {
         const tbody = document.querySelector("#auditoriaTable tbody");
         const loadingMessage = document.getElementById("loadingMessage");
         const errorMessage = document.getElementById("errorMessage");
         const noLogsMessage = document.getElementById("noLogsMessage");
-        const tableResponsive = document.querySelector(".table-responsive");
+        const tableWrapper = document.getElementById("tableWrapper");
 
-        tbody.innerHTML = ""; // Limpa o conteúdo atual
-        loadingMessage.style.display = "block";
-        errorMessage.style.display = "none";
-        noLogsMessage.style.display = "none";
-        tableResponsive.style.display = "none";
+        tbody.innerHTML = "";
+        showAlert(loadingMessage, true);
+        showAlert(errorMessage, false);
+        showAlert(noLogsMessage, false);
+        if (tableWrapper) tableWrapper.style.display = "none";
 
         try {
-          // A rota /api/auditoria no backend já está protegida por 'autenticar' e 'verificarPermissao'
-          // Se o usuário não estiver logado (sessão) ou não tiver permissão, o backend retornará um erro.
-          const response = await fetch("/api/auditoria"); // O cookie de sessão será enviado automaticamente
+          const response = await fetch("/api/auditoria");
 
           if (!response.ok) {
             let errorMsg = "Erro ao carregar auditoria.";
@@ -158,39 +138,37 @@
             }
             throw new Error(errorMsg);
           }
-          const logs = await response.json();
 
-          loadingMessage.style.display = "none";
+          const logs = await response.json();
+          showAlert(loadingMessage, false);
 
           if (logs.length === 0) {
-            noLogsMessage.style.display = "block";
-            tableResponsive.style.display = "none";
+            showAlert(noLogsMessage, true);
             return;
           }
 
-          tableResponsive.style.display = "block";
+          if (tableWrapper) tableWrapper.style.display = "block";
+
           logs.forEach((log) => {
             const row = document.createElement("tr");
             row.innerHTML = `
-            <td>${log.id}</td>
-            <td>${log.matricula_usuario}</td>
-            <td>${log.acao}</td>
-            <td>${log.detalhes || ""}</td>
-            <td>${log.timestamp_formatado}</td>
-          `;
+              <td data-label="ID">${log.id}</td>
+              <td data-label="Matrícula">${log.matricula_usuario}</td>
+              <td data-label="Ação">${log.acao}</td>
+              <td data-label="Detalhes">${log.detalhes || ""}</td>
+              <td data-label="Data/Hora">${log.timestamp_formatado}</td>
+            `;
             tbody.appendChild(row);
           });
         } catch (err) {
           console.error("Erro ao carregar auditoria:", err);
-          loadingMessage.style.display = "none";
+          showAlert(loadingMessage, false);
           errorMessage.textContent =
             err.message || "Erro desconhecido ao carregar auditoria.";
-          errorMessage.style.display = "block";
-          tableResponsive.style.display = "none";
+          showAlert(errorMessage, true);
+          if (tableWrapper) tableWrapper.style.display = "none";
         }
       }
     </script>
-    </div>
-      <script src="/shared/scripts/sidebar.js"></script>
   </body>
 </html>

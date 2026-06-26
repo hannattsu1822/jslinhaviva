@@ -18,34 +18,30 @@
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     />
-    <link
-      rel="stylesheet"
-      href="/static/css/components/bootstrap-overrides.css"
-    />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-    <link
-      rel="stylesheet"
-      href="/static/css/fibra_optica/servico_detalhes.css"
-    />
+    <link rel="stylesheet" href="/static/css/fibra_optica/servico_detalhes.css" />
   </head>
-  <body>
+  <body class="fibra-page fibra-page--detail">
     <div class="page-container">
       <div id="sidebar-root"></div>
 
       <main class="main-content">
+        <div class="container-fluid fibra-shell py-4">
         <header class="main-header">
           <div class="header-content">
+            <div>
+              <div class="fibra-header__badge">
+                <i class="fa-solid fa-ethernet"></i>
+                Fibra Óptica
+              </div>
             <h1 class="page-title">
               <i class="fa-solid fa-circle-info"></i>
               Detalhes do Serviço #<%= servico.id %>
             </h1>
-          </div>
-        </header>
-
-        <div class="container-fluid">
-          <div class="d-flex justify-content-end mb-4 gap-2">
+            </div>
+            <div class="header-actions-stack">
             <a href="/projetos_fibra_andamento" class="btn btn-secondary">
-              <i class="fa-solid fa-arrow-left me-2"></i>Voltar para Lista
+              <i class="fa-solid fa-arrow-left"></i>Voltar
             </a>
             <% if (permissoes.podeGerenciar) { %>
             <a
@@ -53,11 +49,14 @@
               class="btn btn-primary"
               id="btn-editar-servico-fibra"
             >
-              <i class="fa-solid fa-pencil me-2"></i>Editar Serviço
+              <i class="fa-solid fa-pencil"></i>Editar Serviço
             </a>
             <% } %>
+            </div>
           </div>
+        </header>
 
+        <div class="container-fluid px-0">
           <div class="row g-4">
             <div class="col-lg-7">
               <div class="card shadow-sm h-100">
@@ -262,6 +261,7 @@
               </div>
             </div>
           </div>
+        </div>
         </div>
       </main>
     </div>

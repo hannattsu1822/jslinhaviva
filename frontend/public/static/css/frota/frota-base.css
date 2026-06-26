@@ -1,0 +1,454 @@
+﻿@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("/static/css/base/variables.css");
+
+/* â”€â”€ Base GestÃ£o de Turmas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+body.frota-page {
+  font-family: var(--lv-font);
+  color: var(--lv-text);
+  background: var(--lv-bg-deep);
+}
+
+.frota-page .page-container {
+  min-height: 100vh;
+}
+
+.frota-page .main-content {
+  background:
+    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(56, 189, 248, 0.07), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgba(30, 86, 160, 0.06), transparent 50%),
+    #f1f5f9;
+}
+
+.frota-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.frota-page .main-header {
+  margin-bottom: 1.5rem;
+}
+
+.frota-page .header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.frota-page .header-actions-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.frota-header__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 7px 14px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(30, 86, 160, 0.08);
+  border: 1px solid rgba(30, 86, 160, 0.14);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lv-primary);
+}
+
+.frota-page .page-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.frota-page .page-title > i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+  flex-shrink: 0;
+}
+
+/* â”€â”€ Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.frota-page .card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.frota-page .card-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.9rem 1.15rem;
+  font-weight: 700;
+  color: var(--lv-text);
+}
+
+.frota-page .filter-card .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.frota-page .card-body {
+  padding: 1.15rem;
+}
+
+/* â”€â”€ FormulÃ¡rios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.frota-page .form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--lv-text);
+}
+
+.frota-page .form-control,
+.frota-page .form-select,
+.frota-page select,
+.frota-page input[type="text"],
+.frota-page input[type="date"],
+.frota-page textarea {
+  border: 1.5px solid var(--lv-input-border);
+  border-radius: var(--lv-radius-sm);
+  padding: 0.6rem 0.85rem;
+  background: var(--lv-input-bg);
+  color: var(--lv-text);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.frota-page .form-control:focus,
+.frota-page .form-select:focus,
+.frota-page select:focus,
+.frota-page input:focus,
+.frota-page textarea:focus {
+  border-color: var(--lv-input-focus);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+
+.frota-page .form-group label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--lv-text);
+  margin-bottom: 6px;
+}
+
+/* â”€â”€ BotÃµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.frota-page .btn {
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--lv-radius-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.frota-page .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light) 0%,
+    var(--lv-primary) 55%,
+    var(--lv-primary-dark) 100%
+  );
+  border: none;
+  box-shadow: 0 8px 20px rgba(30, 86, 160, 0.25);
+  color: #fff;
+}
+
+.frota-page .btn-primary:hover,
+.frota-page .btn-primary:focus {
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.frota-page .btn-secondary {
+  background: #64748b;
+  border: none;
+  color: #fff;
+}
+
+.frota-page .btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border: none;
+  color: #fff;
+}
+
+.frota-page .btn-danger {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border: none;
+  color: #fff;
+}
+
+.frota-page .btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  border: none;
+  color: #1e293b;
+}
+
+/* â”€â”€ Tabelas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.frota-page .table-responsive {
+  border-radius: var(--lv-radius-sm);
+  border: 1px solid #e2e8f0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.frota-page .table {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+}
+
+.frota-page .table thead th,
+.frota-page #tabelaStatus thead th {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff !important;
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  white-space: nowrap;
+}
+
+.frota-page .table tbody td,
+.frota-page #tabelaStatus tbody td {
+  border-color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.frota-page .table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.frota-page .table-hover tbody tr:hover,
+.frota-page #tabelaStatus tbody tr:hover {
+  background: #f1f5f9;
+}
+
+/* â”€â”€ PainÃ©is (controle-status) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.frota-page .content-card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.frota-page .content-card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--lv-text);
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.frota-page .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.frota-page .form-group {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.frota-page .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.frota-page .actions-cell button {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.frota-page .actions-cell .btn-edit .material-icons {
+  color: #f59e0b;
+}
+
+.frota-page .actions-cell .btn-delete .material-icons {
+  color: #dc2626;
+}
+
+/* â”€â”€ Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.frota-page .modal-content,
+.frota-page .glass-modal {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-lg);
+  box-shadow: var(--lv-shadow-lg);
+  overflow: hidden;
+}
+
+.frota-page .modal-header,
+.frota-page .frota-modal-header,
+.frota-page .frota-modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.frota-page .frota-modal-header,
+.frota-page .frota-modal-header {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff;
+}
+
+.frota-page .frota-modal-header .btn-close,
+.frota-page .frota-modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.frota-page .modal-title {
+  font-weight: 800;
+  color: inherit;
+}
+
+/* â”€â”€ Toast custom (controle-status) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.frota-page #toast.toast {
+  visibility: hidden;
+  min-width: 280px;
+  background: #1e293b;
+  color: #fff;
+  border-radius: var(--lv-radius-sm);
+  padding: 14px 18px;
+  position: fixed;
+  z-index: 1050;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.5s, visibility 0.5s, bottom 0.5s;
+}
+
+.frota-page #toast.toast.show {
+  visibility: visible;
+  opacity: 1;
+  bottom: 50px;
+}
+
+.frota-page #toast.toast.error {
+  background: #dc2626;
+}
+
+.frota-page #toast.toast.success {
+  background: #16a34a;
+}
+
+.frota-page .material-icons.spin {
+  animation: frota-spin 1s linear infinite;
+}
+
+@keyframes frota-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* â”€â”€ Responsivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@media (max-width: 991.98px) {
+  .frota-page .main-content {
+    padding-top: 3.5rem;
+  }
+
+  .frota-page .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .frota-page .header-actions-stack {
+    width: 100%;
+  }
+
+  .frota-page .header-actions-stack .btn,
+  .frota-page .header-content > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .frota-page .page-header-frota,
+  .frota-page .page-header-frota {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .frota-page .page-header-frota > div:last-child {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .frota-page .page-header-frota > div:last-child .btn,
+  .frota-page .page-header-frota > .btn {
+    width: 100%;
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .frota-page .frota-data-table thead,
+  .frota-page #tabelaStatus thead {
+    display: none;
+  }
+
+  .frota-page .frota-data-table tbody tr,
+  .frota-page #tabelaStatus tbody tr {
+    display: block;
+    margin-bottom: 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--lv-radius-sm);
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .frota-page .frota-data-table tbody td,
+  .frota-page #tabelaStatus tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .frota-page .frota-data-table tbody td::before,
+  .frota-page #tabelaStatus tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--lv-text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+}
+
+

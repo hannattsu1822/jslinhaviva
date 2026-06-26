@@ -1,15 +1,6 @@
-/* public/static/css/checklist.css */
+@import url("../frota/frota-base.css");
 
-body {
-  font-family: "Poppins", sans-serif;
-  background-color: #f4f7f6;
-  color: #333;
-  margin: 0;
-  padding: 20px;
-  line-height: 1.6;
-}
-
-.checklist-container {
+.frota-page--checklist .checklist-container {
   max-width: 800px;
   margin: 20px auto;
   background-color: #fff;

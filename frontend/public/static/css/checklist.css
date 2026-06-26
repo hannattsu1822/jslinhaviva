@@ -1,7 +1,7 @@
-/* =================================== */
-/* VARIÁVEIS GLOBAIS */
-/* =================================== */
-:root {
+@import url("./frota/frota-base.css");
+
+/* editar inspecao - extends checklist styles */
+.frota-page--checklist .checklist-container {
     --primary-blue: #2a5298;
     --dark-blue: #1e3c72;
     --light-blue: #e6f0ff;

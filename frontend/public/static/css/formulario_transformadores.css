@@ -1,5 +1,6 @@
-/* Estilos profissionais com esquema de cores branco, azul e preto */
-:root {
+@import url("./trafos/trafos-base.css");
+
+.trafos-page--formulario .formulario-container {
   --primary-color: #3498db;
   --primary-dark: #2980b9;
   --secondary-color: #2c3e50;
@@ -17,20 +18,7 @@
   box-sizing: border-box;
 }
 
-body {
-  font-family: 'Poppins', sans-serif;
-  background-color: var(--bg-light);
-  color: var(--text-color);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  margin: 0;
-  padding: 20px;
-  line-height: 1.5;
-}
-
-.formulario-container {
+.trafos-page--formulario .formulario-container {
   background: var(--bg-color);
   padding: 2rem;
   border-radius: 8px;
@@ -39,7 +27,13 @@ body {
   width: 100%;
   max-width: 800px;
   border: 1px solid var(--border-color);
-  margin: 20px 0;
+  margin: 0 auto;
+}
+
+.trafos-page--formulario .formulario-intro {
+  font-size: clamp(0.875rem, 3vw, 0.9375rem);
+  color: var(--text-light);
+  margin: 0 0 1.5rem;
 }
 
 .formulario-container .header {

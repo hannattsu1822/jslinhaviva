@@ -1,0 +1,302 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("/static/css/base/variables.css");
+
+/* ── Base Avulsos ─────────────────────────────────────────────── */
+body.avulsos-page {
+  font-family: var(--lv-font);
+  color: var(--lv-text);
+  background: var(--lv-bg-deep);
+}
+
+.avulsos-page .page-container {
+  min-height: 100vh;
+}
+
+.avulsos-page .main-content {
+  background:
+    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(56, 189, 248, 0.07), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgba(30, 86, 160, 0.06), transparent 50%),
+    #f1f5f9;
+}
+
+/* ── Cabeçalho ────────────────────────────────────────────────── */
+.avulsos-page .main-header {
+  margin-bottom: 1.5rem;
+}
+
+.avulsos-page .header-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.avulsos-header__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 7px 14px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(30, 86, 160, 0.08);
+  border: 1px solid rgba(30, 86, 160, 0.14);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lv-primary);
+}
+
+.avulsos-page .page-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avulsos-page .page-title > i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.2);
+  flex-shrink: 0;
+}
+
+.avulsos-page .lead {
+  font-size: 1rem;
+  color: var(--lv-text-muted);
+}
+
+/* ── Cards ────────────────────────────────────────────────────── */
+.avulsos-page .card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.avulsos-page .card-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.9rem 1.15rem;
+}
+
+.avulsos-page .card-header h5 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+}
+
+.avulsos-page .card-body {
+  padding: 1.15rem;
+}
+
+/* ── Formulários ──────────────────────────────────────────────── */
+.avulsos-page .form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--lv-text);
+}
+
+.avulsos-page .form-control,
+.avulsos-page .form-select {
+  border: 1.5px solid var(--lv-input-border);
+  border-radius: var(--lv-radius-sm);
+  padding: 0.6rem 0.85rem;
+  background: var(--lv-input-bg);
+  color: var(--lv-text);
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.avulsos-page .form-control:focus,
+.avulsos-page .form-select:focus {
+  border-color: var(--lv-input-focus);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.avulsos-page .form-control:read-only {
+  background: #f1f5f9;
+}
+
+/* ── Botões ───────────────────────────────────────────────────── */
+.avulsos-page .btn {
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--lv-radius-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.avulsos-page .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light) 0%,
+    var(--lv-primary) 55%,
+    var(--lv-primary-dark) 100%
+  );
+  border: none;
+  box-shadow: 0 8px 20px rgba(30, 86, 160, 0.25);
+}
+
+.avulsos-page .btn-primary:hover,
+.avulsos-page .btn-primary:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(30, 86, 160, 0.32);
+  background: linear-gradient(
+    135deg,
+    var(--lv-primary-light) 0%,
+    var(--lv-primary) 55%,
+    var(--lv-primary-dark) 100%
+  );
+}
+
+.avulsos-page .btn-secondary {
+  background: #64748b;
+  border: none;
+  color: #fff;
+}
+
+.avulsos-page .btn-secondary:hover {
+  background: #475569;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.avulsos-page .btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border: none;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.22);
+}
+
+.avulsos-page .btn-success:hover {
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.avulsos-page .btn-outline-secondary {
+  border-color: #cbd5e1;
+  color: var(--lv-text-muted);
+}
+
+.avulsos-page .btn-outline-secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: var(--lv-text);
+}
+
+/* ── Tabelas ──────────────────────────────────────────────────── */
+.avulsos-page .table-responsive {
+  border-radius: var(--lv-radius-sm);
+  border: 1px solid #e2e8f0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.avulsos-page .table {
+  margin-bottom: 0;
+  font-size: 0.85rem;
+}
+
+.avulsos-page .table thead th {
+  background: linear-gradient(135deg, var(--lv-primary), var(--lv-primary-dark));
+  color: #fff;
+  font-weight: 600;
+  border-color: rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.avulsos-page .table tbody td {
+  border-color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.avulsos-page .table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* ── Modal ────────────────────────────────────────────────────── */
+.avulsos-page .modal-content {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-lg);
+  box-shadow: var(--lv-shadow-lg);
+  overflow: hidden;
+}
+
+.avulsos-page .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.avulsos-page .modal-title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-text);
+}
+
+/* ── Alertas / feedback ───────────────────────────────────────── */
+.avulsos-page .alert {
+  border-radius: var(--lv-radius-sm);
+  border-width: 1px;
+}
+
+.avulsos-page .alert-success {
+  background: var(--lv-success-bg);
+  border-color: var(--lv-success-border);
+  color: #166534;
+}
+
+.avulsos-page .alert-danger {
+  background: var(--lv-error-bg);
+  border-color: var(--lv-error-border);
+  color: #991b1b;
+}
+
+.avulsos-page .alert-info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+/* ── Responsivo geral ───────────────────────────────────────────── */
+@media (max-width: 991.98px) {
+  .avulsos-page .main-content {
+    padding-top: 3.5rem;
+  }
+
+  .avulsos-page .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .avulsos-page .header-content .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .avulsos-page .text-end.mb-4 {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .avulsos-page .text-end.mb-4 .btn {
+    width: 100%;
+    margin: 0 !important;
+  }
+}

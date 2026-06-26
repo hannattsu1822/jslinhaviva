@@ -337,18 +337,18 @@ function exibirResultados(dados) {
     const row = document.createElement("tr");
     row.className = "glass-table-row";
     row.innerHTML = `
-      <td>${item.id || "-"}</td>
-      <td>${item.numero_serie || "-"}</td>
-      <td>${item.potencia || "-"}</td>
-      <td>${item.marca || "-"}</td>
-      <td>${formatarData(item.data_formulario) || "-"}</td>
-      <td>${
+      <td data-label="ID">${item.id || "-"}</td>
+      <td data-label="Número de Série">${item.numero_serie || "-"}</td>
+      <td data-label="Potência (kVA)">${item.potencia || "-"}</td>
+      <td data-label="Marca">${item.marca || "-"}</td>
+      <td data-label="Data do Formulário">${formatarData(item.data_formulario) || "-"}</td>
+      <td data-label="Responsável Técnico">${
         item.nome_responsavel
           ? `${item.matricula_responsavel} - ${item.nome_responsavel}`
           : "-"
       }</td>
-      <td>${item.transformador_destinado || "Não informado"}</td>
-      <td>
+      <td data-label="Destinado">${item.transformador_destinado || "Não informado"}</td>
+      <td data-label="Ações">
         <div class="d-flex gap-2 justify-content-center">
           <button onclick="excluirTransformador('${
             item.id

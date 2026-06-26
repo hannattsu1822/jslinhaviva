@@ -277,16 +277,16 @@ document.addEventListener("DOMContentLoaded", () => {
         : "";
 
       tr.innerHTML = `
-          <td>${serv.id || "-"}</td>
-          <td>${serv.processo || "-"}</td>
-          <td>${serv.subestacao_sigla || "-"}</td>
-          <td><span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span></td>
-          <td>${dataPrevistaFormatada}</td>
-          <td>${serv.responsavel_nome || "-"}</td>
-          <td>${formatarNomes(serv.encarregados_itens_nomes)}</td>
-          <td class="text-center ${progressoClasse}">${progressoItens}</td>
-          <td class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
-          <td class="actions-column">
+          <td data-label="ID">${serv.id || "-"}</td>
+          <td data-label="Processo">${serv.processo || "-"}</td>
+          <td data-label="Subestação">${serv.subestacao_sigla || "-"}</td>
+          <td data-label="Prioridade"><span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span></td>
+          <td data-label="Data Prevista">${dataPrevistaFormatada}</td>
+          <td data-label="Responsável">${serv.responsavel_nome || "-"}</td>
+          <td data-label="Encarregado(s)">${formatarNomes(serv.encarregados_itens_nomes)}</td>
+          <td data-label="Progresso" class="text-center ${progressoClasse}">${progressoItens}</td>
+          <td data-label="Status" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
+          <td data-label="Ações" class="actions-column">
               <div class="actions-wrapper">
                   <button class="btn text-info btn-ver-detalhes" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
                   ${botoesAdmin}

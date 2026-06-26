@@ -1,3 +1,5 @@
+@import url("./subestacoes-base.css");
+
 :root {
   --color-primary: #005a9c;
   --color-primary-dark: #003e6b;
@@ -96,45 +98,6 @@ html {
   font-size: var(--font-size-root);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  font-family: var(--font-family-sans);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-base);
-  color: var(--text-color-body);
-  background-color: var(--bg-page);
-  margin: 0;
-}
-
-.container {
-  width: 95%;
-  max-width: 1400px;
-  margin: var(--space-6) auto;
-  padding: 0 var(--space-4);
-}
-
-header.page-header {
-  background-color: var(--bg-card);
-  padding: var(--space-5) var(--space-6);
-  margin-bottom: var(--space-6);
-  border-bottom: var(--border-width) solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  border-radius: var(--border-radius-lg);
-}
-
-header.page-header h1 {
-  color: var(--text-color-headings);
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-semibold);
-  display: flex;
-  align-items: center;
-}
-header.page-header .header-icon {
-  margin-right: var(--space-3);
-  font-size: 1.4em;
-  color: var(--color-primary);
 }
 
 section.card-section {
@@ -551,20 +514,6 @@ table.data-table .actions-column .btn-icon .delete-icon {
 }
 
 @media (max-width: 768px) {
-  .container {
-    width: 100%;
-    padding: 0 var(--space-3);
-    margin-top: var(--space-4);
-    margin-bottom: var(--space-4);
-  }
-  header.page-header {
-    border-radius: 0;
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-  }
-  header.page-header h1 {
-    font-size: 1.5rem;
-  }
   section.card-section {
     padding: var(--space-4);
     margin-bottom: var(--space-4);
@@ -629,9 +578,6 @@ table.data-table .actions-column .btn-icon .delete-icon {
   }
 }
 @media (max-width: 576px) {
-  header.page-header h1 {
-    font-size: 1.3rem;
-  }
   .btn {
     font-size: 0.85em;
     padding: var(--space-2) var(--space-3);

@@ -355,16 +355,16 @@ function atualizarTabela() {
       : "";
 
     tr.innerHTML = `
-            <td>${servico.id}</td>
-            <td>${servico.processo || "—"}</td>
-            <td>${servico.subestacao || "—"}</td>
-            <td>${servico.alimentador || "—"}</td>
-            <td>${servico.tipo_processo || "—"}</td>
-            <td>${dataPrevista}</td>
-            <td class="col-desligamento text-center">${desligamentoHtml}</td>
-            <td>${equipeHtml}</td>
-            <td>${podeAnexarAPR ? `<button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button>` : "—"}</td>
-            <td>
+            <td data-label="ID">${servico.id}</td>
+            <td data-label="Processo">${servico.processo || "—"}</td>
+            <td data-label="Subestação">${servico.subestacao || "—"}</td>
+            <td data-label="Alimentador">${servico.alimentador || "—"}</td>
+            <td data-label="Tipo">${servico.tipo_processo || "—"}</td>
+            <td data-label="Data Prevista">${dataPrevista}</td>
+            <td data-label="Desligamento" class="col-desligamento text-center">${desligamentoHtml}</td>
+            <td data-label="Equipe / Progresso">${equipeHtml}</td>
+            <td data-label="APR">${podeAnexarAPR ? `<button class="btn btn-sm btn-anexar w-100" onclick="abrirModalUploadAPR(${servico.id})"><span class="material-symbols-outlined">attach_file</span> Anexar</button>` : "—"}</td>
+            <td data-label="Ações">
                 <button class="btn btn-sm btn-detalhes w-100 mb-1" onclick="abrirDetalhes(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">visibility</span> Detalhes</button>
                 <button class="btn btn-sm btn-concluir w-100 mb-1" onclick="abrirModalConcluir(${servico.id})"><span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Concluir</button>
                 ${botoesEquipe}

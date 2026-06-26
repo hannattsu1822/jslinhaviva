@@ -1,18 +1,12 @@
-:root {
-  --primary-blue-trafos-filter: #2a5298;
+@import url("./trafos/trafos-base.css");
+
+.trafos-page--reformados-filtrar,
+.trafos-page--consultar-historicos {
+  --primary-blue-trafos-filter: var(--lv-primary, #1e56a0);
   --white-trafos-filter: #ffffff;
   --danger-trafos-filter: #dc3545;
   --light-gray-trafos-filter: #f8f9fa;
   --medium-gray-trafos-filter: #dee2e6;
-}
-
-.page-title-trafos-filter {
-  font-weight: 600;
-  color: var(--primary-blue-trafos-filter);
-  margin-bottom: 1.5rem;
-}
-.page-title-trafos-filter i {
-  margin-right: 0.75rem;
 }
 
 .filter-card-trafos,

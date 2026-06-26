@@ -107,19 +107,19 @@ function exibirResultados(inspecoes) {
   inspecoes.forEach((inspecao) => {
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${inspecao.id}</td>
-      <td>${inspecao.placa || "N/A"}</td>
-      <td>${inspecao.matricula_motorista || inspecao.matricula || "N/A"}</td>
-      <td>${
+      <td data-label="ID">${inspecao.id}</td>
+      <td data-label="Placa">${inspecao.placa || "N/A"}</td>
+      <td data-label="Matrícula">${inspecao.matricula_motorista || inspecao.matricula || "N/A"}</td>
+      <td data-label="Data">${
         inspecao.data_inspecao
           ? new Date(inspecao.data_inspecao).toLocaleDateString("pt-BR", {
               timeZone: "UTC",
             })
           : "N/A"
       }</td>
-      <td>${inspecao.km_atual || "N/A"}</td>
-      <td>${inspecao.horimetro || "N/A"}</td>
-      <td>
+      <td data-label="KM Atual">${inspecao.km_atual || "N/A"}</td>
+      <td data-label="Horímetro">${inspecao.horimetro || "N/A"}</td>
+      <td data-label="Relatório">
         <button onclick="window.navigateTo('/relatorio_publico_veiculos?id=${
           inspecao.id
         }')" 
@@ -127,7 +127,7 @@ function exibirResultados(inspecoes) {
           <i class="fas fa-file-alt"></i>
         </button>
       </td>
-      <td>
+      <td data-label="Ações" class="text-center">
         <div class="d-flex gap-1 justify-content-center">
           <button onclick="window.editarInspecao(${inspecao.id})" 
                   class="btn btn-sm btn-primary" title="Editar">

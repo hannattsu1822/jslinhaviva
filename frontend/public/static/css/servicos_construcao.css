@@ -1,0 +1,128 @@
+@import url("./gestao_servicos/servicos-base.css");
+
+.servicos-page--construcao .page-subtitle {
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+  color: var(--lv-text-muted);
+  font-size: 0.95rem;
+}
+
+.servicos-page--construcao .glass-card {
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-md);
+  box-shadow: var(--lv-shadow-sm);
+  overflow: hidden;
+}
+
+.servicos-page--construcao .filters-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lv-text);
+  margin-bottom: 1rem;
+}
+
+.servicos-page--construcao .filters-title i {
+  color: var(--lv-primary);
+  margin-right: 0.45rem;
+}
+
+.servicos-page--construcao .periodo-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.servicos-page--construcao .periodo-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--lv-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.servicos-page--construcao .table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.servicos-page--construcao .table-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.servicos-page--construcao .badge.bg-primary {
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-primary)) !important;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.servicos-page--construcao .status-concluido,
+.servicos-page--construcao .status-nao-concluido,
+.servicos-page--construcao .status-andamento {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.servicos-page--construcao .status-concluido {
+  color: #166534;
+  background: rgba(25, 135, 84, 0.12);
+}
+
+.servicos-page--construcao .status-nao-concluido {
+  color: #b42318;
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.servicos-page--construcao .status-andamento {
+  color: #075985;
+  background: rgba(13, 202, 240, 0.12);
+}
+
+.servicos-page--construcao .motivo-nao-concluido {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--lv-text-muted);
+  max-width: 240px;
+}
+
+.servicos-page--construcao .pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.25rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eef2f7;
+}
+
+.servicos-page--construcao .pagination-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .servicos-page--construcao .periodo-range {
+    grid-template-columns: 1fr;
+  }
+
+  .servicos-page--construcao .pagination-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -8,19 +8,25 @@
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet"
     />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="/static/css/logbox/relatorios.css" />
       <link rel="stylesheet" href="/shared/css/sidebar.css" />
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
-  <body>
+  <body class="noc-page noc-page--light noc-page--reports">
     <div id="sidebar-root"></div>
     <div class="main-content">
 <div class="report-page-container">
       <header class="page-header">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-2">
+          <div class="noc-subheader__badge">
+            <span class="material-icons" style="font-size:1rem">assessment</span>
+            Centro de Operações
+          </div>
+          <a href="/centro-operacoes" class="noc-btn noc-btn--ghost">
+            <span class="material-icons" style="font-size:1.1rem">arrow_back</span>
+            Voltar ao painel
+          </a>
+        </div>
         <h1>
           <span class="material-icons">assessment</span>
           Gerador de Relatórios

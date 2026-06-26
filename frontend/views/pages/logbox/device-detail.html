@@ -9,110 +9,32 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-    <style>
-        body { background-color: #f8f9fa; }
-        
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-            transition: transform 0.2s ease-in-out;
-        }
-        .card:hover { transform: translateY(-3px); }
-
-        .kpi-icon { font-size: 42px !important; margin-bottom: 8px; }
-        
-        .diag-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.9rem;
-        }
-        .diag-item:last-child { border-bottom: none; }
-        
-        .diag-label { 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            color: #6c757d; 
-            font-weight: 500; 
-        }
-        
-        .diag-value { 
-            font-family: monospace; 
-            background-color: #e9ecef; 
-            padding: 2px 8px; 
-            border-radius: 6px; 
-            color: #212529; 
-            font-weight: 600;
-        }
-
-        .live-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background-color: #198754;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
-        }
-
-        @keyframes flashUpdate {
-            0% { background-color: #cfe2ff; }
-            100% { background-color: white; }
-        }
-        .updated-anim { animation: flashUpdate 1s ease-out; }
-        
-        .material-symbols-outlined { vertical-align: middle; }
-
-        .fan-stat-box {
-            text-align: center;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        .fan-stat-value {
-            font-weight: bold;
-            color: #0d6efd;
-            font-size: 1.1rem;
-        }
-        .fan-stat-label {
-            font-size: 0.8rem;
-            color: #6c757d;
-            text-transform: uppercase;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/logbox/noc-device-detail.css" />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
-<body>
+<body class="noc-page noc-page--light noc-page--detail">
     <div id="sidebar-root"></div>
 
 <div class="main-content">
 <div class="container-fluid p-4">
-    
-    <div class="d-flex justify-content-between align-items-center mb-4">
+
+    <header class="noc-subheader">
         <div>
-            <div class="d-flex align-items-center gap-2 text-muted mb-1">
-                <span class="material-symbols-outlined">router</span>
-                <small class="text-uppercase fw-bold">Monitoramento em Tempo Real</small>
+            <div class="noc-subheader__badge">
+                <span class="material-symbols-outlined" style="font-size:1rem">router</span>
+                Monitoramento em tempo real
             </div>
-            <h1 class="h3 text-primary fw-bold mb-0"><%= device.local_tag %></h1>
-            <p class="text-muted mb-0">Serial Number: <strong><%= device.serial_number %></strong></p>
+            <h1 class="noc-subheader__title"><%= device.local_tag %></h1>
+            <p class="noc-subheader__meta">Serial Number: <strong><%= device.serial_number %></strong></p>
         </div>
-        <a href="/gerenciar-dispositivos" class="btn btn-outline-secondary d-flex align-items-center gap-2">
-            <span class="material-symbols-outlined">arrow_back</span> Voltar
-        </a>
-    </div>
+        <div class="noc-subheader__actions">
+            <a href="/centro-operacoes" class="noc-btn noc-btn--ghost">
+                <span class="material-symbols-outlined" style="font-size:1.1rem">arrow_back</span>
+                Voltar ao Centro de Operações
+            </a>
+        </div>
+    </header>
 
     <div class="row g-4 mb-4">
         <div class="col-xl-3 col-md-6">

@@ -1,0 +1,19 @@
+@import url("./fibra-base.css");
+
+.fibra-page--pontos .dataTables_wrapper .dataTables_filter input,
+.fibra-page--pontos .dataTables_wrapper .dataTables_length select {
+  border: 1.5px solid var(--lv-input-border);
+  border-radius: var(--lv-radius-sm);
+  padding: 0.4rem 0.65rem;
+}
+
+.fibra-page--pontos .dataTables_wrapper .dataTables_paginate .page-link {
+  border-radius: 8px;
+  color: var(--lv-primary);
+  font-weight: 600;
+}
+
+.fibra-page--pontos .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-primary));
+  border-color: var(--lv-primary);
+}

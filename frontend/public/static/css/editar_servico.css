@@ -1,3 +1,5 @@
+@import url("./gestao_servicos/servicos-base.css");
+
 /* public/static/css/editar_servico.css */
 :root {
   --cor-primaria-editar: #007bff;

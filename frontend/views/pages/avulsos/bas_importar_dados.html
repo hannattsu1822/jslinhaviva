@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Importar Dados para Processos BAS</title>
+    <title>Importar BAS | Avulsos | Linha Viva</title>
+    <meta name="theme-color" content="#0b1220" />
 
     <link
       rel="stylesheet"
@@ -19,24 +20,26 @@
       crossorigin="anonymous"
     />
 
-    <link
-      rel="stylesheet"
-      href="/static/css/components/bootstrap-overrides.css"
-    />
     <link rel="stylesheet" href="/shared/css/sidebar.css" />
     <link rel="stylesheet" href="/static/css/avulsos/bas_importar_dados.css" />
   </head>
-  <body>
+  <body class="avulsos-page avulsos-page--import">
     <div class="page-container">
       <div id="sidebar-root"></div>
 
       <main class="main-content">
         <header class="main-header">
           <div class="header-content">
-            <h1 class="page-title">
-              <i class="fa-solid fa-file-arrow-up"></i>
-              Importar Dados de Planilha
-            </h1>
+            <div>
+              <div class="avulsos-header__badge">
+                <i class="fa-solid fa-hand-sparkles"></i>
+                Avulsos
+              </div>
+              <h1 class="page-title">
+                <i class="fa-solid fa-file-arrow-up"></i>
+                Importar Dados de Planilha
+              </h1>
+            </div>
             <a href="/avulsos-dashboard" class="btn btn-secondary">
               <i class="fa-solid fa-arrow-left"></i>
               Voltar

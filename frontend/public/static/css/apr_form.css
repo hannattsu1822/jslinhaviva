@@ -1,3 +1,5 @@
+@import url("./gestao_servicos/servicos-base.css");
+
 @media print {
   body {
     font-size: 9pt; /* Reduzir um pouco para caber mais em A4 */

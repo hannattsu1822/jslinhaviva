@@ -1,15 +1,28 @@
-a,
-.btn,
-.card {
-  transition: none;
+@import url("./avulsos-base.css");
+
+.avulsos-page--import .import-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--lv-radius-md);
+  padding: 2rem 1.25rem;
+  text-align: center;
+  background: #f8fafc;
+  transition: border-color 0.2s, background 0.2s;
 }
 
-a:hover,
-.btn:hover {
-  text-decoration: none;
+.avulsos-page--import .import-dropzone:hover,
+.avulsos-page--import .import-dropzone.dragover {
+  border-color: var(--lv-accent);
+  background: rgba(56, 189, 248, 0.06);
 }
 
-.card:hover {
-  transform: none;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+.avulsos-page--import .import-dropzone i {
+  font-size: 2.5rem;
+  color: var(--lv-primary);
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 575.98px) {
+  .avulsos-page--import .card-body.p-4.p-md-5 {
+    padding: 1.15rem !important;
+  }
 }
