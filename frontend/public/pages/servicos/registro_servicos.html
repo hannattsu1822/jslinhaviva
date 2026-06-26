@@ -312,10 +312,17 @@
           </div>
           <div class="row form-row">
             <div class="col-12">
-              <div class="form-group">
-                <label class="form-label"
-                  >Anexos (Máx. 5 arquivos, 10MB cada)</label
+              <h3 class="form-section-title">
+                <i class="fas fa-paperclip me-2"></i>Anexos
+              </h3>
+              <div class="form-group mb-0">
+                <label class="form-label" for="anexos"
+                  >Documentos e imagens (opcional)</label
                 >
+                <p class="anexos-helper-text">
+                  Máximo de 5 arquivos, 10MB cada. Formatos aceitos: PDF,
+                  imagens, Excel e CSV.
+                </p>
                 <div class="file-upload">
                   <input
                     type="file"
@@ -325,12 +332,21 @@
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png,.xls,.xlsx,.csv"
                   />
-                  <div class="upload-area" id="uploadArea">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Arraste ou clique para selecionar os arquivos</p>
-                    <small>Formatos: PDF, Imagens, Excel, CSV</small>
+                  <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-label="Anexar arquivos ao serviço">
+                    <div class="upload-area__icon">
+                      <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <p class="upload-area__title">
+                      Arraste os arquivos aqui ou clique para anexar
+                    </p>
+                    <button type="button" class="btn btn-primary upload-area__btn">
+                      <i class="fas fa-paperclip me-2"></i>Procurar arquivos
+                    </button>
+                    <small class="upload-area__hint"
+                      >Você também pode soltar arquivos nesta área</small
+                    >
                   </div>
-                  <div id="arquivos-selecionados" class="mt-2"></div>
+                  <div id="arquivos-selecionados" class="arquivos-selecionados"></div>
                 </div>
               </div>
             </div>

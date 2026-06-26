@@ -106,6 +106,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (uploadArea && fileInputAnexos) {
     uploadArea.addEventListener("click", () => fileInputAnexos.click());
+    uploadArea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        fileInputAnexos.click();
+      }
+    });
 
     uploadArea.addEventListener("dragover", (e) => {
       e.preventDefault();
