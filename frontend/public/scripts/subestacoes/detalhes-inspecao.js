@@ -24,10 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "anexosEscritorioContainer"
   );
 
-  const imageLightboxEl = document.getElementById("imageLightbox");
-  const lightboxImage = document.getElementById("lightboxImage");
-  const lightboxCloseBtn = imageLightboxEl.querySelector(".btn-close-lightbox");
-
   const modalTermografia = document.getElementById("modalTermografia");
   const btnAdicionarAnexoTermografia = document.getElementById(
     "btnAdicionarAnexoTermografia"
@@ -51,24 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
       pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
     return id && !isNaN(parseInt(id, 10)) ? parseInt(id, 10) : null;
   }
-
-  function showLightbox(imageUrl) {
-    if (!imageLightboxEl || !lightboxImage) return;
-    lightboxImage.src = imageUrl;
-    imageLightboxEl.classList.remove("hidden");
-  }
-
-  function hideLightbox() {
-    if (!imageLightboxEl) return;
-    imageLightboxEl.classList.add("hidden");
-    lightboxImage.src = "";
-  }
-
-  imageLightboxEl.addEventListener("click", (e) => {
-    if (e.target === imageLightboxEl) hideLightbox();
-  });
-  if (lightboxCloseBtn)
-    lightboxCloseBtn.addEventListener("click", hideLightbox);
 
   async function fetchData(url, options = {}) {
     try {
@@ -98,12 +76,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderAnexos(anexos, title) {
-    if (!anexos || anexos.length === 0) return "";
+    const validos = (anexos || []).filter((a) => a && a.caminho_servidor);
+    if (!validos.length) return "";
     let anexosHtml = title ? `<h4 class="anexos-title">${title}</h4>` : "";
     anexosHtml += `<div class="anexos-container">`;
-    anexos.forEach((anexo) => {
-      if (!anexo || !anexo.caminho_servidor) return;
-
+    validos.forEach((anexo, index) => {
       const isImage =
         anexo.caminho_servidor.match(/\.(jpeg|jpg|gif|png|webp|heic|heif)$/i) !=
         null;
@@ -111,19 +88,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (isImage) {
         anexosHtml += `
-          <div class="anexo-item" data-src="${anexo.caminho_servidor}" title="${anexoTitle}">
+          <button type="button" class="anexo-item" data-galeria-index="${index}" data-galeria-url="${anexo.caminho_servidor}" data-galeria-nome="${anexoTitle}" title="${anexoTitle}">
             <img src="${anexo.caminho_servidor}" alt="${anexo.nome_original}" loading="lazy">
-          </div>`;
+          </button>`;
       } else {
         anexosHtml += `
-          <a href="${anexo.caminho_servidor}" target="_blank" class="anexo-item" title="${anexoTitle}">
+          <button type="button" class="anexo-item" data-galeria-index="${index}" data-galeria-url="${anexo.caminho_servidor}" data-galeria-nome="${anexoTitle}" title="${anexoTitle}">
             <span class="material-symbols-outlined">description</span>
             <span class="anexo-item-title">${anexo.nome_original}</span>
-          </a>`;
+          </button>`;
       }
     });
     anexosHtml += `</div>`;
     return anexosHtml;
+  }
+
+  function bindGaleriasNoContainer(root) {
+    if (!root || !window.AnexoGaleria) return;
+    root.querySelectorAll(".anexos-container").forEach((container) => {
+      window.AnexoGaleria.bindContainer(container);
+    });
   }
 
   function renderInfoGerais(inspecaoInfo) {
@@ -410,11 +394,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "folder_managed"
     );
 
-    detalhesContainer
-      .querySelectorAll(".anexo-item[data-src]")
-      .forEach((img) => {
-        img.addEventListener("click", () => showLightbox(img.dataset.src));
-      });
+    bindGaleriasNoContainer(detalhesContainer);
 
     detalhesContainer.addEventListener("click", (e) => {
       const btn = e.target.closest(".btn-add-termografia");

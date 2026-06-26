@@ -81,16 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "templateHistoricoItem"
   );
 
-  const imageLightboxDetalhesEl = document.getElementById(
-    "imageLightboxDetalhes"
-  );
-  const lightboxImageDetalhesContent = document.getElementById(
-    "lightboxImageDetalhesContent"
-  );
-  const lightboxCloseBtn = imageLightboxDetalhesEl.querySelector(
-    ".btn-close-lightbox"
-  );
-
   let serviceDataOriginal = null;
   let serviceDataWorkingCopy = null;
   let itensParaDeletar = new Set();
@@ -190,19 +180,6 @@ document.addEventListener("DOMContentLoaded", () => {
         suggestionsDiv.innerHTML = "";
       }
     });
-  }
-
-  function openImageLightbox(imageUrl) {
-    if (lightboxImageDetalhesContent && imageLightboxDetalhesEl) {
-      lightboxImageDetalhesContent.src = imageUrl;
-      imageLightboxDetalhesEl.classList.remove("hidden");
-    }
-  }
-
-  function hideLightbox() {
-    if (imageLightboxDetalhesEl) {
-      imageLightboxDetalhesEl.classList.add("hidden");
-    }
   }
 
   function entrarModoEdicao() {
@@ -440,7 +417,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function renderAnexo(anexoData, isNewFile = false) {
+  function renderAnexo(anexoData, isNewFile = false, galeriaIndex = null) {
     const clone = templateAnexoCard.content.cloneNode(true);
     const anexoCard = clone.querySelector(".anexo-preview-card");
     const link = anexoCard.querySelector(".anexo-link");
@@ -464,19 +441,23 @@ document.addEventListener("DOMContentLoaded", () => {
       anexoCard.dataset.anexoId = anexoData.id;
       fileName.textContent = anexoData.nome_original;
       link.href = anexoData.caminho_servidor;
+      link.removeAttribute("target");
+      if (galeriaIndex !== null) {
+        link.dataset.galeriaIndex = galeriaIndex;
+        link.dataset.galeriaUrl = anexoData.caminho_servidor;
+        link.dataset.galeriaNome = anexoData.nome_original;
+        if (anexoData.tipo_mime) link.dataset.galeriaTipo = anexoData.tipo_mime;
+      }
       const isImage =
         anexoData.caminho_servidor &&
-        anexoData.caminho_servidor.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i);
+        (anexoData.tipo_mime?.startsWith("image/") ||
+          anexoData.caminho_servidor.match(
+            /\.(jpe?g|png|gif|webp|heic|heif)$/i
+          ));
       if (isImage) {
         imgPreview.src = anexoData.caminho_servidor;
         imgPreview.classList.remove("hidden");
         fileIcon.classList.add("hidden");
-        link.addEventListener("click", (e) => {
-          if (!e.target.classList.contains("btn-delete-anexo")) {
-            e.preventDefault();
-            openImageLightbox(anexoData.caminho_servidor);
-          }
-        });
       }
     }
     return { anexoCard, btnDeleteAnexo };
@@ -486,8 +467,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isEditMode) container.innerHTML = "";
 
     if (anexos) {
-      anexos.forEach((anexo) => {
-        const { anexoCard, btnDeleteAnexo } = renderAnexo(anexo, false);
+      anexos.forEach((anexo, index) => {
+        const { anexoCard, btnDeleteAnexo } = renderAnexo(anexo, false, index);
         if (isEditMode) {
           btnDeleteAnexo.classList.remove("hidden");
         }
@@ -509,6 +490,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         container.appendChild(anexoCard);
       });
+      if (anexos.length > 0) {
+        window.AnexoGaleria.bindContainer(container, anexos);
+      }
     }
 
     const novosAnexos = novosAnexosMap.get(parentId) || [];
@@ -697,17 +681,6 @@ document.addEventListener("DOMContentLoaded", () => {
         '<span class="material-symbols-outlined">save</span> Salvar';
     }
   });
-
-  if (imageLightboxDetalhesEl) {
-    imageLightboxDetalhesEl.addEventListener("click", (e) => {
-      if (e.target === imageLightboxDetalhesEl) {
-        hideLightbox();
-      }
-    });
-  }
-  if (lightboxCloseBtn) {
-    lightboxCloseBtn.addEventListener("click", hideLightbox);
-  }
 
   async function init() {
     await popularSelectsEdicao();

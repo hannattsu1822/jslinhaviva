@@ -1,0 +1,179 @@
+.anexo-galeria-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.anexo-galeria-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.anexo-galeria-panel {
+  position: relative;
+  width: min(96vw, 1100px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.anexo-galeria-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #f8fafc;
+}
+
+.anexo-galeria-toolbar .anexo-galeria-nome {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.anexo-galeria-contador {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.anexo-galeria-fechar {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.anexo-galeria-fechar:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.anexo-galeria-stage {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.anexo-galeria-stage img,
+.anexo-galeria-stage iframe {
+  max-width: 100%;
+  max-height: calc(92vh - 8rem);
+  object-fit: contain;
+  border: none;
+  background: #0f172a;
+}
+
+.anexo-galeria-arquivo {
+  text-align: center;
+  color: #f8fafc;
+  padding: 2rem;
+}
+
+.anexo-galeria-arquivo .material-symbols-outlined {
+  font-size: 4rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.85;
+}
+
+.anexo-galeria-arquivo p {
+  margin: 0 0 1rem;
+  word-break: break-word;
+}
+
+.anexo-galeria-arquivo .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.anexo-galeria-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(15, 23, 42, 0.65);
+  color: #fff;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  line-height: 1;
+  transition: background 0.2s;
+}
+
+.anexo-galeria-nav:hover:not(:disabled) {
+  background: rgba(30, 86, 160, 0.9);
+}
+
+.anexo-galeria-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.anexo-galeria-nav--prev {
+  left: 0.75rem;
+}
+
+.anexo-galeria-nav--next {
+  right: 0.75rem;
+}
+
+button.anexo-preview-card,
+button.anexo-item {
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: inherit;
+  color: inherit;
+}
+
+button.anexo-preview-card {
+  display: block;
+  width: 100%;
+}
+
+@media (max-width: 575.98px) {
+  .anexo-galeria-nav {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.4rem;
+  }
+
+  .anexo-galeria-nav--prev {
+    left: 0.35rem;
+  }
+
+  .anexo-galeria-nav--next {
+    right: 0.35rem;
+  }
+}

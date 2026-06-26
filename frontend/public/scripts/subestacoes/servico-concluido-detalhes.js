@@ -35,16 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const btnImprimirPagina = document.getElementById("btnImprimirPagina");
 
-  const imageLightboxDetalhesEl = document.getElementById(
-    "imageLightboxDetalhes"
-  );
-  const lightboxImageDetalhesContent = document.getElementById(
-    "lightboxImageDetalhesContent"
-  );
-  const lightboxCloseBtn = imageLightboxDetalhesEl.querySelector(
-    ".btn-close-lightbox"
-  );
-
   function getServicoIdFromUrl() {
     const pathParts = window.location.pathname.split("/");
     const id = pathParts[pathParts.length - 2];
@@ -52,30 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return parseInt(id);
     }
     return null;
-  }
-
-  function openImageLightbox(imageUrl) {
-    if (lightboxImageDetalhesContent && imageLightboxDetalhesEl) {
-      lightboxImageDetalhesContent.src = imageUrl;
-      imageLightboxDetalhesEl.classList.remove("hidden");
-    }
-  }
-
-  function hideLightbox() {
-    if (imageLightboxDetalhesEl) {
-      imageLightboxDetalhesEl.classList.add("hidden");
-    }
-  }
-
-  if (imageLightboxDetalhesEl) {
-    imageLightboxDetalhesEl.addEventListener("click", (e) => {
-      if (e.target === imageLightboxDetalhesEl) {
-        hideLightbox();
-      }
-    });
-  }
-  if (lightboxCloseBtn) {
-    lightboxCloseBtn.addEventListener("click", hideLightbox);
   }
 
   async function fetchData(url, options = {}) {
@@ -120,31 +86,33 @@ document.addEventListener("DOMContentLoaded", () => {
     return "Não informado";
   }
 
-  function createAnexoCard(anexo) {
-    const cardLink = document.createElement("a");
-    cardLink.className = "anexo-preview-card";
-    cardLink.href = anexo.caminho_servidor;
-    cardLink.target = "_blank";
-    cardLink.title = `Abrir ${anexo.nome_original}`;
+  function createAnexoCard(anexo, index) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "anexo-preview-card";
+    card.title = `Ver ${anexo.nome_original}`;
+    card.dataset.galeriaIndex = index;
+    card.dataset.galeriaUrl = anexo.caminho_servidor;
+    card.dataset.galeriaNome = anexo.nome_original;
+    if (anexo.tipo_mime) card.dataset.galeriaTipo = anexo.tipo_mime;
 
-    const isImage = anexo.tipo_mime && anexo.tipo_mime.startsWith("image/");
+    const isImage =
+      (anexo.tipo_mime && anexo.tipo_mime.startsWith("image/")) ||
+      (anexo.caminho_servidor &&
+        anexo.caminho_servidor.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i));
 
     let thumbnailHtml = `<span class="material-symbols-outlined file-icon">description</span>`;
     if (isImage) {
       thumbnailHtml = `<img src="${anexo.caminho_servidor}" alt="Preview de ${anexo.nome_original}" class="anexo-preview-img" />`;
-      cardLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        openImageLightbox(anexo.caminho_servidor);
-      });
     }
 
-    cardLink.innerHTML = `
+    card.innerHTML = `
       <div class="anexo-thumbnail">${thumbnailHtml}</div>
       <div class="file-info">
           <span class="file-name">${anexo.nome_original}</span>
       </div>
     `;
-    return cardLink;
+    return card;
   }
 
   async function carregarDetalhesDoServico() {
@@ -224,10 +192,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (listaAnexosServicoPagina && secaoAnexosServico) {
         listaAnexosServicoPagina.innerHTML = "";
         if (servico.anexos && servico.anexos.length > 0) {
-          servico.anexos.forEach((anexo) => {
-            const card = createAnexoCard(anexo);
+          servico.anexos.forEach((anexo, index) => {
+            const card = createAnexoCard(anexo, index);
             listaAnexosServicoPagina.appendChild(card);
           });
+          window.AnexoGaleria.bindContainer(
+            listaAnexosServicoPagina,
+            servico.anexos
+          );
           secaoAnexosServico.classList.remove("hidden");
         }
       }
@@ -316,34 +288,13 @@ document.addEventListener("DOMContentLoaded", () => {
         anexosSection.appendChild(title);
 
         const container = document.createElement("div");
-        container.className = "item-anexos-container";
+        container.className = "item-anexos-container anexos-preview-container";
 
-        item.anexos.forEach((anexo) => {
-          const caminho = anexo.caminho_servidor || "";
-          const isImage =
-            caminho.match(/\.(jpe?g|png|gif|webp|heic|heif)$/i) != null;
-
-          if (isImage) {
-            const img = document.createElement("img");
-            img.src = caminho;
-            img.alt = anexo.nome_original;
-            img.className = "item-anexo-img";
-            img.title = `Clique para ampliar: ${anexo.nome_original}`;
-            img.addEventListener("click", () => openImageLightbox(caminho));
-            container.appendChild(img);
-          } else {
-            const link = document.createElement("a");
-            link.href = caminho;
-            link.target = "_blank";
-            link.className = "item-anexo-file";
-            link.title = `Abrir: ${anexo.nome_original}`;
-            link.innerHTML = `
-                    <span class="material-symbols-outlined">description</span>
-                    <span class="item-anexo-file-name">${anexo.nome_original}</span>
-                `;
-            container.appendChild(link);
-          }
+        item.anexos.forEach((anexo, index) => {
+          const card = createAnexoCard(anexo, index);
+          container.appendChild(card);
         });
+        window.AnexoGaleria.bindContainer(container, item.anexos);
 
         anexosSection.appendChild(container);
         itemCard.appendChild(anexosSection);
