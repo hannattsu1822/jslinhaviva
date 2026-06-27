@@ -33,7 +33,10 @@ const server = createReleTcpServer({
   },
 });
 
-void server.start();
+void server.start().catch((err: Error) => {
+  console.error("[TCP] Falha ao iniciar gateway:", err.message);
+  process.exit(1);
+});
 
 process.on("SIGINT", () => {
   console.log("[Shutdown] Encerrando...");

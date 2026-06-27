@@ -11,6 +11,9 @@ const STARTUP_DELAY_PORT_5001_MS = 10_000;
 const POST_LOGIN_DELAY_MS = 4_000;
 const SHUTDOWN_DELAY_MS = 1_000;
 const CACHE_RELOAD_INTERVAL_MS = 60_000;
+const BIND_RETRY_ATTEMPTS = 10;
+const BIND_RETRY_DELAY_MS = 2_000;
+/** Porta dedicada a relés legacy por cabo (ex.: TBB-02T1 via listen_port no DB). */
 const LEGACY_DIRECT_PORT = 5001;
 
 export interface ReleTcpServerConfig {
@@ -34,11 +37,75 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
   const deviceCache = new Map<string, ReleDeviceInfo>();
   const portToDeviceMap = new Map<number, ReleDeviceInfo>();
   const legacyServers = new Map<number, net.Server>();
-  const portsBindFailed = new Set<number>();
   const activeSockets = new Set<ReleSocket>();
 
   let mqttConnected = false;
   let cacheReloadTimer: NodeJS.Timeout | undefined;
+  let isShuttingDown = false;
+
+  function closeServer(server: net.Server): Promise<void> {
+    return new Promise((resolve) => {
+      server.close(() => resolve());
+    });
+  }
+
+  function listenWithRetry(
+    server: net.Server,
+    port: number,
+    label: string
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let attempt = 0;
+
+      const tryListen = (): void => {
+        attempt += 1;
+
+        const onListening = (): void => {
+          cleanup();
+          console.log(`[TCP] Porta ${port} aberta — ${label}`);
+          resolve();
+        };
+
+        const onError = (err: NodeJS.ErrnoException): void => {
+          cleanup();
+
+          if (err.code === "EADDRINUSE" && attempt < BIND_RETRY_ATTEMPTS) {
+            console.warn(
+              `[TCP] Porta ${port} (${label}) ocupada — tentativa ${attempt}/${BIND_RETRY_ATTEMPTS}, ` +
+                `aguardando ${BIND_RETRY_DELAY_MS}ms (normal apos pm2 restart)...`
+            );
+            server.close(() => {
+              setTimeout(tryListen, BIND_RETRY_DELAY_MS);
+            });
+            return;
+          }
+
+          if (err.code === "EADDRINUSE") {
+            reject(
+              new Error(
+                `Porta ${port} (${label}) ainda ocupada apos ${BIND_RETRY_ATTEMPTS} tentativas. ` +
+                  `Execute: pm2 delete rele-tcp && sudo ss -tlnp | grep :${port}`
+              )
+            );
+            return;
+          }
+
+          reject(err);
+        };
+
+        const cleanup = (): void => {
+          server.removeListener("listening", onListening);
+          server.removeListener("error", onError);
+        };
+
+        server.once("listening", onListening);
+        server.once("error", onError);
+        server.listen(port, config.bindHost);
+      };
+
+      tryListen();
+    });
+  }
 
   mqttClient.on("connect", () => {
     mqttConnected = true;
@@ -58,7 +125,7 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
     console.error("[MQTT] Erro:", err.message);
   });
 
-  async function loadDeviceCaches(): Promise<void> {
+  async function refreshDeviceCaches(): Promise<void> {
     try {
       const [rows] = (await promisePool.query(
         "SELECT id, nome_rele, custom_id, listen_port FROM dispositivos_reles WHERE ativo = 1"
@@ -82,15 +149,64 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
       }
 
       console.log(
-        `[Cache] ${deviceCache.size} Smart (ID) | ${portToDeviceMap.size} Legacy (Porta).`
+        `[Cache] ${deviceCache.size} Smart/WiFi (porta ${config.tcpPort}) | ${portToDeviceMap.size} Legacy/cabo.`
       );
-
-      for (const listenPort of portToDeviceMap.keys()) {
-        createLegacyServer(listenPort);
-      }
     } catch (error) {
       const err = error as Error;
       console.error("[Cache] Erro ao carregar dispositivos:", err.message);
+    }
+  }
+
+  async function bindLegacyPort(listenPort: number): Promise<void> {
+    if (legacyServers.has(listenPort)) {
+      return;
+    }
+
+    const deviceInfo = portToDeviceMap.get(listenPort);
+    if (!deviceInfo) {
+      console.warn(`[TCP] Porta ${listenPort} sem dispositivo no cache — ignorada.`);
+      return;
+    }
+
+    const modeLabel =
+      listenPort === LEGACY_DIRECT_PORT
+        ? `legacy/cabo ${deviceInfo.deviceId}`
+        : `legacy ${deviceInfo.deviceId}`;
+
+    const legacyServer = net.createServer((rawSocket) => {
+      const socket = rawSocket as ReleSocket;
+      socket.rele_id_db = deviceInfo.rele_id_db;
+      socket.deviceId = deviceInfo.deviceId;
+
+      setupSocketLogic(socket);
+
+      if (listenPort === LEGACY_DIRECT_PORT) {
+        console.log(`[TCP] ${deviceInfo.deviceId} conectou na porta ${LEGACY_DIRECT_PORT} (modo cabo).`);
+        setTimeout(() => {
+          socket.state = "IDLE";
+          socket.startPollingCycle();
+          if (socket.pollTimer) {
+            clearInterval(socket.pollTimer);
+          }
+          socket.pollTimer = setInterval(socket.startPollingCycle, POLL_INTERVAL_MS);
+          socket.startKeepalive();
+        }, STARTUP_DELAY_PORT_5001_MS);
+      } else {
+        setTimeout(() => {
+          socket.state = "AWAITING_PASSWORD_PROMPT";
+          socket.write("\r\n");
+          setTimeout(() => socket.write("ACC\r\n"), 500);
+        }, INITIAL_CONNECTION_DELAY_MS);
+      }
+    });
+
+    await listenWithRetry(legacyServer, listenPort, modeLabel);
+    legacyServers.set(listenPort, legacyServer);
+  }
+
+  async function bindAllLegacyPorts(): Promise<void> {
+    for (const listenPort of portToDeviceMap.keys()) {
+      await bindLegacyPort(listenPort);
     }
   }
 
@@ -326,88 +442,34 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
     setupSocketLogic(socket);
   });
 
-  function handleListenError(port: number, label: string, err: NodeJS.ErrnoException): void {
-    if (err.code === "EADDRINUSE") {
-      portsBindFailed.add(port);
-      console.error(
-        `[TCP] Porta ${port} (${label}) ja em uso. Mate o processo antigo: ` +
-          `pm2 list | grep rele && sudo ss -tlnp | grep :${port}`
-      );
-      return;
-    }
-    console.error(`[TCP] Erro ao abrir porta ${port} (${label}):`, err.message);
-  }
-
-  function createLegacyServer(listenPort: number): void {
-    if (legacyServers.has(listenPort) || portsBindFailed.has(listenPort)) {
-      return;
-    }
-
-    const deviceInfo = portToDeviceMap.get(listenPort);
-    if (!deviceInfo) {
-      console.warn(`[TCP] Porta ${listenPort} sem dispositivo no cache — ignorada.`);
-      return;
-    }
-
-    const legacyServer = net.createServer((rawSocket) => {
-      const socket = rawSocket as ReleSocket;
-      socket.rele_id_db = deviceInfo.rele_id_db;
-      socket.deviceId = deviceInfo.deviceId;
-
-      setupSocketLogic(socket);
-
-      if (listenPort === LEGACY_DIRECT_PORT) {
-        console.log(`[TCP] ${deviceInfo.deviceId} (Porta ${LEGACY_DIRECT_PORT}) - Modo Direto.`);
-        setTimeout(() => {
-          socket.state = "IDLE";
-          socket.startPollingCycle();
-          if (socket.pollTimer) {
-            clearInterval(socket.pollTimer);
-          }
-          socket.pollTimer = setInterval(socket.startPollingCycle, POLL_INTERVAL_MS);
-          socket.startKeepalive();
-        }, STARTUP_DELAY_PORT_5001_MS);
-      } else {
-        setTimeout(() => {
-          socket.state = "AWAITING_PASSWORD_PROMPT";
-          socket.write("\r\n");
-          setTimeout(() => socket.write("ACC\r\n"), 500);
-        }, INITIAL_CONNECTION_DELAY_MS);
-      }
-    });
-
-    legacyServer.once("listening", () => {
-      legacyServers.set(listenPort, legacyServer);
-      portsBindFailed.delete(listenPort);
-      console.log(`[TCP] Porta ${listenPort} aberta para ${deviceInfo.deviceId}`);
-    });
-
-    legacyServer.on("error", (err: NodeJS.ErrnoException) => {
-      handleListenError(listenPort, deviceInfo.deviceId, err);
-    });
-
-    legacyServer.listen(listenPort, config.bindHost);
-  }
-
   async function start(): Promise<void> {
-    await loadDeviceCaches();
+    await refreshDeviceCaches();
+    await bindAllLegacyPorts();
+    await listenWithRetry(mainServer, config.tcpPort, `main WiFi/smart (porta ${config.tcpPort})`);
 
     cacheReloadTimer = setInterval(() => {
-      void loadDeviceCaches();
+      void (async () => {
+        await refreshDeviceCaches();
+        for (const listenPort of portToDeviceMap.keys()) {
+          if (!legacyServers.has(listenPort)) {
+            try {
+              await bindLegacyPort(listenPort);
+            } catch (err) {
+              const error = err as Error;
+              console.error(`[TCP] Falha ao abrir porta legacy ${listenPort}:`, error.message);
+            }
+          }
+        }
+      })();
     }, CACHE_RELOAD_INTERVAL_MS);
-
-    mainServer.once("listening", () => {
-      console.log(`[TCP] Main Server na porta ${config.tcpPort} (${config.bindHost})`);
-    });
-
-    mainServer.on("error", (err: NodeJS.ErrnoException) => {
-      handleListenError(config.tcpPort, "main", err);
-    });
-
-    mainServer.listen(config.tcpPort, config.bindHost);
   }
 
   async function shutdown(): Promise<void> {
+    if (isShuttingDown) {
+      return;
+    }
+    isShuttingDown = true;
+
     if (cacheReloadTimer) {
       clearInterval(cacheReloadTimer);
     }
@@ -422,15 +484,17 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
       setTimeout(resolve, SHUTDOWN_DELAY_MS);
     });
 
-    for (const socket of activeSockets) {
+    for (const socket of [...activeSockets]) {
       socket.destroy();
     }
 
-    mainServer.close();
-    legacyServers.forEach((server) => server.close());
-    mqttClient.end();
+    const closeJobs: Promise<void>[] = [closeServer(mainServer)];
+    legacyServers.forEach((server) => closeJobs.push(closeServer(server)));
+    await Promise.all(closeJobs);
+
+    mqttClient.end(true);
     await promisePool.end();
   }
 
-  return { start, shutdown, reloadCaches: loadDeviceCaches };
+  return { start, shutdown, reloadCaches: refreshDeviceCaches };
 }
