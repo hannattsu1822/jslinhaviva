@@ -1,14 +1,24 @@
-const { promisePool } = require("../../infrastructure/database");
-const {
+import { promisePool } from "../../infrastructure/database";
+import {
   extrairTemperaturaPayload,
   analisarEstadoVentilacao,
   validarTemperatura,
-} = require("../rules/validation");
-const { registrarLeituraRecebida } = require("./connectionHistory");
+} from "../rules/validation";
+import { registrarLeituraRecebida } from "./connectionHistory";
+import type { LogboxPayload } from "../types";
 
-async function processarNovaLeitura(serialNumber, payload) {
+interface VentilationEventRow {
+  id: number;
+  timestamp_inicio: Date | string;
+}
+
+export async function processarNovaLeitura(
+  serialNumber: string,
+  payload: LogboxPayload | string
+): Promise<{ success: true }> {
   try {
-    const payloadString = typeof payload === "object" ? JSON.stringify(payload) : payload;
+    const payloadString =
+      typeof payload === "object" ? JSON.stringify(payload) : payload;
     const temperatura = extrairTemperaturaPayload(payload);
 
     await gerenciarLogicaVentilacao(serialNumber, temperatura);
@@ -32,14 +42,17 @@ async function processarNovaLeitura(serialNumber, payload) {
   }
 }
 
-async function gerenciarLogicaVentilacao(serialNumber, temperatura) {
+async function gerenciarLogicaVentilacao(
+  serialNumber: string,
+  temperatura: number | null
+): Promise<void> {
   const validacao = validarTemperatura(temperatura);
   if (!validacao.valid) return;
 
-  const [rows] = await promisePool.query(
+  const [rows] = (await promisePool.query(
     "SELECT id, timestamp_inicio FROM historico_ventilacao WHERE serial_number = ? AND timestamp_fim IS NULL ORDER BY id DESC LIMIT 1",
     [serialNumber]
-  );
+  )) as [VentilationEventRow[], unknown];
 
   const eventoAberto = rows[0];
   const estadoAtual = !!eventoAberto;
@@ -58,7 +71,7 @@ async function gerenciarLogicaVentilacao(serialNumber, temperatura) {
   if (eventoAberto) {
     const fim = new Date();
     const inicio = new Date(eventoAberto.timestamp_inicio);
-    const duracao = (fim - inicio) / 1000;
+    const duracao = (fim.getTime() - inicio.getTime()) / 1000;
 
     await promisePool.query(
       "UPDATE historico_ventilacao SET timestamp_fim = ?, duracao_segundos = ? WHERE id = ?",
@@ -66,7 +79,3 @@ async function gerenciarLogicaVentilacao(serialNumber, temperatura) {
     );
   }
 }
-
-module.exports = {
-  processarNovaLeitura,
-};

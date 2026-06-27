@@ -4,10 +4,11 @@
   "description": "Sistema de gest\u00e3o de infraestrutura el\u00e9trica - Linhaviva",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "tsx src/server.js",
     "start:rele-tcp": "node src/gateways/rele_tcp_server.js",
-    "dev": "nodemon src/server.js",
-    "start:cluster": "pm2 start src/server.js -i max --name jslinhaviva",
+    "dev": "nodemon --exec tsx src/server.js",
+    "typecheck:telemetry": "tsc -p tsconfig.telemetry.json",
+    "start:cluster": "pm2 start src/server.js -i max --name jslinhaviva --interpreter tsx",
     "start:api": "node scripts/start-api-only.js",
     "export:fibra": "node scripts/export-fibra-pontos.js",
     "generate:pwa-icons": "node scripts/generate-pwa-icons.js",
@@ -37,10 +38,14 @@
     "playwright": "^1.61.0",
     "proj4": "^2.20.9",
     "web-push": "^3.6.7",
-    "ws": "^8.17.1"
+    "ws": "^8.17.1",
+    "tsx": "^4.19.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@types/node": "^22.15.3",
+    "@types/ws": "^8.18.1",
+    "nodemon": "^3.0.2",
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=18.0.0"

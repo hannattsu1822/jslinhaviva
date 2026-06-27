@@ -1,13 +1,18 @@
-const mqtt = require("mqtt");
-const logger = require("../../config/logger");
-const { promisePool } = require("../../infrastructure/database");
-const { sanitizarDadosLeitura } = require("../rules/validation");
-const { processarNovaLeitura } = require("../ingest/logbox.ingest");
-const { broadcastToClients } = require("./websocket.broadcast");
-const { MQTT_BROKER_DEFAULT, MQTT_TOPICS } = require("../constants");
+import mqtt from "mqtt";
+import type { WebSocketServer } from "ws";
+import logger from "../../config/logger";
+import { promisePool } from "../../infrastructure/database";
+import { sanitizarDadosLeitura } from "../rules/validation";
+import { processarNovaLeitura } from "../ingest/logbox.ingest";
+import { broadcastToClients } from "./websocket.broadcast";
+import { MQTT_BROKER_DEFAULT, MQTT_TOPICS } from "../constants";
+import type { LogboxPayload, ReleMqttPayload } from "../types";
 
-async function salvarLeituraRele(dados, wss) {
-  if (!dados || !dados.rele_id || !dados.dados) {
+async function salvarLeituraRele(
+  dados: ReleMqttPayload,
+  wss: WebSocketServer | undefined
+): Promise<void> {
+  if (!dados?.rele_id || !dados?.dados) {
     logger.error("[MQTT] Dados incompletos para relé.");
     return;
   }
@@ -25,11 +30,16 @@ async function salvarLeituraRele(dados, wss) {
       dados: { rele_id, device_id, timestamp, ...dadosMedidos },
     });
   } catch (error) {
-    logger.error(`[MQTT] Erro ao processar leitura do relé: ${error.message}`);
+    const err = error as Error;
+    logger.error(`[MQTT] Erro ao processar leitura do relé: ${err.message}`);
   }
 }
 
-async function salvarLeituraLogBox(serialNumber, dados, wss) {
+async function salvarLeituraLogBox(
+  serialNumber: string,
+  dados: LogboxPayload,
+  wss: WebSocketServer | undefined
+): Promise<void> {
   const dadosSanitizados = sanitizarDadosLeitura(dados);
 
   if (!dadosSanitizados.temperatura_valida) {
@@ -51,11 +61,15 @@ async function salvarLeituraLogBox(serialNumber, dados, wss) {
       },
     });
   } catch (error) {
-    logger.error(`[MQTT] Erro ao processar LogBox SN ${serialNumber}: ${error.message}`);
+    const err = error as Error;
+    logger.error(`[MQTT] Erro ao processar LogBox SN ${serialNumber}: ${err.message}`);
   }
 }
 
-async function salvarStatusConexao(dados, wss) {
+async function salvarStatusConexao(
+  dados: LogboxPayload,
+  wss: WebSocketServer | undefined
+): Promise<void> {
   try {
     await promisePool.query(
       "UPDATE dispositivos_logbox SET status_json = ? WHERE serial_number = ?",
@@ -67,14 +81,15 @@ async function salvarStatusConexao(dados, wss) {
       dados,
     });
   } catch (error) {
-    logger.error(`[MQTT] Erro ao salvar status de conexão (SN: ${dados.serial_number}): ${error.message}`);
+    const err = error as Error;
+    logger.error(`[MQTT] Erro ao salvar status de conexão (SN: ${dados.serial_number}): ${err.message}`);
   }
 }
 
-function iniciarClienteMQTT(app) {
+export function iniciarClienteMQTT(app: { get(name: "wss"): WebSocketServer | undefined }): void {
   const brokerUrl = process.env.MQTT_BROKER_URL || MQTT_BROKER_DEFAULT;
   const client = mqtt.connect(brokerUrl, {
-    clientId: "sistema_js_" + Math.random().toString(16).substr(2, 8),
+    clientId: "sistema_js_" + Math.random().toString(16).slice(2, 10),
   });
 
   const topicos = [
@@ -97,19 +112,20 @@ function iniciarClienteMQTT(app) {
 
   client.on("message", (topic, message) => {
     try {
-      const dados = JSON.parse(message.toString());
-      const wss = app.get("wss");
+      const dados = JSON.parse(message.toString()) as LogboxPayload | ReleMqttPayload;
+      const wss = app.get("wss") as WebSocketServer | undefined;
 
       if (topic.startsWith("sel/reles/")) {
-        salvarLeituraRele(dados, wss);
+        void salvarLeituraRele(dados as ReleMqttPayload, wss);
       } else if (topic.includes("status/channels")) {
         const serialNumber = topic.split("/")[1];
-        salvarLeituraLogBox(serialNumber, dados, wss);
+        void salvarLeituraLogBox(serialNumber, dados as LogboxPayload, wss);
       } else if (topic === MQTT_TOPICS.LOGOBOX_NEIGHBOR) {
-        salvarStatusConexao(dados, wss);
+        void salvarStatusConexao(dados as LogboxPayload, wss);
       }
     } catch (e) {
-      logger.error(`[MQTT] Erro ao processar mensagem do tópico ${topic}: ${e.message}`);
+      const err = e as Error;
+      logger.error(`[MQTT] Erro ao processar mensagem do tópico ${topic}: ${err.message}`);
     }
   });
 
@@ -117,5 +133,3 @@ function iniciarClienteMQTT(app) {
     logger.error(`[MQTT] Erro de conexão: ${err.message}`);
   });
 }
-
-module.exports = { iniciarClienteMQTT };

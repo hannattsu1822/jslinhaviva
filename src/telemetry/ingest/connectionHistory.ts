@@ -1,19 +1,32 @@
-const { promisePool } = require("../../infrastructure/database");
-const { verificarConexaoAtiva } = require("../rules/validation");
-const {
+import { promisePool } from "../../infrastructure/database";
+import { verificarConexaoAtiva } from "../rules/validation";
+import {
   CONNECTION_TIMEOUT_MS,
   CONNECTION_CHECK_INTERVAL_MS,
-} = require("../constants");
+} from "../constants";
+import type { AppLogger } from "../types";
 
-async function obterEventoOfflineAberto(serialNumber) {
-  const [rows] = await promisePool.query(
-    "SELECT id, timestamp_offline FROM historico_conexao WHERE serial_number = ? AND duracao_segundos IS NULL ORDER BY id DESC LIMIT 1",
-    [serialNumber]
-  );
-  return rows[0] || null;
+interface OfflineEventRow {
+  id: number;
+  timestamp_offline: Date | string;
 }
 
-async function registrarLeituraRecebida(serialNumber) {
+interface DeviceRow {
+  serial_number: string;
+  ultima_leitura: Date | string | null;
+}
+
+async function obterEventoOfflineAberto(
+  serialNumber: string
+): Promise<OfflineEventRow | null> {
+  const [rows] = (await promisePool.query(
+    "SELECT id, timestamp_offline FROM historico_conexao WHERE serial_number = ? AND duracao_segundos IS NULL ORDER BY id DESC LIMIT 1",
+    [serialNumber]
+  )) as [OfflineEventRow[], unknown];
+  return rows[0] ?? null;
+}
+
+export async function registrarLeituraRecebida(serialNumber: string): Promise<void> {
   const eventoAberto = await obterEventoOfflineAberto(serialNumber);
   if (!eventoAberto) return;
 
@@ -26,7 +39,10 @@ async function registrarLeituraRecebida(serialNumber) {
   );
 }
 
-async function registrarOffline(serialNumber, ultimaLeitura) {
+export async function registrarOffline(
+  serialNumber: string,
+  ultimaLeitura: Date | string | null | undefined
+): Promise<void> {
   const eventoAberto = await obterEventoOfflineAberto(serialNumber);
   if (eventoAberto) return;
 
@@ -38,10 +54,10 @@ async function registrarOffline(serialNumber, ultimaLeitura) {
   );
 }
 
-async function verificarDispositivosOffline() {
-  const [devices] = await promisePool.query(
+export async function verificarDispositivosOffline(): Promise<void> {
+  const [devices] = (await promisePool.query(
     "SELECT serial_number, ultima_leitura FROM dispositivos_logbox WHERE ativo = 1"
-  );
+  )) as [DeviceRow[], unknown];
 
   for (const device of devices) {
     const conexao = verificarConexaoAtiva(device.ultima_leitura);
@@ -51,13 +67,13 @@ async function verificarDispositivosOffline() {
   }
 }
 
-function iniciarMonitoramentoConexao(logger) {
-  verificarDispositivosOffline().catch((err) => {
+export function iniciarMonitoramentoConexao(logger: AppLogger): void {
+  verificarDispositivosOffline().catch((err: Error) => {
     logger.error(`[Conexão] Erro na verificação inicial: ${err.message}`);
   });
 
   const timer = setInterval(() => {
-    verificarDispositivosOffline().catch((err) => {
+    verificarDispositivosOffline().catch((err: Error) => {
       logger.error(`[Conexão] Erro ao verificar offline: ${err.message}`);
     });
   }, CONNECTION_CHECK_INTERVAL_MS);
@@ -70,10 +86,3 @@ function iniciarMonitoramentoConexao(logger) {
     `[Conexão] Monitoramento de offline ativo (intervalo ${CONNECTION_CHECK_INTERVAL_MS / 1000}s, timeout ${CONNECTION_TIMEOUT_MS / 60000} min).`
   );
 }
-
-module.exports = {
-  registrarLeituraRecebida,
-  registrarOffline,
-  verificarDispositivosOffline,
-  iniciarMonitoramentoConexao,
-};
