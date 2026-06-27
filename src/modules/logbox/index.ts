@@ -15,4 +15,4 @@ router.get("/monitoramento-hub", autenticar, verificarNivel(4), (req, res) => {
 router.use(dispositivosRoutes);
 router.use(monitoramentoRoutes);
 
-export default router;
+export = router;

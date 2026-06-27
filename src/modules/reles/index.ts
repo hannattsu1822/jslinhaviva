@@ -1,1 +1,3 @@
-export { default } from "./reles.routes";
+import router from "./reles.routes";
+
+export = router;
