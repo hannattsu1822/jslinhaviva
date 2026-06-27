@@ -24,6 +24,7 @@ const server = createReleTcpServer({
   tcpPort: TCP_SERVER_PORT,
   bindHost: RELE_TCP_BIND_HOST,
   devicePassword: RELE_DEVICE_PASSWORD,
+  legacy5001DirectMode: process.env.RELE_LEGACY_5001_DIRECT === "true",
   db: {
     host: process.env.DB_HOST || "127.0.0.1",
     port: Number(process.env.DB_PORT) || 3306,

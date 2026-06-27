@@ -21,6 +21,8 @@ export interface ReleTcpServerConfig {
   tcpPort: number;
   bindHost: string;
   devicePassword: string;
+  /** Se true, porta 5001 envia MET directo sem ACC/senha (comportamento antigo). */
+  legacy5001DirectMode: boolean;
   db: {
     host: string;
     port: number;
@@ -173,6 +175,32 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
         ? `legacy/cabo ${deviceInfo.deviceId}`
         : `legacy ${deviceInfo.deviceId}`;
 
+    const beginLegacyLogin = (socket: ReleSocket, delayMs: number): void => {
+      setTimeout(() => {
+        socket.textBuffer = "";
+        socket.state = "AWAITING_PASSWORD_PROMPT";
+        console.log(`[TCP] ${socket.deviceId} iniciando login ACC (porta ${listenPort}).`);
+        socket.write("\r\n");
+        setTimeout(() => socket.write("ACC\r\n"), 500);
+      }, delayMs);
+    };
+
+    const beginLegacyDirectPolling = (socket: ReleSocket): void => {
+      setTimeout(() => {
+        socket.textBuffer = "";
+        socket.state = "IDLE";
+        console.log(
+          `[TCP] ${socket.deviceId} pronto — MET directo sem login (porta ${LEGACY_DIRECT_PORT}).`
+        );
+        socket.startPollingCycle();
+        if (socket.pollTimer) {
+          clearInterval(socket.pollTimer);
+        }
+        socket.pollTimer = setInterval(socket.startPollingCycle, POLL_INTERVAL_MS);
+        socket.startKeepalive();
+      }, STARTUP_DELAY_PORT_5001_MS);
+    };
+
     const legacyServer = net.createServer((rawSocket) => {
       const socket = rawSocket as ReleSocket;
       socket.state = "LEGACY_WARMUP";
@@ -183,24 +211,13 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
 
       if (listenPort === LEGACY_DIRECT_PORT) {
         console.log(`[TCP] ${deviceInfo.deviceId} conectou na porta ${LEGACY_DIRECT_PORT} (modo cabo).`);
-        setTimeout(() => {
-          socket.textBuffer = "";
-          socket.state = "IDLE";
-          console.log(`[TCP] ${deviceInfo.deviceId} pronto — iniciando polling (porta ${LEGACY_DIRECT_PORT}).`);
-          socket.startPollingCycle();
-          if (socket.pollTimer) {
-            clearInterval(socket.pollTimer);
-          }
-          socket.pollTimer = setInterval(socket.startPollingCycle, POLL_INTERVAL_MS);
-          socket.startKeepalive();
-        }, STARTUP_DELAY_PORT_5001_MS);
+        if (config.legacy5001DirectMode) {
+          beginLegacyDirectPolling(socket);
+        } else {
+          beginLegacyLogin(socket, STARTUP_DELAY_PORT_5001_MS);
+        }
       } else {
-        setTimeout(() => {
-          socket.textBuffer = "";
-          socket.state = "AWAITING_PASSWORD_PROMPT";
-          socket.write("\r\n");
-          setTimeout(() => socket.write("ACC\r\n"), 500);
-        }, INITIAL_CONNECTION_DELAY_MS);
+        beginLegacyLogin(socket, INITIAL_CONNECTION_DELAY_MS);
       }
     });
 
@@ -383,6 +400,9 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
         if (loginSuccessful) {
           socket.state = "IDLE";
           socket.write("\r\n");
+          if (socket.deviceId) {
+            console.log(`[TCP] ${socket.deviceId} login OK — iniciando polling.`);
+          }
           setTimeout(() => {
             socket.startPollingCycle();
             if (socket.pollTimer) {
