@@ -1,11 +1,11 @@
-const { promisePool } = require("../../../infrastructure/database");
-const { PDFDocument, StandardFonts } = require("pdf-lib");
-const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
-const {
+import { promisePool } from "../../../infrastructure/database";
+import { PDFDocument, StandardFonts } from "pdf-lib";
+import { ChartJSNodeCanvas } from "chartjs-node-canvas";
+import {
   validarTemperatura,
   extrairTemperaturaPayload,
-} = require("../../../telemetry/rules/validation");
-const {
+} from "../../../telemetry/rules/validation";
+import {
   obterLeituras,
   obterStatus,
   obterUltimaLeitura,
@@ -13,12 +13,32 @@ const {
   obterEstatisticasVentilacao,
   obterHistoricoVentilacao,
   obterHistoricoConexao,
-} = require("../../../telemetry/read/logbox.query");
+} from "../../../telemetry/read/logbox.query";
+import type { FanHistoryAggregate, LogboxDeviceRow, ReportFilters } from "../types";
 
-async function getReportData(filters) {
+interface ProcessedReading {
+  temperatura_externa: number | null;
+  timestamp_leitura: Date | string;
+}
+
+interface AggregatedDayRow {
+  data_dia: Date | string;
+  min_temp: string | number | null;
+  avg_temp: string | number | null;
+  max_temp: string | number | null;
+}
+
+interface ReportStatsRow {
+  temp_min: string | number | null;
+  temp_avg: string | number | null;
+  temp_max: string | number | null;
+  total_count: number;
+}
+
+export async function getReportData(filters: ReportFilters) {
   const { deviceId, reportType, date, month, year } = filters;
-  let startDate;
-  let endDate;
+  let startDate: Date;
+  let endDate: Date;
 
   switch (reportType) {
     case "monthly":
@@ -36,23 +56,28 @@ async function getReportData(filters) {
       break;
   }
 
-  const [deviceRows] = await promisePool.query(
+  const [deviceRows] = (await promisePool.query(
     "SELECT * FROM dispositivos_logbox WHERE id = ?",
     [deviceId]
-  );
+  )) as [LogboxDeviceRow[], unknown];
+
   if (deviceRows.length === 0) {
     throw new Error("Dispositivo não encontrado");
   }
 
   const deviceInfo = deviceRows[0];
-  let chartData = { labels: [], datasets: [] };
-  let processedReadings = [];
+  const chartData: {
+    labels: string[];
+    datasets: Array<{ label: string; data: unknown[] }>;
+  } = { labels: [], datasets: [] };
+  let processedReadings: ProcessedReading[] = [];
 
   if (reportType === "detailed") {
-    const [readings] = await promisePool.query(
+    const [readings] = (await promisePool.query(
       "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? ORDER BY timestamp_leitura ASC",
       [deviceInfo.serial_number, startDate, endDate]
-    );
+    )) as [{ payload_json: unknown; timestamp_leitura: Date | string }[], unknown];
+
     processedReadings = readings
       .map((r) => ({
         temperatura_externa: extrairTemperaturaPayload(r.payload_json),
@@ -75,10 +100,11 @@ async function getReportData(filters) {
       }
     );
   } else {
-    const [aggregated] = await promisePool.query(
+    const [aggregated] = (await promisePool.query(
       `SELECT DATE(timestamp_leitura) as data_dia, MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as min_temp, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as avg_temp, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as max_temp FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ? GROUP BY DATE(timestamp_leitura) ORDER BY data_dia ASC`,
       [deviceInfo.serial_number, startDate, endDate]
-    );
+    )) as [AggregatedDayRow[], unknown];
+
     chartData.labels = aggregated.map((r) =>
       new Date(r.data_dia).toLocaleDateString("pt-BR")
     );
@@ -90,10 +116,10 @@ async function getReportData(filters) {
     );
   }
 
-  const [stats] = await promisePool.query(
+  const [stats] = (await promisePool.query(
     `SELECT MIN(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_min, AVG(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_avg, MAX(JSON_UNQUOTE(JSON_EXTRACT(payload_json, '$.ch_analog_1'))) as temp_max, COUNT(*) as total_count FROM leituras_logbox WHERE serial_number = ? AND timestamp_leitura BETWEEN ? AND ?`,
     [deviceInfo.serial_number, startDate, endDate]
-  );
+  )) as [ReportStatsRow[], unknown];
 
   const fanHistory = await obterHistoricoVentilacao(deviceInfo.serial_number);
   const fanHistoryFiltrado = fanHistory.filter((h) => {
@@ -101,9 +127,9 @@ async function getReportData(filters) {
     return dataInicio >= startDate && dataInicio <= endDate;
   });
 
-  let fanHistoryAgregado = [];
+  let fanHistoryAgregado: FanHistoryAggregate[] = [];
   if (reportType !== "detailed") {
-    const mapAgregado = {};
+    const mapAgregado: Record<string, FanHistoryAggregate> = {};
     fanHistoryFiltrado.forEach((item) => {
       const key = new Date(item.timestamp_inicio).toLocaleDateString("pt-BR");
       if (!mapAgregado[key]) {
@@ -115,10 +141,10 @@ async function getReportData(filters) {
     fanHistoryAgregado = Object.values(mapAgregado);
   }
 
-  const [connectionHistory] = await promisePool.query(
+  const [connectionHistory] = (await promisePool.query(
     "SELECT * FROM historico_conexao WHERE serial_number = ? AND timestamp_offline >= ? AND timestamp_offline <= ? ORDER BY timestamp_offline DESC",
     [deviceInfo.serial_number, startDate, endDate]
-  );
+  )) as [Record<string, unknown>[], unknown];
 
   return {
     device: deviceInfo,
@@ -132,32 +158,34 @@ async function getReportData(filters) {
   };
 }
 
-async function gerarPdfRelatorio(filters) {
+export async function gerarPdfRelatorio(filters: ReportFilters): Promise<Uint8Array> {
   const data = await getReportData(filters);
   const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: 800, height: 400 });
-  let datasets = [];
   const labels = data.chartData.labels;
 
-  if (filters.reportType === "detailed") {
-    datasets.push({
-      label: "Temperatura (°C)",
-      data: data.chartData.datasets[1].data,
-      borderColor: "rgb(75, 192, 192)",
-      borderWidth: 2,
-      tension: 0.1,
-      pointRadius: 0,
-    });
-  } else {
-    datasets.push({
-      label: "Média (°C)",
-      data: data.chartData.datasets[1].data,
-      borderColor: "rgb(255, 159, 64)",
-      borderWidth: 2,
-    });
-  }
+  const datasets =
+    filters.reportType === "detailed"
+      ? [
+          {
+            label: "Temperatura (°C)",
+            data: data.chartData.datasets[1].data,
+            borderColor: "rgb(75, 192, 192)",
+            borderWidth: 2,
+            tension: 0.1,
+            pointRadius: 0,
+          },
+        ]
+      : [
+          {
+            label: "Média (°C)",
+            data: data.chartData.datasets[1].data,
+            borderColor: "rgb(255, 159, 64)",
+            borderWidth: 2,
+          },
+        ];
 
   const configuration = {
-    type: "line",
+    type: "line" as const,
     data: { labels, datasets },
     options: {
       scales: { y: { beginAtZero: false } },
@@ -165,7 +193,9 @@ async function gerarPdfRelatorio(filters) {
     },
   };
 
-  const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+  const imageBuffer = await chartJSNodeCanvas.renderToBuffer(
+    configuration as Parameters<ChartJSNodeCanvas["renderToBuffer"]>[0]
+  );
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage();
   const { height } = page.getSize();
@@ -191,16 +221,14 @@ async function gerarPdfRelatorio(filters) {
 
   const y = height - 140 - imageDims.height;
   page.drawText(
-    `Estatísticas: Mín: ${parseFloat(data.stats.temp_min).toFixed(1)}°C | Méd: ${parseFloat(data.stats.temp_avg).toFixed(1)}°C | Máx: ${parseFloat(data.stats.temp_max).toFixed(1)}°C`,
+    `Estatísticas: Mín: ${parseFloat(String(data.stats.temp_min)).toFixed(1)}°C | Méd: ${parseFloat(String(data.stats.temp_avg)).toFixed(1)}°C | Máx: ${parseFloat(String(data.stats.temp_max)).toFixed(1)}°C`,
     { x: 50, y, font, size: 10 }
   );
 
   return pdfDoc.save();
 }
 
-module.exports = {
-  getReportData,
-  gerarPdfRelatorio,
+export {
   obterLeituras,
   obterStatus,
   obterUltimaLeitura,

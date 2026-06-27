@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import { autenticar, verificarNivel } from "../../../auth";
+import * as controller from "./monitoramento.controller";
+
 const router = express.Router();
-const { autenticar, verificarNivel } = require("../../../auth");
-const controller = require("./monitoramento.controller");
 
 router.get(
   "/logbox-device/:serialNumber",
@@ -9,14 +10,12 @@ router.get(
   verificarNivel(2),
   controller.renderizarPaginaDetalhe
 );
-
 router.get(
   "/relatorios-logbox",
   autenticar,
   verificarNivel(2),
   controller.renderizarPaginaRelatorios
 );
-
 router.get(
   "/api/logbox-device/:serialNumber/leituras",
   autenticar,
@@ -59,14 +58,12 @@ router.get(
   verificarNivel(2),
   controller.obterHistoricoConexao
 );
-
 router.post(
   "/api/relatorios/gerar",
   autenticar,
   verificarNivel(2),
   controller.gerarRelatorioVisual
 );
-
 router.post(
   "/api/relatorios/pdf",
   autenticar,
@@ -74,4 +71,4 @@ router.post(
   controller.gerarPdfRelatorio
 );
 
-module.exports = router;
+export default router;

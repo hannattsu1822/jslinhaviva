@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import { autenticar, verificarNivel } from "../../../auth";
+import * as controller from "./dispositivos.controller";
+
 const router = express.Router();
-const { autenticar, verificarNivel } = require("../../../auth");
-const controller = require("./dispositivos.controller");
 
 router.get(
   "/gerenciar-dispositivos",
@@ -40,4 +41,4 @@ router.delete(
   controller.excluirDispositivo
 );
 
-module.exports = router;
+export default router;
