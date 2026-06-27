@@ -3,7 +3,7 @@ const fs = require("fs/promises");
 const ejs = require("ejs");
 const playwright = require("playwright");
 const { PDFDocument } = require("pdf-lib");
-const { loadReportStyles } = require("./reportTheme.helper");
+const { loadReportStyles, loadCompanyLogoDataUri } = require("./reportTheme.helper");
 const { escapeHtml } = require("../htmlEscape.helper");
 
 const REPORTS_DIR = path.join(__dirname);
@@ -68,6 +68,7 @@ function buildFooterOnlyTemplate() {
  */
 async function wrapReportHtml(bodyHtml, options = {}) {
   const styles = await loadReportStyles();
+  const logoDataUri = await loadCompanyLogoDataUri();
   const {
     title = "Relatório",
     badge = "",
@@ -76,6 +77,7 @@ async function wrapReportHtml(bodyHtml, options = {}) {
     author = "",
     extraMeta = "",
     showFooterNote = true,
+    landscape = true,
   } = options;
 
   const metaLines = [];
@@ -88,6 +90,11 @@ async function wrapReportHtml(bodyHtml, options = {}) {
 
   const safeTitle = escapeHtml(title);
   const safeBadge = badge ? escapeHtml(badge) : "";
+  const landscapeClass = landscape ? " lv-report--landscape" : "";
+
+  const logoHtml = logoDataUri
+    ? `<img class="lv-report-brand__logo" src="${logoDataUri}" alt="${BRAND.company}" />`
+    : `<div class="lv-report-brand__logo-fallback">${BRAND.company}</div>`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -97,14 +104,15 @@ async function wrapReportHtml(bodyHtml, options = {}) {
   <style>${styles}</style>
 </head>
 <body class="lv-report-body">
-  <div class="lv-report">
+  <div class="lv-report${landscapeClass}">
     <div class="lv-report__accent-bar"></div>
     <header class="lv-report-header">
       <div class="lv-report-brand">
-        <div class="lv-report-brand__icon" aria-hidden="true">⚡</div>
+        ${logoHtml}
+        <div class="lv-report-brand__divider" aria-hidden="true"></div>
         <div class="lv-report-brand__text">
           <span class="lv-report-brand__name">${BRAND.name}</span>
-          <span class="lv-report-brand__system">${BRAND.company} · ${BRAND.system}</span>
+          <span class="lv-report-brand__system">${BRAND.system}</span>
         </div>
       </div>
       <div class="lv-report-header__main">
@@ -113,10 +121,10 @@ async function wrapReportHtml(bodyHtml, options = {}) {
         <div class="lv-report-header__meta">${metaLines.join("<br>")}</div>
       </div>
     </header>
-    <main>${bodyHtml}</main>
+    <main class="lv-report-main">${bodyHtml}</main>
     ${
       showFooterNote
-        ? `<p class="lv-report-footer-note">Este documento foi emitido pelo ${BRAND.system}. Informações sujeitas aos registros operacionais da ${BRAND.company}.</p>`
+        ? `<p class="lv-report-footer-note">Documento emitido pelo ${BRAND.system} · ${BRAND.company}. Informações sujeitas aos registros operacionais internos.</p>`
         : ""
     }
   </div>
@@ -139,7 +147,7 @@ async function htmlToPdf(html, options = {}) {
   const {
     landscape = false,
     format = "A4",
-    margin = { top: "12mm", right: "10mm", bottom: "18mm", left: "10mm" },
+    margin = { top: "10mm", right: "12mm", bottom: "16mm", left: "12mm" },
     headerFooter = true,
     footerOnly = false,
     headerMeta = {},

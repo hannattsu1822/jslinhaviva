@@ -55,6 +55,33 @@ body.lv-report-body {
 
 .lv-report {
   width: 100%;
+  padding: 2mm 0 4mm;
+}
+
+.lv-report-main {
+  display: block;
+}
+
+.lv-report--landscape .lv-info-grid--2col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.lv-report--landscape .lv-info-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.lv-report--landscape .lv-photo-grid {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.lv-report--landscape .lv-section {
+  margin-bottom: 22px;
+}
+
+.lv-report--landscape .lv-table th,
+.lv-report--landscape .lv-table td {
+  padding: 9px 12px;
 }
 
 /* Faixa superior — mesmo efeito dos cards de módulos (gestao-servicos) */
@@ -69,37 +96,50 @@ body.lv-report-body {
   margin-bottom: 0;
 }
 
-/* Cabeçalho — marca sidebar + título de página */
+/* Cabeçalho — logo SULGIPE + Linha Viva + título do relatório */
 .lv-report-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  padding: 16px 0 14px;
-  border-bottom: 1px solid var(--lv-surface-border);
-  margin-bottom: 20px;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 0 20px;
+  border-bottom: 2px solid var(--lv-surface-border);
+  margin-bottom: 26px;
   page-break-inside: avoid;
 }
 
 .lv-report-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.lv-report-brand__logo {
+  height: 54px;
+  width: auto;
+  max-width: 170px;
+  object-fit: contain;
+  display: block;
+}
+
+.lv-report-brand__logo-fallback {
+  font-size: 14pt;
+  font-weight: 800;
+  color: #c41e3a;
+  letter-spacing: 0.04em;
+}
+
+.lv-report-brand__divider {
+  width: 1px;
+  height: 48px;
+  background: var(--lv-surface-border);
   flex-shrink: 0;
 }
 
 .lv-report-brand__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
-  color: #fff;
-  font-size: 16px;
-  font-weight: 800;
-  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.2);
+  display: none;
 }
 
 .lv-report-brand__text {
@@ -109,18 +149,20 @@ body.lv-report-body {
 }
 
 .lv-report-brand__name {
-  font-size: 13pt;
+  font-size: 14pt;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--lv-primary);
+  line-height: 1.2;
 }
 
 .lv-report-brand__system {
-  font-size: 8pt;
+  font-size: 8.5pt;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--lv-text-muted);
+  margin-top: 2px;
 }
 
 .lv-report-header__main {
@@ -144,18 +186,20 @@ body.lv-report-body {
 
 .lv-report-header__title {
   margin: 0;
-  font-size: 16pt;
+  font-size: 15pt;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--lv-text);
-  line-height: 1.25;
+  line-height: 1.3;
+  max-width: 420px;
+  margin-left: auto;
 }
 
 .lv-report-header__meta {
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 9pt;
   color: var(--lv-text-muted);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .lv-report-header__meta strong {
@@ -165,7 +209,7 @@ body.lv-report-body {
 
 /* Seções — cards como servicos-page .card */
 .lv-section {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
   background: var(--lv-surface);
   border: 1px solid var(--lv-surface-border);
   border-radius: var(--lv-radius-sm);
@@ -175,7 +219,7 @@ body.lv-report-body {
 
 .lv-section__title {
   margin: 0;
-  padding: 10px 14px;
+  padding: 12px 18px;
   font-size: 11pt;
   font-weight: 700;
   color: var(--lv-text);
@@ -184,22 +228,23 @@ body.lv-report-body {
 }
 
 .lv-section__body {
-  padding: 14px;
+  padding: 16px 18px 18px;
 }
 
 /* Grid de campos */
 .lv-info-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px 16px;
+  gap: 12px 18px;
 }
 
 .lv-info-grid--2col {
   grid-template-columns: repeat(2, 1fr);
+  gap: 12px 18px;
 }
 
 .lv-info-item {
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--lv-surface-muted);
   border: 1px solid var(--lv-surface-border);
   border-radius: 8px;
@@ -231,12 +276,13 @@ body.lv-report-body {
 .lv-text-block {
   white-space: pre-wrap;
   word-wrap: break-word;
-  padding: 12px;
-  background: var(--lv-surface-muted);
+  padding: 12px 14px;
+  background: var(--lv-surface);
   border: 1px solid var(--lv-surface-border);
   border-radius: 8px;
   font-size: 10pt;
-  line-height: 1.55;
+  line-height: 1.6;
+  margin-top: 4px;
 }
 
 /* Tabelas */
@@ -331,7 +377,7 @@ body.lv-report-body {
 .lv-photo-item img {
   max-width: 100%;
   height: auto;
-  max-height: 180px;
+  max-height: 150px;
   object-fit: contain;
   border-radius: 4px;
 }
@@ -412,10 +458,11 @@ body.lv-report-body {
 }
 
 .lv-report-footer-note {
-  margin-top: 24px;
-  padding-top: 12px;
+  margin-top: 28px;
+  padding-top: 14px;
   border-top: 1px solid var(--lv-surface-border);
   font-size: 8pt;
   color: var(--lv-text-muted);
   text-align: center;
+  line-height: 1.5;
 }

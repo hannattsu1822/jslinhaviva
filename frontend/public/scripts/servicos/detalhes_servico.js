@@ -239,7 +239,7 @@ function preencherEquipeResponsavel(responsaveis, statusServico) {
         <th>Matrícula</th>
         <th>Status</th>
         <th>Data Conclusão</th>
-        ${podeRemover ? "<th>Ação</th>" : ""}
+        ${podeRemover ? rawHtml("<th>Ação</th>") : ""}
       </tr>
     </thead>
     <tbody></tbody>
@@ -277,9 +277,9 @@ function preencherEquipeResponsavel(responsaveis, statusServico) {
     tr.innerHTML = safeHtml`
       <td>${resp.nome || "N/A"}</td>
       <td>${matricula}</td>
-      <td>${statusBadge}</td>
+      <td>${rawHtml(statusBadge)}</td>
       <td>${formatarDataParaExibicao(resp.data_conclusao_individual)}</td>
-      ${acaoCell}
+      ${rawHtml(acaoCell)}
     `;
     tbody.appendChild(tr);
   });
@@ -458,7 +458,7 @@ function preencherAnexos(anexos) {
         data-galeria-nome="${nomeOriginalDoAnexo}"
         title="Ver ${nomeOriginalDoAnexo}">
         <div class="card-body text-center d-flex flex-column justify-content-between align-items-center">
-          <div class="attachment-thumbnail mb-2">${previewHTML}</div>
+          <div class="attachment-thumbnail mb-2">${rawHtml(previewHTML)}</div>
           <div>
             <p class="attachment-name small mb-1" title="${nomeOriginalDoAnexo}">${truncateFilename(nomeOriginalDoAnexo)}</p>
             <p class="attachment-size small text-muted mb-2">${anexo.tamanho || ""}</p>

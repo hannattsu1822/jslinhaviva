@@ -272,7 +272,7 @@ async function gerarPdfConsolidado(servicoId) {
     const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: true,
       footerOnly: true,
-      margin: { top: "10mm", right: "10mm", bottom: "20mm", left: "10mm" },
+      margin: { top: "10mm", right: "12mm", bottom: "16mm", left: "12mm" },
     });
 
     const pdfAttachmentPaths = anexos
