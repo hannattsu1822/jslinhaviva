@@ -34,6 +34,7 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
   const deviceCache = new Map<string, ReleDeviceInfo>();
   const portToDeviceMap = new Map<number, ReleDeviceInfo>();
   const legacyServers = new Map<number, net.Server>();
+  const portsBindFailed = new Set<number>();
   const activeSockets = new Set<ReleSocket>();
 
   let mqttConnected = false;
@@ -85,15 +86,7 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
       );
 
       for (const listenPort of portToDeviceMap.keys()) {
-        if (!legacyServers.has(listenPort)) {
-          createLegacyServer(listenPort);
-        }
-      }
-
-      for (const listenPort of portToDeviceMap.keys()) {
-        if (!legacyServers.has(listenPort)) {
-          createLegacyServer(listenPort);
-        }
+        createLegacyServer(listenPort);
       }
     } catch (error) {
       const err = error as Error;
@@ -333,8 +326,20 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
     setupSocketLogic(socket);
   });
 
+  function handleListenError(port: number, label: string, err: NodeJS.ErrnoException): void {
+    if (err.code === "EADDRINUSE") {
+      portsBindFailed.add(port);
+      console.error(
+        `[TCP] Porta ${port} (${label}) ja em uso. Mate o processo antigo: ` +
+          `pm2 list | grep rele && sudo ss -tlnp | grep :${port}`
+      );
+      return;
+    }
+    console.error(`[TCP] Erro ao abrir porta ${port} (${label}):`, err.message);
+  }
+
   function createLegacyServer(listenPort: number): void {
-    if (legacyServers.has(listenPort)) {
+    if (legacyServers.has(listenPort) || portsBindFailed.has(listenPort)) {
       return;
     }
 
@@ -371,11 +376,17 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
       }
     });
 
-    legacyServer.listen(listenPort, config.bindHost, () => {
+    legacyServer.once("listening", () => {
+      legacyServers.set(listenPort, legacyServer);
+      portsBindFailed.delete(listenPort);
       console.log(`[TCP] Porta ${listenPort} aberta para ${deviceInfo.deviceId}`);
     });
 
-    legacyServers.set(listenPort, legacyServer);
+    legacyServer.on("error", (err: NodeJS.ErrnoException) => {
+      handleListenError(listenPort, deviceInfo.deviceId, err);
+    });
+
+    legacyServer.listen(listenPort, config.bindHost);
   }
 
   async function start(): Promise<void> {
@@ -385,9 +396,15 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
       void loadDeviceCaches();
     }, CACHE_RELOAD_INTERVAL_MS);
 
-    mainServer.listen(config.tcpPort, config.bindHost, () => {
+    mainServer.once("listening", () => {
       console.log(`[TCP] Main Server na porta ${config.tcpPort} (${config.bindHost})`);
     });
+
+    mainServer.on("error", (err: NodeJS.ErrnoException) => {
+      handleListenError(config.tcpPort, "main", err);
+    });
+
+    mainServer.listen(config.tcpPort, config.bindHost);
   }
 
   async function shutdown(): Promise<void> {
