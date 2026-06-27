@@ -111,11 +111,81 @@ function renderTextBlock(content) {
   return `<div class="lv-text-block">${content}</div>`;
 }
 
+/**
+ * Gera páginas individuais para impressão ampliada (fotos e capas de documentos).
+ * Inserido após assinaturas no PDF consolidado.
+ */
+function gerarAnexoImpressaoIndividualHtml(items = [], options = {}) {
+  if (!items || items.length === 0) {
+    return "";
+  }
+
+  const { docCode = "", processo = "" } = options;
+  const safeDocCode = escapeHtml(docCode);
+  const safeProcesso = processo ? escapeHtml(processo) : "";
+
+  let pagesHtml = `
+    <section class="rt-print-appendix lv-page-break">
+      <div class="rt-print-appendix__intro">
+        <h2 class="rt-print-appendix__title">Anexo — Impressão Individual</h2>
+        <p class="rt-print-appendix__desc">
+          Páginas a seguir reproduzem cada registro em formato ampliado para
+          impressão avulsa. Processo/OS: <strong>${safeProcesso || "N/A"}</strong>
+          · Documento: <strong>${safeDocCode || "N/A"}</strong>
+        </p>
+      </div>`;
+
+  let photoNum = 0;
+  let docNum = 0;
+
+  items.forEach((item) => {
+    if (item.type === "photo") {
+      photoNum += 1;
+      pagesHtml += `
+      <div class="rt-print-page lv-page-break">
+        <header class="rt-print-page__header">
+          <span class="rt-print-page__doc">${safeDocCode}</span>
+          <span class="rt-print-page__kind">Registro Fotográfico</span>
+        </header>
+        <div class="rt-print-page__body">
+          <img src="${item.src}" alt="${escapeHtml(item.nome)}" />
+        </div>
+        <footer class="rt-print-page__footer">
+          Figura ${photoNum} — ${escapeHtml(item.nome)}
+        </footer>
+      </div>`;
+    } else if (item.type === "document") {
+      docNum += 1;
+      pagesHtml += `
+      <div class="rt-print-page rt-print-page--document lv-page-break">
+        <header class="rt-print-page__header">
+          <span class="rt-print-page__doc">${safeDocCode}</span>
+          <span class="rt-print-page__kind">Documento Anexo</span>
+        </header>
+        <div class="rt-print-page__body rt-print-page__body--document">
+          <p class="rt-print-page__doc-index">Documento ${docNum}</p>
+          <h3 class="rt-print-page__doc-name">${escapeHtml(item.nome)}</h3>
+          <p class="rt-print-page__doc-hint">
+            O conteúdo integral deste documento segue nas páginas imediatamente posteriores.
+          </p>
+        </div>
+        <footer class="rt-print-page__footer">
+          Anexo ${docNum} — ${escapeHtml(item.nome)}
+        </footer>
+      </div>`;
+    }
+  });
+
+  pagesHtml += "</section>";
+  return pagesHtml;
+}
+
 module.exports = {
   statusBadgeClass,
   renderStatusBadge,
   gerarGaleriaHtml,
   gerarListaDocumentosHtml,
+  gerarAnexoImpressaoIndividualHtml,
   renderInfoItem,
   renderTextBlock,
   applyTemplatePlaceholders,

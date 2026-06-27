@@ -94,6 +94,7 @@ async function wrapReportHtml(bodyHtml, options = {}) {
     showFooterNote = true,
     showSignatures = true,
     landscape = true,
+    appendixHtml = "",
   } = options;
 
   const docCode = buildDocumentCode(processo, referenceId);
@@ -180,6 +181,8 @@ async function wrapReportHtml(bodyHtml, options = {}) {
         ? `<p class="lv-report-footer-note">Documento gerado eletronicamente pelo ${BRAND.system}. Reprodução parcial permitida para fins operacionais da ${BRAND.company}.</p>`
         : ""
     }
+
+    ${appendixHtml}
   </div>
 </body>
 </html>`;

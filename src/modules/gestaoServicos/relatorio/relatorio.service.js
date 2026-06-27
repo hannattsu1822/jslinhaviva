@@ -15,6 +15,7 @@ const {
   renderStatusBadge,
   gerarGaleriaHtml,
   gerarListaDocumentosHtml,
+  gerarAnexoImpressaoIndividualHtml,
   renderInfoItem,
   renderTextBlock,
   applyTemplatePlaceholders,
@@ -215,6 +216,26 @@ async function preencherTemplateHtml(servicoData) {
 
   templateHtml = applyTemplatePlaceholders(templateHtml, dadosParaTemplate);
 
+  const docCode = buildDocumentCode(
+    servicoData.processo,
+    servicoData.id
+  );
+  const anexoImpressaoItems = [
+    ...imagensBase64.map((img) => ({
+      type: "photo",
+      src: img.src,
+      nome: img.nome,
+    })),
+    ...anexosPDF.map((pdf) => ({
+      type: "document",
+      nome: pdf.nomeOriginal || pdf.nome || "Documento.pdf",
+    })),
+  ];
+  const appendixHtml = gerarAnexoImpressaoIndividualHtml(anexoImpressaoItems, {
+    docCode,
+    processo: servicoData.processo || "N/A",
+  });
+
   return wrapReportHtml(templateHtml, {
     title: "Relatório Técnico de Serviço — Redes de Distribuição",
     badge: "Gestão de Serviços · Redes de Distribuição",
@@ -224,6 +245,7 @@ async function preencherTemplateHtml(servicoData) {
     author: servicoData.responsavel_nome
       ? `${servicoData.responsavel_nome} (${servicoData.responsavel_matricula || "N/A"})`
       : "",
+    appendixHtml,
   });
 }
 

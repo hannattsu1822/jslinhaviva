@@ -16,6 +16,7 @@ const {
   renderStatusBadge,
   gerarGaleriaHtml,
   gerarListaDocumentosHtml,
+  gerarAnexoImpressaoIndividualHtml,
   applyTemplatePlaceholders,
 } = require("../../../../shared/reports/reportHtml.helper");
 
@@ -35,6 +36,42 @@ async function processarImagensParaUrlLocal(anexos) {
       return { src: imageUrl, nome: img.nome_original };
     })
     .filter(Boolean);
+}
+
+async function processarImagensParaBase64(anexos) {
+  if (!anexos || anexos.length === 0) {
+    return [];
+  }
+  const imagens = anexos.filter(
+    (anexo) => anexo.tipo_mime && anexo.tipo_mime.startsWith("image/")
+  );
+
+  const imagensProcessadas = await Promise.all(
+    imagens.map(async (img) => {
+      if (!img.caminho_servidor) return null;
+      const caminhoRelativo = img.caminho_servidor.replace(
+        "/upload_arquivos_subestacoes/",
+        ""
+      );
+      const caminhoFisico = path.join(uploadsSubestacoesDir, caminhoRelativo);
+
+      if (fs.existsSync(caminhoFisico)) {
+        try {
+          const buffer = await fsPromises.readFile(caminhoFisico);
+          const ext = path.extname(img.nome_original || caminhoFisico).substring(1) || "jpeg";
+          return {
+            src: `data:image/${ext};base64,${buffer.toString("base64")}`,
+            nome: img.nome_original,
+          };
+        } catch (e) {
+          console.error(`Erro ao ler imagem: ${caminhoFisico}`, e);
+          return null;
+        }
+      }
+      return null;
+    })
+  );
+  return imagensProcessadas.filter(Boolean);
 }
 
 function gerarListaDocumentosHtmlSubestacao(anexos) {
@@ -136,6 +173,36 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
 
   templateHtml = applyTemplatePlaceholders(templateHtml, dadosParaTemplate);
 
+  const todasImagensImpressao = [];
+  if (servicoData.itens_escopo && servicoData.itens_escopo.length > 0) {
+    for (const item of servicoData.itens_escopo) {
+      const imgsItem = await processarImagensParaBase64(item.anexos || []);
+      todasImagensImpressao.push(...imgsItem);
+    }
+  }
+  const imgsGerais = await processarImagensParaBase64(anexosGerais);
+  todasImagensImpressao.push(...imgsGerais);
+
+  const pdfsAnexos = anexosGerais.filter(
+    (anexo) => anexo.tipo_mime === "application/pdf"
+  );
+  const docCode = buildDocumentCode(servicoData.processo, servicoData.id);
+  const anexoImpressaoItems = [
+    ...todasImagensImpressao.map((img) => ({
+      type: "photo",
+      src: img.src,
+      nome: img.nome,
+    })),
+    ...pdfsAnexos.map((pdf) => ({
+      type: "document",
+      nome: pdf.nome_original || "Documento.pdf",
+    })),
+  ];
+  const appendixHtml = gerarAnexoImpressaoIndividualHtml(anexoImpressaoItems, {
+    docCode,
+    processo: servicoData.processo || "N/A",
+  });
+
   return wrapReportHtml(templateHtml, {
     title: "Relatório Técnico de Serviço — Subestação",
     badge: "Subestações · Manutenção",
@@ -143,6 +210,7 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
     referenceId: servicoData.id,
     generatedAt: formatReportDate(),
     author: servicoData.responsavel_nome || "",
+    appendixHtml,
   });
 }
 
