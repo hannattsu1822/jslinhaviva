@@ -79,7 +79,7 @@ async function preencherTemplateHtml(servicoData) {
   );
 
   const imagensBase64 = await processarImagensParaBase64(todasAsImagens);
-  const galeriaGeralHtml = gerarGaleriaHtml(imagensBase64);
+  const galeriaGeralHtml = gerarGaleriaHtml(imagensBase64, 6);
   const listaAnexosPdfHtml = gerarListaDocumentosHtml(
     anexosPDF,
     "Nenhum documento PDF foi anexado a este serviço."
@@ -272,7 +272,6 @@ async function gerarPdfConsolidado(servicoId) {
     const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: true,
       footerOnly: true,
-      margin: { top: "10mm", right: "12mm", bottom: "16mm", left: "12mm" },
     });
 
     const pdfAttachmentPaths = anexos

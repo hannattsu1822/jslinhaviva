@@ -145,9 +145,9 @@ async function renderReportTemplate(templateName, data = {}) {
 
 async function htmlToPdf(html, options = {}) {
   const {
-    landscape = false,
+    landscape = true,
     format = "A4",
-    margin = { top: "10mm", right: "12mm", bottom: "16mm", left: "12mm" },
+    margin = { top: "8mm", right: "10mm", bottom: "14mm", left: "10mm" },
     headerFooter = true,
     footerOnly = false,
     headerMeta = {},

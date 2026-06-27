@@ -1,26 +1,28 @@
-<!-- Fragmento de corpo — layout completo aplicado via wrapReportHtml() -->
+<!-- Layout otimizado para A4 paisagem -->
 <section class="lv-section">
   <h2 class="lv-section__title">Detalhes do Serviço</h2>
   <div class="lv-section__body">
-    <div class="lv-info-grid lv-info-grid--2col">
+    <div class="lv-info-grid lv-info-grid--4col">
       {{detalhes_servico_grid}}
     </div>
   </div>
 </section>
 
-<section class="lv-section">
-  <h2 class="lv-section__title">Equipe Responsável</h2>
-  <div class="lv-section__body">{{lista_responsaveis}}</div>
-</section>
+<div class="lv-landscape-split">
+  <section class="lv-section">
+    <h2 class="lv-section__title">Equipe Responsável</h2>
+    <div class="lv-section__body">{{lista_responsaveis}}</div>
+  </section>
 
-<section class="lv-section">
-  <h2 class="lv-section__title">Detalhes da Finalização</h2>
-  <div class="lv-section__body">
-    <div class="lv-info-grid lv-info-grid--2col">
-      {{detalhes_finalizacao_grid}}
+  <section class="lv-section">
+    <h2 class="lv-section__title">Detalhes da Finalização</h2>
+    <div class="lv-section__body">
+      <div class="lv-info-grid lv-info-grid--1col">
+        {{detalhes_finalizacao_grid}}
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+</div>
 
 <section class="lv-section lv-page-break">
   <h2 class="lv-section__title">Anexos Fotográficos</h2>

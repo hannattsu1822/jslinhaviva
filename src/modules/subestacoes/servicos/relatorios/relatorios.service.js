@@ -100,7 +100,8 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
 
   const anexosGerais = servicoData.anexos || [];
   const galeriaAnexosGerais = gerarGaleriaHtml(
-    await processarImagensParaUrlLocal(anexosGerais)
+    await processarImagensParaUrlLocal(anexosGerais),
+    4
   );
   const listaDocumentosGerais = gerarListaDocumentosHtmlSubestacao(anexosGerais);
   const statusFinalTexto = (servicoData.status || "N/A").replace(/_/g, " ");
@@ -177,7 +178,6 @@ async function gerarPdfRelatorio(servicoId) {
     const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: true,
       footerOnly: true,
-      margin: { top: "10mm", right: "12mm", bottom: "16mm", left: "12mm" },
     });
 
     const pdfAttachmentPaths = (servicoData.anexos || [])

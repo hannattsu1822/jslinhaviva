@@ -62,26 +62,79 @@ body.lv-report-body {
   display: block;
 }
 
-.lv-report--landscape .lv-info-grid--2col {
-  grid-template-columns: repeat(3, 1fr);
+.lv-report--landscape .lv-info-grid--4col,
+.lv-report--landscape .lv-info-grid {
+  grid-template-columns: repeat(4, 1fr);
 }
 
-.lv-report--landscape .lv-info-grid {
-  grid-template-columns: repeat(3, 1fr);
+.lv-report--landscape .lv-info-grid--2col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.lv-report--landscape .lv-info-grid--1col {
+  grid-template-columns: 1fr;
+}
+
+.lv-report--landscape .lv-landscape-split {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 18px;
+  margin-bottom: 22px;
+  align-items: stretch;
+}
+
+.lv-report--landscape .lv-landscape-split .lv-section {
+  margin-bottom: 0;
+  height: 100%;
 }
 
 .lv-report--landscape .lv-photo-grid {
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.lv-report--landscape .lv-photo-grid--3col {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .lv-report--landscape .lv-section {
+  margin-bottom: 18px;
+}
+
+.lv-report--landscape .lv-report-header {
+  padding: 14px 0 16px;
   margin-bottom: 22px;
+}
+
+.lv-report--landscape .lv-report-header__title {
+  max-width: none;
+  font-size: 14pt;
+}
+
+.lv-report--landscape .lv-report-brand__logo {
+  height: 48px;
+  max-width: 150px;
+}
+
+.lv-report--landscape .lv-table {
+  font-size: 8.5pt;
 }
 
 .lv-report--landscape .lv-table th,
 .lv-report--landscape .lv-table td {
-  padding: 9px 12px;
+  padding: 7px 10px;
+}
+
+.lv-info-grid--4col {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.lv-info-grid--1col {
+  grid-template-columns: 1fr;
+}
+
+.lv-landscape-split {
+  display: block;
 }
 
 /* Faixa superior — mesmo efeito dos cards de módulos (gestao-servicos) */
