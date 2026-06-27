@@ -7,10 +7,8 @@ const {
   extrairTemperaturaPayload,
   FAN_CONFIG
 } = require("../helpers/validation.helper");
-const pythonApi = require("../../../shared/pythonApiClient");
 
 const MAX_FAN_RUNTIME_MS = 4 * 60 * 60 * 1000;
-const USE_PYTHON_API = process.env.USE_PYTHON_API === 'true';
 
 // ============================================
 // FUNÇÕES DE RELATÓRIO (mantidas 100% MariaDB)
@@ -126,36 +124,10 @@ async function getReportData(filters) {
 }
 
 // ============================================
-// FUNÇÕES DE TELEMETRIA (Python API + Fallback MariaDB)
+// FUNÇÕES DE TELEMETRIA (MariaDB)
 // ============================================
 
 async function obterLeituras(serialNumber) {
-  // Tenta Python API primeiro
-  if (USE_PYTHON_API) {
-    try {
-      const result = await pythonApi.getLogboxReadings(serialNumber, 300);
-      if (result.success && result.data && result.data.labels) {
-        const { labels, temperaturas } = result.data;
-        const validReadings = [];
-        for (let i = 0; i < labels.length; i++) {
-          const temp = temperaturas[i];
-          if (validarTemperatura(temp).valid) {
-            validReadings.push({ timestamp_leitura: labels[i], temp });
-          }
-        }
-        const processed = validReadings.slice(0, 200).reverse();
-        console.log(`[PythonAPI] obterLeituras(${serialNumber}) ✅ ${processed.length} leituras`);
-        return {
-          labels: processed.map(r => r.timestamp_leitura),
-          temperaturas: processed.map(r => r.temp)
-        };
-      }
-    } catch (err) {
-      console.warn(`[Fallback] Python API falhou em obterLeituras(${serialNumber}): ${err.message}`);
-    }
-  }
-
-  // Fallback: MariaDB
   const [rows] = await promisePool.query(
     "SELECT payload_json, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 300",
     [serialNumber]
@@ -172,60 +144,42 @@ async function obterLeituras(serialNumber) {
 }
 
 async function obterStatus(serialNumber) {
+  const [rows] = await promisePool.query(
+    "SELECT status_json, ultima_leitura FROM dispositivos_logbox WHERE serial_number = ?",
+    [serialNumber]
+  );
+  if (rows.length === 0 || !rows[0].status_json) {
+    throw new Error("Status não encontrado");
+  }
+
+  const ultimaLeitura = rows[0].ultima_leitura;
   let status = {};
-  let ultimaLeitura = null;
-
-  // Tenta Python API primeiro
-  if (USE_PYTHON_API) {
-    try {
-      const result = await pythonApi.getLogboxStatus(serialNumber);
-      if (result.success && result.data && result.data.status) {
-        status = result.data.status;
-        ultimaLeitura = new Date();
-        console.log(`[PythonAPI] obterStatus(${serialNumber}) ✅`);
-      }
-    } catch (err) {
-      console.warn(`[Fallback] Python API falhou em obterStatus(${serialNumber}): ${err.message}`);
-    }
+  try {
+    status = typeof rows[0].status_json === "string"
+      ? JSON.parse(rows[0].status_json)
+      : rows[0].status_json;
+  } catch (e) {
+    status = {};
   }
 
-  // Fallback: MariaDB
-  if (Object.keys(status).length === 0) {
-    const [rows] = await promisePool.query(
-      "SELECT status_json, ultima_leitura FROM dispositivos_logbox WHERE serial_number = ?",
-      [serialNumber]
-    );
-    if (rows.length === 0 || !rows[0].status_json) {
-      throw new Error("Status não encontrado");
-    }
-    ultimaLeitura = rows[0].ultima_leitura;
-    try {
-      status = typeof rows[0].status_json === "string"
-        ? JSON.parse(rows[0].status_json)
-        : rows[0].status_json;
-    } catch (e) {
-      status = {};
-    }
-  }
-
-  // Validação comum (aplica em ambas as fontes)
   const temp = extrairTemperaturaPayload(status);
   if (!validarTemperatura(temp).valid) {
     status.ch_analog_1 = null;
     status.temperature_error = "Valor inválido no banco de dados";
   }
 
-  // Só calcula conexão/ventoinha se vier do MariaDB
-  if (!status.connection_status) {
-    const conexao = verificarConexaoAtiva(ultimaLeitura);
-    status.connection_status = conexao.online ? 'online' : 'offline';
-    status.last_seen_minutes = conexao.minutes_ago || conexao.minutes_offline;
-  }
-  if (temp !== null && !status.fan_status) {
-    status.fan_status = temp >= FAN_CONFIG.TEMP_ON ? 'ON' : (temp <= FAN_CONFIG.TEMP_OFF ? 'OFF' : 'HOLD');
+  const conexao = verificarConexaoAtiva(ultimaLeitura);
+  status.connection_status = conexao.online ? "online" : "offline";
+  status.last_seen_minutes = conexao.minutes_ago || conexao.minutes_offline;
+
+  if (temp !== null && validarTemperatura(temp).valid) {
+    status.fan_status = temp >= FAN_CONFIG.TEMP_ON
+      ? "ON"
+      : temp <= FAN_CONFIG.TEMP_OFF
+        ? "OFF"
+        : "HOLD";
   }
 
-  // Contagem diária de ventilação (sempre MariaDB - dado administrativo)
   const [[fanCount]] = await promisePool.query(
     "SELECT COUNT(*) as count FROM historico_ventilacao WHERE serial_number = ? AND timestamp_inicio >= CURDATE()",
     [serialNumber]
@@ -236,32 +190,10 @@ async function obterStatus(serialNumber) {
 }
 
 async function obterUltimaLeitura(serialNumber) {
-  let rows = [];
-
-  // Tenta Python API primeiro
-  if (USE_PYTHON_API) {
-    try {
-      const result = await pythonApi.getLogboxReadings(serialNumber, 10);
-      if (result.success && result.data && result.data.labels) {
-        rows = result.data.labels.map((label, i) => ({
-          payload: { ch_analog_1: result.data.temperaturas[i] },
-          timestamp_leitura: label
-        }));
-        console.log(`[PythonAPI] obterUltimaLeitura(${serialNumber}) ✅ ${rows.length} leituras`);
-      }
-    } catch (err) {
-      console.warn(`[Fallback] Python API falhou em obterUltimaLeitura(${serialNumber}): ${err.message}`);
-    }
-  }
-
-  // Fallback: MariaDB
-  if (rows.length === 0) {
-    const [dbRows] = await promisePool.query(
-      "SELECT payload_json as payload, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 10",
-      [serialNumber]
-    );
-    rows = dbRows;
-  }
+  const [rows] = await promisePool.query(
+    "SELECT payload_json as payload, timestamp_leitura FROM leituras_logbox WHERE serial_number = ? ORDER BY timestamp_leitura DESC LIMIT 10",
+    [serialNumber]
+  );
 
   if (rows.length === 0) {
     throw new Error("Nenhuma leitura encontrada");
@@ -288,23 +220,6 @@ async function obterUltimaLeitura(serialNumber) {
 }
 
 async function obterEstatisticas(serialNumber) {
-  // Tenta Python API primeiro
-  if (USE_PYTHON_API) {
-    try {
-      const result = await pythonApi.getLogboxStats(serialNumber);
-      if (result.success && result.data) {
-        console.log(`[PythonAPI] obterEstatisticas(${serialNumber}) ✅`);
-        return {
-          today: result.data.today || { min: "N/A", avg: "N/A", max: "N/A" },
-          month: result.data.month || { min: "N/A", avg: "N/A", max: "N/A" }
-        };
-      }
-    } catch (err) {
-      console.warn(`[Fallback] Python API falhou em obterEstatisticas(${serialNumber}): ${err.message}`);
-    }
-  }
-
-  // Fallback: MariaDB
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const month = new Date(today.getFullYear(), today.getMonth(), 1);
