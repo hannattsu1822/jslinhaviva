@@ -519,3 +519,318 @@ body.lv-report-body {
   text-align: center;
   line-height: 1.5;
 }
+
+/* ── Modo Relatório Técnico (padrão documental industrial) ─────────── */
+
+.lv-report--technical {
+  font-family: Arial, "Segoe UI", sans-serif;
+}
+
+.lv-report--technical .lv-report__accent-bar,
+.lv-report--technical .lv-report-header {
+  display: none;
+}
+
+/* Faixa de controle documental */
+.rt-doc-control {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  font-size: 8pt;
+  border: 1px solid #94a3b8;
+}
+
+.rt-doc-control td {
+  border: 1px solid #94a3b8;
+  padding: 6px 10px;
+  vertical-align: top;
+  width: 25%;
+  background: #f8fafc;
+}
+
+.rt-doc-control span {
+  display: block;
+  font-size: 7pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.rt-doc-control strong {
+  font-size: 9pt;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* Capa / cabeçalho técnico */
+.rt-cover {
+  display: grid;
+  grid-template-columns: 1.1fr 1.8fr 1fr;
+  gap: 16px;
+  align-items: center;
+  background: linear-gradient(180deg, #163d72 0%, #1e56a0 55%, #1e56a0 100%);
+  color: #fff;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  border: 1px solid #163d72;
+  page-break-inside: avoid;
+}
+
+.rt-cover__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.rt-cover__logo {
+  height: 52px;
+  max-width: 160px;
+  filter: brightness(1.05);
+}
+
+.rt-cover__company {
+  margin: 0;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.rt-cover__center {
+  text-align: center;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0 16px;
+}
+
+.rt-cover__kind {
+  margin: 0 0 6px;
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.rt-cover__title {
+  margin: 0;
+  font-size: 13.5pt;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #fff;
+}
+
+.rt-cover__module {
+  margin: 8px 0 0;
+  font-size: 8.5pt;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.rt-cover__meta {
+  font-size: 8.5pt;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: right;
+}
+
+.rt-cover__meta strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Seções numeradas */
+.lv-report--technical .lv-section {
+  border-radius: 0;
+  border: 1px solid #94a3b8;
+  margin-bottom: 16px;
+  box-shadow: none;
+}
+
+.lv-report--technical .lv-section__title {
+  display: none;
+}
+
+.rt-section__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 9px 14px;
+  background: #163d72;
+  color: #fff;
+  font-size: 10pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #0f2d52;
+}
+
+.rt-section__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 9pt;
+  font-weight: 800;
+}
+
+.rt-section--annex .rt-section__heading {
+  background: #0f2d52;
+}
+
+.rt-section__intro {
+  margin: 0 0 14px;
+  font-size: 9pt;
+  color: #475569;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.lv-report--technical .lv-section__body {
+  padding: 14px 16px 16px;
+  background: #fff;
+}
+
+.lv-report--technical .lv-info-item {
+  border-radius: 0;
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.lv-report--technical .lv-info-item__label {
+  color: #475569;
+  font-size: 7.5pt;
+}
+
+.lv-report--technical .lv-text-block {
+  border-radius: 0;
+  background: #fafafa;
+  border-color: #cbd5e1;
+}
+
+.lv-report--technical .lv-table {
+  border: 1px solid #64748b;
+}
+
+.lv-report--technical .lv-table th,
+.lv-report--technical .lv-table td {
+  border: 1px solid #94a3b8;
+}
+
+.lv-report--technical .lv-table thead th {
+  background: #163d72;
+  color: #fff;
+  font-size: 8pt;
+  border-color: #0f2d52;
+}
+
+.lv-report--technical .lv-table tbody tr:nth-child(even) {
+  background: #f1f5f9;
+}
+
+/* Figuras numeradas (anexo fotográfico) */
+.rt-figure-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 18px;
+}
+
+.lv-report--landscape .rt-figure-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.rt-figure {
+  margin: 0;
+  page-break-inside: avoid;
+  border: 1px solid #94a3b8;
+  background: #fff;
+}
+
+.rt-figure__frame {
+  padding: 8px;
+  background: #f8fafc;
+  border-bottom: 1px solid #cbd5e1;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rt-figure__frame img {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.rt-figure figcaption {
+  padding: 8px 10px;
+  font-size: 8pt;
+  font-weight: 600;
+  color: #334155;
+  text-align: center;
+  line-height: 1.4;
+  background: #f1f5f9;
+}
+
+/* Assinaturas */
+.rt-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 32px;
+  padding-top: 8px;
+  page-break-inside: avoid;
+}
+
+.rt-signature {
+  text-align: center;
+}
+
+.rt-signature__line {
+  border-top: 1px solid #0f172a;
+  margin: 48px 12px 8px;
+}
+
+.rt-signature__label {
+  margin: 0;
+  font-size: 9pt;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rt-signature__role {
+  margin: 4px 0 0;
+  font-size: 8pt;
+  color: #64748b;
+}
+
+.lv-report--technical .lv-report-footer-note {
+  border-top: 1px solid #94a3b8;
+  font-size: 7.5pt;
+  color: #64748b;
+  margin-top: 24px;
+}
+
+.lv-report--technical .lv-item-card {
+  border-radius: 0;
+  border-color: #94a3b8;
+  background: #fff;
+}
+
+.lv-report--technical .lv-subsection-title {
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #163d72;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 4px;
+}

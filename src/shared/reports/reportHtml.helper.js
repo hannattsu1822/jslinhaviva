@@ -29,9 +29,27 @@ function renderStatusBadge(label) {
   return `<span class="lv-badge ${badgeClass}">${text}</span>`;
 }
 
-function gerarGaleriaHtml(imagens, columns = 4) {
+function gerarGaleriaHtml(imagens, columns = 4, options = {}) {
   if (!imagens || imagens.length === 0) {
-    return '<p class="lv-empty">Nenhuma imagem encontrada.</p>';
+    return '<p class="lv-empty">Nenhum registro fotográfico encontrado.</p>';
+  }
+
+  const { technical = false, figureStart = 1 } = options;
+
+  if (technical) {
+    let galleryHtml = '<div class="rt-figure-grid">';
+    imagens.forEach((img, index) => {
+      const figureNum = figureStart + index;
+      galleryHtml += `
+        <figure class="rt-figure">
+          <div class="rt-figure__frame">
+            <img src="${img.src}" alt="${escapeHtml(img.nome)}" />
+          </div>
+          <figcaption>Figura ${figureNum} — ${escapeHtml(img.nome)}</figcaption>
+        </figure>`;
+    });
+    galleryHtml += "</div>";
+    return galleryHtml;
   }
 
   const gridClass =

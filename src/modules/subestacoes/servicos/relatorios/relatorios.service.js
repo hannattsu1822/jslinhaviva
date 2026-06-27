@@ -10,6 +10,7 @@ const {
   htmlToPdf,
   mergePdfAttachments,
   formatReportDate,
+  buildDocumentCode,
 } = require("../../../../shared/reports/pdfReport.service");
 const {
   renderStatusBadge,
@@ -72,7 +73,10 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
       const imagensItemLocal = await processarImagensParaUrlLocal(
         item.anexos || []
       );
-      const galeriaItemHtml = gerarGaleriaHtml(imagensItemLocal);
+      const galeriaItemHtml = gerarGaleriaHtml(imagensItemLocal, 2, {
+        technical: true,
+        figureStart: 1,
+      });
       itensEscopoHtml += `
         <div class="lv-item-card">
           <p class="lv-item-card__title">${escapeHtml(
@@ -101,7 +105,8 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
   const anexosGerais = servicoData.anexos || [];
   const galeriaAnexosGerais = gerarGaleriaHtml(
     await processarImagensParaUrlLocal(anexosGerais),
-    4
+    3,
+    { technical: true }
   );
   const listaDocumentosGerais = gerarListaDocumentosHtmlSubestacao(anexosGerais);
   const statusFinalTexto = (servicoData.status || "N/A").replace(/_/g, " ");
@@ -132,9 +137,10 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
   templateHtml = applyTemplatePlaceholders(templateHtml, dadosParaTemplate);
 
   return wrapReportHtml(templateHtml, {
-    title: "Relatório Final de Serviço de Subestação",
-    badge: "Subestações",
+    title: "Relatório Técnico de Serviço — Subestação",
+    badge: "Subestações · Manutenção",
     processo: servicoData.processo || "N/A",
+    referenceId: servicoData.id,
     generatedAt: formatReportDate(),
     author: servicoData.responsavel_nome || "",
   });
@@ -174,10 +180,15 @@ async function gerarPdfRelatorio(servicoId) {
     const htmlContent = await preencherTemplateHtmlServicoSubestacao(
       servicoData
     );
+    const docCode = buildDocumentCode(
+      servicoData.processo,
+      servicoData.id
+    );
 
     const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: true,
       footerOnly: true,
+      docCode,
     });
 
     const pdfAttachmentPaths = (servicoData.anexos || [])

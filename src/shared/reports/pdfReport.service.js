@@ -22,6 +22,19 @@ function formatReportDate(date = new Date()) {
   return date.toLocaleString("pt-BR", { timeZone: "America/Maceio" });
 }
 
+function formatReportDateShort(date = new Date()) {
+  return date.toLocaleDateString("pt-BR", { timeZone: "America/Maceio" });
+}
+
+function buildDocumentCode(processo, referenceId) {
+  const slug = String(processo || referenceId || "000")
+    .trim()
+    .replace(/\//g, "-")
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9\-]/g, "");
+  return `LV-SRV-${slug || "000"}`;
+}
+
 function buildHeaderFooterTemplates(meta = {}) {
   const title = escapeHtml(meta.title || "Relatório");
   const subtitle = escapeHtml(meta.subtitle || BRAND.system);
@@ -53,11 +66,12 @@ function buildHeaderFooterTemplates(meta = {}) {
   return { headerTemplate, footerTemplate };
 }
 
-function buildFooterOnlyTemplate() {
-  const footerStyle = `font-family: ${PDF_FONT}; font-size: 9px; color: #64748b; width: 100%;`;
+function buildFooterOnlyTemplate(docCode = "") {
+  const footerStyle = `font-family: ${PDF_FONT}; font-size: 8px; color: #475569; width: 100%;`;
+  const docLabel = docCode ? `${escapeHtml(docCode)} · ` : "";
   return `
-    <div style="${footerStyle} padding: 0 10mm; height: 12mm; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0;">
-      <span>${BRAND.system} · ${BRAND.company}</span>
+    <div style="${footerStyle} padding: 0 10mm; height: 12mm; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #94a3b8;">
+      <span>${docLabel}${BRAND.company} · ${BRAND.system} · Uso Interno</span>
       <span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>
     </div>
   `;
@@ -73,28 +87,55 @@ async function wrapReportHtml(bodyHtml, options = {}) {
     title = "Relatório",
     badge = "",
     processo = "",
+    referenceId = "",
     generatedAt = formatReportDate(),
     author = "",
     extraMeta = "",
     showFooterNote = true,
+    showSignatures = true,
     landscape = true,
   } = options;
 
+  const docCode = buildDocumentCode(processo, referenceId);
+  const emissionDate = formatReportDateShort();
+
   const metaLines = [];
   if (processo) {
-    metaLines.push(`<strong>Processo:</strong> ${escapeHtml(processo)}`);
+    metaLines.push(`<strong>Processo/OS:</strong> ${escapeHtml(processo)}`);
   }
-  metaLines.push(`<strong>Gerado em:</strong> ${escapeHtml(generatedAt)}`);
-  if (author) metaLines.push(`<strong>Por:</strong> ${escapeHtml(author)}`);
-  if (extraMeta) metaLines.push(extraMeta);
+  metaLines.push(`<strong>Emissão:</strong> ${escapeHtml(generatedAt)}`);
+  if (author) metaLines.push(`<strong>Responsável:</strong> ${escapeHtml(author)}`);
 
   const safeTitle = escapeHtml(title);
   const safeBadge = badge ? escapeHtml(badge) : "";
-  const landscapeClass = landscape ? " lv-report--landscape" : "";
+  const reportClasses = [
+    "lv-report",
+    landscape ? "lv-report--landscape" : "",
+    "lv-report--technical",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const logoHtml = logoDataUri
-    ? `<img class="lv-report-brand__logo" src="${logoDataUri}" alt="${BRAND.company}" />`
+    ? `<img class="lv-report-brand__logo rt-cover__logo" src="${logoDataUri}" alt="${BRAND.company}" />`
     : `<div class="lv-report-brand__logo-fallback">${BRAND.company}</div>`;
+
+  const signaturesHtml =
+    showSignatures && author
+      ? `
+    <div class="rt-signatures">
+      <div class="rt-signature">
+        <div class="rt-signature__line"></div>
+        <p class="rt-signature__label">${escapeHtml(author)}</p>
+        <p class="rt-signature__role">Responsável Técnico</p>
+      </div>
+      <div class="rt-signature">
+        <div class="rt-signature__line"></div>
+        <p class="rt-signature__label">${BRAND.company}</p>
+        <p class="rt-signature__role">Gestão Operacional — ${BRAND.system}</p>
+      </div>
+    </div>`
+      : "";
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -104,27 +145,39 @@ async function wrapReportHtml(bodyHtml, options = {}) {
   <style>${styles}</style>
 </head>
 <body class="lv-report-body">
-  <div class="lv-report${landscapeClass}">
-    <div class="lv-report__accent-bar"></div>
-    <header class="lv-report-header">
-      <div class="lv-report-brand">
+  <div class="${reportClasses}">
+    <table class="rt-doc-control" aria-label="Controle documental">
+      <tr>
+        <td><span>Documento</span><strong>${escapeHtml(docCode)}</strong></td>
+        <td><span>Revisão</span><strong>00</strong></td>
+        <td><span>Data</span><strong>${escapeHtml(emissionDate)}</strong></td>
+        <td><span>Classificação</span><strong>Uso Interno</strong></td>
+      </tr>
+    </table>
+
+    <header class="rt-cover">
+      <div class="rt-cover__brand">
         ${logoHtml}
-        <div class="lv-report-brand__divider" aria-hidden="true"></div>
-        <div class="lv-report-brand__text">
-          <span class="lv-report-brand__name">${BRAND.name}</span>
-          <span class="lv-report-brand__system">${BRAND.system}</span>
-        </div>
+        <p class="rt-cover__company">${BRAND.company}</p>
       </div>
-      <div class="lv-report-header__main">
-        ${safeBadge ? `<span class="lv-report-header__badge">${safeBadge}</span>` : ""}
-        <h1 class="lv-report-header__title">${safeTitle}</h1>
-        <div class="lv-report-header__meta">${metaLines.join("<br>")}</div>
+      <div class="rt-cover__center">
+        <p class="rt-cover__kind">Relatório Técnico</p>
+        <h1 class="rt-cover__title">${safeTitle}</h1>
+        ${safeBadge ? `<p class="rt-cover__module">${safeBadge}</p>` : ""}
+      </div>
+      <div class="rt-cover__meta">
+        ${metaLines.join("<br>")}
+        ${extraMeta ? `<br>${extraMeta}` : ""}
       </div>
     </header>
+
     <main class="lv-report-main">${bodyHtml}</main>
+
+    ${signaturesHtml}
+
     ${
       showFooterNote
-        ? `<p class="lv-report-footer-note">Documento emitido pelo ${BRAND.system} · ${BRAND.company}. Informações sujeitas aos registros operacionais internos.</p>`
+        ? `<p class="lv-report-footer-note">Documento gerado eletronicamente pelo ${BRAND.system}. Reprodução parcial permitida para fins operacionais da ${BRAND.company}.</p>`
         : ""
     }
   </div>
@@ -151,6 +204,7 @@ async function htmlToPdf(html, options = {}) {
     headerFooter = true,
     footerOnly = false,
     headerMeta = {},
+    docCode = "",
   } = options;
 
   let browser;
@@ -172,7 +226,7 @@ async function htmlToPdf(html, options = {}) {
     if (footerOnly) {
       pdfOptions.displayHeaderFooter = true;
       pdfOptions.headerTemplate = "<div></div>";
-      pdfOptions.footerTemplate = buildFooterOnlyTemplate();
+      pdfOptions.footerTemplate = buildFooterOnlyTemplate(docCode);
     } else if (headerFooter) {
       const { headerTemplate, footerTemplate } =
         buildHeaderFooterTemplates(headerMeta);
@@ -219,6 +273,8 @@ module.exports = {
   REPORTS_DIR,
   TEMPLATES_DIR,
   formatReportDate,
+  formatReportDateShort,
+  buildDocumentCode,
   buildHeaderFooterTemplates,
   buildFooterOnlyTemplate,
   wrapReportHtml,

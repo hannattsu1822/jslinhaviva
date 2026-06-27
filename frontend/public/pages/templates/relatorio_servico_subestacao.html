@@ -1,6 +1,8 @@
-<!-- Layout otimizado para A4 paisagem -->
-<section class="lv-section">
-  <h2 class="lv-section__title">Informações Gerais do Serviço</h2>
+<!-- Relatório técnico — seções numeradas (padrão documental) -->
+<section class="lv-section rt-section">
+  <h2 class="rt-section__heading">
+    <span class="rt-section__num">1</span> Identificação do Serviço
+  </h2>
   <div class="lv-section__body">
     <div class="lv-info-grid lv-info-grid--4col">
       <div class="lv-info-item">
@@ -37,14 +39,18 @@
   </div>
 </section>
 
-<section class="lv-section">
-  <h2 class="lv-section__title">Itens de Escopo Executados</h2>
+<section class="lv-section rt-section">
+  <h2 class="rt-section__heading">
+    <span class="rt-section__num">2</span> Itens de Escopo Executados
+  </h2>
   <div class="lv-section__body">{{itens_escopo_html}}</div>
 </section>
 
 <div class="lv-landscape-split">
-  <section class="lv-section">
-    <h2 class="lv-section__title">Detalhes da Conclusão Geral</h2>
+  <section class="lv-section rt-section">
+    <h2 class="rt-section__heading">
+      <span class="rt-section__num">3</span> Conclusão do Serviço
+    </h2>
     <div class="lv-section__body">
       <div class="lv-info-grid lv-info-grid--1col">
         <div class="lv-info-item">
@@ -67,13 +73,23 @@
     </div>
   </section>
 
-  <section class="lv-section">
-    <h2 class="lv-section__title">Anexos Gerais do Serviço</h2>
-    <div class="lv-section__body">
-      <h3 class="lv-subsection-title">Imagens</h3>
-      {{galeria_anexos_gerais}}
-      <h3 class="lv-subsection-title">Outros Documentos</h3>
-      {{lista_documentos_gerais}}
-    </div>
+  <section class="lv-section rt-section">
+    <h2 class="rt-section__heading">
+      <span class="rt-section__num">4</span> Documentos Complementares
+    </h2>
+    <div class="lv-section__body">{{lista_documentos_gerais}}</div>
   </section>
 </div>
+
+<section class="lv-section rt-section rt-section--annex lv-page-break">
+  <h2 class="rt-section__heading">
+    <span class="rt-section__num">A</span> Registro Fotográfico
+  </h2>
+  <div class="lv-section__body">
+    <p class="rt-section__intro">
+      Registros fotográficos gerais do serviço. Figuras por item de escopo
+      constam na seção 2.
+    </p>
+    {{galeria_anexos_gerais}}
+  </div>
+</section>

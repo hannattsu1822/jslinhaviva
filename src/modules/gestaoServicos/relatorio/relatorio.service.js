@@ -9,6 +9,7 @@ const {
   htmlToPdf,
   mergePdfAttachments,
   formatReportDate,
+  buildDocumentCode,
 } = require("../../../shared/reports/pdfReport.service");
 const {
   renderStatusBadge,
@@ -79,7 +80,9 @@ async function preencherTemplateHtml(servicoData) {
   );
 
   const imagensBase64 = await processarImagensParaBase64(todasAsImagens);
-  const galeriaGeralHtml = gerarGaleriaHtml(imagensBase64, 6);
+  const galeriaGeralHtml = gerarGaleriaHtml(imagensBase64, 3, {
+    technical: true,
+  });
   const listaAnexosPdfHtml = gerarListaDocumentosHtml(
     anexosPDF,
     "Nenhum documento PDF foi anexado a este serviço."
@@ -213,9 +216,10 @@ async function preencherTemplateHtml(servicoData) {
   templateHtml = applyTemplatePlaceholders(templateHtml, dadosParaTemplate);
 
   return wrapReportHtml(templateHtml, {
-    title: "Relatório Final de Serviço de Redes de Distribuição",
-    badge: "Gestão de Serviços",
+    title: "Relatório Técnico de Serviço — Redes de Distribuição",
+    badge: "Gestão de Serviços · Redes de Distribuição",
     processo: servicoData.processo || "N/A",
+    referenceId: servicoData.id,
     generatedAt: formatReportDate(),
     author: servicoData.responsavel_nome
       ? `${servicoData.responsavel_nome} (${servicoData.responsavel_matricula || "N/A"})`
@@ -268,10 +272,15 @@ async function gerarPdfConsolidado(servicoId) {
 
     const servicoData = { ...servicoRows[0], anexos: anexos || [], responsaveis };
     const htmlContent = await preencherTemplateHtml(servicoData);
+    const docCode = buildDocumentCode(
+      servicoData.processo,
+      servicoData.id
+    );
 
     const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: true,
       footerOnly: true,
+      docCode,
     });
 
     const pdfAttachmentPaths = anexos
