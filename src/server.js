@@ -11,8 +11,8 @@ const {
 } = require("./infrastructure/uploads");
 const { mountSecureUploads } = require("./shared/secureUpload.middleware");
 const { autenticar, verificarNivel } = require("./auth");
-const { iniciarClienteMQTT } = require("./mqtt_handler");
-const { iniciarMonitoramentoConexao } = require("./modules/logbox/connectionHistory.service");
+const { iniciarClienteMQTT } = require("./telemetry/transport/mqtt.subscriber");
+const { iniciarMonitoramentoConexao } = require("./telemetry/ingest/connectionHistory");
 
 mountSecureUploads(app, [
   { urlPath: "/upload_arquivos_subestacoes", dir: uploadsSubestacoesDir, minNivel: 2 },
