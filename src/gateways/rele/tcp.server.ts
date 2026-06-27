@@ -175,6 +175,7 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
 
     const legacyServer = net.createServer((rawSocket) => {
       const socket = rawSocket as ReleSocket;
+      socket.state = "LEGACY_WARMUP";
       socket.rele_id_db = deviceInfo.rele_id_db;
       socket.deviceId = deviceInfo.deviceId;
 
@@ -183,7 +184,9 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
       if (listenPort === LEGACY_DIRECT_PORT) {
         console.log(`[TCP] ${deviceInfo.deviceId} conectou na porta ${LEGACY_DIRECT_PORT} (modo cabo).`);
         setTimeout(() => {
+          socket.textBuffer = "";
           socket.state = "IDLE";
+          console.log(`[TCP] ${deviceInfo.deviceId} pronto — iniciando polling (porta ${LEGACY_DIRECT_PORT}).`);
           socket.startPollingCycle();
           if (socket.pollTimer) {
             clearInterval(socket.pollTimer);
@@ -193,6 +196,7 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
         }, STARTUP_DELAY_PORT_5001_MS);
       } else {
         setTimeout(() => {
+          socket.textBuffer = "";
           socket.state = "AWAITING_PASSWORD_PROMPT";
           socket.write("\r\n");
           setTimeout(() => socket.write("ACC\r\n"), 500);
@@ -233,6 +237,10 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
     const parsedData = parseReleResponse(socket.metData ?? "", socket.tempData ?? "");
 
     if (Object.keys(parsedData).length === 0) {
+      console.warn(
+        `[TCP] ${socket.deviceId} MET/THE recebidos mas parse vazio — ` +
+          `MET(${ (socket.metData ?? "").length} chars) THE(${ (socket.tempData ?? "").length} chars)`
+      );
       return;
     }
 
@@ -287,6 +295,10 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
 
     try {
       while (true) {
+        if (socket.state === "LEGACY_WARMUP") {
+          break;
+        }
+
         if (socket.state === "AWAITING_IDENTITY") {
           if (socket.binaryBuffer.length === 0) {
             break;
@@ -299,6 +311,7 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
           if (deviceInfo) {
             socket.rele_id_db = deviceInfo.rele_id_db;
             socket.deviceId = deviceInfo.deviceId;
+            console.log(`[TCP] ${deviceInfo.deviceId} identificado (WiFi, id: ${deviceIdHex}).`);
 
             setTimeout(() => {
               socket.state = "AWAITING_PASSWORD_PROMPT";
@@ -351,6 +364,9 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
               socket.state = "AWAITING_THE";
               socket.write("THE\r\n");
             } else {
+              console.warn(
+                `[TCP] ${socket.deviceId ?? "?"} MET rejeitado — ${completeMessage.slice(0, 120).replace(/\r?\n/g, " ")}`
+              );
               socket.state = "IDLE";
             }
             break;
@@ -358,6 +374,9 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
             socket.tempData = completeMessage;
             await processAndPublish(socket);
             socket.state = "IDLE";
+            if (socket.deviceId) {
+              socket.startKeepalive();
+            }
             break;
         }
 
@@ -392,6 +411,9 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
     socket.startPollingCycle = () => {
       if (socket.state === "IDLE") {
         socket.state = "AWAITING_MET";
+        if (socket.deviceId) {
+          console.log(`[TCP] ${socket.deviceId} -> MET`);
+        }
         socket.write("MET\r\n");
 
         if (socket.keepaliveTimer) {
@@ -413,6 +435,9 @@ export function createReleTcpServer(config: ReleTcpServerConfig) {
     };
 
     socket.on("data", (data) => {
+      if (socket.state === "LEGACY_WARMUP") {
+        return;
+      }
       if (socket.state === "AWAITING_IDENTITY") {
         socket.binaryBuffer = Buffer.concat([socket.binaryBuffer, data]);
       } else {

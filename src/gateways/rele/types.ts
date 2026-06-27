@@ -1,6 +1,7 @@
 import type net from "net";
 
 export type ReleSocketState =
+  | "LEGACY_WARMUP"
   | "AWAITING_IDENTITY"
   | "AWAITING_PASSWORD_PROMPT"
   | "LOGGING_IN_OTTER"
