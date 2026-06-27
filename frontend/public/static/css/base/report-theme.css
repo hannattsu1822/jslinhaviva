@@ -1,0 +1,421 @@
+/**
+ * Tema de relatórios PDF/HTML — alinhado ao design system Linha Viva.
+ * Tokens espelham frontend/public/static/css/base/variables.css
+ * (valores duplicados aqui para geração offline via Playwright setContent).
+ */
+:root {
+  --lv-primary: #1e56a0;
+  --lv-primary-dark: #163d72;
+  --lv-primary-light: #2d6cb5;
+  --lv-accent: #38bdf8;
+  --lv-accent-soft: #7dd3fc;
+  --lv-bg-deep: #0b1220;
+  --lv-bg-mid: #111c33;
+  --lv-surface: #ffffff;
+  --lv-surface-muted: #f8fafc;
+  --lv-surface-border: #e2e8f0;
+  --lv-text: #0f172a;
+  --lv-text-muted: #64748b;
+  --lv-success: #16a34a;
+  --lv-error: #dc2626;
+  --lv-success-bg: #f0fdf4;
+  --lv-success-border: #bbf7d0;
+  --lv-error-bg: #fef2f2;
+  --lv-error-border: #fecaca;
+  --lv-warning: #dd6b20;
+  --lv-warning-bg: #fffbeb;
+  --lv-warning-border: #fde68a;
+  --lv-radius-sm: 10px;
+  --lv-radius-md: 16px;
+  --lv-font: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --lv-table-head-bg: #eff6ff;
+}
+
+@page {
+  size: A4;
+  margin: 18mm 12mm 22mm 12mm;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body.lv-report-body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--lv-font);
+  font-size: 10pt;
+  line-height: 1.5;
+  color: var(--lv-text);
+  background: var(--lv-surface);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.lv-report {
+  width: 100%;
+}
+
+/* Faixa superior — mesmo efeito dos cards de módulos (gestao-servicos) */
+.lv-report__accent-bar {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--lv-primary-light),
+    var(--lv-accent)
+  );
+  border-radius: 2px 2px 0 0;
+  margin-bottom: 0;
+}
+
+/* Cabeçalho — marca sidebar + título de página */
+.lv-report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 16px 0 14px;
+  border-bottom: 1px solid var(--lv-surface-border);
+  margin-bottom: 20px;
+  page-break-inside: avoid;
+}
+
+.lv-report-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.lv-report-brand__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--lv-primary-light), var(--lv-accent));
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.2);
+}
+
+.lv-report-brand__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lv-report-brand__name {
+  font-size: 13pt;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-primary);
+}
+
+.lv-report-brand__system {
+  font-size: 8pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--lv-text-muted);
+}
+
+.lv-report-header__main {
+  flex: 1;
+  text-align: right;
+}
+
+.lv-report-header__badge {
+  display: inline-block;
+  padding: 4px 10px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: rgba(30, 86, 160, 0.08);
+  border: 1px solid rgba(30, 86, 160, 0.14);
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lv-primary);
+}
+
+.lv-report-header__title {
+  margin: 0;
+  font-size: 16pt;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--lv-text);
+  line-height: 1.25;
+}
+
+.lv-report-header__meta {
+  margin-top: 8px;
+  font-size: 9pt;
+  color: var(--lv-text-muted);
+  line-height: 1.6;
+}
+
+.lv-report-header__meta strong {
+  color: var(--lv-text);
+  font-weight: 600;
+}
+
+/* Seções — cards como servicos-page .card */
+.lv-section {
+  margin-bottom: 20px;
+  background: var(--lv-surface);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: var(--lv-radius-sm);
+  overflow: hidden;
+  page-break-inside: avoid;
+}
+
+.lv-section__title {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 11pt;
+  font-weight: 700;
+  color: var(--lv-text);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid var(--lv-surface-border);
+}
+
+.lv-section__body {
+  padding: 14px;
+}
+
+/* Grid de campos */
+.lv-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 16px;
+}
+
+.lv-info-grid--2col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.lv-info-item {
+  padding: 10px 12px;
+  background: var(--lv-surface-muted);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: 8px;
+  page-break-inside: avoid;
+}
+
+.lv-info-item--full {
+  grid-column: 1 / -1;
+}
+
+.lv-info-item__label {
+  display: block;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lv-text-muted);
+  margin-bottom: 4px;
+}
+
+.lv-info-item__value {
+  font-size: 10pt;
+  font-weight: 500;
+  color: var(--lv-text);
+  word-break: break-word;
+}
+
+.lv-text-block {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding: 12px;
+  background: var(--lv-surface-muted);
+  border: 1px solid var(--lv-surface-border);
+  border-radius: 8px;
+  font-size: 10pt;
+  line-height: 1.55;
+}
+
+/* Tabelas */
+.lv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+
+.lv-table th,
+.lv-table td {
+  border: 1px solid var(--lv-surface-border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.lv-table thead th {
+  background: var(--lv-table-head-bg);
+  color: var(--lv-primary-dark);
+  font-weight: 700;
+  font-size: 8.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.lv-table tbody tr:nth-child(even) {
+  background: var(--lv-surface-muted);
+}
+
+.lv-table tfoot td,
+.lv-table tfoot th {
+  background: var(--lv-table-head-bg);
+  font-weight: 700;
+}
+
+/* Badges de status — mesmas cores de estado do sistema */
+.lv-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.lv-badge--success {
+  color: var(--lv-success);
+  background: var(--lv-success-bg);
+  border-color: var(--lv-success-border);
+}
+
+.lv-badge--error {
+  color: var(--lv-error);
+  background: var(--lv-error-bg);
+  border-color: var(--lv-error-border);
+}
+
+.lv-badge--warning {
+  color: var(--lv-warning);
+  background: var(--lv-warning-bg);
+  border-color: var(--lv-warning-border);
+}
+
+.lv-badge--neutral {
+  color: var(--lv-primary);
+  background: rgba(30, 86, 160, 0.08);
+  border-color: rgba(30, 86, 160, 0.14);
+}
+
+/* Galeria de fotos */
+.lv-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  page-break-inside: avoid;
+}
+
+.lv-photo-grid--3col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.lv-photo-item {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  background: var(--lv-surface-muted);
+}
+
+.lv-photo-item img {
+  max-width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.lv-photo-item__caption {
+  margin: 6px 0 0;
+  font-size: 7.5pt;
+  color: var(--lv-text-muted);
+}
+
+.lv-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--lv-text-muted);
+  font-style: italic;
+  font-size: 9pt;
+}
+
+.lv-signature {
+  margin-top: 40px;
+  page-break-inside: avoid;
+}
+
+.lv-signature__line {
+  border-top: 1px solid var(--lv-text);
+  width: 60%;
+  margin: 0 auto;
+  padding-top: 8px;
+  text-align: center;
+  font-size: 9pt;
+  color: var(--lv-text-muted);
+}
+
+.lv-doc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lv-doc-list li {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--lv-surface-border);
+  font-size: 9pt;
+  background: var(--lv-surface-muted);
+}
+
+.lv-item-card {
+  border: 1px solid var(--lv-surface-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--lv-surface-muted);
+  page-break-inside: avoid;
+}
+
+.lv-item-card__title {
+  font-weight: 700;
+  font-size: 10pt;
+  margin: 0 0 8px;
+  color: var(--lv-text);
+}
+
+.lv-item-card__meta {
+  font-size: 9pt;
+  color: var(--lv-text-muted);
+  line-height: 1.5;
+}
+
+.lv-subsection-title {
+  margin: 16px 0 10px;
+  font-size: 10pt;
+  font-weight: 700;
+  color: var(--lv-primary-dark);
+}
+
+.lv-page-break {
+  page-break-before: always;
+}
+
+.lv-report-footer-note {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--lv-surface-border);
+  font-size: 8pt;
+  color: var(--lv-text-muted);
+  text-align: center;
+}

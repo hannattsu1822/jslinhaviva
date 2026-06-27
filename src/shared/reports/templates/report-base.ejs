@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title><%= title %></title>
+    <style><%- reportStyles %></style>
+  </head>
+  <body class="lv-report-body">
+    <div class="lv-report">
+      <div class="lv-report__accent-bar"></div>
+
+      <header class="lv-report-header">
+        <div class="lv-report-brand">
+          <div class="lv-report-brand__icon" aria-hidden="true">⚡</div>
+          <div class="lv-report-brand__text">
+            <span class="lv-report-brand__name"><%= brand.name %></span>
+            <span class="lv-report-brand__system"
+              ><%= brand.company %> · <%= brand.system %></span
+            >
+          </div>
+        </div>
+        <div class="lv-report-header__main">
+          <% if (typeof badge !== 'undefined' && badge) { %>
+          <span class="lv-report-header__badge"><%= badge %></span>
+          <% } %>
+          <h1 class="lv-report-header__title"><%= title %></h1>
+          <div class="lv-report-header__meta">
+            <% if (typeof processo !== 'undefined' && processo) { %>
+            <strong>Processo:</strong> <%= processo %><br />
+            <% } %>
+            <strong>Gerado em:</strong>
+            <%= typeof generatedAt !== 'undefined' ? generatedAt :
+            formatReportDate() %>
+            <% if (typeof author !== 'undefined' && author) { %>
+            <br /><strong>Por:</strong> <%= author %>
+            <% } %>
+            <% if (typeof extraMeta !== 'undefined' && extraMeta) { %>
+            <br /><%- extraMeta %>
+            <% } %>
+          </div>
+        </div>
+      </header>
+
+      <main><%- body %></main>
+
+      <% if (typeof showFooterNote === 'undefined' || showFooterNote) { %>
+      <p class="lv-report-footer-note">
+        Este documento foi emitido pelo <%= brand.system %>. Informações sujeitas
+        aos registros operacionais da <%= brand.company %>.
+      </p>
+      <% } %>
+    </div>
+  </body>
+</html>

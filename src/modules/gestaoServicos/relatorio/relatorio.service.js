@@ -1,11 +1,22 @@
 const path = require("path");
 const fs = require("fs");
 const fsPromises = require("fs").promises;
-const { PDFDocument } = require("pdf-lib");
-const playwright = require("playwright");
 const { promisePool } = require("../../../infrastructure/database");
-const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
+const { projectRootDir, publicPage } = require("../../../shared/path.helper");
 const { escapeHtml } = require("../../../shared/htmlEscape.helper");
+const {
+  wrapReportHtml,
+  htmlToPdf,
+  mergePdfAttachments,
+  formatReportDate,
+} = require("../../../shared/reports/pdfReport.service");
+const {
+  renderStatusBadge,
+  gerarGaleriaHtml,
+  gerarListaDocumentosHtml,
+  renderInfoItem,
+  renderTextBlock,
+} = require("../../../shared/reports/reportHtml.helper");
 
 async function processarImagensParaBase64(imagens) {
   const imagensProcessadas = await Promise.all(
@@ -37,49 +48,26 @@ async function processarImagensParaBase64(imagens) {
   return imagensProcessadas.filter(Boolean);
 }
 
-function gerarGaleriaHtml(imagens) {
-  if (!imagens || imagens.length === 0) {
-    return '<p class="no-content">Nenhuma imagem encontrada para este serviço.</p>';
+function formatarData(dataStr, comHora = false) {
+  if (!dataStr) return "N/A";
+  const options = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "UTC",
+  };
+  if (comHora) {
+    options.hour = "2-digit";
+    options.minute = "2-digit";
   }
-
-  let galleryHtml = "";
-  for (let i = 0; i < imagens.length; i += 4) {
-    const chunk = imagens.slice(i, i + 4);
-    galleryHtml += '<div class="photo-grid-container">';
-    galleryHtml += '<div class="photo-grid-4">';
-    chunk.forEach((img) => {
-      galleryHtml += `
-                <div class="gallery-item">
-                    <img src="${img.src}" alt="${escapeHtml(img.nome)}">
-                    <p class="caption">${escapeHtml(img.nome)}</p>
-                </div>
-            `;
-    });
-    galleryHtml += "</div></div>";
-  }
-  return galleryHtml;
+  const dataObj = new Date(dataStr);
+  if (isNaN(dataObj.getTime())) return "Data inválida";
+  return dataObj.toLocaleDateString("pt-BR", options);
 }
 
 async function preencherTemplateHtml(servicoData) {
   const templatePath = publicPage("templates/relatorio_servico.html");
   let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
-
-  const formatarData = (dataStr, comHora = false) => {
-    if (!dataStr) return "N/A";
-    const options = {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      timeZone: "UTC",
-    };
-    if (comHora) {
-      options.hour = "2-digit";
-      options.minute = "2-digit";
-    }
-    const dataObj = new Date(dataStr);
-    if (isNaN(dataObj.getTime())) return "Data inválida";
-    return dataObj.toLocaleDateString("pt-BR", options);
-  };
 
   const todasAsImagens = servicoData.anexos.filter((anexo) =>
     ["imagem", "foto_conclusao", "foto_nao_conclusao"].includes(anexo.tipo)
@@ -90,80 +78,134 @@ async function preencherTemplateHtml(servicoData) {
 
   const imagensBase64 = await processarImagensParaBase64(todasAsImagens);
   const galeriaGeralHtml = gerarGaleriaHtml(imagensBase64);
-
-  const listaAnexosPdfHtml =
-    anexosPDF.length > 0
-      ? `<ul>${anexosPDF
-          .map(
-            (pdf) =>
-              `<li>${escapeHtml(pdf.nomeOriginal)} (Tipo: ${escapeHtml(pdf.tipo)})</li>`
-          )
-          .join("")}</ul>`
-      : '<p class="no-content">Nenhum documento PDF foi anexado a este serviço.</p>';
+  const listaAnexosPdfHtml = gerarListaDocumentosHtml(
+    anexosPDF,
+    "Nenhum documento PDF foi anexado a este serviço."
+  );
 
   let listaResponsaveisHtml =
-    '<p class="no-content">Nenhum responsável atribuído.</p>';
+    '<p class="lv-empty">Nenhum responsável atribuído.</p>';
   if (servicoData.responsaveis && servicoData.responsaveis.length > 0) {
-    listaResponsaveisHtml = '<table class="responsaveis-table">';
-    listaResponsaveisHtml +=
-      "<thead><tr><th>Nome</th><th>Matrícula</th><th>Status</th><th>Data Conclusão</th><th>Observações</th></tr></thead>";
-    listaResponsaveisHtml += "<tbody>";
-    servicoData.responsaveis.forEach((resp) => {
-      listaResponsaveisHtml += `
+    listaResponsaveisHtml = `
+      <table class="lv-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Matrícula</th>
+            <th>Status</th>
+            <th>Data Conclusão</th>
+            <th>Observações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${servicoData.responsaveis
+            .map(
+              (resp) => `
             <tr>
-                <td>${escapeHtml(resp.nome || "N/A")}</td>
-                <td>${escapeHtml(resp.responsavel_matricula || "N/A")}</td>
-                <td>${escapeHtml(resp.status_individual || "N/A")}</td>
-                <td>${
-                  resp.data_conclusao_individual
-                    ? new Date(resp.data_conclusao_individual).toLocaleString(
-                        "pt-BR"
-                      )
-                    : "N/A"
-                }</td>
-                <td>${escapeHtml(resp.observacoes_individuais || "")}</td>
-            </tr>
-        `;
-    });
-    listaResponsaveisHtml += "</tbody></table>";
+              <td>${escapeHtml(resp.nome || "N/A")}</td>
+              <td>${escapeHtml(resp.responsavel_matricula || "N/A")}</td>
+              <td>${renderStatusBadge(resp.status_individual || "N/A")}</td>
+              <td>${
+                resp.data_conclusao_individual
+                  ? new Date(resp.data_conclusao_individual).toLocaleString(
+                      "pt-BR"
+                    )
+                  : "N/A"
+              }</td>
+              <td>${escapeHtml(resp.observacoes_individuais || "")}</td>
+            </tr>`
+            )
+            .join("")}
+        </tbody>
+      </table>`;
   }
 
+  const statusFinalTexto =
+    servicoData.status === "concluido" ? "Concluído" : "Não Concluído";
+
+  const detalhesServicoGrid = [
+    renderInfoItem("Processo", escapeHtml(servicoData.processo || "N/A")),
+    renderInfoItem("ID do Serviço", escapeHtml(String(servicoData.id))),
+    renderInfoItem(
+      "Data Prevista",
+      formatarData(servicoData.data_prevista_execucao)
+    ),
+    renderInfoItem("Tipo", escapeHtml(servicoData.tipo || "N/A")),
+    renderInfoItem("Subestação", escapeHtml(servicoData.subestacao || "N/A")),
+    renderInfoItem("Alimentador", escapeHtml(servicoData.alimentador || "N/A")),
+    renderInfoItem(
+      "Chave Montante",
+      escapeHtml(servicoData.chave_montante || "N/A")
+    ),
+    renderInfoItem(
+      "Desligamento",
+      escapeHtml(
+        `${servicoData.desligamento || "N/A"} ${
+          servicoData.desligamento === "SIM"
+            ? `(${servicoData.hora_inicio || ""} - ${servicoData.hora_fim || ""})`
+            : ""
+        }`
+      )
+    ),
+    renderInfoItem(
+      "Descrição do Serviço",
+      renderTextBlock(
+        escapeHtml(servicoData.descricao_servico || "Nenhuma.")
+      ),
+      true
+    ),
+    renderInfoItem(
+      "Observações Iniciais",
+      renderTextBlock(escapeHtml(servicoData.observacoes || "Nenhuma.")),
+      true
+    ),
+  ].join("");
+
+  let detalhesFinalizacaoGrid = [
+    renderInfoItem("Status Final", renderStatusBadge(statusFinalTexto)),
+    renderInfoItem(
+      "Data da Finalização",
+      formatarData(servicoData.data_conclusao, true)
+    ),
+    renderInfoItem(
+      "Responsável pela Finalização",
+      escapeHtml(
+        `${servicoData.responsavel_nome || "N/A"} (${
+          servicoData.responsavel_matricula || "N/A"
+        })`
+      ),
+      true
+    ),
+  ];
+
+  if (servicoData.status === "nao_concluido") {
+    detalhesFinalizacaoGrid.push(
+      renderInfoItem(
+        "Motivo da Não Conclusão",
+        renderTextBlock(
+          escapeHtml(servicoData.motivo_nao_conclusao || "Nenhum.")
+        ),
+        true
+      )
+    );
+  }
+
+  detalhesFinalizacaoGrid.push(
+    renderInfoItem(
+      "Observações da Conclusão",
+      renderTextBlock(
+        escapeHtml(servicoData.observacoes_conclusao || "Nenhuma.")
+      ),
+      true
+    )
+  );
+
   const dadosParaTemplate = {
-    processo: escapeHtml(servicoData.processo || "N/A"),
-    id: servicoData.id,
-    tipo: escapeHtml(servicoData.tipo || "N/A"),
-    data_prevista_execucao: formatarData(servicoData.data_prevista_execucao),
-    subestacao: escapeHtml(servicoData.subestacao || "N/A"),
-    alimentador: escapeHtml(servicoData.alimentador || "N/A"),
-    chave_montante: escapeHtml(servicoData.chave_montante || "N/A"),
-    desligamento: escapeHtml(`${servicoData.desligamento || "N/A"} ${
-      servicoData.desligamento === "SIM"
-        ? `(${servicoData.hora_inicio || ""} - ${servicoData.hora_fim || ""})`
-        : ""
-    }`),
-    descricao_servico: escapeHtml(servicoData.descricao_servico || "Nenhuma."),
-    observacoes: escapeHtml(servicoData.observacoes || "Nenhuma."),
-    status_final_classe:
-      servicoData.status === "concluido"
-        ? "status-concluido"
-        : "status-nao-concluido",
-    status_final_texto:
-      servicoData.status === "concluido" ? "Concluído" : "Não Concluído",
-    data_finalizacao: formatarData(servicoData.data_conclusao, true),
-    responsavel_finalizacao: escapeHtml(`${servicoData.responsavel_nome || "N/A"} (${
-      servicoData.responsavel_matricula || "N/A"
-    })`),
-    motivo_nao_conclusao_html:
-      servicoData.status === "nao_concluido"
-        ? `<div class="grid-item full-width"><strong>Motivo da Não Conclusão</strong><div class="text-area">${escapeHtml(
-            servicoData.motivo_nao_conclusao || "Nenhum."
-          )}</div></div>`
-        : "",
-    observacoes_conclusao: escapeHtml(servicoData.observacoes_conclusao || "Nenhuma."),
+    detalhes_servico_grid: detalhesServicoGrid,
+    lista_responsaveis: listaResponsaveisHtml,
+    detalhes_finalizacao_grid: detalhesFinalizacaoGrid.join(""),
     galeria_geral: galeriaGeralHtml,
     lista_anexos_pdf: listaAnexosPdfHtml,
-    lista_responsaveis: listaResponsaveisHtml,
-    data_geracao: new Date().toLocaleString("pt-BR"),
   };
 
   for (const key in dadosParaTemplate) {
@@ -171,12 +213,19 @@ async function preencherTemplateHtml(servicoData) {
     templateHtml = templateHtml.replace(regex, dadosParaTemplate[key]);
   }
 
-  return templateHtml;
+  return wrapReportHtml(templateHtml, {
+    title: "Relatório Final de Serviço de Redes de Distribuição",
+    badge: "Gestão de Serviços",
+    processo: servicoData.processo || "N/A",
+    generatedAt: formatReportDate(),
+    author: servicoData.responsavel_nome
+      ? `${servicoData.responsavel_nome} (${servicoData.responsavel_matricula || "N/A"})`
+      : "",
+  });
 }
 
 async function gerarPdfConsolidado(servicoId) {
   const connection = await promisePool.getConnection();
-  let browser;
   try {
     const [servicoRows] = await connection.query(
       `
@@ -219,77 +268,41 @@ async function gerarPdfConsolidado(servicoId) {
     );
 
     const servicoData = { ...servicoRows[0], anexos, responsaveis };
-
     const htmlContent = await preencherTemplateHtml(servicoData);
 
-    browser = await playwright.chromium.launch();
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
+    const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: true,
-      margin: { top: "20mm", right: "10mm", bottom: "20mm", left: "10mm" },
+      headerMeta: {
+        title: "Relatório de Serviço — Redes de Distribuição",
+        subtitle: servicoData.processo || "",
+      },
     });
-    await browser.close();
-    browser = null;
 
-    const pdfsAnexos = anexos.filter(
-      (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
-    );
-
-    if (pdfsAnexos.length > 0) {
-      const mergedPdfDoc = await PDFDocument.load(pdfBuffer);
-
-      for (const anexo of pdfsAnexos) {
+    const pdfAttachmentPaths = anexos
+      .filter(
+        (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
+      )
+      .map((anexo) => {
         const caminhoRelativo = anexo.caminho.replace(
           "/api/upload_arquivos/",
           ""
         );
-        const caminhoFisico = path.join(
-          projectRootDir,
-          "upload_arquivos",
-          caminhoRelativo
-        );
+        return path.join(projectRootDir, "upload_arquivos", caminhoRelativo);
+      });
 
-        if (fs.existsSync(caminhoFisico)) {
-          const anexoPdfBytes = await fsPromises.readFile(caminhoFisico);
-          try {
-            const anexoPdfDoc = await PDFDocument.load(anexoPdfBytes, {
-              ignoreEncryption: true,
-            });
-            const copiedPages = await mergedPdfDoc.copyPages(
-              anexoPdfDoc,
-              anexoPdfDoc.getPageIndices()
-            );
-            copiedPages.forEach((page) => mergedPdfDoc.addPage(page));
-          } catch (pdfError) {
-            console.error(
-              `Falha ao processar o anexo PDF ${anexo.nomeOriginal}: ${pdfError.message}. Anexo ignorado.`
-            );
-          }
-        }
-      }
-      const finalPdfBytes = await mergedPdfDoc.save();
-      return {
-        nomeArquivo: `relatorio_servico_${(
-          servicoData.processo || servicoId
-        ).replace(/\//g, "-")}.pdf`,
-        buffer: Buffer.from(finalPdfBytes),
-      };
-    }
+    const finalBuffer = await mergePdfAttachments(
+      pdfBuffer,
+      pdfAttachmentPaths
+    );
 
     return {
       nomeArquivo: `relatorio_servico_${(
         servicoData.processo || servicoId
       ).replace(/\//g, "-")}.pdf`,
-      buffer: pdfBuffer,
+      buffer: finalBuffer,
     };
-  } catch (error) {
-    if (browser) await browser.close();
-    throw error;
   } finally {
-    if (connection) connection.release();
+    connection.release();
   }
 }
 
