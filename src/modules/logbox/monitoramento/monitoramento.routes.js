@@ -42,6 +42,12 @@ router.get(
   controller.obterEstatisticas
 );
 router.get(
+  "/api/logbox-device/:serialNumber/fan-stats",
+  autenticar,
+  verificarNivel(2),
+  controller.obterEstatisticasVentilacao
+);
+router.get(
   "/api/logbox-device/:serialNumber/ventilation-history",
   autenticar,
   verificarNivel(2),

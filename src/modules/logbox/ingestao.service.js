@@ -7,6 +7,7 @@ const {
   analisarEstadoVentilacao,
   validarTemperatura 
 } = require("./helpers/validation.helper");
+const { registrarLeituraRecebida } = require("./connectionHistory.service");
 
 async function processarNovaLeitura(serialNumber, payload) {
   try {
@@ -24,6 +25,8 @@ async function processarNovaLeitura(serialNumber, payload) {
       "UPDATE dispositivos_logbox SET ultima_leitura = NOW(), status_json = ? WHERE serial_number = ?",
       [payloadString, serialNumber]
     );
+
+    await registrarLeituraRecebida(serialNumber);
 
     return { success: true };
   } catch (error) {

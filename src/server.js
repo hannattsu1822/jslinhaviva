@@ -12,6 +12,7 @@ const {
 const { mountSecureUploads } = require("./shared/secureUpload.middleware");
 const { autenticar, verificarNivel } = require("./auth");
 const { iniciarClienteMQTT } = require("./mqtt_handler");
+const { iniciarMonitoramentoConexao } = require("./modules/logbox/connectionHistory.service");
 
 mountSecureUploads(app, [
   { urlPath: "/upload_arquivos_subestacoes", dir: uploadsSubestacoesDir, minNivel: 2 },
@@ -24,6 +25,7 @@ mountSecureUploads(app, [
 
 // ─── MQTT ─────────────────────────────────────────────────────────────────────
 iniciarClienteMQTT(app);
+iniciarMonitoramentoConexao(logger);
 
 // ─── Rotas principais ─────────────────────────────────────────────────────────
 const aggregatorRoutes = require("./routes");

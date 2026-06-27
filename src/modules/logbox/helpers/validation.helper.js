@@ -84,6 +84,39 @@ function sanitizarDadosLeitura(dados) {
   };
 }
 
+function validarStatusDispositivo(status, ultimaLeitura) {
+  const conexao = verificarConexaoAtiva(ultimaLeitura);
+  const statusObj = status && typeof status === "object" ? status : {};
+
+  let connection_status = conexao.online ? "online" : "offline";
+
+  if (
+    statusObj.connection_status === "online" ||
+    statusObj.connection_status === "offline"
+  ) {
+    connection_status = conexao.online
+      ? statusObj.connection_status
+      : "offline";
+  }
+
+  const minutes_since_last_reading = conexao.online
+    ? conexao.minutes_ago
+    : conexao.minutes_offline;
+
+  let connection_warning = null;
+  if (!conexao.online) {
+    connection_warning = conexao.reason;
+  } else if (conexao.minutes_ago >= 3) {
+    connection_warning = `Última leitura há ${conexao.minutes_ago} minutos`;
+  }
+
+  return {
+    connection_status,
+    minutes_since_last_reading,
+    connection_warning,
+  };
+}
+
 function analisarEstadoVentilacao(temperatura, estadoAtual) {
   const validacao = validarTemperatura(temperatura);
 
@@ -124,6 +157,7 @@ function analisarEstadoVentilacao(temperatura, estadoAtual) {
 
 module.exports = {
   validarTemperatura,
+  validarStatusDispositivo,
   verificarConexaoAtiva,
   extrairTemperaturaPayload,
   sanitizarDadosLeitura,

@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "start:rele-tcp": "node src/gateways/rele_tcp_server.js",
     "dev": "nodemon src/server.js",
     "start:cluster": "pm2 start src/server.js -i max --name jslinhaviva",
     "start:api": "node scripts/start-api-only.js",
