@@ -15,6 +15,7 @@ const {
   renderStatusBadge,
   gerarGaleriaHtml,
   gerarListaDocumentosHtml,
+  applyTemplatePlaceholders,
 } = require("../../../../shared/reports/reportHtml.helper");
 
 async function processarImagensParaUrlLocal(anexos) {
@@ -127,10 +128,7 @@ async function preencherTemplateHtmlServicoSubestacao(servicoData) {
     lista_documentos_gerais: listaDocumentosGerais,
   };
 
-  for (const key in dadosParaTemplate) {
-    const regex = new RegExp(`{{${key}}}`, "g");
-    templateHtml = templateHtml.replace(regex, dadosParaTemplate[key]);
-  }
+  templateHtml = applyTemplatePlaceholders(templateHtml, dadosParaTemplate);
 
   return wrapReportHtml(templateHtml, {
     title: "Relatório Final de Serviço de Subestação",
@@ -178,13 +176,11 @@ async function gerarPdfRelatorio(servicoId) {
 
     const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: false,
-      headerMeta: {
-        title: "Relatório de Serviço — Subestação",
-        subtitle: servicoData.processo || "",
-      },
+      footerOnly: true,
+      margin: { top: "10mm", right: "10mm", bottom: "20mm", left: "10mm" },
     });
 
-    const pdfAttachmentPaths = servicoData.anexos
+    const pdfAttachmentPaths = (servicoData.anexos || [])
       .filter((anexo) => anexo.tipo_mime === "application/pdf")
       .map((anexo) => {
         const caminhoRelativo = anexo.caminho_servidor.replace(

@@ -77,8 +77,16 @@ function renderInfoItem(label, value, fullWidth = false) {
   return `
     <div class="lv-info-item${modifier}">
       <span class="lv-info-item__label">${escapeHtml(label)}</span>
-      <span class="lv-info-item__value">${value}</span>
+      <div class="lv-info-item__value">${value}</div>
     </div>`;
+}
+
+function applyTemplatePlaceholders(template, data) {
+  let result = template;
+  for (const [key, value] of Object.entries(data)) {
+    result = result.split(`{{${key}}}`).join(value ?? "");
+  }
+  return result;
 }
 
 function renderTextBlock(content) {
@@ -92,4 +100,5 @@ module.exports = {
   gerarListaDocumentosHtml,
   renderInfoItem,
   renderTextBlock,
+  applyTemplatePlaceholders,
 };

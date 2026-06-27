@@ -257,9 +257,9 @@ function atualizarTabela() {
       const statusHtml =
         servico.status === "concluido"
           ? '<span class="badge bg-success">Concluído</span>'
-          : `<span class="status-nao-concluido">Não Concluído</span><small class="motivo-nao-concluido d-block">${
+          : `<span class="status-nao-concluido">Não Concluído</span><small class="motivo-nao-concluido d-block">${escapeHtml(
               servico.motivo_nao_conclusao || ""
-            }</small>`;
+            )}</small>`;
 
       let reativarButtonHtml = "";
       const P = window.ServicosPermissions || {};
@@ -295,17 +295,17 @@ function atualizarTabela() {
         <td data-label="Processo">${servico.processo || "N/A"}</td>
         <td data-label="Subestação">${servico.subestacao || "N/A"}</td>
         <td data-label="Alimentador">${servico.alimentador || "N/A"}</td>
-        <td data-label="Status / Motivo">${statusHtml}</td>
+        <td data-label="Status / Motivo">${rawHtml(statusHtml)}</td>
         <td data-label="Data Finalização">${formatarData(servico.data_conclusao)}</td>
         <td data-label="Equipe">${servico.nomes_responsaveis || "Não informado"}</td>
-        <td data-label="APR" class="text-center table-actions apr-actions">${aprButtonHtml}</td>
+        <td data-label="APR" class="text-center table-actions apr-actions">${rawHtml(aprButtonHtml)}</td>
         <td data-label="Ordem">${servico.ordem_obra || "N/A"}</td>
         <td data-label="Ações" class="text-center">
           <div class="btn-group">
-            ${anexosPosterioresButtonHtml}
+            ${rawHtml(anexosPosterioresButtonHtml)}
             <button class="btn btn-sm glass-btn me-1" data-action="navigate" data-href="/detalhes_servico?id=${servico.id}" title="Visualizar"><span class="material-symbols-outlined">visibility</span></button>
             <button class="btn btn-sm glass-btn btn-success me-1" data-action="solicitarRelatorioCompleto" data-id="${servico.id}" title="Gerar Relatório PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button>
-            ${reativarButtonHtml}
+            ${rawHtml(reativarButtonHtml)}
           </div>
         </td>`;
       elementos.tabela.appendChild(tr);

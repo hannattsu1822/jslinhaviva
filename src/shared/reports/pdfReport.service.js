@@ -53,6 +53,16 @@ function buildHeaderFooterTemplates(meta = {}) {
   return { headerTemplate, footerTemplate };
 }
 
+function buildFooterOnlyTemplate() {
+  const footerStyle = `font-family: ${PDF_FONT}; font-size: 9px; color: #64748b; width: 100%;`;
+  return `
+    <div style="${footerStyle} padding: 0 10mm; height: 12mm; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0;">
+      <span>${BRAND.system} · ${BRAND.company}</span>
+      <span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>
+    </div>
+  `;
+}
+
 /**
  * Envolve fragmento HTML com layout base e tema do sistema.
  */
@@ -129,8 +139,9 @@ async function htmlToPdf(html, options = {}) {
   const {
     landscape = false,
     format = "A4",
-    margin = { top: "28mm", right: "10mm", bottom: "22mm", left: "10mm" },
+    margin = { top: "12mm", right: "10mm", bottom: "18mm", left: "10mm" },
     headerFooter = true,
+    footerOnly = false,
     headerMeta = {},
   } = options;
 
@@ -141,7 +152,7 @@ async function htmlToPdf(html, options = {}) {
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle" });
+    await page.setContent(html, { waitUntil: "load", timeout: 120000 });
 
     const pdfOptions = {
       format,
@@ -150,7 +161,11 @@ async function htmlToPdf(html, options = {}) {
       margin,
     };
 
-    if (headerFooter) {
+    if (footerOnly) {
+      pdfOptions.displayHeaderFooter = true;
+      pdfOptions.headerTemplate = "<div></div>";
+      pdfOptions.footerTemplate = buildFooterOnlyTemplate();
+    } else if (headerFooter) {
       const { headerTemplate, footerTemplate } =
         buildHeaderFooterTemplates(headerMeta);
       pdfOptions.displayHeaderFooter = true;
@@ -197,6 +212,7 @@ module.exports = {
   TEMPLATES_DIR,
   formatReportDate,
   buildHeaderFooterTemplates,
+  buildFooterOnlyTemplate,
   wrapReportHtml,
   renderReportTemplate,
   htmlToPdf,

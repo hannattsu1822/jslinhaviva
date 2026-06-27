@@ -32,8 +32,7 @@
 }
 
 @page {
-  size: A4;
-  margin: 18mm 12mm 22mm 12mm;
+  margin: 0;
 }
 
 *,
@@ -222,6 +221,7 @@ body.lv-report-body {
 }
 
 .lv-info-item__value {
+  display: block;
   font-size: 10pt;
   font-weight: 500;
   color: var(--lv-text);

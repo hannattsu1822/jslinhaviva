@@ -40,7 +40,9 @@ function getStatusHtml(service) {
       return '<span class="status-concluido">Concluído</span>';
 
     case "nao_concluido": {
-      const motivo = service.motivo_nao_conclusao || "Motivo não especificado.";
+      const motivo = escapeHtml(
+        service.motivo_nao_conclusao || "Motivo não especificado."
+      );
       return `
         <span class="status-nao-concluido">Não Concluído</span>
         <span class="motivo-nao-concluido">${motivo}</span>
@@ -243,7 +245,7 @@ function renderTable() {
       <td>${formatDate(service.created_at)}</td>
       <td>${formatDate(service.data_prevista_execucao)}</td>
       <td>${formatDate(service.data_conclusao)}</td>
-      <td>${getStatusHtml(service)}</td>
+      <td>${rawHtml(getStatusHtml(service))}</td>
       <td class="text-center">
         <a
           href="detalhes_servico?id=${service.id}"

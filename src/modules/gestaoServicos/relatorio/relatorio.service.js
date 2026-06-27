@@ -16,6 +16,7 @@ const {
   gerarListaDocumentosHtml,
   renderInfoItem,
   renderTextBlock,
+  applyTemplatePlaceholders,
 } = require("../../../shared/reports/reportHtml.helper");
 
 async function processarImagensParaBase64(imagens) {
@@ -69,10 +70,11 @@ async function preencherTemplateHtml(servicoData) {
   const templatePath = publicPage("templates/relatorio_servico.html");
   let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
 
-  const todasAsImagens = servicoData.anexos.filter((anexo) =>
+  const anexos = servicoData.anexos || [];
+  const todasAsImagens = anexos.filter((anexo) =>
     ["imagem", "foto_conclusao", "foto_nao_conclusao"].includes(anexo.tipo)
   );
-  const anexosPDF = servicoData.anexos.filter(
+  const anexosPDF = anexos.filter(
     (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
   );
 
@@ -208,10 +210,7 @@ async function preencherTemplateHtml(servicoData) {
     lista_anexos_pdf: listaAnexosPdfHtml,
   };
 
-  for (const key in dadosParaTemplate) {
-    const regex = new RegExp(`{{${key}}}`, "g");
-    templateHtml = templateHtml.replace(regex, dadosParaTemplate[key]);
-  }
+  templateHtml = applyTemplatePlaceholders(templateHtml, dadosParaTemplate);
 
   return wrapReportHtml(templateHtml, {
     title: "Relatório Final de Serviço de Redes de Distribuição",
@@ -267,15 +266,13 @@ async function gerarPdfConsolidado(servicoId) {
       [servicoId]
     );
 
-    const servicoData = { ...servicoRows[0], anexos, responsaveis };
+    const servicoData = { ...servicoRows[0], anexos: anexos || [], responsaveis };
     const htmlContent = await preencherTemplateHtml(servicoData);
 
     const pdfBuffer = await htmlToPdf(htmlContent, {
       landscape: true,
-      headerMeta: {
-        title: "Relatório de Serviço — Redes de Distribuição",
-        subtitle: servicoData.processo || "",
-      },
+      footerOnly: true,
+      margin: { top: "10mm", right: "10mm", bottom: "20mm", left: "10mm" },
     });
 
     const pdfAttachmentPaths = anexos

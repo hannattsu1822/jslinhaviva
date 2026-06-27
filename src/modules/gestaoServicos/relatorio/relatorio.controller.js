@@ -15,9 +15,14 @@ async function gerarPdfConsolidado(req, res) {
   } catch (error) {
     console.error("Erro ao gerar relatório PDF:", error);
     const statusCode = error.message === "Serviço não encontrado" ? 404 : 500;
+    let message = "Erro interno ao gerar o relatório PDF.";
+    if (error.message && error.message.includes("Executable doesn't exist")) {
+      message =
+        "Navegador PDF (Playwright) não instalado no servidor. Execute: npx playwright install chromium";
+    }
     res.status(statusCode).json({
       success: false,
-      message: "Erro interno ao gerar o relatório PDF.",
+      message,
     });
   }
 }
