@@ -1,13 +1,15 @@
 {
   "name": "jslinhaviva",
   "version": "1.0.0",
-  "description": "Sistema de gest\u00e3o de infraestrutura el\u00e9trica - Linhaviva",
+  "description": "Sistema de gestão de infraestrutura elétrica - Linhaviva",
   "main": "src/server.js",
   "scripts": {
     "start": "tsx src/server.js",
     "start:rele-tcp": "node src/gateways/rele_tcp_server.js",
     "dev": "nodemon --exec tsx src/server.js",
     "typecheck:telemetry": "tsc -p tsconfig.telemetry.json",
+    "typecheck:auth": "tsc -p tsconfig.auth.json",
+    "typecheck": "npm run typecheck:telemetry && npm run typecheck:auth",
     "start:cluster": "pm2 start src/server.js -i max --name jslinhaviva --interpreter tsx",
     "start:api": "node scripts/start-api-only.js",
     "export:fibra": "node scripts/export-fibra-pontos.js",
@@ -23,8 +25,8 @@
     "ejs": "^3.1.10",
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.3.1",
     "express-mysql-session": "^3.0.3",
+    "express-rate-limit": "^7.3.1",
     "express-session": "^1.18.1",
     "express-validator": "^7.1.0",
     "helmet": "^7.1.0",
@@ -37,11 +39,14 @@
     "pino-pretty": "^11.2.1",
     "playwright": "^1.61.0",
     "proj4": "^2.20.9",
+    "tsx": "^4.19.4",
     "web-push": "^3.6.7",
-    "ws": "^8.17.1",
-    "tsx": "^4.19.4"
+    "ws": "^8.17.1"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/express": "^5.0.6",
+    "@types/express-session": "^1.19.0",
     "@types/node": "^22.15.3",
     "@types/ws": "^8.18.1",
     "nodemon": "^3.0.2",
