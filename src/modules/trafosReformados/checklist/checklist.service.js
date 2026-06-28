@@ -1,8 +1,260 @@
 const { promisePool } = require("../../../infrastructure/database");
-const { chromium } = require("playwright");
 const path = require("path");
 const fs = require("fs");
-const { projectRootDir } = require("../../../shared/path.helper");
+const fsPromises = require("fs").promises;
+const { projectRootDir, publicPage } = require("../../../shared/path.helper");
+const { escapeHtml } = require("../../../shared/htmlEscape.helper");
+const {
+  wrapReportHtml,
+  htmlToPdf,
+  formatReportDate,
+  buildDocumentCode,
+  buildReformadoDocumentCode,
+} = require("../../../shared/reports/pdfReport.service");
+const {
+  renderInfoItem,
+  renderTextBlock,
+  renderStatusBadge,
+  gerarGaleriaHtml,
+  gerarAnexoImpressaoIndividualHtml,
+  applyTemplatePlaceholders,
+} = require("../../../shared/reports/reportHtml.helper");
+
+function formatarDataHora(val) {
+  if (!val) return "N/A";
+  const date = new Date(val);
+  if (isNaN(date.getTime())) return "N/A";
+  return date.toLocaleString("pt-BR", { timeZone: "America/Maceio" });
+}
+
+function formatarData(val) {
+  if (!val) return "N/A";
+  const date = new Date(val);
+  if (isNaN(date.getTime())) return "N/A";
+  return date.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
+
+function formatarDataParaPDFRelatorioTabela(dataISO) {
+  if (!dataISO) return "N/A";
+  if (typeof dataISO === "string" && dataISO.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+    return dataISO.substring(0, 10);
+  }
+  const dateParts = String(dataISO).split("-");
+  if (dateParts.length === 3) {
+    return `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+  }
+  try {
+    const dateObj = new Date(dataISO);
+    if (!isNaN(dateObj.getTime())) {
+      const dia = String(dateObj.getUTCDate()).padStart(2, "0");
+      const mes = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+      const ano = dateObj.getUTCFullYear();
+      return `${dia}/${mes}/${ano}`;
+    }
+  } catch (e) {}
+  return dataISO;
+}
+
+function resolverTecnicoLabel(checklist) {
+  if (checklist.nome_tecnico) {
+    const matricula = checklist.tecnico_responsavel_teste || "N/A";
+    return `${checklist.nome_tecnico} (${matricula})`;
+  }
+  return checklist.tecnico_responsavel_teste || "N/A";
+}
+
+async function processarAnexosParaRelatorio(anexos = []) {
+  const imagens = [];
+  const anexoImpressaoItems = [];
+
+  for (const anexo of anexos) {
+    if (!anexo?.caminho_arquivo) continue;
+    const absolutePath = path.join(projectRootDir, anexo.caminho_arquivo);
+    if (!fs.existsSync(absolutePath)) continue;
+
+    try {
+      const buffer = await fsPromises.readFile(absolutePath);
+      const mimeType = anexo.tipo_mime || "image/jpeg";
+      const src = `data:${mimeType};base64,${buffer.toString("base64")}`;
+      const nome = anexo.nome_original || "Anexo fotográfico";
+      imagens.push({ src, nome });
+      anexoImpressaoItems.push({ type: "photo", src, nome });
+    } catch (err) {
+      console.error(`Erro ao ler anexo ${absolutePath}:`, err.message);
+    }
+  }
+
+  return { imagens, anexoImpressaoItems };
+}
+
+function gerarTabelaBobinasHtml(checklist) {
+  return `
+    <table class="lv-table lv-table--checklist">
+      <thead>
+        <tr>
+          <th>Verificação</th>
+          <th>Fase I</th>
+          <th>Fase II</th>
+          <th>Fase III</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Bobinas Primárias</strong></td>
+          <td>${escapeHtml(checklist.bobina_primaria_i || "N/A")}</td>
+          <td>${escapeHtml(checklist.bobina_primaria_ii || "N/A")}</td>
+          <td>${escapeHtml(checklist.bobina_primaria_iii || "N/A")}</td>
+        </tr>
+        <tr>
+          <td><strong>Bobinas Secundárias</strong></td>
+          <td>${escapeHtml(checklist.bobina_secundaria_i || "N/A")}</td>
+          <td>${escapeHtml(checklist.bobina_secundaria_ii || "N/A")}</td>
+          <td>${escapeHtml(checklist.bobina_secundaria_iii || "N/A")}</td>
+        </tr>
+        <tr>
+          <td><strong>Valores Teste TTR</strong></td>
+          <td>${escapeHtml(checklist.valor_bobina_i || "N/A")}</td>
+          <td>${escapeHtml(checklist.valor_bobina_ii || "N/A")}</td>
+          <td>${escapeHtml(checklist.valor_bobina_iii || "N/A")}</td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
+async function preencherTemplateHtmlChecklistReformado(
+  checklist,
+  transformador,
+  options = {}
+) {
+  const {
+    sectionOffset = 0,
+    includeAnexos = true,
+  } = options;
+
+  const templatePath = publicPage(
+    "templates/relatorio_checklist_trafo_reformado.html"
+  );
+  let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
+
+  const tecnicoLabel = resolverTecnicoLabel(checklist);
+  const conclusao = checklist.conclusao_checklist || "N/A";
+  const conclusaoBadge = renderStatusBadge(
+    conclusao === "APROVADO" ? "Aprovado" : conclusao === "REPROVADO" ? "Reprovado" : conclusao
+  );
+
+  const detalhesIdentificacaoGrid = [
+    renderInfoItem("ID do Teste", escapeHtml(String(checklist.id ?? "N/A"))),
+    renderInfoItem(
+      "ID do Registro",
+      escapeHtml(String(transformador.id ?? checklist.trafos_reformados_id ?? "N/A"))
+    ),
+    renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste))),
+    renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), true),
+  ].join("");
+
+  const detalhesTransformadorGrid = [
+    renderInfoItem(
+      "Nº de Série",
+      escapeHtml(transformador.numero_serie || checklist.numero_serie || "N/A")
+    ),
+    renderInfoItem(
+      "Fabricante",
+      escapeHtml(transformador.fabricante || checklist.fabricante || "N/A")
+    ),
+    renderInfoItem(
+      "Potência (kVA)",
+      escapeHtml(String(transformador.pot ?? checklist.pot ?? "N/A"))
+    ),
+  ].join("");
+
+  const detalhesConclusaoGrid = [
+    renderInfoItem("Status Final", conclusaoBadge),
+  ].join("");
+
+  let anexosGaleria = '<p class="lv-empty">Nenhum registro fotográfico encontrado.</p>';
+  let anexoImpressaoItems = [];
+
+  if (includeAnexos && checklist.anexos?.length) {
+    const anexosProcessados = await processarAnexosParaRelatorio(checklist.anexos);
+    anexoImpressaoItems = anexosProcessados.anexoImpressaoItems;
+    if (anexosProcessados.imagens.length) {
+      anexosGaleria = gerarGaleriaHtml(anexosProcessados.imagens, 3, {
+        technical: true,
+      });
+    }
+  }
+
+  templateHtml = applyTemplatePlaceholders(templateHtml, {
+    secao_identificacao: String(sectionOffset + 1),
+    secao_transformador: String(sectionOffset + 2),
+    secao_avaliacao: String(sectionOffset + 3),
+    secao_estado: String(sectionOffset + 4),
+    secao_obs_checklist: String(sectionOffset + 5),
+    secao_obs_gerais: String(sectionOffset + 6),
+    secao_conclusao: String(sectionOffset + 7),
+    secao_anexos: String(sectionOffset + 8),
+    detalhes_identificacao_grid: detalhesIdentificacaoGrid,
+    detalhes_transformador_grid: detalhesTransformadorGrid,
+    avaliacao_bobinas_table: gerarTabelaBobinasHtml(checklist),
+    estado_fisico_block: renderTextBlock(
+      escapeHtml(checklist.estado_fisico || "N/A")
+    ),
+    observacoes_checklist_block: renderTextBlock(
+      escapeHtml(checklist.observacoes_checklist || "Nenhuma observação registrada.")
+    ),
+    observacoes_gerais_block: renderTextBlock(
+      escapeHtml(
+        transformador.resultado_avaliacao ||
+          checklist.resultado_avaliacao ||
+          "Nenhuma observação registrada."
+      )
+    ),
+    detalhes_conclusao_grid: detalhesConclusaoGrid,
+    anexos_galeria: anexosGaleria,
+  });
+
+  return { templateHtml, anexoImpressaoItems, tecnicoLabel };
+}
+
+async function montarHtmlChecklistReformado(
+  checklist,
+  transformador,
+  usuarioLogado,
+  options = {}
+) {
+  const { templateHtml, anexoImpressaoItems, tecnicoLabel } =
+    await preencherTemplateHtmlChecklistReformado(
+      checklist,
+      transformador,
+      options
+    );
+
+  const numeroSerie =
+    transformador.numero_serie || checklist.numero_serie || checklist.id;
+  const docCode = buildReformadoDocumentCode(checklist.id, numeroSerie);
+  const author =
+    usuarioLogado?.nome && usuarioLogado?.matricula
+      ? `${usuarioLogado.nome} (${usuarioLogado.matricula})`
+      : tecnicoLabel;
+
+  const appendixHtml = gerarAnexoImpressaoIndividualHtml(anexoImpressaoItems, {
+    docCode,
+    processo: `REF-${checklist.id}`,
+  });
+
+  const htmlContent = await wrapReportHtml(templateHtml, {
+    title: "Relatório Técnico de Avaliação de Transformador Reformado",
+    badge: "Reformados · Avaliação Técnica",
+    processo: `REF-${checklist.id}`,
+    referenceId: checklist.id,
+    generatedAt: formatReportDate(),
+    author,
+    showSignatures: Boolean(tecnicoLabel && tecnicoLabel !== "N/A"),
+    appendixHtml,
+  });
+
+  return { htmlContent, docCode };
+}
 
 async function obterChecklistPorRegistroId(registroId) {
   const [rows] = await promisePool.query(
@@ -189,270 +441,225 @@ async function avaliarCompleto(id, dadosAvaliacao) {
 }
 
 async function gerarPdfChecklist(checklist, transformador, usuarioLogado) {
-  let tecnicoNomeChecklist = checklist.tecnico_responsavel_teste || "N/A";
-  if (checklist.tecnico_responsavel_teste) {
-    const [userRows] = await promisePool.query(
-      "SELECT nome FROM users WHERE matricula = ?",
-      [checklist.tecnico_responsavel_teste]
-    );
-    if (userRows.length > 0) {
-      tecnicoNomeChecklist = `${userRows[0].nome} (${checklist.tecnico_responsavel_teste})`;
-    }
-  }
+  const { htmlContent, docCode } = await montarHtmlChecklistReformado(
+    checklist,
+    transformador,
+    usuarioLogado
+  );
 
-  let anexoHtml = "";
-  if (checklist.anexos && checklist.anexos.length > 0) {
-    const imageTags = checklist.anexos
-      .map((anexo) => {
-        const absoluteImagePath = path.join(
-          projectRootDir,
-          anexo.caminho_arquivo
-        );
-        if (fs.existsSync(absoluteImagePath)) {
-          const imageBuffer = fs.readFileSync(absoluteImagePath);
-          const base64Image = imageBuffer.toString("base64");
-          const mimeType = anexo.tipo_mime || "image/jpeg";
-          const imageSrc = `data:${mimeType};base64,${base64Image}`;
-
-          return `<div class="anexo-item">
-                    <img src="${imageSrc}" alt="${anexo.nome_original}">
-                    <p>${anexo.nome_original}</p>
-                  </div>`;
-        }
-        return "";
-      })
-      .join("");
-
-    if (imageTags) {
-      anexoHtml = `
-        <div class="page-break"></div>
-        <div class="section">
-            <h2>Anexos Fotográficos</h2>
-            <div class="anexos-container">
-                ${imageTags}
-            </div>
-        </div>
-      `;
-    }
-  }
-
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <title>Relatório de Avaliação do Transformador</title>
-        <style>
-            body { font-family: Arial, sans-serif; color: #333; font-size: 10pt; }
-            .container { padding: 0 1cm; }
-            h1 {
-                color: #003366; text-align: center; margin-bottom: 20px;
-                font-size: 16pt; border-bottom: 2px solid #003366; padding-bottom: 10px;
-            }
-            h2 {
-                color: #004a99; font-size: 12pt; margin-top: 25px;
-                margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;
-            }
-            .info-grid {
-                display: grid; grid-template-columns: 1fr 1fr;
-                gap: 0 20px; margin-bottom: 20px;
-            }
-            .info-grid p { margin: 5px 0; }
-            .info-grid strong { color: #003366; min-width: 120px; display: inline-block; }
-            table {
-                width: 100%; border-collapse: collapse; margin-top: 10px;
-            }
-            th, td {
-                border: 1px solid #ddd; padding: 8px; text-align: left;
-            }
-            th {
-                background-color: #f2f9ff; font-weight: bold; color: #003366;
-            }
-            .obs-box {
-                margin-top: 20px; padding: 15px; background-color: #f9f9f9;
-                border: 1px solid #eee; border-radius: 5px;
-                white-space: pre-wrap; word-wrap: break-word;
-            }
-            .status { font-weight: bold; }
-            .status.aprovado { color: #28a745; }
-            .status.reprovado { color: #dc3545; }
-            .page-break { page-break-before: always; }
-            .anexos-container {
-                display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start;
-            }
-            .anexo-item {
-                width: calc(50% - 10px); text-align: center; border: 1px solid #eee;
-                padding: 10px; border-radius: 5px;
-            }
-            .anexo-item img {
-                max-width: 100%; height: auto; max-height: 280px;
-                border-radius: 4px; margin-bottom: 5px;
-            }
-            .anexo-item p { font-size: 8pt; color: #555; margin: 0; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="info-grid">
-                <div>
-                    <h2>Dados do Transformador</h2>
-                    <p><strong>ID do Registro:</strong> ${transformador.id || "N/A"}</p>
-                    <p><strong>Número de Série:</strong> ${transformador.numero_serie || "N/A"}</p>
-                    <p><strong>Fabricante:</strong> ${transformador.fabricante || "N/A"}</p>
-                    <p><strong>Potência:</strong> ${transformador.pot ? transformador.pot + " kVA" : "N/A"}</p>
-                </div>
-                <div>
-                    <h2>Detalhes da Avaliação</h2>
-                    <p><strong>ID do Teste:</strong> ${checklist.id || "N/A"}</p>
-                    <p><strong>Data do Teste:</strong> ${checklist.data_teste ? new Date(checklist.data_teste).toLocaleString("pt-BR") : "N/A"}</p>
-                    <p><strong>Técnico Responsável:</strong> ${tecnicoNomeChecklist}</p>
-                </div>
-            </div>
-
-            <h2>Resultados do Checklist Técnico</h2>
-            <table>
-                <tr><th>Verificação</th><th>Fase I</th><th>Fase II</th><th>Fase III</th></tr>
-                <tr><td><strong>Bobinas Primárias</strong></td><td>${checklist.bobina_primaria_i || "N/A"}</td><td>${checklist.bobina_primaria_ii || "N/A"}</td><td>${checklist.bobina_primaria_iii || "N/A"}</td></tr>
-                <tr><td><strong>Bobinas Secundárias</strong></td><td>${checklist.bobina_secundaria_i || "N/A"}</td><td>${checklist.bobina_secundaria_ii || "N/A"}</td><td>${checklist.bobina_secundaria_iii || "N/A"}</td></tr>
-                <tr><td><strong>Valores Teste TTR</strong></td><td>${checklist.valor_bobina_i || "N/A"}</td><td>${checklist.valor_bobina_ii || "N/A"}</td><td>${checklist.valor_bobina_iii || "N/A"}</td></tr>
-            </table>
-
-            <table>
-                <tr>
-                    <th style="width: 200px;">Estado Físico Geral</th>
-                    <td>${checklist.estado_fisico || "N/A"}</td>
-                </tr>
-            </table>
-
-            ${checklist.observacoes_checklist ? `
-                <h2>Observações do Checklist</h2>
-                <div class="obs-box">${checklist.observacoes_checklist}</div>
-            ` : ""}
-            
-            ${transformador.resultado_avaliacao ? `
-                <h2>Observações Gerais / Motivo da Reprovação</h2>
-                <div class="obs-box">${transformador.resultado_avaliacao}</div>
-            ` : ""}
-
-            <h2>Conclusão Final</h2>
-            <table>
-                <tr>
-                    <th style="width: 200px;">Status Final</th>
-                    <td class="status ${checklist.conclusao_checklist === "APROVADO" ? "aprovado" : "reprovado"}">
-                        ${checklist.conclusao_checklist || "N/A"}
-                    </td>
-                </tr>
-            </table>
-            ${anexoHtml}
-        </div>
-    </body>
-    </html>`;
-
-  const headerTemplate = `
-    <div style="font-family: Arial, sans-serif; font-size: 10pt; color: #003366; width: 100%; text-align: center; padding: 0.5cm 1cm; border-bottom: 1px solid #ccc;">
-        Relatório de Avaliação de Transformadores Reformados
-    </div>`;
-
-  const footerTemplate = `
-    <div style="font-family: Arial, sans-serif; font-size: 8pt; color: #777; width: 100%; padding: 0 1cm;">
-        <table style="width: 100%; border: 0;">
-            <tr>
-                <td style="text-align: left; border: 0;">Gerado por: ${usuarioLogado.nome} (${usuarioLogado.matricula})</td>
-                <td style="text-align: right; border: 0;">Página <span class="pageNumber"></span> de <span class="totalPages"></span></td>
-            </tr>
-            <tr>
-                <td colspan="2" style="text-align: left; border: 0;">Data de Geração: ${new Date().toLocaleString("pt-BR")}</td>
-            </tr>
-        </table>
-    </div>`;
-
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  return htmlToPdf(htmlContent, {
+    landscape: true,
+    footerOnly: true,
+    docCode,
   });
-  const page = await browser.newPage();
-  await page.setContent(htmlContent, { waitUntil: "networkidle" });
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "2cm", right: "1cm", bottom: "2.5cm", left: "1cm" },
-    headerTemplate: headerTemplate,
-    footerTemplate: footerTemplate,
-    displayHeaderFooter: true,
-  });
-  await browser.close();
-  return pdfBuffer;
 }
 
-async function gerarPdfTabelaHistorico(dados, filtros) {
-  if (!dados || dados.length === 0) {
+async function gerarPdfTabelaHistorico(dados, filtros, usuario) {
+  if (!dados?.length) {
     throw new Error("Não há dados para gerar o relatório.");
   }
-  const htmlContent = `
-        <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório de Transformadores Avaliados</title>
-        <style>
-            body { font-family: 'Poppins', sans-serif; font-size: 9px; }
-            h1 { text-align: center; color: #2a5298; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .info-filtros { margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 5px; }
-            .info-filtros span { display: inline-block; margin-right: 15px; }
-        </style></head><body>
-        <h1>Relatório de Transformadores Avaliados</h1>
-        <div class="info-filtros">
-            <strong>Filtros Aplicados:</strong><br>
-            ${Object.entries(filtros)
-              .map(([key, value]) =>
-                value ? `<span><b>${key}:</b> ${value}</span>` : ""
-              )
-              .filter(Boolean)
-              .join("\n")}
-        </div>
-        <table><thead><tr>
-            <th>ID Registro</th><th>Nº de Série</th><th>Fabricante</th><th>Potência</th><th>Status</th><th>Data Avaliação</th><th>Técnico</th>
-        </tr></thead><tbody>
-            ${dados
-              .map(
-                (trafo) => `
-                <tr>
-                    <td>${trafo.id}</td>
-                    <td>${trafo.numero_serie}</td>
-                    <td>${trafo.fabricante || "-"}</td>
-                    <td>${trafo.pot || "-"}</td>
-                    <td>${
-                      trafo.status_avaliacao === "avaliado"
-                        ? "Aprovado"
-                        : "Reprovado"
-                    }</td>
-                    <td>${
-                      trafo.data_avaliacao
-                        ? new Date(trafo.data_avaliacao).toLocaleDateString(
-                            "pt-BR"
-                          )
-                        : "-"
-                    }</td>
-                    <td>${trafo.nome_tecnico || "-"}</td>
-                </tr>
-            `
-              )
-              .join("")}
-        </tbody></table></body></html>`;
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox"],
+  const filtrosLinhas = Object.entries(filtros || {})
+    .filter(([, value]) => value)
+    .map(([key, value]) => `${key}: ${value}`);
+
+  if (filtrosLinhas.length === 0) {
+    filtrosLinhas.push("Nenhum filtro específico aplicado.");
+  }
+
+  const linhasTabela = dados
+    .map((trafo) => {
+      const statusLabel =
+        trafo.status_avaliacao === "avaliado" ? "Aprovado" : "Reprovado";
+      return `<tr>
+        <td>${escapeHtml(String(trafo.id ?? "-"))}</td>
+        <td>${escapeHtml(trafo.numero_serie || "-")}</td>
+        <td>${escapeHtml(trafo.fabricante || "-")}</td>
+        <td>${escapeHtml(String(trafo.pot ?? "-"))}</td>
+        <td>${escapeHtml(statusLabel)}</td>
+        <td>${escapeHtml(formatarData(trafo.data_avaliacao))}</td>
+        <td>${escapeHtml(trafo.nome_tecnico || "-")}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const bodyHtml = `
+    <section class="lv-section rt-section">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">1</span> Filtros Aplicados
+      </h2>
+      <div class="lv-section__body">
+        <div class="lv-text-block">${filtrosLinhas.map((l) => escapeHtml(l)).join("<br>")}</div>
+      </div>
+    </section>
+    <section class="lv-section rt-section">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">2</span> Listagem de Checklists Avaliados
+      </h2>
+      <div class="lv-section__body">
+        <table class="lv-table lv-table--checklist">
+          <thead>
+            <tr>
+              <th>ID Registro</th>
+              <th>Nº de Série</th>
+              <th>Fabricante</th>
+              <th>Potência</th>
+              <th>Status</th>
+              <th>Data Avaliação</th>
+              <th>Técnico</th>
+            </tr>
+          </thead>
+          <tbody>${linhasTabela}</tbody>
+        </table>
+      </div>
+    </section>`;
+
+  const docCode = buildDocumentCode("LIST", Date.now(), { prefix: "LV-REF" });
+  const author =
+    usuario?.nome && usuario?.matricula
+      ? `${usuario.nome} (${usuario.matricula})`
+      : "";
+
+  const htmlContent = await wrapReportHtml(bodyHtml, {
+    title: "Relatório de Checklists de Transformadores Reformados",
+    badge: "Reformados · Listagem",
+    processo: "LISTAGEM",
+    referenceId: "000",
+    generatedAt: formatReportDate(),
+    author,
+    showSignatures: false,
   });
-  const page = await browser.newPage();
-  await page.setContent(htmlContent, { waitUntil: "networkidle" });
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
+
+  return htmlToPdf(htmlContent, {
     landscape: true,
-    margin: { top: "1cm", right: "1cm", bottom: "1cm", left: "1cm" },
+    footerOnly: true,
+    docCode,
   });
-  await browser.close();
-  return pdfBuffer;
+}
+
+async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) {
+  if (!checklists?.length) {
+    throw new Error("Não há avaliações para gerar o relatório.");
+  }
+
+  const numeroSerie = transformador.numero_serie || checklists[0]?.numero_serie;
+  if (!numeroSerie) {
+    throw new Error("Número de série não informado.");
+  }
+
+  const resumoLinhas = checklists
+    .map((item) => {
+      const statusLabel =
+        item.conclusao_checklist === "APROVADO" ? "Aprovado" : "Reprovado";
+      return `<tr>
+        <td>${escapeHtml(String(item.id ?? "-"))}</td>
+        <td>${escapeHtml(String(item.trafos_reformados_id ?? "-"))}</td>
+        <td>${escapeHtml(formatarDataHora(item.data_teste))}</td>
+        <td>${escapeHtml(item.nome_tecnico || item.tecnico_responsavel_teste || "-")}</td>
+        <td>${escapeHtml(statusLabel)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  let secoesDetalhadas = [];
+  const todosAnexoItems = [];
+
+  for (let index = 0; index < checklists.length; index += 1) {
+    const checklist = checklists[index];
+    const transformadorItem = {
+      id: checklist.trafos_reformados_id || transformador.id,
+      numero_serie: numeroSerie,
+      fabricante: checklist.fabricante || transformador.fabricante,
+      pot: checklist.pot || transformador.pot,
+      resultado_avaliacao:
+        checklist.resultado_avaliacao || transformador.resultado_avaliacao,
+    };
+
+    const { templateHtml, anexoImpressaoItems } =
+      await preencherTemplateHtmlChecklistReformado(
+        checklist,
+        transformadorItem,
+        { sectionOffset: 2 + index * 8, includeAnexos: true }
+      );
+
+    todosAnexoItems.push(...anexoImpressaoItems);
+    secoesDetalhadas.push(`
+      <div class="lv-page-break"></div>
+      ${templateHtml}
+    `);
+  }
+
+  const bodyHtml = `
+    <section class="lv-section rt-section">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">1</span> Identificação do Transformador
+      </h2>
+      <div class="lv-section__body">
+        <div class="lv-info-grid lv-info-grid--4col">
+          ${renderInfoItem("Nº de Série", escapeHtml(numeroSerie))}
+          ${renderInfoItem(
+            "Fabricante",
+            escapeHtml(checklists[0]?.fabricante || transformador.fabricante || "N/A")
+          )}
+          ${renderInfoItem(
+            "Potência (kVA)",
+            escapeHtml(String(checklists[0]?.pot || transformador.pot || "N/A"))
+          )}
+          ${renderInfoItem(
+            "Total de Avaliações",
+            escapeHtml(String(checklists.length))
+          )}
+        </div>
+      </div>
+    </section>
+    <section class="lv-section rt-section">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">2</span> Resumo das Avaliações
+      </h2>
+      <div class="lv-section__body">
+        <table class="lv-table lv-table--checklist">
+          <thead>
+            <tr>
+              <th>ID Teste</th>
+              <th>ID Registro</th>
+              <th>Data do Teste</th>
+              <th>Técnico</th>
+              <th>Conclusão</th>
+            </tr>
+          </thead>
+          <tbody>${resumoLinhas}</tbody>
+        </table>
+      </div>
+    </section>
+    ${secoesDetalhadas.join("")}`;
+
+  const docCode = buildReformadoDocumentCode("HIST", numeroSerie);
+  const author =
+    usuarioLogado?.nome && usuarioLogado?.matricula
+      ? `${usuarioLogado.nome} (${usuarioLogado.matricula})`
+      : "";
+
+  const appendixHtml = gerarAnexoImpressaoIndividualHtml(todosAnexoItems, {
+    docCode,
+    processo: numeroSerie,
+  });
+
+  const htmlContent = await wrapReportHtml(bodyHtml, {
+    title: "Histórico de Avaliações — Transformador Reformado",
+    badge: "Reformados · Histórico por Série",
+    processo: numeroSerie,
+    referenceId: "HIST",
+    generatedAt: formatReportDate(),
+    author,
+    showSignatures: false,
+    appendixHtml,
+  });
+
+  return htmlToPdf(htmlContent, {
+    landscape: true,
+    footerOnly: true,
+    docCode,
+  });
 }
 
 async function excluirAnexo(anexoId) {
@@ -502,5 +709,6 @@ module.exports = {
   avaliarCompleto,
   gerarPdfChecklist,
   gerarPdfTabelaHistorico,
+  gerarPdfListaHistorico,
   excluirAnexo,
 };

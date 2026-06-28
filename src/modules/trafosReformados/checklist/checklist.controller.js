@@ -95,7 +95,11 @@ async function gerarPdfChecklist(req, res) {
 async function gerarPdfTabelaHistorico(req, res) {
   try {
     const { dados, filtros } = req.body;
-    const pdfBuffer = await service.gerarPdfTabelaHistorico(dados, filtros);
+    const pdfBuffer = await service.gerarPdfTabelaHistorico(
+      dados,
+      filtros,
+      req.user
+    );
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -105,6 +109,36 @@ async function gerarPdfTabelaHistorico(req, res) {
   } catch (error) {
     console.error("Erro ao gerar PDF da tabela de históricos:", error);
     const statusCode = error.message.includes("Não há dados") ? 400 : 500;
+    res.status(statusCode).json({ success: false, message: error.message });
+  }
+}
+
+async function gerarPdfListaHistorico(req, res) {
+  try {
+    const { checklists, transformador } = req.body;
+    if (!checklists?.length || !transformador?.numero_serie) {
+      return res.status(400).json({
+        success: false,
+        message: "Dados insuficientes para gerar o relatório.",
+      });
+    }
+    const pdfBuffer = await service.gerarPdfListaHistorico(
+      checklists,
+      transformador,
+      req.user
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Historico_Completo_Trafo_${transformador.numero_serie}.pdf`
+    );
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error("Erro ao gerar PDF da lista de históricos:", error);
+    const statusCode =
+      error.message.includes("Não há") || error.message.includes("não informado")
+        ? 400
+        : 500;
     res.status(statusCode).json({ success: false, message: error.message });
   }
 }
@@ -127,5 +161,6 @@ module.exports = {
   avaliarCompleto,
   gerarPdfChecklist,
   gerarPdfTabelaHistorico,
+  gerarPdfListaHistorico,
   excluirAnexo,
 };

@@ -41,6 +41,13 @@ router.post(
   controller.gerarPdfTabelaHistorico
 );
 
+router.post(
+  "/api/gerar_pdf_lista_historico",
+  autenticar,
+  verificarNivel(3),
+  controller.gerarPdfListaHistorico
+);
+
 router.delete(
   "/api/checklist_anexos/:anexoId",
   autenticar,

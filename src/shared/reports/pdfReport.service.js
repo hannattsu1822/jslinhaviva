@@ -52,6 +52,14 @@ function buildTransformerDocumentCode(checklistId, numeroSerie) {
   return buildDocumentCode(slug, checklistId, { prefix: "LV-TRF" });
 }
 
+function buildReformadoDocumentCode(testeId, numeroSerie) {
+  const slug = String(numeroSerie || testeId || "000")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9\-]/g, "");
+  return buildDocumentCode(slug, testeId, { prefix: "LV-REF" });
+}
+
 function buildHeaderFooterTemplates(meta = {}) {
   const title = escapeHtml(meta.title || "Relatório");
   const subtitle = escapeHtml(meta.subtitle || BRAND.system);
@@ -297,6 +305,7 @@ module.exports = {
   buildDocumentCode,
   buildFleetDocumentCode,
   buildTransformerDocumentCode,
+  buildReformadoDocumentCode,
   buildHeaderFooterTemplates,
   buildFooterOnlyTemplate,
   wrapReportHtml,
