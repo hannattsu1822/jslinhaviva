@@ -26,13 +26,22 @@ function formatReportDateShort(date = new Date()) {
   return date.toLocaleDateString("pt-BR", { timeZone: "America/Maceio" });
 }
 
-function buildDocumentCode(processo, referenceId) {
+function buildDocumentCode(processo, referenceId, options = {}) {
+  const { prefix = "LV-SRV" } = options;
   const slug = String(processo || referenceId || "000")
     .trim()
     .replace(/\//g, "-")
     .replace(/\s+/g, "")
     .replace(/[^a-zA-Z0-9\-]/g, "");
-  return `LV-SRV-${slug || "000"}`;
+  return `${prefix}-${slug || referenceId || "000"}`;
+}
+
+function buildFleetDocumentCode(inspecaoId, placa) {
+  const slug = String(placa || inspecaoId || "000")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9\-]/g, "");
+  return buildDocumentCode(slug, inspecaoId, { prefix: "LV-FRT" });
 }
 
 function buildHeaderFooterTemplates(meta = {}) {
@@ -278,6 +287,7 @@ module.exports = {
   formatReportDate,
   formatReportDateShort,
   buildDocumentCode,
+  buildFleetDocumentCode,
   buildHeaderFooterTemplates,
   buildFooterOnlyTemplate,
   wrapReportHtml,

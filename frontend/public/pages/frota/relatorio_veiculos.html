@@ -3,85 +3,60 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Relatório de Veículos</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
-    <link rel="stylesheet" href="/static/css/relatorio_veiculos.css" />
+    <title>Relatório de Inspeção Veicular</title>
+    <link rel="stylesheet" href="/static/css/base/report-theme.css" />
     <style>
+      body.lv-report-body {
+        padding: 12px;
+      }
+      .no-print {
+        text-align: center;
+        margin: 20px 0 8px;
+      }
+      .no-print button {
+        margin: 0 6px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .no-print .pdf-btn {
+        background: #163d72;
+        color: #fff;
+        border-color: #163d72;
+      }
       @media print {
-        body {
-          margin: 0;
-          font-size: 10pt;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .relatorio-container {
-          box-shadow: none;
-          border: none;
-          width: 100%;
-          margin: 0;
-          padding: 0;
-        }
         .no-print {
           display: none !important;
         }
-        h1,
-        h2 {
-          page-break-after: avoid;
-        }
-        .divisao {
-          page-break-inside: avoid;
-          border-bottom-width: 1px;
-          border-bottom-style: solid;
-          border-bottom-color: #eee;
-          padding-bottom: 10px;
-          margin-bottom: 10px;
-        }
-        .relatorio-grid {
-          page-break-inside: avoid;
-        }
-        .relatorio-item p {
-          line-height: 1.4;
-        }
       }
     </style>
-  
     <script src="/shared/utils/dom-safe.js"></script>
     <script src="/shared/utils/ui-actions.js"></script>
-</head>
-  <body class="frota-page frota-page--relatorio pdf-render-mode">
-    <div class="relatorio-container">
-      <div class="report-header-logo no-print"></div>
-
-      <h1>
-        <i class="fa-solid fa-file-lines"></i>
-        Relatório de Inspeção Veicular N°:
-        <span id="inspecaoId"></span>
-      </h1>
-
+  </head>
+  <body class="lv-report-body frota-page frota-page--relatorio">
+    <div class="lv-report lv-report--landscape lv-report--technical" id="relatorioRoot">
       <div id="relatorioContent">
-        <p style="text-align: center; padding: 20px; color: #6c757d">
+        <p class="lv-empty" style="text-align: center; padding: 24px">
           Carregando dados do relatório...
         </p>
       </div>
+    </div>
 
-      <div class="no-print" style="text-align: center; margin-top: 20px">
-        <button data-action="gerarPDF" class="pdf-btn" type="button">
-          <i class="fa-solid fa-file-pdf"></i> Gerar PDF Novamente
-        </button>
-        <button data-action="navigate" data-href="/filtrar_veiculos"
-         
-          class="back-btn"
-          type="button"
-          style="margin-left: 10px"
-        >
-          <i class="fa-solid fa-arrow-left"></i> Voltar para Filtrar Veículos
-        </button>
-      </div>
+    <div class="no-print">
+      <button data-action="gerarPDF" class="pdf-btn" type="button">
+        Gerar PDF
+      </button>
+      <button
+        data-action="navigate"
+        data-href="/filtrar_veiculos"
+        class="back-btn"
+        type="button"
+      >
+        Voltar para Filtrar Veículos
+      </button>
     </div>
 
     <script src="/scripts/frota/relatorio_veiculos.js"></script>

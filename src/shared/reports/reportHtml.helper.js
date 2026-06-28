@@ -182,12 +182,53 @@ function gerarAnexoImpressaoIndividualHtml(items = [], options = {}) {
   return pagesHtml;
 }
 
+function renderInspecaoStatusBadge(status) {
+  const num =
+    status === null || status === undefined ? null : Number(status);
+  if (num === 1) {
+    return '<span class="lv-badge lv-badge--success">Conforme</span>';
+  }
+  if (num === 0) {
+    return '<span class="lv-badge lv-badge--error">Não Conforme</span>';
+  }
+  return '<span class="lv-badge lv-badge--warning">Não Informado</span>';
+}
+
+function gerarTabelaChecklistHtml(items) {
+  if (!items || items.length === 0) {
+    return '<p class="lv-empty">Nenhum item registrado.</p>';
+  }
+
+  return `
+    <table class="lv-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th style="width: 140px; text-align: center;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map(
+            (item) => `
+          <tr>
+            <td>${escapeHtml(item.label)}</td>
+            <td style="text-align: center;">${renderInspecaoStatusBadge(item.value)}</td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>`;
+}
+
 module.exports = {
   statusBadgeClass,
   renderStatusBadge,
+  renderInspecaoStatusBadge,
   gerarGaleriaHtml,
   gerarListaDocumentosHtml,
   gerarAnexoImpressaoIndividualHtml,
+  gerarTabelaChecklistHtml,
   renderInfoItem,
   renderTextBlock,
   applyTemplatePlaceholders,

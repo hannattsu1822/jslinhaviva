@@ -1,8 +1,162 @@
 const { promisePool } = require("../../../infrastructure/database");
-const { chromium } = require("playwright");
-const { createReportToken } = require("../../../shared/reportToken.helper");
-const path = require("path");
-const { projectRootDir } = require("../../../shared/path.helper");
+const fsPromises = require("fs").promises;
+const { publicPage } = require("../../../shared/path.helper");
+const { escapeHtml } = require("../../../shared/htmlEscape.helper");
+const {
+  wrapReportHtml,
+  htmlToPdf,
+  formatReportDate,
+  buildFleetDocumentCode,
+} = require("../../../shared/reports/pdfReport.service");
+const {
+  renderInfoItem,
+  renderTextBlock,
+  gerarTabelaChecklistHtml,
+  applyTemplatePlaceholders,
+} = require("../../../shared/reports/reportHtml.helper");
+
+const MAPEAMENTO_ITENS_INSPECAO = {
+  buzina: "Buzina",
+  cinto_seguranca: "Cinto de Segurança",
+  quebra_sol: "Quebra-sol",
+  retrovisor_inteiro: "Retrovisor Inteiro",
+  retrovisor_direito_esquerdo: "Retrovisor Direito/Esquerdo",
+  limpador_para_brisa: "Limpador de Para-brisa",
+  farol_baixa: "Farol de Baixa",
+  farol_alto: "Farol de Alta",
+  meia_luz: "Meia-luz",
+  luz_freio: "Luz de Freio",
+  luz_re: "Luz de Ré",
+  bateria: "Bateria",
+  luzes_painel: "Luzes do Painel",
+  seta_direita_esquerdo: "Seta Direita/Esquerda",
+  pisca_alerta: "Pisca-alerta",
+  luz_interna: "Luz Interna",
+  velocimetro_tacografo: "Velocímetro/Tacógrafo",
+  freios: "Freios",
+  macaco: "Macaco",
+  chave_roda: "Chave de Roda",
+  triangulo_sinalizacao: "Triângulo de Sinalização",
+  extintor_incendio: "Extintor de Incêndio",
+  portas_travas: "Portas e Travas",
+  sirene: "Sirene",
+  fechamento_janelas: "Fechamento de Janelas",
+  para_brisa: "Para-brisa",
+  oleo_motor: "Óleo do Motor",
+  oleo_freio: "Óleo de Freio",
+  nivel_agua_radiador: "Nível de Água do Radiador",
+  pneus_estado_calibragem: "Pneus (Estado e Calibragem)",
+  pneu_reserva_estepe: "Pneu Reserva/Estepe",
+  bancos_encosto_assentos: "Bancos e Encostos",
+  para_choque_dianteiro: "Para-choque Dianteiro",
+  para_choque_traseiro: "Para-choque Traseiro",
+  lataria: "Lataria",
+  estado_fisico_sky: "Estado Físico do Sky",
+  funcionamento_sky: "Funcionamento do Sky",
+  sapatas: "Sapatas",
+  cestos: "Cestos",
+  comandos: "Comandos",
+  lubrificacao: "Lubrificação",
+  ensaio_eletrico: "Ensaio Elétrico",
+  cilindros: "Cilindros",
+  gavetas: "Gavetas",
+  capas: "Capas",
+  nivel_oleo_sky: "Nível de Óleo do Sky",
+};
+
+const CAMPOS_SKY = [
+  "estado_fisico_sky",
+  "funcionamento_sky",
+  "sapatas",
+  "cestos",
+  "comandos",
+  "lubrificacao",
+  "ensaio_eletrico",
+  "cilindros",
+  "gavetas",
+  "capas",
+  "nivel_oleo_sky",
+];
+
+const CAMPOS_METADADOS = [
+  "id",
+  "matricula",
+  "placa",
+  "data_inspecao",
+  "km_atual",
+  "horimetro",
+  "observacoes",
+  "responsavel_nome",
+];
+
+function formatarDataInspecao(dataStr) {
+  if (!dataStr) return "N/A";
+  const dataObj = new Date(dataStr);
+  if (isNaN(dataObj.getTime())) return "Data inválida";
+  return dataObj.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
+
+function extrairItensChecklist(inspecao, grupoSky = false) {
+  return Object.keys(MAPEAMENTO_ITENS_INSPECAO)
+    .filter((key) => {
+      if (CAMPOS_METADADOS.includes(key)) return false;
+      const isSky = CAMPOS_SKY.includes(key);
+      return grupoSky ? isSky : !isSky;
+    })
+    .map((key) => ({
+      label: MAPEAMENTO_ITENS_INSPECAO[key],
+      value: inspecao[key],
+    }));
+}
+
+async function preencherTemplateHtmlInspecao(inspecao) {
+  const templatePath = publicPage("templates/relatorio_inspecao_veiculo.html");
+  let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
+
+  const responsavelLabel = inspecao.responsavel_nome
+    ? `${inspecao.responsavel_nome} (${inspecao.matricula || "N/A"})`
+    : inspecao.matricula || "N/A";
+
+  const detalhesInspecaoGrid = [
+    renderInfoItem("Nº da Inspeção", escapeHtml(String(inspecao.id))),
+    renderInfoItem("Placa", escapeHtml(inspecao.placa || "N/A")),
+    renderInfoItem(
+      "Data da Inspeção",
+      formatarDataInspecao(inspecao.data_inspecao)
+    ),
+    renderInfoItem("KM Atual", escapeHtml(String(inspecao.km_atual ?? "N/A"))),
+    renderInfoItem(
+      "Horímetro",
+      escapeHtml(String(inspecao.horimetro ?? "N/A"))
+    ),
+    renderInfoItem("Responsável", escapeHtml(responsavelLabel), true),
+  ].join("");
+
+  const checklistVeiculo = extrairItensChecklist(inspecao, false);
+  const checklistSky = extrairItensChecklist(inspecao, true);
+  const observacoesBlock = renderTextBlock(
+    escapeHtml(inspecao.observacoes || "Nenhuma observação registrada.")
+  );
+
+  templateHtml = applyTemplatePlaceholders(templateHtml, {
+    detalhes_inspecao_grid: detalhesInspecaoGrid,
+    checklist_veiculo_table: gerarTabelaChecklistHtml(checklistVeiculo),
+    checklist_sky_table: gerarTabelaChecklistHtml(checklistSky),
+    observacoes_block: observacoesBlock,
+  });
+
+  const docCode = buildFleetDocumentCode(inspecao.id, inspecao.placa);
+
+  return wrapReportHtml(templateHtml, {
+    title: "Relatório Técnico de Inspeção Veicular",
+    badge: "Frota · Checklist Veicular",
+    processo: `INS-${inspecao.id}`,
+    referenceId: inspecao.id,
+    generatedAt: formatReportDate(),
+    author: responsavelLabel,
+    showSignatures: Boolean(inspecao.responsavel_nome || inspecao.matricula),
+  });
+}
 
 async function listarInspecoes(user) {
   if (user?.nivel >= 4) {
@@ -20,7 +174,10 @@ async function listarInspecoes(user) {
 
 async function obterInspecaoPorId(id, user = null) {
   const [rows] = await promisePool.query(
-    "SELECT * FROM inspecoes WHERE id = ?",
+    `SELECT i.*, u.nome AS responsavel_nome
+     FROM inspecoes i
+     LEFT JOIN users u ON i.matricula = u.matricula
+     WHERE i.id = ?`,
     [id]
   );
   if (rows.length === 0) {
@@ -254,52 +411,22 @@ async function obterUltimoHorimetro(placa) {
   return rows[0];
 }
 
-async function gerarPdfInspecao(id, protocol, host, user) {
-  await obterInspecaoPorId(id, user);
-  const [rows] = await promisePool.query(
-    "SELECT placa FROM inspecoes WHERE id = ?",
-    [id]
-  );
-  if (rows.length === 0) {
-    throw new Error("Inspeção não encontrada!");
-  }
-  const { placa } = rows[0];
-  const placaFormatada = String(placa || "SEM_PLACA").replace(
+async function gerarPdfInspecao(id, _protocol, _host, user) {
+  const inspecao = await obterInspecaoPorId(id, user);
+
+  const placaFormatada = String(inspecao.placa || "SEM_PLACA").replace(
     /[^a-zA-Z0-9]/g,
     "_"
   );
   const nomeArquivo = `inspecao_${id}_${placaFormatada}.pdf`;
+  const docCode = buildFleetDocumentCode(inspecao.id, inspecao.placa);
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  const htmlContent = await preencherTemplateHtmlInspecao(inspecao);
+  const pdfBuffer = await htmlToPdf(htmlContent, {
+    landscape: true,
+    footerOnly: true,
+    docCode,
   });
-  const page = await browser.newPage();
-  const token = createReportToken("inspecao_veiculo", id);
-  const url = `${protocol}://${host}/relatorio_publico_veiculos?id=${id}&token=${encodeURIComponent(token)}`;
-  await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
-
-  const headerFooterStyle = `font-family: 'Poppins', Arial, sans-serif; font-size: 9px; color: #333; width: 100%;`;
-  const primaryColorForHeader = "#004494";
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "40mm", right: "10mm", bottom: "25mm", left: "10mm" },
-    displayHeaderFooter: true,
-    headerTemplate: `
-      <div style="${headerFooterStyle} padding: 0 10mm; height: 30mm; display: flex; flex-direction: column; justify-content: center; align-items: center; border-bottom: 1px solid #ddd;">
-        <div style="font-size: 14px; color: ${primaryColorForHeader}; font-weight: 600;">Relatório de Inspeção Veicular</div>
-        <div style="font-size: 10px; color: #555;">SULGIPE - LINHA VIVA SYSTEM</div>
-      </div>
-    `,
-    footerTemplate: `
-      <div style="${headerFooterStyle} padding: 0 10mm; height: 15mm; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #ddd;">
-        <span>Gerado em: <span class="date"></span></span>
-        <span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>
-      </div>
-    `,
-  });
-  await browser.close();
 
   return { nomeArquivo, pdfBuffer };
 }

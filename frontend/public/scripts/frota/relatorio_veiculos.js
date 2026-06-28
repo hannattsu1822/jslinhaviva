@@ -49,47 +49,100 @@ const mapeamentoNomes = {
   nivel_oleo_sky: "Nível de Óleo do Sky",
 };
 
-function getIcon(status) {
-  if (status === 1) {
-    return '<i class="fas fa-check-circle icon-ok"></i>';
-  } else if (status === 0) {
-    return '<i class="fas fa-times-circle icon-not-ok"></i>';
-  } else {
-    return '<i class="fas fa-question-circle icon-unknown"></i>';
+const camposSky = [
+  "estado_fisico_sky",
+  "funcionamento_sky",
+  "sapatas",
+  "cestos",
+  "comandos",
+  "lubrificacao",
+  "ensaio_eletrico",
+  "cilindros",
+  "gavetas",
+  "capas",
+  "nivel_oleo_sky",
+];
+
+const camposExcluidos = [
+  "id",
+  "matricula",
+  "placa",
+  "data_inspecao",
+  "km_atual",
+  "horimetro",
+  "observacoes",
+  "responsavel_nome",
+];
+
+function getStatusBadgeHtml(status) {
+  const num = status === null || status === undefined ? null : Number(status);
+  if (num === 1) {
+    return '<span class="lv-badge lv-badge--success">Conforme</span>';
   }
+  if (num === 0) {
+    return '<span class="lv-badge lv-badge--error">Não Conforme</span>';
+  }
+  return '<span class="lv-badge lv-badge--warning">Não Informado</span>';
 }
 
-function getStatusText(status) {
-  if (status === 1) {
-    return "Conforme";
-  } else if (status === 0) {
-    return "Não Conforme";
-  } else {
-    return "Não Informado";
+function buildChecklistTable(data, skyOnly) {
+  const rows = Object.keys(data)
+    .filter(
+      (key) =>
+        !camposExcluidos.includes(key) &&
+        mapeamentoNomes[key] &&
+        (skyOnly ? camposSky.includes(key) : !camposSky.includes(key))
+    )
+    .map(
+      (key) => `
+      <tr>
+        <td>${mapeamentoNomes[key]}</td>
+        <td style="text-align:center;">${getStatusBadgeHtml(data[key])}</td>
+      </tr>`
+    )
+    .join("");
+
+  if (!rows) {
+    return '<p class="lv-empty">Nenhum item registrado.</p>';
   }
+
+  return `
+    <table class="lv-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th style="width:140px;text-align:center;">Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function formatarData(dataStr) {
+  if (!dataStr) return "N/A";
+  const dataObj = new Date(dataStr);
+  if (isNaN(dataObj.getTime())) return "N/A";
+  return dataObj.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 async function carregarRelatorio() {
   const urlParams = new URLSearchParams(window.location.search);
   const inspecaoId = urlParams.get("id");
   const reportToken = urlParams.get("token");
-  const inspecaoIdSpan = document.getElementById("inspecaoId");
   const relatorioContent = document.getElementById("relatorioContent");
 
   if (!inspecaoId) {
-    if (relatorioContent)
-      relatorioContent.innerHTML = `<p class="erro" style="color: var(--sys-color-error, red); text-align:center;">ID da inspeção não fornecido.</p>`;
+    if (relatorioContent) {
+      relatorioContent.innerHTML =
+        '<p class="lv-empty" style="color:#dc2626;text-align:center;">ID da inspeção não fornecido.</p>';
+    }
     return;
   }
 
-  if (inspecaoIdSpan) {
-    inspecaoIdSpan.textContent = inspecaoId;
-  }
+  if (!relatorioContent) return;
 
-  if (!relatorioContent) {
-    return;
-  }
-  relatorioContent.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--sys-color-text-secondary);">Carregando dados do relatório...</p>`;
+  relatorioContent.innerHTML =
+    '<p class="lv-empty" style="text-align:center;padding:24px;">Carregando dados do relatório...</p>';
 
   try {
     const response = reportToken
@@ -97,7 +150,10 @@ async function carregarRelatorio() {
           `/api/inspecoes_publico/${inspecaoId}?token=${encodeURIComponent(reportToken)}`,
           { credentials: "same-origin" }
         )
-      : await fetch(`/api/inspecoes/${inspecaoId}`, { credentials: "same-origin" });
+      : await fetch(`/api/inspecoes/${inspecaoId}`, {
+          credentials: "same-origin",
+        });
+
     if (!response.ok) {
       const errorData = await response
         .json()
@@ -106,156 +162,115 @@ async function carregarRelatorio() {
         errorData.message || "Erro ao carregar dados da inspeção"
       );
     }
-    const data = await response.json();
 
+    const data = await response.json();
     if (!data) {
       throw new Error("Dados da inspeção não encontrados ou formato inválido.");
     }
 
-    const camposExcluidos = [
-      "id",
-      "matricula",
-      "placa",
-      "data_inspecao",
-      "km_atual",
-      "horimetro",
-      "observacoes",
-    ];
-
-    let dataInspecaoFormatada = "N/A";
-    if (data.data_inspecao) {
-      const dataObj = new Date(data.data_inspecao);
-      if (!isNaN(dataObj.getTime())) {
-        dataInspecaoFormatada = dataObj.toLocaleDateString("pt-BR", {
-          timeZone: "UTC",
-        });
-      }
-    }
+    const responsavel = data.responsavel_nome
+      ? `${data.responsavel_nome} (${data.matricula || "N/A"})`
+      : data.matricula || "N/A";
+    const docCode = `LV-FRT-${String(data.placa || data.id)
+      .replace(/\s+/g, "")
+      .replace(/[^a-zA-Z0-9\-]/g, "")}`;
+    const emissao = new Date().toLocaleString("pt-BR", {
+      timeZone: "America/Maceio",
+    });
 
     relatorioContent.innerHTML = safeHtml`
-      <div class="divisao">
-        <h2>Informações Gerais</h2>
-        <div class="relatorio-grid">
-          <div class="relatorio-item">
-            <i class="fas fa-car"></i>
-            <p><strong>Placa:</strong> ${data.placa || "N/A"}</p>
-          </div>
-          <div class="relatorio-item">
-            <i class="fas fa-id-card"></i>
-            <p><strong>Matrícula do Responsável:</strong> ${
-              data.matricula || "N/A"
-            }</p>
-          </div>
-          <div class="relatorio-item">
-            <i class="fas fa-calendar-alt"></i>
-            <p><strong>Data da Inspeção:</strong> ${dataInspecaoFormatada}</p>
-          </div>
-          <div class="relatorio-item">
-            <i class="fas fa-tachometer-alt"></i>
-            <p><strong>KM Atual:</strong> ${data.km_atual || "N/A"}</p>
-          </div>
-          <div class="relatorio-item">
-            <i class="fas fa-clock"></i>
-            <p><strong>Horímetro:</strong> ${data.horimetro || "N/A"}</p>
-          </div>
-        </div>
-      </div>
+      <table class="rt-doc-control" aria-label="Controle documental">
+        <tr>
+          <td><span>Documento</span><strong>${docCode}</strong></td>
+          <td><span>Revisão</span><strong>00</strong></td>
+          <td><span>Data</span><strong>${formatarData(data.data_inspecao)}</strong></td>
+          <td><span>Classificação</span><strong>Uso Interno</strong></td>
+        </tr>
+      </table>
 
-      <div class="divisao">
-        <h2>Itens de Inspeção do Veículo</h2>
-        <div class="relatorio-grid checklist-items-grid">
-          ${Object.keys(data)
-            .filter(
-              (key) =>
-                !camposExcluidos.includes(key) &&
-                mapeamentoNomes[key] &&
-                ![
-                  // Excluir campos específicos do Sky/Cesto desta seção
-                  "estado_fisico_sky",
-                  "funcionamento_sky",
-                  "sapatas",
-                  "cestos",
-                  "comandos",
-                  "lubrificacao",
-                  "ensaio_eletrico",
-                  "cilindros",
-                  "gavetas",
-                  "capas",
-                  "nivel_oleo_sky",
-                ].includes(key)
-            )
-            .map(
-              (key) => `
-              <div class="relatorio-item">
-                ${getIcon(data[key])}
-                <p><strong>${
-                  mapeamentoNomes[key] ||
-                  key
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (l) => l.toUpperCase())
-                }:</strong> ${getStatusText(data[key])}</p>
-              </div>`
-            )
-            .join("")}
+      <header class="rt-cover">
+        <div class="rt-cover__brand">
+          <img class="rt-cover__logo" src="/static/images/brand/sulgipe-logo.png" alt="SULGIPE" />
+          <p class="rt-cover__company">SULGIPE</p>
         </div>
-      </div>
-      
-      <div class="divisao">
-        <h2>Itens de Inspeção do Sky/Cesto Aéreo</h2>
-        <div class="relatorio-grid checklist-items-grid">
-          ${Object.keys(data)
-            .filter(
-              (key) =>
-                !camposExcluidos.includes(key) &&
-                mapeamentoNomes[key] &&
-                [
-                  // Incluir apenas campos específicos do Sky/Cesto nesta seção
-                  "estado_fisico_sky",
-                  "funcionamento_sky",
-                  "sapatas",
-                  "cestos",
-                  "comandos",
-                  "lubrificacao",
-                  "ensaio_eletrico",
-                  "cilindros",
-                  "gavetas",
-                  "capas",
-                  "nivel_oleo_sky",
-                ].includes(key)
-            )
-            .map(
-              (key) => `
-              <div class="relatorio-item">
-                ${getIcon(data[key])}
-                <p><strong>${
-                  mapeamentoNomes[key] ||
-                  key
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (l) => l.toUpperCase())
-                }:</strong> ${getStatusText(data[key])}</p>
-              </div>`
-            )
-            .join("")}
+        <div class="rt-cover__center">
+          <p class="rt-cover__kind">Relatório Técnico</p>
+          <h1 class="rt-cover__title">Relatório Técnico de Inspeção Veicular</h1>
+          <p class="rt-cover__module">Frota · Checklist Veicular</p>
         </div>
-      </div>
+        <div class="rt-cover__meta">
+          <strong>Inspeção:</strong> INS-${inspecaoId}<br />
+          <strong>Emissão:</strong> ${emissao}<br />
+          <strong>Responsável:</strong> ${responsavel}
+        </div>
+      </header>
 
-      ${
-        data.observacoes
-          ? `
-        <div class="divisao">
-          <h2>Observações</h2>
-          <div class="relatorio-item observacoes-item">
-            <p>${data.observacoes}</p>
+      <main class="lv-report-main">
+        <section class="lv-section rt-section">
+          <h2 class="rt-section__heading">
+            <span class="rt-section__num">1</span> Identificação da Inspeção
+          </h2>
+          <div class="lv-section__body">
+            <div class="lv-info-grid lv-info-grid--4col">
+              <div class="lv-info-item">
+                <span class="lv-info-item__label">Nº da Inspeção</span>
+                <span class="lv-info-item__value">${inspecaoId}</span>
+              </div>
+              <div class="lv-info-item">
+                <span class="lv-info-item__label">Placa</span>
+                <span class="lv-info-item__value">${data.placa || "N/A"}</span>
+              </div>
+              <div class="lv-info-item">
+                <span class="lv-info-item__label">Data da Inspeção</span>
+                <span class="lv-info-item__value">${formatarData(data.data_inspecao)}</span>
+              </div>
+              <div class="lv-info-item">
+                <span class="lv-info-item__label">KM Atual</span>
+                <span class="lv-info-item__value">${data.km_atual ?? "N/A"}</span>
+              </div>
+              <div class="lv-info-item">
+                <span class="lv-info-item__label">Horímetro</span>
+                <span class="lv-info-item__value">${data.horimetro ?? "N/A"}</span>
+              </div>
+              <div class="lv-info-item lv-info-item--full">
+                <span class="lv-info-item__label">Responsável</span>
+                <span class="lv-info-item__value">${responsavel}</span>
+              </div>
+            </div>
           </div>
+        </section>
+
+        <div class="lv-landscape-split">
+          <section class="lv-section rt-section">
+            <h2 class="rt-section__heading">
+              <span class="rt-section__num">2</span> Itens do Veículo
+            </h2>
+            <div class="lv-section__body">${rawHtml(buildChecklistTable(data, false))}</div>
+          </section>
+
+          <section class="lv-section rt-section">
+            <h2 class="rt-section__heading">
+              <span class="rt-section__num">3</span> Itens Sky / Cesto Aéreo
+            </h2>
+            <div class="lv-section__body">${rawHtml(buildChecklistTable(data, true))}</div>
+          </section>
         </div>
-      `
-          : ""
-      }
+
+        <section class="lv-section rt-section">
+          <h2 class="rt-section__heading">
+            <span class="rt-section__num">4</span> Observações
+          </h2>
+          <div class="lv-section__body">
+            <div class="lv-text-block">${data.observacoes || "Nenhuma observação registrada."}</div>
+          </div>
+        </section>
+      </main>
     `;
   } catch (error) {
     console.error("Erro ao carregar relatório:", error);
-    if (relatorioContent)
-      relatorioContent.innerHTML = safeHtml`<p class="erro" style="color: var(--sys-color-error, red); text-align:center;">Erro ao carregar o relatório: ${error.message}. Verifique o ID ou tente novamente mais tarde.</p>`;
+    if (relatorioContent) {
+      relatorioContent.innerHTML = safeHtml`<p class="lv-empty" style="color:#dc2626;text-align:center;">Erro ao carregar o relatório: ${error.message}</p>`;
+    }
   }
 }
 
@@ -268,14 +283,7 @@ window.gerarPDF = function () {
     return;
   }
 
-  const noPrintElements = document.querySelectorAll(".no-print");
-  noPrintElements.forEach((el) => (el.style.display = "none"));
-
   window.location.href = `/api/gerar_pdf_veiculos/${inspecaoId}`;
-
-  setTimeout(() => {
-    noPrintElements.forEach((el) => (el.style.display = "")); // Restaurar para o display original
-  }, 3000); // Ajuste o tempo se necessário
 };
 
 document.addEventListener("DOMContentLoaded", carregarRelatorio);
