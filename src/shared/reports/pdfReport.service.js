@@ -118,6 +118,7 @@ async function wrapReportHtml(bodyHtml, options = {}) {
     extraMeta = "",
     showFooterNote = true,
     showSignatures = true,
+    signaturesOnOwnPage = false,
     landscape = true,
     appendixHtml = "",
   } = options;
@@ -146,10 +147,14 @@ async function wrapReportHtml(bodyHtml, options = {}) {
     ? `<img class="lv-report-brand__logo rt-cover__logo" src="${logoDataUri}" alt="${BRAND.company}" />`
     : `<div class="lv-report-brand__logo-fallback">${BRAND.company}</div>`;
 
+  const signaturesClass = signaturesOnOwnPage
+    ? "rt-signatures rt-signatures--own-page"
+    : "rt-signatures";
+
   const signaturesHtml =
     showSignatures && author
       ? `
-    <div class="rt-signatures">
+    <div class="${signaturesClass}">
       <div class="rt-signature">
         <div class="rt-signature__line"></div>
         <p class="rt-signature__label">${escapeHtml(author)}</p>
@@ -162,6 +167,10 @@ async function wrapReportHtml(bodyHtml, options = {}) {
       </div>
     </div>`
       : "";
+
+  const footerNoteHtml = showFooterNote
+    ? `<p class="lv-report-footer-note">Documento gerado eletronicamente pelo ${BRAND.system}. Reprodução parcial permitida para fins operacionais da ${BRAND.company}.</p>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -199,13 +208,9 @@ async function wrapReportHtml(bodyHtml, options = {}) {
 
     <main class="lv-report-main">${bodyHtml}</main>
 
+    ${signaturesOnOwnPage ? footerNoteHtml : ""}
     ${signaturesHtml}
-
-    ${
-      showFooterNote
-        ? `<p class="lv-report-footer-note">Documento gerado eletronicamente pelo ${BRAND.system}. Reprodução parcial permitida para fins operacionais da ${BRAND.company}.</p>`
-        : ""
-    }
+    ${signaturesOnOwnPage ? "" : footerNoteHtml}
 
     ${appendixHtml}
   </div>

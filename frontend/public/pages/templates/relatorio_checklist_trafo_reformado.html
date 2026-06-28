@@ -1,24 +1,34 @@
 <!-- Relatório técnico — checklist de transformador reformado -->
-<section class="lv-section rt-section rt-section--compact">
+<!-- Página 1: identificação + avaliação até status -->
+<section class="lv-section rt-section rt-section--paginated">
   <h2 class="rt-section__heading">
     <span class="rt-section__num">{{secao_identificacao}}</span> Identificação da Avaliação
   </h2>
   <div class="lv-section__body">
-    <div class="lv-info-grid lv-info-grid--4col lv-info-grid--compact">
+    <div class="lv-info-grid lv-info-grid--4col">
       {{detalhes_identificacao_grid}}
     </div>
   </div>
 </section>
 
-<section class="lv-section rt-section rt-section--compact">
+<section class="lv-section rt-section rt-section--paginated rt-section--page-break-after">
   <h2 class="rt-section__heading">
-    <span class="rt-section__num">{{secao_avaliacao}}</span> Avaliação Técnica e Conclusão
+    <span class="rt-section__num">{{secao_avaliacao}}</span> Avaliação Técnica
   </h2>
   <div class="lv-section__body">
     {{avaliacao_bobinas_table}}
     <p class="lv-subsection-title">Estado Físico Geral</p>
     {{estado_fisico_block}}
     {{detalhes_conclusao_status}}
+  </div>
+</section>
+
+<!-- Página 2: observações + fotografias -->
+<section class="lv-section rt-section rt-section--paginated">
+  <h2 class="rt-section__heading">
+    <span class="rt-section__num">{{secao_observacoes}}</span> Observações e Registro Fotográfico
+  </h2>
+  <div class="lv-section__body">
     <p class="lv-subsection-title">Observações do Checklist</p>
     {{observacoes_checklist_block}}
     <p class="lv-subsection-title">Observações Gerais / Motivo da Reprovação</p>

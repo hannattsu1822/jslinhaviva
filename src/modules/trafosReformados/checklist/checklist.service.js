@@ -183,6 +183,7 @@ async function preencherTemplateHtmlChecklistReformado(
   templateHtml = applyTemplatePlaceholders(templateHtml, {
     secao_identificacao: String(sectionOffset + 1),
     secao_avaliacao: String(sectionOffset + 2),
+    secao_observacoes: String(sectionOffset + 3),
     detalhes_identificacao_grid: detalhesIdentificacaoGrid,
     avaliacao_bobinas_table: gerarTabelaBobinasHtml(checklist),
     estado_fisico_block: renderTextBlock(
@@ -237,13 +238,13 @@ async function montarBlocoAvaliacaoHistorico(
   }
 
   const html = `
-    <section class="lv-section rt-section rt-section--compact rt-evaluation-block${index > 0 ? " lv-page-break" : ""}">
+    <section class="lv-section rt-section rt-section--paginated rt-section--page-break-after rt-evaluation-block${index > 0 ? " lv-page-break" : ""}">
       <h2 class="rt-section__heading">
         <span class="rt-section__num">${index + 2}</span>
         Avaliação — Teste ${escapeHtml(String(checklist.id))}
       </h2>
       <div class="lv-section__body">
-        <div class="lv-info-grid lv-info-grid--4col lv-info-grid--compact">
+        <div class="lv-info-grid lv-info-grid--4col">
           ${renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste)))}
           ${renderInfoItem("ID do Registro", escapeHtml(String(checklist.trafos_reformados_id ?? transformador.id ?? "N/A")))}
           ${renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), { span: 2 })}
@@ -252,6 +253,14 @@ async function montarBlocoAvaliacaoHistorico(
         <p class="lv-subsection-title">Estado Físico Geral</p>
         ${renderTextBlock(escapeHtml(checklist.estado_fisico || "N/A"))}
         ${renderStatusRow("Status Final", conclusaoBadge)}
+      </div>
+    </section>
+    <section class="lv-section rt-section rt-section--paginated">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">${index + 2}.1</span>
+        Observações e Registro Fotográfico
+      </h2>
+      <div class="lv-section__body">
         <p class="lv-subsection-title">Observações do Checklist</p>
         ${renderTextBlock(
           escapeHtml(
@@ -308,6 +317,7 @@ async function montarHtmlChecklistReformado(
     generatedAt: formatReportDate(),
     author,
     showSignatures: Boolean(tecnicoLabel && tecnicoLabel !== "N/A"),
+    signaturesOnOwnPage: true,
     appendixHtml,
   });
 

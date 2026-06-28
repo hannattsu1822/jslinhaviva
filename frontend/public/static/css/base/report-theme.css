@@ -702,6 +702,35 @@ body.lv-report-body {
   margin-bottom: 8px;
 }
 
+.lv-report--technical .rt-section--paginated {
+  margin-bottom: 12px;
+  page-break-inside: auto;
+  break-inside: auto;
+}
+
+.lv-report--technical .rt-section--paginated .rt-section__heading {
+  padding: 7px 14px;
+  font-size: 9.5pt;
+}
+
+.lv-report--technical .rt-section--paginated .lv-section__body {
+  padding: 12px 16px 14px;
+}
+
+.lv-report--technical .rt-section--paginated .lv-subsection-title {
+  margin: 10px 0 6px;
+  font-size: 9pt;
+}
+
+.lv-report--technical .rt-section--paginated .lv-subsection-title:first-child {
+  margin-top: 0;
+}
+
+.lv-report--technical .rt-section--page-break-after {
+  page-break-after: always;
+  break-after: page;
+}
+
 .lv-report--technical .rt-section--compact .rt-section__heading {
   padding: 5px 12px;
   font-size: 9pt;
@@ -1091,6 +1120,17 @@ body.lv-report-body {
   margin-top: 32px;
   padding-top: 8px;
   page-break-inside: avoid;
+}
+
+.rt-signatures--own-page {
+  page-break-before: always;
+  break-before: page;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  margin-top: 0;
+  padding-top: 72px;
+  min-height: 130mm;
+  align-content: start;
 }
 
 .rt-signature {
