@@ -686,8 +686,65 @@ body.lv-report-body {
 .lv-report--technical .lv-section {
   border-radius: 0;
   border: 1px solid #94a3b8;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   box-shadow: none;
+  page-break-inside: auto;
+  break-inside: auto;
+  overflow: visible;
+}
+
+.lv-report--technical .rt-cover {
+  margin-bottom: 12px;
+  padding: 14px 18px;
+}
+
+.lv-report--technical .rt-section--compact {
+  margin-bottom: 8px;
+}
+
+.lv-report--technical .rt-section--compact .rt-section__heading {
+  padding: 5px 12px;
+  font-size: 9pt;
+}
+
+.lv-report--technical .rt-section--compact .lv-section__body {
+  padding: 8px 12px 10px;
+}
+
+.lv-report--technical .rt-section--compact .rt-status-row {
+  margin: 6px 0;
+}
+
+.lv-info-grid--compact {
+  gap: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.lv-report--technical .lv-info-grid--compact .lv-info-item {
+  padding: 6px 8px;
+}
+
+.lv-report--technical .lv-info-grid--compact .lv-info-item__label {
+  margin-bottom: 2px;
+  font-size: 7pt;
+}
+
+.lv-report--technical .lv-info-grid--compact .lv-info-item__value {
+  font-size: 9pt;
+}
+
+.lv-table--compact th,
+.lv-table--compact td {
+  padding: 4px 6px;
+  font-size: 8pt;
+  line-height: 1.3;
+}
+
+.lv-text-block--compact {
+  padding: 6px 8px;
+  margin-top: 0;
+  font-size: 9pt;
+  line-height: 1.45;
 }
 
 .lv-report--technical .lv-section__title {
@@ -754,6 +811,10 @@ body.lv-report-body {
   border-radius: 0;
   background: #fafafa;
   border-color: #cbd5e1;
+  padding: 6px 8px;
+  margin-top: 0;
+  font-size: 9pt;
+  line-height: 1.45;
 }
 
 .lv-report--technical .lv-table {
@@ -858,16 +919,58 @@ body.lv-report-body {
 
 .lv-table--phases {
   table-layout: fixed;
+  margin: 0 0 4px;
 }
 
-.lv-report--technical .rt-section--flow,
-.lv-report--technical .rt-evaluation-block {
+.lv-report--technical .rt-section--compact .lv-subsection-title {
+  margin: 6px 0 3px;
+  font-size: 8pt;
+  padding-bottom: 2px;
+}
+
+.lv-report--technical .rt-section--compact .lv-subsection-title:first-child {
+  margin-top: 0;
+}
+
+.lv-report--technical .rt-status-row {
+  border-radius: 0;
+  border-color: #cbd5e1;
+  background: #fff;
+  padding: 6px 10px;
+  margin: 6px 0;
+  gap: 8px;
+}
+
+.lv-report--technical .rt-section__heading {
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.lv-report--technical .lv-info-grid--compact .lv-info-item {
   page-break-inside: auto;
   break-inside: auto;
-  overflow: visible;
 }
 
-.lv-report--technical .rt-section.rt-section {
+.lv-report--technical .lv-table--phases {
+  page-break-inside: auto;
+  break-inside: auto;
+  margin: 0 0 2px;
+}
+
+.lv-report--technical .lv-section__body > .lv-table:first-child {
+  margin-top: 0;
+}
+
+.lv-report--technical .rt-section--compact .lv-section__body > *:last-child {
+  margin-bottom: 0;
+}
+
+.lv-report--technical .rt-figure-grid {
+  gap: 10px 12px;
+  margin-top: 4px;
+}
+
+.lv-report--technical .rt-evaluation-block {
   page-break-inside: auto;
   break-inside: auto;
   overflow: visible;
@@ -875,11 +978,6 @@ body.lv-report-body {
 
 .lv-report--technical .rt-section .lv-section__body {
   overflow: visible;
-}
-
-.lv-report--technical .lv-table-wrap {
-  overflow: visible;
-  margin-bottom: 4px;
 }
 
 .rt-status-row {
@@ -890,12 +988,6 @@ body.lv-report-body {
   margin-bottom: 14px;
   background: var(--lv-surface-muted);
   border: 1px solid var(--lv-surface-border);
-}
-
-.lv-report--technical .rt-status-row {
-  border-radius: 0;
-  border-color: #cbd5e1;
-  background: #fff;
 }
 
 .rt-status-row__label {
@@ -914,16 +1006,11 @@ body.lv-report-body {
 }
 
 .lv-report--technical .lv-section__body .lv-subsection-title {
-  margin: 14px 0 8px;
+  margin: 8px 0 4px;
 }
 
 .lv-report--technical .lv-section__body .lv-subsection-title:first-child {
   margin-top: 0;
-}
-
-.lv-report--technical .lv-section__body .rt-status-row + .lv-subsection-title,
-.lv-report--technical .lv-section__body .lv-table-wrap + .lv-subsection-title {
-  margin-top: 14px;
 }
 
 .lv-report--landscape .lv-table--checklist .lv-table__item-col {
@@ -934,7 +1021,12 @@ body.lv-report-body {
   display: table-header-group;
 }
 
-.lv-report--technical .lv-table--checklist tbody tr {
+.lv-report--technical .lv-table--compact tbody tr {
+  page-break-inside: auto;
+  break-inside: auto;
+}
+
+.lv-report--technical .lv-table--checklist:not(.lv-table--compact) tbody tr {
   page-break-inside: avoid;
   break-inside: avoid;
 }

@@ -183,8 +183,6 @@ async function preencherTemplateHtmlChecklistReformado(
   templateHtml = applyTemplatePlaceholders(templateHtml, {
     secao_identificacao: String(sectionOffset + 1),
     secao_avaliacao: String(sectionOffset + 2),
-    secao_conclusao: String(sectionOffset + 3),
-    secao_anexos: String(sectionOffset + 4),
     detalhes_identificacao_grid: detalhesIdentificacaoGrid,
     avaliacao_bobinas_table: gerarTabelaBobinasHtml(checklist),
     estado_fisico_block: renderTextBlock(
@@ -239,21 +237,21 @@ async function montarBlocoAvaliacaoHistorico(
   }
 
   const html = `
-    <section class="lv-section rt-section rt-section--flow rt-evaluation-block${index > 0 ? " lv-page-break" : ""}">
+    <section class="lv-section rt-section rt-section--compact rt-evaluation-block${index > 0 ? " lv-page-break" : ""}">
       <h2 class="rt-section__heading">
-        <span class="rt-section__num">${index + 1}</span>
+        <span class="rt-section__num">${index + 2}</span>
         Avaliação — Teste ${escapeHtml(String(checklist.id))}
       </h2>
       <div class="lv-section__body">
-        <div class="lv-info-grid lv-info-grid--4col">
+        <div class="lv-info-grid lv-info-grid--4col lv-info-grid--compact">
           ${renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste)))}
           ${renderInfoItem("ID do Registro", escapeHtml(String(checklist.trafos_reformados_id ?? transformador.id ?? "N/A")))}
           ${renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), { span: 2 })}
         </div>
-        ${renderStatusRow("Status Final", conclusaoBadge)}
-        <div class="lv-table-wrap">${gerarTabelaBobinasHtml(checklist)}</div>
+        ${gerarTabelaBobinasHtml(checklist)}
         <p class="lv-subsection-title">Estado Físico Geral</p>
         ${renderTextBlock(escapeHtml(checklist.estado_fisico || "N/A"))}
+        ${renderStatusRow("Status Final", conclusaoBadge)}
         <p class="lv-subsection-title">Observações do Checklist</p>
         ${renderTextBlock(
           escapeHtml(
@@ -544,21 +542,15 @@ async function gerarPdfTabelaHistorico(dados, filtros, usuario) {
     .join("");
 
   const bodyHtml = `
-    <section class="lv-section rt-section rt-section--flow">
+    <section class="lv-section rt-section rt-section--compact">
       <h2 class="rt-section__heading">
-        <span class="rt-section__num">1</span> Filtros Aplicados
+        <span class="rt-section__num">1</span> Listagem de Checklists Avaliados
       </h2>
       <div class="lv-section__body">
-        <div class="lv-text-block">${filtrosLinhas.map((l) => escapeHtml(l)).join("<br>")}</div>
-      </div>
-    </section>
-    <section class="lv-section rt-section rt-section--flow">
-      <h2 class="rt-section__heading">
-        <span class="rt-section__num">2</span> Listagem de Checklists Avaliados
-      </h2>
-      <div class="lv-section__body">
-        <div class="lv-table-wrap">
-        <table class="lv-table lv-table--checklist">
+        <p class="lv-subsection-title">Filtros Aplicados</p>
+        <div class="lv-text-block lv-text-block--compact">${filtrosLinhas.map((l) => escapeHtml(l)).join("<br>")}</div>
+        <p class="lv-subsection-title">Resultados</p>
+        <table class="lv-table lv-table--checklist lv-table--compact">
           <thead>
             <tr>
               <th>ID Registro</th>
@@ -572,7 +564,6 @@ async function gerarPdfTabelaHistorico(dados, filtros, usuario) {
           </thead>
           <tbody>${linhasTabela}</tbody>
         </table>
-        </div>
       </div>
     </section>`;
 
@@ -648,12 +639,12 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
   }
 
   const bodyHtml = `
-    <section class="lv-section rt-section rt-section--flow">
+    <section class="lv-section rt-section rt-section--compact">
       <h2 class="rt-section__heading">
-        <span class="rt-section__num">1</span> Identificação do Transformador
+        <span class="rt-section__num">1</span> Identificação e Resumo
       </h2>
       <div class="lv-section__body">
-        <div class="lv-info-grid lv-info-grid--4col">
+        <div class="lv-info-grid lv-info-grid--4col lv-info-grid--compact">
           ${renderInfoItem("Nº de Série", escapeHtml(numeroSerie))}
           ${renderInfoItem(
             "Fabricante",
@@ -668,15 +659,8 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
             escapeHtml(String(checklists.length))
           )}
         </div>
-      </div>
-    </section>
-    <section class="lv-section rt-section rt-section--flow">
-      <h2 class="rt-section__heading">
-        <span class="rt-section__num">2</span> Resumo das Avaliações
-      </h2>
-      <div class="lv-section__body">
-        <div class="lv-table-wrap">
-        <table class="lv-table lv-table--checklist">
+        <p class="lv-subsection-title">Resumo das Avaliações</p>
+        <table class="lv-table lv-table--checklist lv-table--compact">
           <thead>
             <tr>
               <th>ID Teste</th>
@@ -688,7 +672,6 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
           </thead>
           <tbody>${resumoLinhas}</tbody>
         </table>
-        </div>
       </div>
     </section>
     ${secoesDetalhadas.join("")}`;
