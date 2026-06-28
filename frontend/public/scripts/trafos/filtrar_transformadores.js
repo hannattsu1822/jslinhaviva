@@ -157,6 +157,7 @@ async function buscarTransformadores(filtros) {
     const response = await fetch("/api/filtrar_transformadores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(filtros),
     });
     if (!response.ok) {
@@ -210,22 +211,24 @@ async function gerarPDFTabela() {
       "#resultadosBody tr:not(#semResultados)"
     );
     rows.forEach((row) => {
+      if (row.id === "semResultados" || row.cells.length < 7) return;
       dados.push({
-        id: row.cells[0].textContent,
-        numero_serie: row.cells[1].textContent,
-        potencia: row.cells[2].textContent,
-        marca: row.cells[3].textContent,
-        data_formulario: row.cells[4].textContent,
-        responsavel: row.cells[5].textContent,
-        destinado: row.cells[6].textContent,
+        id: row.cells[0].textContent.trim(),
+        numero_serie: row.cells[1].textContent.trim(),
+        potencia: row.cells[2].textContent.trim(),
+        marca: row.cells[3].textContent.trim(),
+        data_formulario: row.cells[4].textContent.trim(),
+        responsavel: row.cells[5].textContent.trim(),
+        destinado: row.cells[6].textContent.trim(),
       });
     });
     if (dados.length === 0) {
-      throw new Error("Nenhum dado para gerar PDF");
+      throw new Error("Nenhum dado para gerar PDF. Aplique os filtros e aguarde os resultados.");
     }
     const response = await fetch("/api/gerar_pdf_tabela_transformadores", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         dados,
         filtros: {
@@ -237,7 +240,10 @@ async function gerarPDFTabela() {
       }),
     });
     if (!response.ok) {
-      throw new Error("Erro ao gerar PDF");
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Erro ao gerar PDF" }));
+      throw new Error(errorData.message || "Erro ao gerar PDF");
     }
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -258,14 +264,20 @@ async function gerarPDFTabela() {
   }
 }
 
-async function gerarPDF(id) {
-  const btnPDF = document.querySelector(`button[data-action="gerarPDF" data-target="${id}"]`);
+window.gerarPDF = async function gerarPDF(id, button) {
+  const btnPDF =
+    button ||
+    document.querySelector(
+      `button[data-action="gerarPDF"][data-target="${id}"]`
+    );
   if (!btnPDF) return;
   const originalHTML = btnPDF.innerHTML;
   btnPDF.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   btnPDF.disabled = true;
   try {
-    const response = await fetch(`/api/gerar_pdf/${id}`);
+    const response = await fetch(`/api/gerar_pdf/${id}`, {
+      credentials: "include",
+    });
     if (!response.ok) {
       const errorData = await response
         .json()
@@ -309,7 +321,7 @@ async function gerarPDF(id) {
     btnPDF.innerHTML = originalHTML;
     btnPDF.disabled = false;
   }
-}
+};
 
 function exibirResultados(dados) {
   const tbody = document.getElementById("resultadosBody");
@@ -397,7 +409,7 @@ function exibirResultados(dados) {
     : "Filtros: Nenhum filtro ativo.";
 }
 
-async function excluirTransformador(id) {
+window.excluirTransformador = async function excluirTransformador(id) {
   if (
     confirm("Tem certeza que deseja excluir este checklist de transformador?")
   ) {
@@ -427,8 +439,8 @@ async function excluirTransformador(id) {
       toggleLoading(false);
     }
   }
-}
+};
 
-function abrirRelatorio(id) {
+window.abrirRelatorio = function abrirRelatorio(id) {
   window.location.href = `/relatorio_formulario?id=${id}`;
-}
+};

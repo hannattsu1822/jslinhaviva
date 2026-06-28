@@ -336,10 +336,10 @@ function preencherTabela(trafos) {
       <td data-label="Potência">${trafo.pot || "-"}</td>
       <td data-label="Data Importação">${dataImportacao}</td>
       <td data-label="Status"><span class="badge ${statusClass}">${statusText}</span></td>
-      <td data-label="Última Avaliação">${ultimaAvaliacaoHtml}</td>
+      <td data-label="Última Avaliação">${rawHtml(ultimaAvaliacaoHtml)}</td>
       <td data-label="Ações" class="text-center">
         <div class="d-flex gap-1 justify-content-center">
-          ${actionButtonsHtml}
+          ${rawHtml(actionButtonsHtml)}
         </div>
       </td>`;
     tbody.appendChild(tr);

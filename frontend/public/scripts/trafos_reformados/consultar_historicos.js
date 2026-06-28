@@ -343,18 +343,19 @@ function preencherTabela(trafos) {
       <td data-label="Potência">${trafo.pot || "-"}</td>
       <td data-label="Status"><span class="badge ${statusClass}">${statusText}</span></td>
       <td data-label="Data Avaliação">${dataAvaliacao}</td>
-      <td data-label="Histórico" class="text-center">${historicoButtonHtml}</td>
+      <td data-label="Histórico" class="text-center">${rawHtml(historicoButtonHtml)}</td>
       <td data-label="Ações" class="text-center">
         <div class="btn-group">
-            ${actionButtonsHtml}
+            ${rawHtml(actionButtonsHtml)}
         </div>
       </td>`;
     tbody.appendChild(tr);
   });
 }
 
-async function visualizarChecklist(registroId) {
+window.visualizarChecklist = async function visualizarChecklist(registroId) {
   const container = document.getElementById("checklistDetailsContainer");
+  if (!container || !checklistModalInstance) return;
   container.innerHTML =
     '<div class="text-center p-4"><div class="spinner-border" role="status"></div></div>';
   checklistModalInstance.show();
@@ -433,15 +434,20 @@ async function visualizarChecklist(registroId) {
             <p><strong>Observações Gerais / Motivo da Reprovação:</strong> ${
               checklistData.resultado_avaliacao || "Nenhuma."
             }</p>
-            ${anexoHtml}
+            ${rawHtml(anexoHtml)}
         `;
   } catch (error) {
     container.innerHTML = safeHtml`<div class="alert alert-danger">${error.message}</div>`;
   }
-}
+};
 
-async function gerarPDFChecklist(registroId) {
-  const btn = event.currentTarget;
+window.gerarPDFChecklist = async function gerarPDFChecklist(registroId, button) {
+  const btn =
+    button ||
+    document.querySelector(
+      `button[data-action="gerarPDFChecklist"][data-id="${registroId}"]`
+    );
+  if (!btn) return;
   const originalIcon = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML =
@@ -499,9 +505,9 @@ async function gerarPDFChecklist(registroId) {
     btn.disabled = false;
     btn.innerHTML = originalIcon;
   }
-}
+};
 
-async function reverterParaPendente(registroId) {
+window.reverterParaPendente = async function reverterParaPendente(registroId) {
   if (
     !confirm(
       `Tem certeza que deseja reverter o registro ID ${registroId} para o status "Pendente"? Ele voltará para a fila de avaliação.`
@@ -525,7 +531,7 @@ async function reverterParaPendente(registroId) {
   } catch (error) {
     alert("Erro: " + error.message);
   }
-}
+};
 
 async function gerarPDFTabela() {
   const btn = document.getElementById("btnGerarPDFTabela");
