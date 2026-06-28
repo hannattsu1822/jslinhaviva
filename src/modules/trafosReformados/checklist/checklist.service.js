@@ -13,6 +13,7 @@ const {
 } = require("../../../shared/reports/pdfReport.service");
 const {
   renderInfoItem,
+  renderStatusRow,
   renderTextBlock,
   renderStatusBadge,
   gerarGaleriaHtml,
@@ -89,7 +90,7 @@ async function processarAnexosParaRelatorio(anexos = []) {
 
 function gerarTabelaBobinasHtml(checklist) {
   return `
-    <table class="lv-table lv-table--checklist lv-table--phases">
+    <table class="lv-table lv-table--phases">
       <thead>
         <tr>
           <th class="lv-table__label-col">Verificação</th>
@@ -161,12 +162,10 @@ async function preencherTemplateHtmlChecklistReformado(
       escapeHtml(String(transformador.pot ?? checklist.pot ?? "N/A"))
     ),
     renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste))),
-    renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), true),
+    renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), { span: 2 }),
   ].join("");
 
-  const detalhesConclusaoGrid = [
-    renderInfoItem("Status Final", conclusaoBadge),
-  ].join("");
+  const detalhesConclusaoStatus = renderStatusRow("Status Final", conclusaoBadge);
 
   let anexosGaleria = '<p class="lv-empty">Nenhum registro fotográfico encontrado.</p>';
   let anexoImpressaoItems = [];
@@ -201,7 +200,7 @@ async function preencherTemplateHtmlChecklistReformado(
           "Nenhuma observação registrada."
       )
     ),
-    detalhes_conclusao_grid: detalhesConclusaoGrid,
+    detalhes_conclusao_status: detalhesConclusaoStatus,
     anexos_galeria: anexosGaleria,
   });
 
@@ -240,7 +239,7 @@ async function montarBlocoAvaliacaoHistorico(
   }
 
   const html = `
-    <section class="lv-section rt-section rt-evaluation-block">
+    <section class="lv-section rt-section rt-section--flow rt-evaluation-block${index > 0 ? " lv-page-break" : ""}">
       <h2 class="rt-section__heading">
         <span class="rt-section__num">${index + 1}</span>
         Avaliação — Teste ${escapeHtml(String(checklist.id))}
@@ -249,10 +248,10 @@ async function montarBlocoAvaliacaoHistorico(
         <div class="lv-info-grid lv-info-grid--4col">
           ${renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste)))}
           ${renderInfoItem("ID do Registro", escapeHtml(String(checklist.trafos_reformados_id ?? transformador.id ?? "N/A")))}
-          ${renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel))}
-          ${renderInfoItem("Status Final", conclusaoBadge)}
+          ${renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), { span: 2 })}
         </div>
-        ${gerarTabelaBobinasHtml(checklist)}
+        ${renderStatusRow("Status Final", conclusaoBadge)}
+        <div class="lv-table-wrap">${gerarTabelaBobinasHtml(checklist)}</div>
         <p class="lv-subsection-title">Estado Físico Geral</p>
         ${renderTextBlock(escapeHtml(checklist.estado_fisico || "N/A"))}
         <p class="lv-subsection-title">Observações do Checklist</p>
@@ -545,7 +544,7 @@ async function gerarPdfTabelaHistorico(dados, filtros, usuario) {
     .join("");
 
   const bodyHtml = `
-    <section class="lv-section rt-section">
+    <section class="lv-section rt-section rt-section--flow">
       <h2 class="rt-section__heading">
         <span class="rt-section__num">1</span> Filtros Aplicados
       </h2>
@@ -553,11 +552,12 @@ async function gerarPdfTabelaHistorico(dados, filtros, usuario) {
         <div class="lv-text-block">${filtrosLinhas.map((l) => escapeHtml(l)).join("<br>")}</div>
       </div>
     </section>
-    <section class="lv-section rt-section">
+    <section class="lv-section rt-section rt-section--flow">
       <h2 class="rt-section__heading">
         <span class="rt-section__num">2</span> Listagem de Checklists Avaliados
       </h2>
       <div class="lv-section__body">
+        <div class="lv-table-wrap">
         <table class="lv-table lv-table--checklist">
           <thead>
             <tr>
@@ -572,6 +572,7 @@ async function gerarPdfTabelaHistorico(dados, filtros, usuario) {
           </thead>
           <tbody>${linhasTabela}</tbody>
         </table>
+        </div>
       </div>
     </section>`;
 
@@ -643,16 +644,13 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
     );
 
     todosAnexoItems.push(...anexoImpressaoItems);
-    secoesDetalhadas.push(`
-      <div class="lv-page-break"></div>
-      ${html}
-    `);
+    secoesDetalhadas.push(html);
   }
 
   const bodyHtml = `
-    <section class="lv-section rt-section">
+    <section class="lv-section rt-section rt-section--flow">
       <h2 class="rt-section__heading">
-        <span class="rt-section__num">A</span> Identificação do Transformador
+        <span class="rt-section__num">1</span> Identificação do Transformador
       </h2>
       <div class="lv-section__body">
         <div class="lv-info-grid lv-info-grid--4col">
@@ -672,11 +670,12 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
         </div>
       </div>
     </section>
-    <section class="lv-section rt-section">
+    <section class="lv-section rt-section rt-section--flow">
       <h2 class="rt-section__heading">
-        <span class="rt-section__num">B</span> Resumo das Avaliações
+        <span class="rt-section__num">2</span> Resumo das Avaliações
       </h2>
       <div class="lv-section__body">
+        <div class="lv-table-wrap">
         <table class="lv-table lv-table--checklist">
           <thead>
             <tr>
@@ -689,14 +688,7 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
           </thead>
           <tbody>${resumoLinhas}</tbody>
         </table>
-      </div>
-    </section>
-    <section class="lv-section rt-section rt-section--annex">
-      <h2 class="rt-section__heading">
-        <span class="rt-section__num">C</span> Detalhamento das Avaliações
-      </h2>
-      <div class="lv-section__body">
-        <p class="rt-section__intro">Registros completos de cada teste realizado para o número de série ${escapeHtml(numeroSerie)}.</p>
+        </div>
       </div>
     </section>
     ${secoesDetalhadas.join("")}`;

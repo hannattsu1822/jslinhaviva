@@ -333,6 +333,14 @@ body.lv-report-body {
   grid-column: 1 / -1;
 }
 
+.lv-info-item--span-2 {
+  grid-column: span 2;
+}
+
+.lv-info-item--span-3 {
+  grid-column: span 3;
+}
+
 .lv-info-item__label {
   display: block;
   font-size: 8pt;
@@ -533,6 +541,12 @@ body.lv-report-body {
 
 .lv-page-break {
   page-break-before: always;
+  break-before: page;
+}
+
+.lv-section.lv-page-break {
+  page-break-before: always;
+  break-before: page;
 }
 
 .lv-report-footer-note {
@@ -842,10 +856,61 @@ body.lv-report-body {
   overflow-wrap: anywhere;
 }
 
+.lv-table--phases {
+  table-layout: fixed;
+}
+
 .lv-report--technical .rt-section--flow,
 .lv-report--technical .rt-evaluation-block {
   page-break-inside: auto;
   break-inside: auto;
+  overflow: visible;
+}
+
+.lv-report--technical .rt-section.rt-section {
+  page-break-inside: auto;
+  break-inside: auto;
+  overflow: visible;
+}
+
+.lv-report--technical .rt-section .lv-section__body {
+  overflow: visible;
+}
+
+.lv-report--technical .lv-table-wrap {
+  overflow: visible;
+  margin-bottom: 4px;
+}
+
+.rt-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--lv-surface-muted);
+  border: 1px solid var(--lv-surface-border);
+}
+
+.lv-report--technical .rt-status-row {
+  border-radius: 0;
+  border-color: #cbd5e1;
+  background: #fff;
+}
+
+.rt-status-row__label {
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--lv-text-muted);
+  white-space: nowrap;
+}
+
+.rt-status-row__value {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .lv-report--technical .lv-section__body .lv-subsection-title {
@@ -854,6 +919,11 @@ body.lv-report-body {
 
 .lv-report--technical .lv-section__body .lv-subsection-title:first-child {
   margin-top: 0;
+}
+
+.lv-report--technical .lv-section__body .rt-status-row + .lv-subsection-title,
+.lv-report--technical .lv-section__body .lv-table-wrap + .lv-subsection-title {
+  margin-top: 14px;
 }
 
 .lv-report--landscape .lv-table--checklist .lv-table__item-col {
@@ -869,7 +939,7 @@ body.lv-report-body {
   break-inside: avoid;
 }
 
-.lv-report--technical .lv-section__body:has(.lv-table) {
+.lv-report--technical .lv-checklist-dual {
   overflow: hidden;
 }
 

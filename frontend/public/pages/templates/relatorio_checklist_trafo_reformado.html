@@ -1,5 +1,5 @@
 <!-- Relatório técnico — checklist de transformador reformado -->
-<section class="lv-section rt-section">
+<section class="lv-section rt-section rt-section--flow">
   <h2 class="rt-section__heading">
     <span class="rt-section__num">{{secao_identificacao}}</span> Identificação da Avaliação
   </h2>
@@ -15,7 +15,7 @@
     <span class="rt-section__num">{{secao_avaliacao}}</span> Resultados do Checklist Técnico
   </h2>
   <div class="lv-section__body">
-    {{avaliacao_bobinas_table}}
+    <div class="lv-table-wrap">{{avaliacao_bobinas_table}}</div>
     <p class="lv-subsection-title">Estado Físico Geral</p>
     {{estado_fisico_block}}
   </div>
@@ -26,9 +26,7 @@
     <span class="rt-section__num">{{secao_conclusao}}</span> Conclusão e Observações
   </h2>
   <div class="lv-section__body">
-    <div class="lv-info-grid lv-info-grid--4col">
-      {{detalhes_conclusao_grid}}
-    </div>
+    {{detalhes_conclusao_status}}
     <p class="lv-subsection-title">Observações do Checklist</p>
     {{observacoes_checklist_block}}
     <p class="lv-subsection-title">Observações Gerais / Motivo da Reprovação</p>

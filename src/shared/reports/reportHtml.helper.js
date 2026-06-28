@@ -90,12 +90,36 @@ function gerarListaDocumentosHtml(documentos, emptyMessage) {
   return listHtml;
 }
 
-function renderInfoItem(label, value, fullWidth = false) {
-  const modifier = fullWidth ? " lv-info-item--full" : "";
+function renderInfoItem(label, value, options = false) {
+  let fullWidth = false;
+  let span = 0;
+
+  if (typeof options === "boolean") {
+    fullWidth = options;
+  } else if (options && typeof options === "object") {
+    fullWidth = Boolean(options.fullWidth);
+    span = Number(options.span) || 0;
+  }
+
+  const modifiers = [
+    fullWidth ? "lv-info-item--full" : "",
+    span > 1 ? `lv-info-item--span-${span}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return `
-    <div class="lv-info-item${modifier}">
+    <div class="lv-info-item${modifiers ? ` ${modifiers}` : ""}">
       <span class="lv-info-item__label">${escapeHtml(label)}</span>
       <div class="lv-info-item__value">${value}</div>
+    </div>`;
+}
+
+function renderStatusRow(label, badgeHtml) {
+  return `
+    <div class="rt-status-row">
+      <span class="rt-status-row__label">${escapeHtml(label)}</span>
+      <div class="rt-status-row__value">${badgeHtml}</div>
     </div>`;
 }
 
@@ -298,6 +322,7 @@ module.exports = {
   gerarTabelaChecklistHtml,
   gerarTabelaKeyValueHtml,
   renderInfoItem,
+  renderStatusRow,
   renderTextBlock,
   applyTemplatePlaceholders,
 };
