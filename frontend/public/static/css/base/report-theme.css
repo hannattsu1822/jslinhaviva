@@ -794,6 +794,28 @@ body.lv-report-body {
   padding: 5px 4px;
 }
 
+.lv-table--keyvalue .lv-table__value-col {
+  width: 34%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-size: 7.5pt;
+  line-height: 1.35;
+  vertical-align: middle;
+  padding: 5px 8px;
+}
+
+.lv-table--keyvalue .lv-table__obs-col {
+  width: 28%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-size: 7pt;
+  line-height: 1.35;
+  vertical-align: top;
+  padding: 5px 8px;
+  color: #475569;
+  font-style: italic;
+}
+
 .lv-table--checklist thead .lv-table__status-col {
   font-size: 7pt;
 }

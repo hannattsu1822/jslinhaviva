@@ -1,78 +1,313 @@
+// public/scripts/trafos/relatorio_formulario.js
+
+function esc(value) {
+  if (typeof window.escapeHtml === "function") {
+    return window.escapeHtml(value);
+  }
+  if (value == null) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function tratarValor(valor) {
   return valor || "Não informado";
 }
 
 function formatarValoresConcatenados(valor) {
   if (!valor) return "Não informado";
-  return valor
+  return String(valor)
     .split(",")
     .map((item) => item.trim())
     .join(", ");
 }
 
-function formatarData(data, tipo = "completa", incluirHoras = false) {
-  if (!data) return "Não informado";
+function parseObservacoesSecoes(data) {
+  if (!data?.observacoes_secoes) return {};
+  try {
+    return typeof data.observacoes_secoes === "string"
+      ? JSON.parse(data.observacoes_secoes)
+      : data.observacoes_secoes;
+  } catch {
+    return {};
+  }
+}
 
-  if (typeof data === "string" && data.match(/^\d{2}\/\d{2}\/\d{4}/)) {
-    if (tipo === "ano" && data.length === 10) {
-      return data.slice(6, 10);
-    }
-    if (
-      (incluirHoras && data.length > 10) ||
-      (!incluirHoras && data.length === 10)
-    ) {
-      return data;
-    }
+function isReformado(data) {
+  return (
+    data.reformado === 1 ||
+    data.reformado === true ||
+    String(data.reformado).toLowerCase() === "true"
+  );
+}
+
+function extrairItensAvaliacao(data, obsSecoes) {
+  return [
+    {
+      label: "Detalhes do Tanque",
+      value: formatarValoresConcatenados(data.detalhes_tanque),
+      observacao: obsSecoes.tanque,
+    },
+    {
+      label: "Corrosão do Tanque",
+      value: data.corrosao_tanque || "N/A",
+    },
+    {
+      label: "Buchas Primárias",
+      value: formatarValoresConcatenados(data.buchas_primarias),
+      observacao: obsSecoes.buchas_primarias,
+    },
+    {
+      label: "Buchas Secundárias",
+      value: formatarValoresConcatenados(data.buchas_secundarias),
+      observacao: obsSecoes.buchas_secundarias,
+    },
+    {
+      label: "Conectores",
+      value: formatarValoresConcatenados(data.conectores),
+      observacao: obsSecoes.conectores,
+    },
+    {
+      label: "Bobina I",
+      value: data.avaliacao_bobina_i || "N/A",
+      observacao: obsSecoes.bobina_i,
+    },
+    {
+      label: "Bobina II",
+      value: data.avaliacao_bobina_ii || "N/A",
+      observacao: obsSecoes.bobina_ii,
+    },
+    {
+      label: "Bobina III",
+      value: data.avaliacao_bobina_iii || "N/A",
+      observacao: obsSecoes.bobina_iii,
+    },
+  ];
+}
+
+function buildKeyValueTable(items, dualColumn = true) {
+  function singleTable(slice) {
+    const rows = slice
+      .map(
+        (item) => `
+      <tr>
+        <td class="lv-table__item-col">${esc(item.label)}</td>
+        <td class="lv-table__value-col">${esc(item.value)}</td>
+        <td class="lv-table__obs-col">${item.observacao ? esc(item.observacao) : "—"}</td>
+      </tr>`
+      )
+      .join("");
+
+    return `
+      <table class="lv-table lv-table--checklist lv-table--keyvalue">
+        <thead>
+          <tr>
+            <th class="lv-table__item-col">Item</th>
+            <th class="lv-table__value-col">Avaliação</th>
+            <th class="lv-table__obs-col">Observações</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
   }
 
-  let dateStringParaConverter = String(data);
-  if (dateStringParaConverter.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    dateStringParaConverter += "T00:00:00Z";
-  } else if (dateStringParaConverter.match(/^\d{4}$/) && tipo === "ano") {
-    return dateStringParaConverter;
+  if (!items.length) {
+    return '<p class="lv-empty">Nenhum item registrado.</p>';
   }
 
-  const dateObj = new Date(dateStringParaConverter);
-  if (isNaN(dateObj.getTime())) return "Data inválida";
-
-  const dia = String(dateObj.getUTCDate()).padStart(2, "0");
-  const mes = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
-  const ano = dateObj.getUTCFullYear();
-
-  if (tipo === "ano") {
-    return ano;
+  if (dualColumn && items.length >= 6) {
+    const mid = Math.ceil(items.length / 2);
+    return `<div class="lv-checklist-dual">
+      ${singleTable(items.slice(0, mid))}
+      ${singleTable(items.slice(mid))}
+    </div>`;
   }
 
-  let dataFormatada = `${dia}/${mes}/${ano}`;
+  return singleTable(items);
+}
 
-  if (incluirHoras) {
-    const horas = String(dateObj.getUTCHours()).padStart(2, "0");
-    const minutos = String(dateObj.getUTCMinutes()).padStart(2, "0");
-    dataFormatada += ` ${horas}:${minutos}`;
-  }
-  return dataFormatada;
+function montarRelatorioHtml(data, checklistId) {
+  const obsSecoes = parseObservacoesSecoes(data);
+  const responsavel = `${tratarValor(data.nome_responsavel)} (${tratarValor(data.matricula_responsavel)})`;
+  const supervisor = `${tratarValor(data.nome_supervisor_fmt)} (${tratarValor(data.matricula_supervisor_fmt)})`;
+  const anoReforma = isReformado(data)
+    ? tratarValor(data.data_reformado_formatada)
+    : "Não Reformado";
+  const numeroSerie = data.numero_serie || data.serie_transformador_ref || "N/A";
+  const docCode = `LV-TRF-${String(numeroSerie).replace(/\s+/g, "").replace(/[^a-zA-Z0-9\-]/g, "")}`;
+  const emissao = new Date().toLocaleString("pt-BR", {
+    timeZone: "America/Maceio",
+  });
+  const avaliacaoTable = buildKeyValueTable(
+    extrairItensAvaliacao(data, obsSecoes),
+    true
+  );
+
+  return `
+    <table class="rt-doc-control" aria-label="Controle documental">
+      <tr>
+        <td><span>Documento</span><strong>${esc(docCode)}</strong></td>
+        <td><span>Revisão</span><strong>00</strong></td>
+        <td><span>Data</span><strong>${esc(tratarValor(data.data_formulario_completa))}</strong></td>
+        <td><span>Classificação</span><strong>Uso Interno</strong></td>
+      </tr>
+    </table>
+
+    <header class="rt-cover">
+      <div class="rt-cover__brand">
+        <img class="rt-cover__logo" src="/static/images/brand/sulgipe-logo.png" alt="SULGIPE" />
+        <p class="rt-cover__company">SULGIPE</p>
+      </div>
+      <div class="rt-cover__center">
+        <p class="rt-cover__kind">Relatório Técnico</p>
+        <h1 class="rt-cover__title">Relatório Técnico de Inspeção de Transformador</h1>
+        <p class="rt-cover__module">Transformadores · Checklist</p>
+      </div>
+      <div class="rt-cover__meta">
+        <strong>Checklist:</strong> CHK-${esc(checklistId)}<br />
+        <strong>Emissão:</strong> ${esc(emissao)}<br />
+        <strong>Responsável:</strong> ${esc(responsavel)}
+      </div>
+    </header>
+
+    <main class="lv-report-main">
+      <section class="lv-section rt-section">
+        <h2 class="rt-section__heading">
+          <span class="rt-section__num">1</span> Identificação do Checklist
+        </h2>
+        <div class="lv-section__body">
+          <div class="lv-info-grid lv-info-grid--4col">
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">ID do Checklist</span>
+              <span class="lv-info-item__value">${esc(checklistId)}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Nº de Série</span>
+              <span class="lv-info-item__value">${esc(numeroSerie)}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Ano de Fabricação</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.data_fabricacao_formatada))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Ano da Reforma</span>
+              <span class="lv-info-item__value">${esc(anoReforma)}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Data do Formulário</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.data_formulario_completa))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Responsável</span>
+              <span class="lv-info-item__value">${esc(responsavel)}</span>
+            </div>
+            <div class="lv-info-item lv-info-item--full">
+              <span class="lv-info-item__label">Supervisor Técnico</span>
+              <span class="lv-info-item__value">${esc(supervisor)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lv-section rt-section">
+        <h2 class="rt-section__heading">
+          <span class="rt-section__num">2</span> Dados Cadastrais do Transformador
+        </h2>
+        <div class="lv-section__body">
+          <div class="lv-info-grid lv-info-grid--4col">
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Marca</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.marca))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Potência (kVA)</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.potencia))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Número de Fases</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.numero_fases))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Local de Retirada</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.local_retirada))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Regional</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.regional))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Entrada no Almoxarifado</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.data_entrada_almoxarifado_formatada))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Último Proc. Remessa</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.data_processamento_remessa_formatada))}</span>
+            </div>
+            <div class="lv-info-item lv-info-item--full">
+              <span class="lv-info-item__label">Motivo de Desativação</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.motivo_desativacao))}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lv-section rt-section">
+        <h2 class="rt-section__heading">
+          <span class="rt-section__num">3</span> Avaliação Técnica
+        </h2>
+        <div class="lv-section__body">${avaliacaoTable}</div>
+      </section>
+
+      <section class="lv-section rt-section">
+        <h2 class="rt-section__heading">
+          <span class="rt-section__num">4</span> Conclusão e Destino
+        </h2>
+        <div class="lv-section__body">
+          <div class="lv-info-grid lv-info-grid--2col">
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Conclusão Técnica</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.conclusao))}</span>
+            </div>
+            <div class="lv-info-item">
+              <span class="lv-info-item__label">Transformador Destinado Para</span>
+              <span class="lv-info-item__value">${esc(tratarValor(data.transformador_destinado))}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lv-section rt-section">
+        <h2 class="rt-section__heading">
+          <span class="rt-section__num">5</span> Observações Gerais
+        </h2>
+        <div class="lv-section__body">
+          <div class="lv-text-block">${esc(data.observacoes || "Nenhuma observação registrada.")}</div>
+        </div>
+      </section>
+    </main>`;
 }
 
 async function carregarRelatorio() {
   const urlParams = new URLSearchParams(window.location.search);
   const checklistId = urlParams.get("id");
   const reportToken = urlParams.get("token");
-  const checklistIdSpan = document.getElementById("checklistId");
   const relatorioContent = document.getElementById("relatorioContent");
 
   if (!checklistId) {
-    if (relatorioContent)
-      relatorioContent.innerHTML = `<p class="erro">ID do checklist não fornecido na URL.</p>`;
-    return;
-  }
-  if (checklistIdSpan)
-    checklistIdSpan.textContent = `ID do Checklist: ${checklistId}`;
-  if (!relatorioContent) {
-    console.error("Elemento 'relatorioContent' não encontrado no DOM.");
+    if (relatorioContent) {
+      relatorioContent.innerHTML =
+        '<p class="lv-empty" style="color:#dc2626;text-align:center;">ID do checklist não fornecido.</p>';
+    }
     return;
   }
 
-  relatorioContent.innerHTML = `<p style="text-align: center; padding: 30px; color: var(--sys-dark-gray); font-style: italic;"><i class="fas fa-spinner fa-spin"></i> Carregando dados do relatório...</p>`;
+  if (!relatorioContent) return;
+
+  relatorioContent.innerHTML =
+    '<p class="lv-empty" style="text-align:center;padding:24px;">Carregando dados do relatório...</p>';
 
   try {
     const response = reportToken
@@ -83,196 +318,26 @@ async function carregarRelatorio() {
       : await fetch(`/api/checklist_transformadores/${checklistId}`, {
           credentials: "same-origin",
         });
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        message: `Erro HTTP: ${response.status}. Não foi possível obter detalhes do erro.`,
-      }));
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: `Erro HTTP: ${response.status}` }));
       throw new Error(
-        errorData.message ||
-          `Falha ao buscar dados do relatório: ${response.status}`
+        errorData.message || "Erro ao carregar dados da inspeção"
       );
     }
-    const data = await response.json();
 
-    let obsSecoes = {};
-    if (data.observacoes_secoes) {
-      try {
-        obsSecoes = JSON.parse(data.observacoes_secoes);
-      } catch (e) {
-        console.error("Erro ao decodificar observacoes_secoes JSON:", e);
-        obsSecoes = {};
-      }
+    const data = await response.json();
+    if (!data) {
+      throw new Error("Dados do checklist não encontrados.");
     }
 
-    const criarObsHtml = (key) => {
-      const obsTexto = obsSecoes[key];
-      if (obsTexto && obsTexto.trim() !== "") {
-        const textoFormatado = obsTexto
-          .trim()
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/\n/g, "<br>");
-        return `
-          <div class="obs-secao">
-            <i class="fas fa-comment-dots"></i>
-            <p>${textoFormatado}</p>
-          </div>
-        `;
-      }
-      return "";
-    };
-
-    relatorioContent.innerHTML = safeHtml`
-        <div class="divisao">
-          <h2>Informações Gerais do Checklist</h2>
-          <div class="relatorio-grid">
-            <div class="relatorio-item"><i class="fas fa-hashtag"></i><p><strong>Nº de Série do Transformador:</strong> ${tratarValor(
-              data.numero_serie
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-calendar-alt"></i><p><strong>Ano de Fabricação do Trafo:</strong> ${tratarValor(
-              data.data_fabricacao_formatada
-            )}</p></div>
-            <div class="relatorio-item ano-reforma"><i class="fas fa-calendar-alt"></i><p><strong>Ano da Reforma do Trafo:</strong> ${
-              data.reformado === 1 ||
-              data.reformado === true ||
-              String(data.reformado).toLowerCase() === "true"
-                ? tratarValor(data.data_reformado_formatada)
-                : "Não Reformado"
-            }</p></div>
-            <div class="relatorio-item"><i class="fas fa-calendar-check"></i><p><strong>Data deste Formulário:</strong> ${tratarValor(
-              data.data_formulario_completa
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-user"></i><p><strong>Responsável pelo Checklist:</strong> ${tratarValor(
-              data.nome_responsavel
-            )} (${tratarValor(data.matricula_responsavel)})</p></div>
-            <div class="relatorio-item"><i class="fas fa-user-tie"></i><p><strong>Supervisor Técnico:</strong> ${tratarValor(
-              data.nome_supervisor_fmt
-            )} (${tratarValor(data.matricula_supervisor_fmt)})</p></div>
-          </div>
-        </div>
-  
-        <div class="divisao">
-          <h2>Dados Cadastrais do Transformador</h2>
-          <div class="relatorio-grid">
-            <div class="relatorio-item"><i class="fas fa-industry"></i><p><strong>Marca:</strong> ${tratarValor(
-              data.marca
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-bolt"></i><p><strong>Potência (kVA):</strong> ${tratarValor(
-              data.potencia
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-bolt"></i><p><strong>Número de Fases:</strong> ${tratarValor(
-              data.numero_fases
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-map-marker-alt"></i><p><strong>Local de Retirada:</strong> ${tratarValor(
-              data.local_retirada
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-globe"></i><p><strong>Regional:</strong> ${tratarValor(
-              data.regional
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-calendar-day"></i><p><strong>Data de Entrada no Almoxarifado:</strong> ${tratarValor(
-              data.data_entrada_almoxarifado_formatada
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-file-invoice"></i><p><strong>Data Último Processamento de Remessa:</strong> ${tratarValor(
-              data.data_processamento_remessa_formatada
-            )}</p></div>
-            <div class="relatorio-item"><i class="fas fa-exclamation-triangle"></i><p><strong>Motivo de Desativação (se aplicável):</strong> ${tratarValor(
-              data.motivo_desativacao
-            )}</p></div>
-          </div>
-        </div>
-  
-        <div class="divisao">
-          <h2>Avaliação do Checklist</h2>
-          <div class="checklist-grid">
-            <div class="checklist-item">
-                <i class="fas fa-box-open"></i>
-                <p><strong>Detalhes do Tanque:</strong> ${formatarValoresConcatenados(
-                  data.detalhes_tanque
-                )}</p>
-                ${criarObsHtml("tanque")}
-            </div>
-            <div class="checklist-item">
-                <i class="fas fa-flask"></i>
-                <p><strong>Corrosão do Tanque:</strong> ${tratarValor(
-                  data.corrosao_tanque
-                )}</p>
-            </div>
-            <div class="checklist-item">
-                <i class="fas fa-oil-can"></i>
-                <p><strong>Buchas Primárias:</strong> ${formatarValoresConcatenados(
-                  data.buchas_primarias
-                )}</p>
-                ${criarObsHtml("buchas_primarias")}
-            </div>
-            <div class="checklist-item">
-                <i class="fas fa-oil-can"></i>
-                <p><strong>Buchas Secundárias:</strong> ${formatarValoresConcatenados(
-                  data.buchas_secundarias
-                )}</p>
-                ${criarObsHtml("buchas_secundarias")}
-            </div>
-            <div class="checklist-item">
-                <i class="fas fa-plug"></i>
-                <p><strong>Conectores:</strong> ${formatarValoresConcatenados(
-                  data.conectores
-                )}</p>
-                ${criarObsHtml("conectores")}
-            </div>
-            <div class="checklist-item">
-                <i class="fas fa-wave-square"></i>
-                <p><strong>Bobina I:</strong> ${tratarValor(
-                  data.avaliacao_bobina_i
-                )}</p>
-                ${criarObsHtml("bobina_i")}
-            </div>
-            <div class="checklist-item">
-                <i class="fas fa-wave-square"></i>
-                <p><strong>Bobina II:</strong> ${tratarValor(
-                  data.avaliacao_bobina_ii
-                )}</p>
-                ${criarObsHtml("bobina_ii")}
-            </div>
-            <div class="checklist-item">
-                <i class="fas fa-wave-square"></i>
-                <p><strong>Bobina III:</strong> ${tratarValor(
-                  data.avaliacao_bobina_iii
-                )}</p>
-                ${criarObsHtml("bobina_iii")}
-            </div>
-          </div>
-        </div>
-        
-        <div class="divisao">
-          <h2>Conclusão e Destino</h2>
-          <div class="relatorio-grid">
-              <div class="checklist-item"><i class="fas fa-check-double"></i><p><strong>Conclusão Técnica:</strong> ${tratarValor(
-                data.conclusao
-              )}</p></div>
-              <div class="checklist-item"><i class="fas fa-dolly"></i><p><strong>Transformador Destinado Para:</strong> ${tratarValor(
-                data.transformador_destinado
-              )}</p></div>
-          </div>
-        </div>
-  
-        ${
-          data.observacoes
-            ? `
-          <div class="divisao">
-            <h2>Observações Gerais</h2>
-            <div class="relatorio-item observacoes-item">
-              <i class="fas fa-comment-dots"></i>
-              <p>${data.observacoes}</p>
-            </div>
-          </div>
-        `
-            : ""
-        }
-      `;
+    relatorioContent.innerHTML = montarRelatorioHtml(data, checklistId);
   } catch (error) {
     console.error("Erro ao carregar relatório:", error);
     if (relatorioContent) {
-      relatorioContent.innerHTML = safeHtml`<p class="erro">Erro ao carregar o relatório: ${error.message}. Verifique o ID ou tente novamente mais tarde.</p>`;
+      relatorioContent.innerHTML = `<p class="lv-empty" style="color:#dc2626;text-align:center;">Erro ao carregar o relatório: ${esc(error.message)}</p>`;
     }
   }
 }
@@ -281,19 +346,12 @@ function gerarPDF() {
   const urlParams = new URLSearchParams(window.location.search);
   const checklistId = urlParams.get("id");
   if (checklistId) {
-    const noPrintElements = document.querySelectorAll(".no-print");
-    noPrintElements.forEach((button) => {
-      button.style.display = "none";
-    });
     window.location.href = `/api/gerar_pdf/${checklistId}`;
-    setTimeout(() => {
-      noPrintElements.forEach((button) => {
-        button.style.display = "inline-block";
-      });
-    }, 3000);
   } else {
     alert("ID do checklist não encontrado na URL para gerar PDF!");
   }
 }
+
+window.gerarPDF = gerarPDF;
 
 document.addEventListener("DOMContentLoaded", carregarRelatorio);

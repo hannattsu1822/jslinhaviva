@@ -3,99 +3,62 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Relatório de Transformadores</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
-    <link rel="stylesheet" href="/static/css/relatorio_transformadores.css" />
+    <title>Relatório de Inspeção de Transformador</title>
+    <link rel="stylesheet" href="/static/css/base/report-theme.css" />
     <style>
+      body.lv-report-body {
+        padding: 12px;
+      }
+      .no-print {
+        text-align: center;
+        margin: 20px 0 8px;
+      }
+      .no-print button {
+        margin: 0 6px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .no-print .pdf-btn {
+        background: #163d72;
+        color: #fff;
+        border-color: #163d72;
+      }
       @media print {
-        body {
-          margin: 0;
-          padding: 0;
-          font-size: 9pt;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .relatorio-container {
-          box-shadow: none !important;
-          border: none !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          width: auto !important;
-          max-width: none !important;
-        }
         .no-print {
           display: none !important;
         }
-        h1,
-        h2 {
-          page-break-after: avoid !important;
-        }
-        .divisao {
-          page-break-inside: avoid !important;
-        }
-      }
-      .obs-secao {
-        margin-top: 8px;
-        padding-left: 25px;
-        font-size: 0.9em;
-        color: #4a5568;
-        font-style: italic;
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        background-color: #f7fafc;
-        padding: 8px;
-        border-left: 3px solid #718096;
-        border-radius: 0 4px 4px 0;
-      }
-      .obs-secao i {
-        margin-top: 3px;
-        color: #718096;
-      }
-      .obs-secao p {
-        margin: 0;
-        padding: 0;
-        line-height: 1.4;
       }
     </style>
-  
     <script src="/shared/utils/dom-safe.js"></script>
     <script src="/shared/utils/ui-actions.js"></script>
-</head>
-
-  <body class="trafos-page trafos-page--relatorio">
-    <div class="relatorio-container">
-      <h1>
-        <i class="fa-solid fa-file-lines"></i>
-        Relatório de Transformador
-        <span id="checklistId"></span>
-      </h1>
-
+  </head>
+  <body class="lv-report-body trafos-page trafos-page--relatorio">
+    <div class="lv-report lv-report--landscape lv-report--technical" id="relatorioRoot">
       <div id="relatorioContent">
-        <p style="text-align: center; padding: 20px; color: #6c757d">
+        <p class="lv-empty" style="text-align: center; padding: 24px">
           Carregando dados do relatório...
         </p>
       </div>
-
-      <div class="no-print" style="text-align: center; margin-top: 30px">
-        <button
-          data-action="navigate-referrer" data-fallback="/filtrar_transformadores"
-          class="back-btn"
-          type="button"
-        >
-          <i class="fa-solid fa-arrow-left"></i> Voltar
-        </button>
-        <button data-action="gerarPDF" class="pdf-btn" type="button">
-          <i class="fa-solid fa-file-pdf"></i> Gerar PDF Novamente
-        </button>
-      </div>
     </div>
 
-    <script src="/scripts/trafos/relatorio_formulario.js"></script>
+    <div class="no-print">
+      <button
+        data-action="navigate-referrer"
+        data-fallback="/filtrar_transformadores"
+        class="back-btn"
+        type="button"
+      >
+        Voltar
+      </button>
+      <button data-action="gerarPDF" class="pdf-btn" type="button">
+        Gerar PDF
+      </button>
+    </div>
+
+    <script src="/scripts/trafos/relatorio_formulario.js?v=2"></script>
   </body>
 </html>

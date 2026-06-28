@@ -235,6 +235,59 @@ function gerarTabelaChecklistHtml(items, options = {}) {
   return gerarTabelaChecklistSingleHtml(items);
 }
 
+function gerarTabelaKeyValueSingleHtml(items, options = {}) {
+  const { valueLabel = "Valor", showObs = false } = options;
+
+  return `
+    <table class="lv-table lv-table--checklist lv-table--keyvalue">
+      <thead>
+        <tr>
+          <th class="lv-table__item-col">Item</th>
+          <th class="lv-table__value-col">${escapeHtml(valueLabel)}</th>
+          ${
+            showObs
+              ? '<th class="lv-table__obs-col">Observações</th>'
+              : ""
+          }
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map(
+            (item) => `
+          <tr>
+            <td class="lv-table__item-col">${escapeHtml(item.label)}</td>
+            <td class="lv-table__value-col">${escapeHtml(item.value ?? "N/A")}</td>
+            ${
+              showObs
+                ? `<td class="lv-table__obs-col">${item.observacao ? escapeHtml(item.observacao) : "—"}</td>`
+                : ""
+            }
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>`;
+}
+
+function gerarTabelaKeyValueHtml(items, options = {}) {
+  if (!items || items.length === 0) {
+    return '<p class="lv-empty">Nenhum item registrado.</p>';
+  }
+
+  const { dualColumn = false, minItemsForDual = 8, ...tableOptions } = options;
+
+  if (dualColumn && items.length >= minItemsForDual) {
+    const mid = Math.ceil(items.length / 2);
+    return `<div class="lv-checklist-dual">
+      ${gerarTabelaKeyValueSingleHtml(items.slice(0, mid), tableOptions)}
+      ${gerarTabelaKeyValueSingleHtml(items.slice(mid), tableOptions)}
+    </div>`;
+  }
+
+  return gerarTabelaKeyValueSingleHtml(items, tableOptions);
+}
+
 module.exports = {
   statusBadgeClass,
   renderStatusBadge,
@@ -243,6 +296,7 @@ module.exports = {
   gerarListaDocumentosHtml,
   gerarAnexoImpressaoIndividualHtml,
   gerarTabelaChecklistHtml,
+  gerarTabelaKeyValueHtml,
   renderInfoItem,
   renderTextBlock,
   applyTemplatePlaceholders,

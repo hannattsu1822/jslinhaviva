@@ -44,6 +44,14 @@ function buildFleetDocumentCode(inspecaoId, placa) {
   return buildDocumentCode(slug, inspecaoId, { prefix: "LV-FRT" });
 }
 
+function buildTransformerDocumentCode(checklistId, numeroSerie) {
+  const slug = String(numeroSerie || checklistId || "000")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9\-]/g, "");
+  return buildDocumentCode(slug, checklistId, { prefix: "LV-TRF" });
+}
+
 function buildHeaderFooterTemplates(meta = {}) {
   const title = escapeHtml(meta.title || "Relatório");
   const subtitle = escapeHtml(meta.subtitle || BRAND.system);
@@ -288,6 +296,7 @@ module.exports = {
   formatReportDateShort,
   buildDocumentCode,
   buildFleetDocumentCode,
+  buildTransformerDocumentCode,
   buildHeaderFooterTemplates,
   buildFooterOnlyTemplate,
   wrapReportHtml,

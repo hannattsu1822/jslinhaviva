@@ -1,8 +1,195 @@
 const { promisePool } = require("../../../infrastructure/database");
-const { chromium } = require("playwright");
-const { createReportToken } = require("../../../shared/reportToken.helper");
-const path = require("path");
-const { projectRootDir } = require("../../../shared/path.helper");
+const fsPromises = require("fs").promises;
+const { publicPage } = require("../../../shared/path.helper");
+const { escapeHtml } = require("../../../shared/htmlEscape.helper");
+const {
+  wrapReportHtml,
+  htmlToPdf,
+  formatReportDate,
+  buildDocumentCode,
+  buildTransformerDocumentCode,
+} = require("../../../shared/reports/pdfReport.service");
+const {
+  renderInfoItem,
+  renderTextBlock,
+  gerarTabelaKeyValueHtml,
+  applyTemplatePlaceholders,
+} = require("../../../shared/reports/reportHtml.helper");
+
+function formatarValoresConcatenados(valor) {
+  if (!valor) return "Não informado";
+  return String(valor)
+    .split(",")
+    .map((item) => item.trim())
+    .join(", ");
+}
+
+function parseObservacoesSecoes(data) {
+  if (!data?.observacoes_secoes) return {};
+  try {
+    return typeof data.observacoes_secoes === "string"
+      ? JSON.parse(data.observacoes_secoes)
+      : data.observacoes_secoes;
+  } catch {
+    return {};
+  }
+}
+
+function isReformado(data) {
+  return (
+    data.reformado === 1 ||
+    data.reformado === true ||
+    String(data.reformado).toLowerCase() === "true"
+  );
+}
+
+function extrairItensAvaliacao(data, obsSecoes) {
+  return [
+    {
+      label: "Detalhes do Tanque",
+      value: formatarValoresConcatenados(data.detalhes_tanque),
+      observacao: obsSecoes.tanque,
+    },
+    {
+      label: "Corrosão do Tanque",
+      value: data.corrosao_tanque || "N/A",
+    },
+    {
+      label: "Buchas Primárias",
+      value: formatarValoresConcatenados(data.buchas_primarias),
+      observacao: obsSecoes.buchas_primarias,
+    },
+    {
+      label: "Buchas Secundárias",
+      value: formatarValoresConcatenados(data.buchas_secundarias),
+      observacao: obsSecoes.buchas_secundarias,
+    },
+    {
+      label: "Conectores",
+      value: formatarValoresConcatenados(data.conectores),
+      observacao: obsSecoes.conectores,
+    },
+    {
+      label: "Bobina I",
+      value: data.avaliacao_bobina_i || "N/A",
+      observacao: obsSecoes.bobina_i,
+    },
+    {
+      label: "Bobina II",
+      value: data.avaliacao_bobina_ii || "N/A",
+      observacao: obsSecoes.bobina_ii,
+    },
+    {
+      label: "Bobina III",
+      value: data.avaliacao_bobina_iii || "N/A",
+      observacao: obsSecoes.bobina_iii,
+    },
+  ];
+}
+
+async function preencherTemplateHtmlChecklist(data) {
+  const templatePath = publicPage(
+    "templates/relatorio_checklist_transformador.html"
+  );
+  let templateHtml = await fsPromises.readFile(templatePath, "utf-8");
+
+  const obsSecoes = parseObservacoesSecoes(data);
+  const responsavelLabel = `${data.nome_responsavel || "N/A"} (${data.matricula_responsavel || "N/A"})`;
+  const supervisorLabel = `${data.nome_supervisor_fmt || "N/A"} (${data.matricula_supervisor_fmt || "N/A"})`;
+  const anoReforma = isReformado(data)
+    ? data.data_reformado_formatada || "N/A"
+    : "Não Reformado";
+
+  const detalhesChecklistGrid = [
+    renderInfoItem("ID do Checklist", escapeHtml(String(data.id))),
+    renderInfoItem(
+      "Nº de Série",
+      escapeHtml(data.numero_serie || data.serie_transformador_ref || "N/A")
+    ),
+    renderInfoItem(
+      "Ano de Fabricação",
+      escapeHtml(data.data_fabricacao_formatada || "N/A")
+    ),
+    renderInfoItem("Ano da Reforma", escapeHtml(anoReforma)),
+    renderInfoItem(
+      "Data do Formulário",
+      escapeHtml(data.data_formulario_completa || "N/A")
+    ),
+    renderInfoItem("Responsável", escapeHtml(responsavelLabel), true),
+    renderInfoItem("Supervisor Técnico", escapeHtml(supervisorLabel), true),
+  ].join("");
+
+  const detalhesTransformadorGrid = [
+    renderInfoItem("Marca", escapeHtml(data.marca || "N/A")),
+    renderInfoItem("Potência (kVA)", escapeHtml(String(data.potencia ?? "N/A"))),
+    renderInfoItem(
+      "Número de Fases",
+      escapeHtml(String(data.numero_fases ?? "N/A"))
+    ),
+    renderInfoItem(
+      "Local de Retirada",
+      escapeHtml(data.local_retirada || "N/A")
+    ),
+    renderInfoItem("Regional", escapeHtml(data.regional || "N/A")),
+    renderInfoItem(
+      "Entrada no Almoxarifado",
+      escapeHtml(data.data_entrada_almoxarifado_formatada || "N/A")
+    ),
+    renderInfoItem(
+      "Último Proc. Remessa",
+      escapeHtml(data.data_processamento_remessa_formatada || "N/A")
+    ),
+    renderInfoItem(
+      "Motivo de Desativação",
+      escapeHtml(data.motivo_desativacao || "N/A"),
+      true
+    ),
+  ].join("");
+
+  const detalhesConclusaoGrid = [
+    renderInfoItem("Conclusão Técnica", escapeHtml(data.conclusao || "N/A")),
+    renderInfoItem(
+      "Transformador Destinado Para",
+      escapeHtml(data.transformador_destinado || "N/A"),
+      true
+    ),
+  ].join("");
+
+  const avaliacaoTecnicaTable = gerarTabelaKeyValueHtml(
+    extrairItensAvaliacao(data, obsSecoes),
+    {
+      dualColumn: true,
+      minItemsForDual: 6,
+      valueLabel: "Avaliação",
+      showObs: true,
+    }
+  );
+
+  const observacoesBlock = renderTextBlock(
+    escapeHtml(data.observacoes || "Nenhuma observação registrada.")
+  );
+
+  templateHtml = applyTemplatePlaceholders(templateHtml, {
+    detalhes_checklist_grid: detalhesChecklistGrid,
+    detalhes_transformador_grid: detalhesTransformadorGrid,
+    avaliacao_tecnica_table: avaliacaoTecnicaTable,
+    detalhes_conclusao_grid: detalhesConclusaoGrid,
+    observacoes_block: observacoesBlock,
+  });
+
+  const numeroSerie = data.numero_serie || data.serie_transformador_ref;
+  const author = data.nome_responsavel || data.matricula_responsavel || "";
+
+  return wrapReportHtml(templateHtml, {
+    title: "Relatório Técnico de Inspeção de Transformador",
+    badge: "Transformadores · Checklist",
+    processo: `CHK-${data.id}`,
+    referenceId: data.id,
+    generatedAt: formatReportDate(),
+    author: responsavelLabel,
+    showSignatures: Boolean(author),
+  });
+}
 
 function excelSerialDateToJSDate(input) {
   if (!input && typeof input !== "number") return null;
@@ -317,15 +504,8 @@ async function filtrarChecklists(filtros) {
   return rows;
 }
 
-async function gerarPdfChecklist(id, protocol, host) {
-  const [chkRows] = await promisePool.query(
-    "SELECT t.marca, t.numero_serie FROM checklist_transformadores ct INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie WHERE ct.id = ?",
-    [id]
-  );
-  if (chkRows.length === 0) {
-    throw new Error("Checklist não encontrado!");
-  }
-  const { marca, numero_serie } = chkRows[0];
+async function gerarPdfChecklist(id, _protocol, _host) {
+  const data = await obterChecklistPublico(id);
   const sanitize = (str, fb = "val") =>
     str == null || String(str).trim() === ""
       ? fb
@@ -334,44 +514,18 @@ async function gerarPdfChecklist(id, protocol, host) {
           .replace(/_{2,}/g, "_")
           .replace(/^_|_$/g, "");
   const nomeArquivo = `Checklist_${sanitize(id, `ID${id}`)}_${sanitize(
-    marca,
+    data.marca,
     "MarcaDesconhecida"
-  )}_${sanitize(numero_serie, "SerieDesconhecida")}.pdf`;
+  )}_${sanitize(data.numero_serie, "SerieDesconhecida")}.pdf`;
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-gpu",
-      "--disable-dev-shm-usage",
-    ],
+  const docCode = buildTransformerDocumentCode(id, data.numero_serie);
+  const htmlContent = await preencherTemplateHtmlChecklist(data);
+  const pdfBuffer = await htmlToPdf(htmlContent, {
+    landscape: true,
+    footerOnly: true,
+    docCode,
   });
-  const page = await (
-    await browser.newContext({ javaScriptEnabled: true, bypassCSP: true })
-  ).newPage();
-  const token = createReportToken("checklist_transformador", id);
-  await page.goto(
-    `${protocol}://${host}/relatorio_formulario?id=${id}&token=${encodeURIComponent(token)}`,
-    {
-    waitUntil: "networkidle",
-    timeout: 90000,
-    }
-  );
-  await page.waitForTimeout(1500);
 
-  const hfStyle = `font-family:'Poppins',Arial,sans-serif;font-size:9px;color:#333;width:100%;`;
-  const primaryColor = "#2a5298";
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "30mm", right: "10mm", bottom: "20mm", left: "10mm" },
-    displayHeaderFooter: true,
-    headerTemplate: `<div style="${hfStyle}padding:0 10mm;height:20mm;display:flex;flex-direction:column;justify-content:center;align-items:center;border-bottom:1px solid #ddd;"><div style="font-size:14px;color:${primaryColor};font-weight:600;">Relatório de Inspeção de Transformador</div><div style="font-size:10px;color:#555;">SULGIPE - Linha Viva System</div></div>`,
-    footerTemplate: `<div style="${hfStyle}padding:0 10mm;height:10mm;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ddd;"><span>Gerado em: <span class="date"></span></span><span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span></div>`,
-    timeout: 90000,
-  });
-  await browser.close();
   return { nomeArquivo, pdfBuffer };
 }
 
@@ -379,101 +533,92 @@ async function gerarPdfTabela(dados, filtros, usuario) {
   if (!dados?.length) {
     throw new Error("Nenhum dado para gerar PDF.");
   }
-  let colunasAdicionaisTh = "";
-  let colunasAdicionaisTdFn = (item) => "";
+
   const filtroRemessaAplicado =
     filtros?.dataRemessaInicial && filtros?.dataRemessaFinal;
 
+  const filtrosLinhas = [
+    `Data Checklist Inicial: ${filtros?.dataInicial ? formatarDataParaPDFRelatorioTabela(filtros.dataInicial) : "N/A"}`,
+    `Data Checklist Final: ${filtros?.dataFinal ? formatarDataParaPDFRelatorioTabela(filtros.dataFinal) : "N/A"}`,
+    `Nº Série: ${filtros?.numero_serie || "N/A"}`,
+    `Responsável: ${filtros?.responsavel || "N/A"}`,
+  ];
   if (filtroRemessaAplicado) {
-    colunasAdicionaisTh = "<th>Data Proc. Remessa</th>";
-    colunasAdicionaisTdFn = (item) =>
-      `<td>${item.data_processamento_remessa_formatada || "-"}</td>`;
+    filtrosLinhas.push(
+      `Data Proc. Remessa Inicial: ${formatarDataParaPDFRelatorioTabela(filtros.dataRemessaInicial)}`,
+      `Data Proc. Remessa Final: ${formatarDataParaPDFRelatorioTabela(filtros.dataRemessaFinal)}`
+    );
   }
-  const htmlContent = `
-        <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório Checklists</title>
-        <style>body{font-family:'Poppins',sans-serif;color:#333;font-size:9pt;margin:0;padding:0}.container{padding:20px}.info-header{text-align:center;font-size:8pt;color:#555;margin-bottom:20px}.info-filtros{background-color:#f0f4f8;padding:10px;border-radius:4px;margin-bottom:15px;font-size:8pt;border:1px solid #d6e0ea}.info-filtros strong{display:block;margin-bottom:3px;color:#1e3c72}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #ccc;padding:6px;text-align:left;vertical-align:top;word-break:break-word}th{background-color:#2a5298;color:white;font-weight:500;font-size:9pt}td{font-size:8pt}tr:nth-child(even){background-color:#f8f9fa}@page{size:A4 portrait;margin:25mm 15mm 20mm 15mm;@top-center{content:"Relatório de Checklists de Transformadores";font-size:12pt;color:#2a5298;font-weight:bold;vertical-align:bottom;padding-bottom:5mm}@bottom-left{content:"SULGIPE - Linha Viva System";font-size:8pt;color:#555}@bottom-right{content:"Página " counter(page) " de " counter(pages);font-size:8pt;color:#555}}</style></head>
-        <body><div class="container">
-            <div class="info-header">Gerado por: ${usuario.nome} (${
-    usuario.matricula
-  }) em ${new Date().toLocaleString("pt-BR", {
-    timeZone: "America/Maceio",
-  })}</div>
-            <div class="info-filtros"><strong>Filtros aplicados:</strong>
-                ${
-                  filtros?.dataInicial
-                    ? `Data Checklist Inicial: ${formatarDataParaPDFRelatorioTabela(
-                        filtros.dataInicial
-                      )}<br>`
-                    : "Data Checklist Inicial: N/A<br>"
-                }
-                ${
-                  filtros?.dataFinal
-                    ? `Data Checklist Final: ${formatarDataParaPDFRelatorioTabela(
-                        filtros.dataFinal
-                      )}<br>`
-                    : "Data Checklist Final: N/A<br>"
-                }
-                ${
-                  filtros?.numero_serie
-                    ? `Nº Série: ${filtros.numero_serie}<br>`
-                    : "Nº Série: N/A<br>"
-                }
-                ${
-                  filtros?.responsavel
-                    ? `Responsável: ${filtros.responsavel}<br>`
-                    : "Responsável: N/A<br>"
-                }
-                ${
-                  filtroRemessaAplicado && filtros?.dataRemessaInicial
-                    ? `Data Proc. Remessa Inicial: ${formatarDataParaPDFRelatorioTabela(
-                        filtros.dataRemessaInicial
-                      )}<br>`
-                    : ""
-                }
-                ${
-                  filtroRemessaAplicado && filtros?.dataRemessaFinal
-                    ? `Data Proc. Remessa Final: ${formatarDataParaPDFRelatorioTabela(
-                        filtros.dataRemessaFinal
-                      )}<br>`
-                    : ""
-                }
-            </div>
-            <table><thead><tr><th>ID</th><th>Nº Série</th><th>Potência</th><th>Marca</th><th>Data Formulário</th><th>Responsável</th><th>Destinado</th>${colunasAdicionaisTh}</tr></thead>
-            <tbody>${dados
-              .map(
-                (item) =>
-                  `<tr><td>${item.id || "-"}</td><td>${
-                    item.numero_serie || "-"
-                  }</td><td>${item.potencia || "-"}</td><td>${
-                    item.marca || "-"
-                  }</td><td>${item.data_formulario || "-"}</td><td>${
-                    item.nome_responsavel || item.responsavel || "-"
-                  }</td><td>${
-                    item.transformador_destinado || item.destinado || "-"
-                  }</td>${colunasAdicionaisTdFn(item)}</tr>`
-              )
-              .join("")}</tbody>
-        </table></div></body></html>`;
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-gpu",
-      "--disable-dev-shm-usage",
-    ],
+  const colunaRemessaTh = filtroRemessaAplicado
+    ? "<th>Data Proc. Remessa</th>"
+    : "";
+  const linhasTabela = dados
+    .map((item) => {
+      const colunaRemessaTd = filtroRemessaAplicado
+        ? `<td>${escapeHtml(item.data_processamento_remessa_formatada || "-")}</td>`
+        : "";
+      return `<tr>
+        <td>${escapeHtml(String(item.id ?? "-"))}</td>
+        <td>${escapeHtml(item.numero_serie || "-")}</td>
+        <td>${escapeHtml(String(item.potencia ?? "-"))}</td>
+        <td>${escapeHtml(item.marca || "-")}</td>
+        <td>${escapeHtml(item.data_formulario || "-")}</td>
+        <td>${escapeHtml(item.nome_responsavel || item.responsavel || "-")}</td>
+        <td>${escapeHtml(item.transformador_destinado || item.destinado || "-")}</td>
+        ${colunaRemessaTd}
+      </tr>`;
+    })
+    .join("");
+
+  const bodyHtml = `
+    <section class="lv-section rt-section">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">1</span> Filtros Aplicados
+      </h2>
+      <div class="lv-section__body">
+        <div class="lv-text-block">${filtrosLinhas.map((l) => escapeHtml(l)).join("<br>")}</div>
+      </div>
+    </section>
+    <section class="lv-section rt-section">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">2</span> Listagem de Checklists
+      </h2>
+      <div class="lv-section__body">
+        <table class="lv-table lv-table--checklist">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nº Série</th>
+              <th>Potência</th>
+              <th>Marca</th>
+              <th>Data Formulário</th>
+              <th>Responsável</th>
+              <th>Destinado</th>
+              ${colunaRemessaTh}
+            </tr>
+          </thead>
+          <tbody>${linhasTabela}</tbody>
+        </table>
+      </div>
+    </section>`;
+
+  const docCode = buildDocumentCode("LIST", Date.now(), { prefix: "LV-TRF" });
+  const htmlContent = await wrapReportHtml(bodyHtml, {
+    title: "Relatório de Checklists de Transformadores",
+    badge: "Transformadores · Listagem",
+    processo: "LISTAGEM",
+    referenceId: "000",
+    generatedAt: formatReportDate(),
+    author: `${usuario.nome} (${usuario.matricula})`,
+    showSignatures: false,
   });
-  const page = await browser.newPage();
-  await page.setContent(htmlContent, { waitUntil: "networkidle" });
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    preferCSSPageSize: true,
-    timeout: 90000,
+
+  return htmlToPdf(htmlContent, {
+    landscape: true,
+    footerOnly: true,
+    docCode,
   });
-  await browser.close();
-  return pdfBuffer;
 }
 
 module.exports = {
