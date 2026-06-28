@@ -140,8 +140,13 @@ async function preencherTemplateHtmlInspecao(inspecao) {
 
   templateHtml = applyTemplatePlaceholders(templateHtml, {
     detalhes_inspecao_grid: detalhesInspecaoGrid,
-    checklist_veiculo_table: gerarTabelaChecklistHtml(checklistVeiculo),
-    checklist_sky_table: gerarTabelaChecklistHtml(checklistSky),
+    checklist_veiculo_table: gerarTabelaChecklistHtml(checklistVeiculo, {
+      dualColumn: true,
+    }),
+    checklist_sky_table: gerarTabelaChecklistHtml(checklistSky, {
+      dualColumn: true,
+      minItemsForDual: 6,
+    }),
     observacoes_block: observacoesBlock,
   });
 

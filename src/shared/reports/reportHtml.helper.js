@@ -194,17 +194,13 @@ function renderInspecaoStatusBadge(status) {
   return '<span class="lv-badge lv-badge--warning">Não Informado</span>';
 }
 
-function gerarTabelaChecklistHtml(items) {
-  if (!items || items.length === 0) {
-    return '<p class="lv-empty">Nenhum item registrado.</p>';
-  }
-
+function gerarTabelaChecklistSingleHtml(items) {
   return `
-    <table class="lv-table">
+    <table class="lv-table lv-table--checklist">
       <thead>
         <tr>
-          <th>Item</th>
-          <th style="width: 140px; text-align: center;">Status</th>
+          <th class="lv-table__item-col">Item</th>
+          <th class="lv-table__status-col">Status</th>
         </tr>
       </thead>
       <tbody>
@@ -212,13 +208,31 @@ function gerarTabelaChecklistHtml(items) {
           .map(
             (item) => `
           <tr>
-            <td>${escapeHtml(item.label)}</td>
-            <td style="text-align: center;">${renderInspecaoStatusBadge(item.value)}</td>
+            <td class="lv-table__item-col">${escapeHtml(item.label)}</td>
+            <td class="lv-table__status-col">${renderInspecaoStatusBadge(item.value)}</td>
           </tr>`
           )
           .join("")}
       </tbody>
     </table>`;
+}
+
+function gerarTabelaChecklistHtml(items, options = {}) {
+  if (!items || items.length === 0) {
+    return '<p class="lv-empty">Nenhum item registrado.</p>';
+  }
+
+  const { dualColumn = false, minItemsForDual = 8 } = options;
+
+  if (dualColumn && items.length >= minItemsForDual) {
+    const mid = Math.ceil(items.length / 2);
+    return `<div class="lv-checklist-dual">
+      ${gerarTabelaChecklistSingleHtml(items.slice(0, mid))}
+      ${gerarTabelaChecklistSingleHtml(items.slice(mid))}
+    </div>`;
+  }
+
+  return gerarTabelaChecklistSingleHtml(items);
 }
 
 module.exports = {

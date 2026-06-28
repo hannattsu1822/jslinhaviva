@@ -86,6 +86,31 @@ body.lv-report-body {
 .lv-report--landscape .lv-landscape-split .lv-section {
   margin-bottom: 0;
   height: 100%;
+  min-width: 0;
+}
+
+.lv-report--landscape .lv-landscape-split .lv-section__body {
+  overflow: hidden;
+}
+
+.lv-report--landscape .lv-landscape-split .lv-table {
+  table-layout: fixed;
+  font-size: 7.5pt;
+}
+
+.lv-report--landscape .lv-landscape-split .lv-table th,
+.lv-report--landscape .lv-landscape-split .lv-table td {
+  padding: 5px 6px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-size: 7.5pt;
+  vertical-align: middle;
+}
+
+.lv-report--landscape .lv-landscape-split .lv-badge {
+  font-size: 6.5pt;
+  padding: 2px 5px;
+  white-space: nowrap;
 }
 
 .lv-report--landscape .lv-photo-grid {
@@ -735,6 +760,70 @@ body.lv-report-body {
 
 .lv-report--technical .lv-table tbody tr:nth-child(even) {
   background: #f1f5f9;
+}
+
+/* Checklist compacto (frota e inspeções com muitos itens) */
+.lv-checklist-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.lv-table--checklist {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.lv-table--checklist .lv-table__item-col {
+  width: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-size: 7.5pt;
+  line-height: 1.35;
+  vertical-align: middle;
+  padding: 5px 8px;
+}
+
+.lv-table--checklist .lv-table__status-col {
+  width: 82px;
+  min-width: 82px;
+  max-width: 82px;
+  text-align: center;
+  vertical-align: middle;
+  padding: 5px 4px;
+}
+
+.lv-table--checklist thead .lv-table__status-col {
+  font-size: 7pt;
+}
+
+.lv-table--checklist .lv-badge {
+  font-size: 6.5pt;
+  padding: 2px 5px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.lv-report--landscape .lv-table--checklist .lv-table__item-col {
+  font-size: 7pt;
+}
+
+.lv-report--technical .lv-table thead {
+  display: table-header-group;
+}
+
+.lv-report--technical .lv-table--checklist tbody tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.lv-report--technical .lv-section__body:has(.lv-table) {
+  overflow: hidden;
+}
+
+.lv-report--technical .lv-landscape-split .lv-checklist-dual {
+  grid-template-columns: 1fr;
 }
 
 /* Figuras numeradas (anexo fotográfico) */

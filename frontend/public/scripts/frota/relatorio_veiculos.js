@@ -98,37 +98,51 @@ function getStatusBadgeHtml(status) {
   return '<span class="lv-badge lv-badge--warning">Não Informado</span>';
 }
 
-function buildChecklistTable(data, skyOnly) {
-  const rows = Object.keys(data)
-    .filter(
-      (key) =>
-        !camposExcluidos.includes(key) &&
-        mapeamentoNomes[key] &&
-        (skyOnly ? camposSky.includes(key) : !camposSky.includes(key))
-    )
-    .map(
-      (key) => `
-      <tr>
-        <td>${esc(mapeamentoNomes[key])}</td>
-        <td style="text-align:center;">${getStatusBadgeHtml(data[key])}</td>
-      </tr>`
-    )
-    .join("");
+function buildChecklistTable(data, skyOnly, dualColumn = false) {
+  const keys = Object.keys(data).filter(
+    (key) =>
+      !camposExcluidos.includes(key) &&
+      mapeamentoNomes[key] &&
+      (skyOnly ? camposSky.includes(key) : !camposSky.includes(key))
+  );
 
-  if (!rows) {
+  if (keys.length === 0) {
     return '<p class="lv-empty">Nenhum item registrado.</p>';
   }
 
-  return `
-    <table class="lv-table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th style="width:140px;text-align:center;">Status</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  function buildSingleTable(keySlice) {
+    const rows = keySlice
+      .map(
+        (key) => `
+      <tr>
+        <td class="lv-table__item-col">${esc(mapeamentoNomes[key])}</td>
+        <td class="lv-table__status-col">${getStatusBadgeHtml(data[key])}</td>
+      </tr>`
+      )
+      .join("");
+
+    return `
+      <table class="lv-table lv-table--checklist">
+        <thead>
+          <tr>
+            <th class="lv-table__item-col">Item</th>
+            <th class="lv-table__status-col">Status</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  const minForDual = skyOnly ? 6 : 8;
+  if (dualColumn && keys.length >= minForDual) {
+    const mid = Math.ceil(keys.length / 2);
+    return `<div class="lv-checklist-dual">
+      ${buildSingleTable(keys.slice(0, mid))}
+      ${buildSingleTable(keys.slice(mid))}
+    </div>`;
+  }
+
+  return buildSingleTable(keys);
 }
 
 function formatarData(dataStr) {
@@ -148,8 +162,8 @@ function montarRelatorioHtml(data, inspecaoId) {
   const emissao = new Date().toLocaleString("pt-BR", {
     timeZone: "America/Maceio",
   });
-  const checklistVeiculo = buildChecklistTable(data, false);
-  const checklistSky = buildChecklistTable(data, true);
+  const checklistVeiculo = buildChecklistTable(data, false, true);
+  const checklistSky = buildChecklistTable(data, true, true);
 
   return `
     <table class="rt-doc-control" aria-label="Controle documental">
@@ -213,21 +227,19 @@ function montarRelatorioHtml(data, inspecaoId) {
         </div>
       </section>
 
-      <div class="lv-landscape-split">
-        <section class="lv-section rt-section">
-          <h2 class="rt-section__heading">
-            <span class="rt-section__num">2</span> Itens do Veículo
-          </h2>
-          <div class="lv-section__body">${checklistVeiculo}</div>
-        </section>
+      <section class="lv-section rt-section">
+        <h2 class="rt-section__heading">
+          <span class="rt-section__num">2</span> Itens do Veículo
+        </h2>
+        <div class="lv-section__body">${checklistVeiculo}</div>
+      </section>
 
-        <section class="lv-section rt-section">
-          <h2 class="rt-section__heading">
-            <span class="rt-section__num">3</span> Itens Sky / Cesto Aéreo
-          </h2>
-          <div class="lv-section__body">${checklistSky}</div>
-        </section>
-      </div>
+      <section class="lv-section rt-section">
+        <h2 class="rt-section__heading">
+          <span class="rt-section__num">3</span> Itens Sky / Cesto Aéreo
+        </h2>
+        <div class="lv-section__body">${checklistSky}</div>
+      </section>
 
       <section class="lv-section rt-section">
         <h2 class="rt-section__heading">
