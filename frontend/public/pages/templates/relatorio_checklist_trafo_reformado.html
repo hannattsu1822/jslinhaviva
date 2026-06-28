@@ -10,57 +10,33 @@
   </div>
 </section>
 
-<section class="lv-section rt-section">
-  <h2 class="rt-section__heading">
-    <span class="rt-section__num">{{secao_transformador}}</span> Dados do Transformador
-  </h2>
-  <div class="lv-section__body">
-    <div class="lv-info-grid lv-info-grid--4col">
-      {{detalhes_transformador_grid}}
-    </div>
-  </div>
-</section>
-
-<section class="lv-section rt-section">
+<section class="lv-section rt-section rt-section--flow">
   <h2 class="rt-section__heading">
     <span class="rt-section__num">{{secao_avaliacao}}</span> Resultados do Checklist Técnico
   </h2>
-  <div class="lv-section__body">{{avaliacao_bobinas_table}}</div>
-</section>
-
-<section class="lv-section rt-section">
-  <h2 class="rt-section__heading">
-    <span class="rt-section__num">{{secao_estado}}</span> Estado Físico Geral
-  </h2>
-  <div class="lv-section__body">{{estado_fisico_block}}</div>
-</section>
-
-<section class="lv-section rt-section">
-  <h2 class="rt-section__heading">
-    <span class="rt-section__num">{{secao_obs_checklist}}</span> Observações do Checklist
-  </h2>
-  <div class="lv-section__body">{{observacoes_checklist_block}}</div>
-</section>
-
-<section class="lv-section rt-section">
-  <h2 class="rt-section__heading">
-    <span class="rt-section__num">{{secao_obs_gerais}}</span> Observações Gerais / Motivo da Reprovação
-  </h2>
-  <div class="lv-section__body">{{observacoes_gerais_block}}</div>
-</section>
-
-<section class="lv-section rt-section">
-  <h2 class="rt-section__heading">
-    <span class="rt-section__num">{{secao_conclusao}}</span> Conclusão Final
-  </h2>
   <div class="lv-section__body">
-    <div class="lv-info-grid lv-info-grid--2col">
-      {{detalhes_conclusao_grid}}
-    </div>
+    {{avaliacao_bobinas_table}}
+    <p class="lv-subsection-title">Estado Físico Geral</p>
+    {{estado_fisico_block}}
   </div>
 </section>
 
-<section class="lv-section rt-section">
+<section class="lv-section rt-section rt-section--flow">
+  <h2 class="rt-section__heading">
+    <span class="rt-section__num">{{secao_conclusao}}</span> Conclusão e Observações
+  </h2>
+  <div class="lv-section__body">
+    <div class="lv-info-grid lv-info-grid--4col">
+      {{detalhes_conclusao_grid}}
+    </div>
+    <p class="lv-subsection-title">Observações do Checklist</p>
+    {{observacoes_checklist_block}}
+    <p class="lv-subsection-title">Observações Gerais / Motivo da Reprovação</p>
+    {{observacoes_gerais_block}}
+  </div>
+</section>
+
+<section class="lv-section rt-section rt-section--flow">
   <h2 class="rt-section__heading">
     <span class="rt-section__num">{{secao_anexos}}</span> Registro Fotográfico
   </h2>

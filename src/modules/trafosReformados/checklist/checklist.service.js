@@ -89,33 +89,33 @@ async function processarAnexosParaRelatorio(anexos = []) {
 
 function gerarTabelaBobinasHtml(checklist) {
   return `
-    <table class="lv-table lv-table--checklist">
+    <table class="lv-table lv-table--checklist lv-table--phases">
       <thead>
         <tr>
-          <th>Verificação</th>
-          <th>Fase I</th>
-          <th>Fase II</th>
-          <th>Fase III</th>
+          <th class="lv-table__label-col">Verificação</th>
+          <th class="lv-table__phase-col">Fase I</th>
+          <th class="lv-table__phase-col">Fase II</th>
+          <th class="lv-table__phase-col">Fase III</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><strong>Bobinas Primárias</strong></td>
-          <td>${escapeHtml(checklist.bobina_primaria_i || "N/A")}</td>
-          <td>${escapeHtml(checklist.bobina_primaria_ii || "N/A")}</td>
-          <td>${escapeHtml(checklist.bobina_primaria_iii || "N/A")}</td>
+          <td class="lv-table__label-col"><strong>Bobinas Primárias</strong></td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.bobina_primaria_i || "N/A")}</td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.bobina_primaria_ii || "N/A")}</td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.bobina_primaria_iii || "N/A")}</td>
         </tr>
         <tr>
-          <td><strong>Bobinas Secundárias</strong></td>
-          <td>${escapeHtml(checklist.bobina_secundaria_i || "N/A")}</td>
-          <td>${escapeHtml(checklist.bobina_secundaria_ii || "N/A")}</td>
-          <td>${escapeHtml(checklist.bobina_secundaria_iii || "N/A")}</td>
+          <td class="lv-table__label-col"><strong>Bobinas Secundárias</strong></td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.bobina_secundaria_i || "N/A")}</td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.bobina_secundaria_ii || "N/A")}</td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.bobina_secundaria_iii || "N/A")}</td>
         </tr>
         <tr>
-          <td><strong>Valores Teste TTR</strong></td>
-          <td>${escapeHtml(checklist.valor_bobina_i || "N/A")}</td>
-          <td>${escapeHtml(checklist.valor_bobina_ii || "N/A")}</td>
-          <td>${escapeHtml(checklist.valor_bobina_iii || "N/A")}</td>
+          <td class="lv-table__label-col"><strong>Valores Teste TTR</strong></td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.valor_bobina_i || "N/A")}</td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.valor_bobina_ii || "N/A")}</td>
+          <td class="lv-table__phase-col">${escapeHtml(checklist.valor_bobina_iii || "N/A")}</td>
         </tr>
       </tbody>
     </table>`;
@@ -148,11 +148,6 @@ async function preencherTemplateHtmlChecklistReformado(
       "ID do Registro",
       escapeHtml(String(transformador.id ?? checklist.trafos_reformados_id ?? "N/A"))
     ),
-    renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste))),
-    renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), true),
-  ].join("");
-
-  const detalhesTransformadorGrid = [
     renderInfoItem(
       "Nº de Série",
       escapeHtml(transformador.numero_serie || checklist.numero_serie || "N/A")
@@ -165,6 +160,8 @@ async function preencherTemplateHtmlChecklistReformado(
       "Potência (kVA)",
       escapeHtml(String(transformador.pot ?? checklist.pot ?? "N/A"))
     ),
+    renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste))),
+    renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel), true),
   ].join("");
 
   const detalhesConclusaoGrid = [
@@ -186,15 +183,10 @@ async function preencherTemplateHtmlChecklistReformado(
 
   templateHtml = applyTemplatePlaceholders(templateHtml, {
     secao_identificacao: String(sectionOffset + 1),
-    secao_transformador: String(sectionOffset + 2),
-    secao_avaliacao: String(sectionOffset + 3),
-    secao_estado: String(sectionOffset + 4),
-    secao_obs_checklist: String(sectionOffset + 5),
-    secao_obs_gerais: String(sectionOffset + 6),
-    secao_conclusao: String(sectionOffset + 7),
-    secao_anexos: String(sectionOffset + 8),
+    secao_avaliacao: String(sectionOffset + 2),
+    secao_conclusao: String(sectionOffset + 3),
+    secao_anexos: String(sectionOffset + 4),
     detalhes_identificacao_grid: detalhesIdentificacaoGrid,
-    detalhes_transformador_grid: detalhesTransformadorGrid,
     avaliacao_bobinas_table: gerarTabelaBobinasHtml(checklist),
     estado_fisico_block: renderTextBlock(
       escapeHtml(checklist.estado_fisico || "N/A")
@@ -214,6 +206,75 @@ async function preencherTemplateHtmlChecklistReformado(
   });
 
   return { templateHtml, anexoImpressaoItems, tecnicoLabel };
+}
+
+async function montarBlocoAvaliacaoHistorico(
+  checklist,
+  transformador,
+  index
+) {
+  const tecnicoLabel = resolverTecnicoLabel(checklist);
+  const conclusao = checklist.conclusao_checklist || "N/A";
+  const conclusaoBadge = renderStatusBadge(
+    conclusao === "APROVADO"
+      ? "Aprovado"
+      : conclusao === "REPROVADO"
+        ? "Reprovado"
+        : conclusao
+  );
+
+  let anexosGaleria =
+    '<p class="lv-empty">Nenhum registro fotográfico nesta avaliação.</p>';
+  let anexoImpressaoItems = [];
+
+  if (checklist.anexos?.length) {
+    const anexosProcessados = await processarAnexosParaRelatorio(
+      checklist.anexos
+    );
+    anexoImpressaoItems = anexosProcessados.anexoImpressaoItems;
+    if (anexosProcessados.imagens.length) {
+      anexosGaleria = gerarGaleriaHtml(anexosProcessados.imagens, 3, {
+        technical: true,
+      });
+    }
+  }
+
+  const html = `
+    <section class="lv-section rt-section rt-evaluation-block">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">${index + 1}</span>
+        Avaliação — Teste ${escapeHtml(String(checklist.id))}
+      </h2>
+      <div class="lv-section__body">
+        <div class="lv-info-grid lv-info-grid--4col">
+          ${renderInfoItem("Data do Teste", escapeHtml(formatarDataHora(checklist.data_teste)))}
+          ${renderInfoItem("ID do Registro", escapeHtml(String(checklist.trafos_reformados_id ?? transformador.id ?? "N/A")))}
+          ${renderInfoItem("Técnico Responsável", escapeHtml(tecnicoLabel))}
+          ${renderInfoItem("Status Final", conclusaoBadge)}
+        </div>
+        ${gerarTabelaBobinasHtml(checklist)}
+        <p class="lv-subsection-title">Estado Físico Geral</p>
+        ${renderTextBlock(escapeHtml(checklist.estado_fisico || "N/A"))}
+        <p class="lv-subsection-title">Observações do Checklist</p>
+        ${renderTextBlock(
+          escapeHtml(
+            checklist.observacoes_checklist || "Nenhuma observação registrada."
+          )
+        )}
+        <p class="lv-subsection-title">Observações Gerais / Motivo da Reprovação</p>
+        ${renderTextBlock(
+          escapeHtml(
+            transformador.resultado_avaliacao ||
+              checklist.resultado_avaliacao ||
+              "Nenhuma observação registrada."
+          )
+        )}
+        <p class="lv-subsection-title">Registro Fotográfico</p>
+        ${anexosGaleria}
+      </div>
+    </section>`;
+
+  return { html, anexoImpressaoItems };
 }
 
 async function montarHtmlChecklistReformado(
@@ -575,24 +636,23 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
         checklist.resultado_avaliacao || transformador.resultado_avaliacao,
     };
 
-    const { templateHtml, anexoImpressaoItems } =
-      await preencherTemplateHtmlChecklistReformado(
-        checklist,
-        transformadorItem,
-        { sectionOffset: 2 + index * 8, includeAnexos: true }
-      );
+    const { html, anexoImpressaoItems } = await montarBlocoAvaliacaoHistorico(
+      checklist,
+      transformadorItem,
+      index
+    );
 
     todosAnexoItems.push(...anexoImpressaoItems);
     secoesDetalhadas.push(`
       <div class="lv-page-break"></div>
-      ${templateHtml}
+      ${html}
     `);
   }
 
   const bodyHtml = `
     <section class="lv-section rt-section">
       <h2 class="rt-section__heading">
-        <span class="rt-section__num">1</span> Identificação do Transformador
+        <span class="rt-section__num">A</span> Identificação do Transformador
       </h2>
       <div class="lv-section__body">
         <div class="lv-info-grid lv-info-grid--4col">
@@ -614,7 +674,7 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
     </section>
     <section class="lv-section rt-section">
       <h2 class="rt-section__heading">
-        <span class="rt-section__num">2</span> Resumo das Avaliações
+        <span class="rt-section__num">B</span> Resumo das Avaliações
       </h2>
       <div class="lv-section__body">
         <table class="lv-table lv-table--checklist">
@@ -629,6 +689,14 @@ async function gerarPdfListaHistorico(checklists, transformador, usuarioLogado) 
           </thead>
           <tbody>${resumoLinhas}</tbody>
         </table>
+      </div>
+    </section>
+    <section class="lv-section rt-section rt-section--annex">
+      <h2 class="rt-section__heading">
+        <span class="rt-section__num">C</span> Detalhamento das Avaliações
+      </h2>
+      <div class="lv-section__body">
+        <p class="rt-section__intro">Registros completos de cada teste realizado para o número de série ${escapeHtml(numeroSerie)}.</p>
       </div>
     </section>
     ${secoesDetalhadas.join("")}`;

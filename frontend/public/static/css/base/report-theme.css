@@ -827,6 +827,35 @@ body.lv-report-body {
   line-height: 1.2;
 }
 
+.lv-table--phases .lv-table__label-col {
+  width: 34%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+
+.lv-table--phases .lv-table__phase-col {
+  width: 22%;
+  text-align: center;
+  vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.lv-report--technical .rt-section--flow,
+.lv-report--technical .rt-evaluation-block {
+  page-break-inside: auto;
+  break-inside: auto;
+}
+
+.lv-report--technical .lv-section__body .lv-subsection-title {
+  margin: 14px 0 8px;
+}
+
+.lv-report--technical .lv-section__body .lv-subsection-title:first-child {
+  margin-top: 0;
+}
+
 .lv-report--landscape .lv-table--checklist .lv-table__item-col {
   font-size: 7pt;
 }
