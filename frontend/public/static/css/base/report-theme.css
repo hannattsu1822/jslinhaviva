@@ -838,20 +838,20 @@ body.lv-report-body {
 /* ── Anexo de impressão individual (páginas avulsas) ─────────────────── */
 
 .rt-print-appendix {
-  margin-top: 8px;
+  margin-top: 16px;
 }
 
 .rt-print-appendix__intro {
-  padding: 16px 18px;
+  padding: 14px 16px;
   border: 1px solid #94a3b8;
   background: #f1f5f9;
-  margin-bottom: 0;
+  margin-bottom: 12px;
   page-break-inside: avoid;
 }
 
 .rt-print-appendix__title {
-  margin: 0 0 8px;
-  font-size: 11pt;
+  margin: 0 0 6px;
+  font-size: 10.5pt;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -860,70 +860,92 @@ body.lv-report-body {
 
 .rt-print-appendix__desc {
   margin: 0;
-  font-size: 9pt;
+  font-size: 8.5pt;
   color: #475569;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
+/* Card de página — grid estável para impressão PDF */
 .rt-print-page {
-  display: flex;
-  flex-direction: column;
-  min-height: 175mm;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   border: 1px solid #94a3b8;
   background: #fff;
   page-break-inside: avoid;
+  overflow: hidden;
+}
+
+.rt-print-appendix .rt-print-page {
+  page-break-before: always;
 }
 
 .rt-print-page__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 14px;
+  gap: 12px;
+  padding: 7px 12px;
   background: #163d72;
   color: #fff;
-  font-size: 8pt;
+  font-size: 7.5pt;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .rt-print-page__doc {
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .rt-print-page__kind {
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 7.5pt;
-  opacity: 0.9;
+  letter-spacing: 0.05em;
+  font-size: 7pt;
+  opacity: 0.92;
+  text-align: right;
 }
 
 .rt-print-page__body {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12mm 14mm;
+  padding: 5mm 8mm;
   background: #fff;
-  min-height: 140mm;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.rt-print-page__body img {
-  max-width: 100%;
-  max-height: 155mm;
-  object-fit: contain;
-  border: 1px solid #cbd5e1;
+.rt-print-page__frame {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 4mm;
+}
+
+.rt-print-page__frame img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 .rt-print-page__body--document {
   flex-direction: column;
   text-align: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
 }
 
 .rt-print-page__doc-index {
   margin: 0;
-  font-size: 9pt;
+  font-size: 8.5pt;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -932,31 +954,61 @@ body.lv-report-body {
 
 .rt-print-page__doc-name {
   margin: 0;
-  font-size: 14pt;
+  font-size: 13pt;
   font-weight: 700;
   color: #0f172a;
   word-break: break-word;
-  max-width: 90%;
+  max-width: 85%;
 }
 
 .rt-print-page__doc-hint {
-  margin: 8px 0 0;
-  font-size: 9pt;
+  margin: 4px 0 0;
+  font-size: 8.5pt;
   color: #64748b;
-  max-width: 420px;
-  line-height: 1.5;
+  max-width: 480px;
+  line-height: 1.45;
 }
 
 .rt-print-page__footer {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-top: 1px solid #cbd5e1;
   background: #f1f5f9;
-  font-size: 9pt;
+  font-size: 8.5pt;
   font-weight: 600;
   color: #334155;
   text-align: center;
+  line-height: 1.35;
 }
 
-.rt-print-page--document .rt-print-page__body {
-  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+.rt-print-page__caption {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Paisagem: dimensões calibradas para A4 landscape (~277×188mm úteis) ─ */
+
+.lv-report--landscape .rt-print-page {
+  height: 178mm;
+  max-height: 178mm;
+}
+
+.lv-report--landscape .rt-print-page__body {
+  height: 148mm;
+  max-height: 148mm;
+}
+
+.lv-report--landscape .rt-print-page__frame {
+  min-height: 138mm;
+  max-height: 138mm;
+}
+
+.lv-report--landscape .rt-print-page--document .rt-print-page__body {
+  height: 148mm;
+  max-height: 148mm;
+}
+
+.lv-report--landscape .rt-print-appendix__intro {
+  margin-bottom: 0;
 }

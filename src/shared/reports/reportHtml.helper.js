@@ -142,22 +142,24 @@ function gerarAnexoImpressaoIndividualHtml(items = [], options = {}) {
     if (item.type === "photo") {
       photoNum += 1;
       pagesHtml += `
-      <div class="rt-print-page lv-page-break">
+      <div class="rt-print-page rt-print-page--photo">
         <header class="rt-print-page__header">
           <span class="rt-print-page__doc">${safeDocCode}</span>
-          <span class="rt-print-page__kind">Registro Fotográfico</span>
+          <span class="rt-print-page__kind">Registro Fotográfico · Figura ${photoNum}</span>
         </header>
         <div class="rt-print-page__body">
-          <img src="${item.src}" alt="${escapeHtml(item.nome)}" />
+          <div class="rt-print-page__frame">
+            <img src="${item.src}" alt="${escapeHtml(item.nome)}" />
+          </div>
         </div>
         <footer class="rt-print-page__footer">
-          Figura ${photoNum} — ${escapeHtml(item.nome)}
+          <span class="rt-print-page__caption">Figura ${photoNum} — ${escapeHtml(item.nome)}</span>
         </footer>
       </div>`;
     } else if (item.type === "document") {
       docNum += 1;
       pagesHtml += `
-      <div class="rt-print-page rt-print-page--document lv-page-break">
+      <div class="rt-print-page rt-print-page--document">
         <header class="rt-print-page__header">
           <span class="rt-print-page__doc">${safeDocCode}</span>
           <span class="rt-print-page__kind">Documento Anexo</span>
