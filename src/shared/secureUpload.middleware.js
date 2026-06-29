@@ -145,10 +145,32 @@ function cleanupUploadedFiles(files) {
   }
 }
 
+function collectMulterFiles(req) {
+  const files = [];
+
+  if (req.file) {
+    files.push(req.file);
+  }
+
+  if (Array.isArray(req.files)) {
+    files.push(...req.files);
+    return files;
+  }
+
+  if (req.files && typeof req.files === "object") {
+    for (const key of Object.keys(req.files)) {
+      const group = req.files[key];
+      if (Array.isArray(group)) {
+        files.push(...group);
+      }
+    }
+  }
+
+  return files;
+}
+
 function validateMulterUploads(req, res, next) {
-  const files = []
-    .concat(req.files || [])
-    .concat(req.file ? [req.file] : []);
+  const files = collectMulterFiles(req);
 
   if (files.length === 0) return next();
 
@@ -248,9 +270,7 @@ function createImageUploadFileFilter() {
 }
 
 function validateImageMulterUploads(req, res, next) {
-  const files = []
-    .concat(req.files || [])
-    .concat(req.file ? [req.file] : []);
+  const files = collectMulterFiles(req);
 
   if (files.length === 0) return next();
 
