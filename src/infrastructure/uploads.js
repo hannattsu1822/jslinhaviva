@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const { projectRootDir } = require("../shared/path.helper");
-const { createUploadFileFilter, validateMulterUploads } = require("../shared/secureUpload.middleware");
+const { createUploadFileFilter, createImageUploadFileFilter, validateMulterUploads, validateImageMulterUploads } = require("../shared/secureUpload.middleware");
 const logger = require("../config/logger");
 
 function ensureDirectoryExists(dirPath, dirName) {
@@ -46,6 +46,12 @@ const multerInstance = multer({
   fileFilter: createUploadFileFilter(),
 });
 
+const checklistDailyMulter = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024, files: 10 },
+  fileFilter: createImageUploadFileFilter(),
+});
+
 function chainUploadMiddleware(...middlewares) {
   return (req, res, next) => {
     let index = 0;
@@ -73,6 +79,14 @@ const upload = {
   any: () =>
     chainUploadMiddleware(multerInstance.any(), validateMulterUploads),
   none: () => chainUploadMiddleware(multerInstance.none()),
+};
+
+const uploadChecklistDaily = {
+  fields: (fields) =>
+    chainUploadMiddleware(
+      checklistDailyMulter.fields(fields),
+      validateImageMulterUploads
+    ),
 };
 
 const anexoStorage = multer.diskStorage({
@@ -118,6 +132,7 @@ const uploadAnexoChecklist = {
 
 module.exports = {
   upload,
+  uploadChecklistDaily,
   uploadAnexoChecklist,
   uploadsSubestacoesDir,
   uploadsFibraDir,

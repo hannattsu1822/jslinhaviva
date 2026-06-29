@@ -4,7 +4,7 @@ const router = express.Router();
 
 const { autenticar, verificarNivel } = require("../../auth");
 
-const { upload } = require("../../infrastructure/uploads");
+const { uploadChecklistDaily } = require("../../infrastructure/uploads");
 
 const checklistController = require("./checklistDaily.controller");
 
@@ -40,7 +40,7 @@ router.post(
   "/api/checklist/salvar",
   autenticar,
   verificarNivel(4),
-  upload.fields([
+  uploadChecklistDaily.fields([
     { name: "fotos_veiculo", maxCount: 10 },
     { name: "fotosveiculo", maxCount: 10 },
   ]),

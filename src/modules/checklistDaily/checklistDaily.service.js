@@ -66,6 +66,14 @@ function flattenMulterFiles(files) {
   return [];
 }
 
+function resolveArquivoExtensao(arquivo) {
+  if (arquivo.resolvedExtension) {
+    return arquivo.resolvedExtension;
+  }
+  const ext = path.extname(arquivo.originalname || "").toLowerCase();
+  return ext === ".jpeg" ? ".jpg" : ext;
+}
+
 async function listarVeiculosAtivos() {
   const [veiculos] = await promisePool.query(
     "SELECT id, placa, modelo FROM veiculos_frota WHERE status = 'ATIVO' ORDER BY modelo, placa"
@@ -161,7 +169,7 @@ async function processarNovoChecklist(matricula, dados, arquivos) {
     }
 
     for (const arquivo of arquivosArray) {
-      const extensao = path.extname(arquivo.originalname || "");
+      const extensao = resolveArquivoExtensao(arquivo);
       const novoNomeArquivo = `foto_${checklistId}_${Date.now()}_${Math.round(
         Math.random() * 1e9
       )}${extensao}`;
@@ -237,7 +245,7 @@ async function processarNovoChecklistPorVeiculoId(matricula, veiculoIdRaw, dados
     }
 
     for (const arquivo of arquivosArray) {
-      const extensao = path.extname(arquivo.originalname || "");
+      const extensao = resolveArquivoExtensao(arquivo);
       const novoNomeArquivo = `foto_${checklistId}_${Date.now()}_${Math.round(
         Math.random() * 1e9
       )}${extensao}`;
