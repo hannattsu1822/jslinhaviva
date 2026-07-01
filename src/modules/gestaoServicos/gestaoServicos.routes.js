@@ -4,6 +4,12 @@ const { promisePool } = require("../../infrastructure/database");
 const { upload } = require("../../infrastructure/uploads");
 const { autenticar, verificarNivel, verificarNivelOuCargo } = require("../../auth");
 const {
+  redirecionarConstrucaoRestrito,
+  redirecionarTransporteRestrito,
+  redirecionarCodRestrito,
+  bloquearConstrucaoRestritoApi,
+} = require("../../shared/perfilCargo.helper");
+const {
   NIVEL_ADMIN_SERVICOS,
   NIVEL_ACESSO_MIN,
   ehCargoConstrucaoAcompanhamento,
@@ -22,29 +28,7 @@ const relatorioController = require("./relatorio/relatorio.controller");
 
 const router = express.Router();
 
-function usuarioConstrucaoRestrito(user) {
-  const nivel = user?.nivel ?? 0;
-  return nivel < NIVEL_ADMIN_SERVICOS && ehCargoConstrucaoAcompanhamento(user);
-}
-
-function redirecionarConstrucaoRestrito(req, res, next) {
-  if (usuarioConstrucaoRestrito(req.user)) {
-    return res.redirect("/acompanhamento_construcao");
-  }
-  next();
-}
-
-function bloquearConstrucaoRestritoApi(req, res, next) {
-  if (usuarioConstrucaoRestrito(req.user)) {
-    return res.status(403).json({
-      message:
-        "Perfil de Construção: acesso permitido apenas ao acompanhamento de construção.",
-    });
-  }
-  next();
-}
-
-router.get("/gestao-servicos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/gestao-servicos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, redirecionarCodRestrito, redirecionarTransporteRestrito, (req, res) => {
   res.sendFile(
     publicPage("servicos/gestao_servico.html"),
   );
@@ -106,6 +90,8 @@ router.get(
   "/acompanhamento_construcao",
   autenticar,
   verificarNivelOuCargo(NIVEL_ADMIN_SERVICOS, ["construcao", "construção"]),
+  redirecionarCodRestrito,
+  redirecionarTransporteRestrito,
   (req, res) => {
     res.sendFile(
       publicPage("servicos/servicos_construcao.html"),

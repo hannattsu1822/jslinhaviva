@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   function usuarioSomenteVisualizacao(user) {
     const nivel = Number(user?.nivel || 0);
-    if (nivel >= 2) return false;
+    if (nivel >= 7) return false;
     const cargo = normalizarTexto(user?.cargo || "");
     return cargo.includes("transporte") || cargo.includes("direcao");
   }

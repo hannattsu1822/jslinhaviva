@@ -456,7 +456,7 @@
         const isTransporteRestrito =
           (userCargoNormalized.includes("transporte") ||
             userCargoNormalized.includes("direcao")) &&
-          userLevel < 2;
+          userLevel < 7;
 
         const cardPermissions = {
           "card-subestacoes": 3,
@@ -513,6 +513,7 @@
         if (isCOD) {
           Object.keys(cardPermissions).forEach((id) => hideElement(id));
           showElement("card-noc", "block");
+          showElement("card-monitoramento", "block");
 
           const calendarCard = document.querySelector(".dashboard-calendar-card");
           if (calendarCard) calendarCard.style.display = "none";

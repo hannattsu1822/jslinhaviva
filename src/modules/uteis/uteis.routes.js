@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { autenticar, verificarNivel } = require("../../auth");
+const { autenticar, verificarNivel, verificarNivelOuCargo } = require("../../auth");
+const {
+  redirecionarConstrucaoRestrito,
+  redirecionarTransporteRestrito,
+} = require("../../shared/perfilCargo.helper");
 const {
   NIVEL_ADMIN_SERVICOS,
 } = require("../gestaoServicos/servicos.permissions");
@@ -29,7 +33,13 @@ router.get(
   controller.renderizarPaginaLogboxDevices
 );
 
-router.get("/monitoramento-hub", autenticar, verificarNivel(4), (req, res) => {
+router.get(
+  "/monitoramento-hub",
+  autenticar,
+  verificarNivelOuCargo(4, ["cod"]),
+  redirecionarConstrucaoRestrito,
+  redirecionarTransporteRestrito,
+  (req, res) => {
   res.render("pages/logbox/monitoramento-hub", {
     pageTitle: "Hub de Monitoramento",
     user: req.session.user,

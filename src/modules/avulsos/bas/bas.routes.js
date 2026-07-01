@@ -1,50 +1,52 @@
 const express = require("express");
 const router = express.Router();
-const { autenticar, verificarNivel } = require("../../../auth");
+const { autenticar, verificarNivel, verificarNivelOuCargo } = require("../../../auth");
 const { upload } = require("../../../infrastructure/uploads");
 const controller = require("./bas.controller");
+
+const acessoAvulsos = verificarNivelOuCargo(2, ["construcao", "construção"]);
 
 router.post(
   "/api/bas/importar-dados-processos",
   autenticar,
-  verificarNivel(2),
+  acessoAvulsos,
   upload.single("csvFile"),
   controller.importarDadosProcessos
 );
 router.get(
   "/api/bas/user-info",
   autenticar,
-  verificarNivel(2),
+  acessoAvulsos,
   controller.obterInfoUsuario
 );
 router.get(
   "/api/bas/processos-construcao",
   autenticar,
-  verificarNivel(2),
+  acessoAvulsos,
   controller.listarProcessosConstrucao
 );
 router.get(
   "/api/bas/processos-linhaviva",
   autenticar,
-  verificarNivel(2),
+  acessoAvulsos,
   controller.listarProcessosLinhaViva
 );
 router.post(
   "/api/bas/salvar-bas-cadastro",
   autenticar,
-  verificarNivel(2),
+  acessoAvulsos,
   controller.salvarCadastroBas
 );
 router.post(
   "/api/bas/gerar-relatorio-processos-txt",
   autenticar,
-  verificarNivel(2),
+  acessoAvulsos,
   controller.gerarRelatorioTxt
 );
 router.post(
   "/api/bas/gerar-relatorio-processos-txt-linhaviva",
   autenticar,
-  verificarNivel(2),
+  acessoAvulsos,
   controller.gerarRelatorioTxtLinhaViva
 );
 

@@ -276,7 +276,7 @@ function applySidebarPermissions(user) {
     userCargoNormalized.includes("transporte") ||
     userCargoNormalized.includes("direcao");
   const isTransporteRestrito =
-    isTransporteDirecao && (user.nivel ?? 0) < NIVEL_ACESSO_MIN;
+    isTransporteDirecao && (user.nivel ?? 0) < NIVEL_ADMIN;
   const isConstrucaoRestrito =
     isConstrucaoAcompanhamento && (user.nivel ?? 0) < NIVEL_ADMIN;
 
@@ -291,6 +291,7 @@ function applySidebarPermissions(user) {
   if (isCOD) {
     allManagedIds.forEach((id) => hideSidebarItem(id));
     showSidebarItem("sidebar-noc-link");
+    showSidebarItem("sidebar-monitoramento-link");
     hideDashboardNavItem();
     return;
   }
@@ -317,6 +318,7 @@ function applySidebarPermissions(user) {
   if (isConstrucaoRestrito) {
     allManagedIds.forEach((id) => hideSidebarItem(id));
     showSidebarItem("sidebar-construcao-link");
+    showSidebarItem("sidebar-avulsos-link");
     const construcaoLink = document.querySelector(
       '.sidebar .nav-link[href="/acompanhamento_construcao"]'
     );

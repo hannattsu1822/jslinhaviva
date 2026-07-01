@@ -51,6 +51,10 @@ function ehCargoTransporteDirecao(user) {
   return cargoContem(user, ["transporte", "direcao", "direção"]);
 }
 
+function ehCargoCOD(user) {
+  return normalizarTexto(user?.cargo) === "cod";
+}
+
 module.exports = {
   NIVEL_ADMIN,
   NIVEL_BASICO_MAX,
@@ -72,4 +76,5 @@ module.exports = {
   podeConcluirAdministrativo: temControleTotal,
   ehCargoConstrucaoAcompanhamento,
   ehCargoTransporteDirecao,
+  ehCargoCOD,
 };

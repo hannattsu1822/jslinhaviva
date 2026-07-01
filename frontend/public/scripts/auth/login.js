@@ -185,6 +185,11 @@ async function performLogin() {
           .toLowerCase();
         const nivel = result.user?.nivel ?? 0;
 
+        if (cargo === "cod") {
+          window.location.href = "/centro-operacoes";
+          return;
+        }
+
         if (cargo.includes("construcao") && nivel < 7) {
           window.location.href = "/acompanhamento_construcao";
           return;
@@ -192,7 +197,7 @@ async function performLogin() {
 
         if (
           (cargo.includes("transporte") || cargo.includes("direcao")) &&
-          nivel < 2
+          nivel < 7
         ) {
           window.location.href = "/frota_controle";
           return;

@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function usuarioTransporteRestrito(user) {
     const nivel = Number(user?.nivel || 0);
-    if (nivel >= 2) return false;
+    if (nivel >= 7) return false;
     const cargo = normalizarTexto(user?.cargo || "");
     return cargo.includes("transporte") || cargo.includes("direcao");
   }
@@ -17,8 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function aplicarModoSomenteVisualizacao() {
     const btnVoltar = document.getElementById("btnVoltarFrota");
     if (btnVoltar) {
-      // Evita link para /frota para perfil sem acesso a essa hub.
-      btnVoltar.setAttribute("href", "/dashboard");
+      btnVoltar.style.display = "none";
     }
 
     document.querySelectorAll(".card-text").forEach((el) => {

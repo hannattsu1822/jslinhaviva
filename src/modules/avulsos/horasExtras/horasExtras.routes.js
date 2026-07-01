@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { autenticar, verificarNivel } = require("../../../auth");
+const { autenticar, verificarNivelOuCargo } = require("../../../auth");
 const controller = require("./horasExtras.controller");
 
-router.get("/api/avulsos/turmas-encarregados", autenticar, verificarNivel(2), controller.listarTurmasEncarregados);
-router.post("/api/avulsos/solicitacao-horas-extras", autenticar, verificarNivel(2), controller.solicitarHorasExtras);
+const acessoAvulsos = verificarNivelOuCargo(2, ["construcao", "construção"]);
+
+router.get("/api/avulsos/turmas-encarregados", autenticar, acessoAvulsos, controller.listarTurmasEncarregados);
+router.post("/api/avulsos/solicitacao-horas-extras", autenticar, acessoAvulsos, controller.solicitarHorasExtras);
 
 module.exports = router;

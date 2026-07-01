@@ -43,9 +43,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   const isTransporteRestrito =
     (userCargoNormalized.includes("transporte") ||
       userCargoNormalized.includes("direcao")) &&
-    userLevel < 2;
+    userLevel < 7;
+  const isCod = userCargoNormalized === "cod";
 
-  if (isConstrucaoRestrito || isTransporteRestrito) {
+  if (isConstrucaoRestrito || isTransporteRestrito || isCod) {
     if (calendarCard) calendarCard.style.display = "none";
     return;
   }

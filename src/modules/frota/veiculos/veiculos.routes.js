@@ -3,49 +3,39 @@ const path = require("path");
 const router = express.Router();
 const { autenticar, verificarNivel, verificarNivelOuCargo } = require("../../../auth");
 const controller = require("./veiculos.controller");
+const { publicPage } = require("../../../shared/path.helper");
 const {
-  NIVEL_ADMIN,
-  ehCargoConstrucaoAcompanhamento,
-} = require("../../../shared/moduloNivel.permissions");
-const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
+  redirecionarConstrucaoRestrito,
+  redirecionarTransporteRestrito,
+  redirecionarCodRestrito,
+  bloquearConstrucaoRestritoApi,
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
+} = require("../../../shared/perfilCargo.helper");
 
-function usuarioConstrucaoRestrito(user) {
-  return (user?.nivel ?? 0) < NIVEL_ADMIN && ehCargoConstrucaoAcompanhamento(user);
-}
+const bloquearOutrosPerfisApi = [
+  bloquearConstrucaoRestritoApi,
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
+];
 
-function redirecionarConstrucaoRestrito(req, res, next) {
-  if (usuarioConstrucaoRestrito(req.user)) {
-    return res.redirect("/acompanhamento_construcao");
-  }
-  next();
-}
-
-function bloquearConstrucaoRestritoApi(req, res, next) {
-  if (usuarioConstrucaoRestrito(req.user)) {
-    return res.status(403).json({
-      message: "Perfil de Construção: acesso permitido apenas ao acompanhamento de construção.",
-    });
-  }
-  next();
-}
-
-router.get("/frota", autenticar, verificarNivel(2), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/frota", autenticar, verificarNivel(2), redirecionarConstrucaoRestrito, redirecionarTransporteRestrito, redirecionarCodRestrito, (req, res) => {
   res.sendFile(publicPage("frota/frota.html"));
 });
 
-router.get("/checklist_veiculos", autenticar, verificarNivel(3), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/checklist_veiculos", autenticar, verificarNivel(3), redirecionarConstrucaoRestrito, redirecionarTransporteRestrito, redirecionarCodRestrito, (req, res) => {
   res.sendFile(
     publicPage("frota/checklist_veiculos.html")
   );
 });
 
-router.get("/agendar_checklist", autenticar, verificarNivel(4), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/agendar_checklist", autenticar, verificarNivel(4), redirecionarConstrucaoRestrito, redirecionarTransporteRestrito, redirecionarCodRestrito, (req, res) => {
   res.sendFile(
     publicPage("frota/agendar_checklist.html")
   );
 });
 
-router.get("/frota_controle", autenticar, verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/frota_controle", autenticar, verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]), redirecionarConstrucaoRestrito, redirecionarCodRestrito, (req, res) => {
   res.sendFile(
     publicPage("frota/frota_controle.html")
   );
@@ -56,6 +46,7 @@ router.get(
   autenticar,
   verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   redirecionarConstrucaoRestrito,
+  redirecionarCodRestrito,
   (req, res) => {
     res.sendFile(
       publicPage("frota/frota_motoristas_cadastro.html")
@@ -68,6 +59,7 @@ router.get(
   autenticar,
   verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   redirecionarConstrucaoRestrito,
+  redirecionarCodRestrito,
   (req, res) => {
     res.sendFile(
       publicPage("frota/frota_estoque_cadastro.html")
@@ -80,6 +72,7 @@ router.get(
   autenticar,
   verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   redirecionarConstrucaoRestrito,
+  redirecionarCodRestrito,
   (req, res) => {
     res.sendFile(
       publicPage("frota/frota_veiculos_cadastro.html")
@@ -87,7 +80,7 @@ router.get(
   }
 );
 
-router.get("/filtrar_veiculos", autenticar, verificarNivel(4), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/filtrar_veiculos", autenticar, verificarNivel(4), redirecionarConstrucaoRestrito, redirecionarTransporteRestrito, redirecionarCodRestrito, (req, res) => {
   res.sendFile(
     publicPage("frota/filtrar_veiculos.html")
   );
@@ -99,13 +92,13 @@ router.get("/relatorio_publico_veiculos", (req, res) => {
   );
 });
 
-router.get("/check_horimetro", autenticar, verificarNivel(3), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/check_horimetro", autenticar, verificarNivel(3), redirecionarConstrucaoRestrito, redirecionarTransporteRestrito, redirecionarCodRestrito, (req, res) => {
   res.sendFile(
     publicPage("frota/check_horimetro.html")
   );
 });
 
-router.get("/editar_inspecao", autenticar, verificarNivel(4), redirecionarConstrucaoRestrito, (req, res) => {
+router.get("/editar_inspecao", autenticar, verificarNivel(4), redirecionarConstrucaoRestrito, redirecionarTransporteRestrito, redirecionarCodRestrito, (req, res) => {
   res.sendFile(
     publicPage("frota/editar_inspecao.html")
   );
@@ -115,21 +108,21 @@ router.get(
   "/api/motoristas",
   autenticar,
   verificarNivel(2),
-  bloquearConstrucaoRestritoApi,
+  ...bloquearOutrosPerfisApi,
   controller.listarMotoristas
 );
 router.get(
   "/api/encarregados",
   autenticar,
   verificarNivel(2),
-  bloquearConstrucaoRestritoApi,
+  ...bloquearOutrosPerfisApi,
   controller.listarEncarregados
 );
 router.get(
   "/api/placas",
   autenticar,
   verificarNivel(2),
-  bloquearConstrucaoRestritoApi,
+  ...bloquearOutrosPerfisApi,
   controller.listarPlacas
 );
 router.get(
@@ -137,6 +130,7 @@ router.get(
   autenticar,
   verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   bloquearConstrucaoRestritoApi,
+  bloquearCodRestritoApi,
   controller.listarVeiculosControle
 );
 router.get(
@@ -144,6 +138,7 @@ router.get(
   autenticar,
   verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   bloquearConstrucaoRestritoApi,
+  bloquearCodRestritoApi,
   controller.listarInventario
 );
 router.post(
@@ -151,6 +146,8 @@ router.post(
   autenticar,
   verificarNivel(2),
   bloquearConstrucaoRestritoApi,
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
   controller.criarItemInventario
 );
 router.delete(
@@ -158,6 +155,8 @@ router.delete(
   autenticar,
   verificarNivel(2),
   bloquearConstrucaoRestritoApi,
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
   controller.deletarItemInventario
 );
 router.get(
@@ -165,6 +164,7 @@ router.get(
   autenticar,
   verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   bloquearConstrucaoRestritoApi,
+  bloquearCodRestritoApi,
   controller.listarMotoristasCrud
 );
 router.post(
@@ -172,6 +172,8 @@ router.post(
   autenticar,
   verificarNivel(2),
   bloquearConstrucaoRestritoApi,
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
   controller.criarMotoristaCrud
 );
 router.delete(
@@ -179,6 +181,8 @@ router.delete(
   autenticar,
   verificarNivel(2),
   bloquearConstrucaoRestritoApi,
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
   controller.deletarMotoristaCrud
 );
 router.get(
@@ -186,6 +190,7 @@ router.get(
   autenticar,
   verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   bloquearConstrucaoRestritoApi,
+  bloquearCodRestritoApi,
   controller.listarEstoqueCrud
 );
 router.post(
@@ -193,14 +198,18 @@ router.post(
   autenticar,
   verificarNivel(2),
   bloquearConstrucaoRestritoApi,
-  controller.criarItemEstoqueCrud
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
+  controller.criarEstoqueCrud
 );
 router.delete(
   "/api/frota/estoque_crud/:id",
   autenticar,
   verificarNivel(2),
   bloquearConstrucaoRestritoApi,
-  controller.deletarItemEstoqueCrud
+  bloquearTransporteRestritoApi,
+  bloquearCodRestritoApi,
+  controller.deletarEstoqueCrud
 );
 
 module.exports = router;

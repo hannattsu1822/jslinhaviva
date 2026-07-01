@@ -3,9 +3,9 @@ const { autenticar } = require("./auth");
 const { publicPage } = require("./shared/path.helper");
 const {
   NIVEL_ADMIN,
-  NIVEL_ACESSO_MIN,
   ehCargoConstrucaoAcompanhamento,
   ehCargoTransporteDirecao,
+  ehCargoCOD,
 } = require("./shared/moduloNivel.permissions");
 
 const rotasAuth = require("./routes/rotas_auth");
@@ -70,11 +70,15 @@ router.get("/login", (req, res) => {
 function redirecionarDashboardRestrito(req, res, next) {
   const nivel = req.user?.nivel ?? 0;
 
+  if (ehCargoCOD(req.user)) {
+    return res.redirect("/centro-operacoes");
+  }
+
   if (nivel < NIVEL_ADMIN && ehCargoConstrucaoAcompanhamento(req.user)) {
     return res.redirect("/acompanhamento_construcao");
   }
 
-  if (nivel < NIVEL_ACESSO_MIN && ehCargoTransporteDirecao(req.user)) {
+  if (nivel < NIVEL_ADMIN && ehCargoTransporteDirecao(req.user)) {
     return res.redirect("/frota_controle");
   }
 
