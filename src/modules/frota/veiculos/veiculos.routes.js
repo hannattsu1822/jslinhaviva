@@ -200,7 +200,7 @@ router.post(
   bloquearConstrucaoRestritoApi,
   bloquearTransporteRestritoApi,
   bloquearCodRestritoApi,
-  controller.criarEstoqueCrud
+  controller.criarItemEstoqueCrud
 );
 router.delete(
   "/api/frota/estoque_crud/:id",
@@ -209,7 +209,7 @@ router.delete(
   bloquearConstrucaoRestritoApi,
   bloquearTransporteRestritoApi,
   bloquearCodRestritoApi,
-  controller.deletarEstoqueCrud
+  controller.deletarItemEstoqueCrud
 );
 
 module.exports = router;
