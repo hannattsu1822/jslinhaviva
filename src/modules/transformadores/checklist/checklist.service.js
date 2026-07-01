@@ -288,6 +288,63 @@ async function listarTrafosSemChecklist() {
   return rows;
 }
 
+async function listarAvariadosPendentes({ page = 1, limit = 15, numero_serie = "" }) {
+  const currentPage = Number.isFinite(Number(page))
+    ? Math.max(1, parseInt(page, 10))
+    : 1;
+  const pageSize = Number.isFinite(Number(limit))
+    ? Math.min(100, Math.max(1, parseInt(limit, 10)))
+    : 15;
+  const offset = (currentPage - 1) * pageSize;
+  const filtroSerie = String(numero_serie || "").trim();
+
+  let whereSql = `WHERE NOT EXISTS (
+      SELECT 1
+      FROM checklist_transformadores ct
+      WHERE ct.numero_serie = t.numero_serie
+    )`;
+  const params = [];
+  if (filtroSerie) {
+    whereSql += " AND t.numero_serie LIKE ?";
+    params.push(`%${filtroSerie}%`);
+  }
+
+  const [[countRows]] = await promisePool.query(
+    `SELECT COUNT(*) AS total
+     FROM transformadores t
+     ${whereSql}`,
+    params
+  );
+  const totalItems = Number(countRows?.total || 0);
+
+  const [rows] = await promisePool.query(
+    `SELECT
+      t.numero_serie,
+      t.marca,
+      t.potencia,
+      t.local_retirada,
+      t.regional,
+      t.data_processamento_remessa
+     FROM transformadores t
+     ${whereSql}
+     ORDER BY t.data_processamento_remessa DESC, t.numero_serie ASC
+     LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset]
+  );
+
+  return {
+    items: rows,
+    pagination: {
+      currentPage,
+      totalPages: Math.max(1, Math.ceil(totalItems / pageSize)),
+      totalItems,
+      itemsPerPage: pageSize,
+      hasPrev: currentPage > 1,
+      hasNext: offset + rows.length < totalItems,
+    },
+  };
+}
+
 async function listarTrafosDaRemessa(dataRemessaInicial, dataRemessaFinal) {
   if (!dataRemessaInicial || !dataRemessaFinal) {
     throw new Error(
@@ -468,40 +525,70 @@ async function filtrarChecklists(filtros) {
     dataFinal,
     dataRemessaInicial,
     dataRemessaFinal,
+    page = 1,
+    limit = 15,
   } = filtros;
-  let query = `
+  const currentPage = Number.isFinite(Number(page))
+    ? Math.max(1, parseInt(page, 10))
+    : 1;
+  const pageSize = Number.isFinite(Number(limit))
+    ? Math.min(100, Math.max(1, parseInt(limit, 10)))
+    : 15;
+  const offset = (currentPage - 1) * pageSize;
+  let whereSql = " WHERE 1=1";
+  const params = [];
+  if (numero_serie) {
+    whereSql += " AND t.numero_serie LIKE ?";
+    params.push(`%${numero_serie.trim()}%`);
+  }
+  if (matricula_responsavel) {
+    whereSql += " AND ct.matricula_responsavel = ?";
+    params.push(matricula_responsavel.trim());
+  }
+  if (dataInicial) {
+    whereSql += " AND DATE(ct.data_checklist) >= ?";
+    params.push(dataInicial);
+  }
+  if (dataFinal) {
+    whereSql += " AND DATE(ct.data_checklist) <= ?";
+    params.push(dataFinal);
+  }
+  if (dataRemessaInicial && dataRemessaFinal) {
+    whereSql += " AND t.data_processamento_remessa BETWEEN ? AND ?";
+    params.push(dataRemessaInicial, dataRemessaFinal);
+  }
+  const baseFromSql = `
+        FROM checklist_transformadores ct
+        INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
+        LEFT JOIN users u ON ct.matricula_responsavel = u.matricula`;
+  const countQuery = `
+        SELECT COUNT(*) as total
+        ${baseFromSql}
+        ${whereSql}`;
+  const [countRows] = await promisePool.query(countQuery, params);
+  const totalItems = Number(countRows?.[0]?.total || 0);
+
+  const query = `
         SELECT ct.id, t.numero_serie, t.potencia, t.marca,
                DATE_FORMAT(ct.data_checklist, '%d/%m/%Y %H:%i') as data_formulario, 
                ct.matricula_responsavel, u.nome as nome_responsavel, ct.transformador_destinado,
                DATE_FORMAT(t.data_processamento_remessa, '%d/%m/%Y') as data_processamento_remessa_formatada
-        FROM checklist_transformadores ct
-        INNER JOIN transformadores t ON ct.numero_serie = t.numero_serie
-        LEFT JOIN users u ON ct.matricula_responsavel = u.matricula
-        WHERE 1=1`;
-  const params = [];
-  if (numero_serie) {
-    query += " AND t.numero_serie LIKE ?";
-    params.push(`%${numero_serie.trim()}%`);
-  }
-  if (matricula_responsavel) {
-    query += " AND ct.matricula_responsavel = ?";
-    params.push(matricula_responsavel.trim());
-  }
-  if (dataInicial) {
-    query += " AND DATE(ct.data_checklist) >= ?";
-    params.push(dataInicial);
-  }
-  if (dataFinal) {
-    query += " AND DATE(ct.data_checklist) <= ?";
-    params.push(dataFinal);
-  }
-  if (dataRemessaInicial && dataRemessaFinal) {
-    query += " AND t.data_processamento_remessa BETWEEN ? AND ?";
-    params.push(dataRemessaInicial, dataRemessaFinal);
-  }
-  query += " ORDER BY ct.data_checklist DESC, ct.id DESC";
-  const [rows] = await promisePool.query(query, params);
-  return rows;
+        ${baseFromSql}
+        ${whereSql}
+        ORDER BY ct.data_checklist DESC, ct.id DESC
+        LIMIT ? OFFSET ?`;
+  const [rows] = await promisePool.query(query, [...params, pageSize, offset]);
+  return {
+    items: rows,
+    pagination: {
+      currentPage,
+      totalPages: Math.max(1, Math.ceil(totalItems / pageSize)),
+      totalItems,
+      itemsPerPage: pageSize,
+      hasPrev: currentPage > 1,
+      hasNext: offset + rows.length < totalItems,
+    },
+  };
 }
 
 async function gerarPdfChecklist(id, _protocol, _host) {
@@ -623,6 +710,7 @@ async function gerarPdfTabela(dados, filtros, usuario) {
 
 module.exports = {
   listarTrafosSemChecklist,
+  listarAvariadosPendentes,
   listarTrafosDaRemessa,
   obterHistoricoRemessas,
   salvarChecklist,

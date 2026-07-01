@@ -13,9 +13,7 @@ router.get(
   autenticar,
   verificarNivel(3),
   (req, res) => {
-    res.sendFile(
-      publicPage("trafos/reformados/transformadores_reformados.html")
-    );
+    res.redirect(302, "/transformadores?contexto=reformados");
   }
 );
 

@@ -18,10 +18,17 @@ async function obterChecklistPorRegistroId(req, res) {
 
 async function obterHistoricoPorSerie(req, res) {
   try {
-    const checklists = await service.obterHistoricoPorSerie(
-      req.params.numero_serie
-    );
-    res.json({ success: true, data: checklists });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const result = await service.obterHistoricoPorSerie(req.params.numero_serie, {
+      page,
+      limit,
+    });
+    res.json({
+      success: true,
+      data: result.items,
+      pagination: result.pagination,
+    });
   } catch (err) {
     console.error("Erro ao buscar checklists por série:", err);
     res

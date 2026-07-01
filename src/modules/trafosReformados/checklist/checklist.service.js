@@ -357,7 +357,27 @@ async function obterChecklistPorRegistroId(registroId) {
   return checklist;
 }
 
-async function obterHistoricoPorSerie(numero_serie) {
+async function obterHistoricoPorSerie(
+  numero_serie,
+  { page = 1, limit = 10 } = {}
+) {
+  const currentPage = Number.isFinite(Number(page))
+    ? Math.max(1, parseInt(page, 10))
+    : 1;
+  const pageSize = Number.isFinite(Number(limit))
+    ? Math.min(100, Math.max(1, parseInt(limit, 10)))
+    : 10;
+  const offset = (currentPage - 1) * pageSize;
+
+  const [[totalRows]] = await promisePool.query(
+    `SELECT COUNT(*) AS total
+     FROM trafos_reformados_testes tst
+     JOIN trafos_reformados tr ON tst.trafos_reformados_id = tr.id
+     WHERE tr.numero_serie = ?`,
+    [numero_serie]
+  );
+  const totalItems = Number(totalRows?.total || 0);
+
   const [checklists] = await promisePool.query(
     `SELECT 
         tst.*, 
@@ -370,8 +390,9 @@ async function obterHistoricoPorSerie(numero_serie) {
      JOIN trafos_reformados tr ON tst.trafos_reformados_id = tr.id
      LEFT JOIN users u ON tst.tecnico_responsavel_teste = u.matricula
      WHERE tr.numero_serie = ? 
-     ORDER BY tst.data_teste DESC, tst.id DESC`,
-    [numero_serie]
+     ORDER BY tst.data_teste DESC, tst.id DESC
+     LIMIT ? OFFSET ?`,
+    [numero_serie, pageSize, offset]
   );
 
   if (checklists.length > 0) {
@@ -394,7 +415,17 @@ async function obterHistoricoPorSerie(numero_serie) {
     });
   }
 
-  return checklists;
+  return {
+    items: checklists,
+    pagination: {
+      page: currentPage,
+      limit: pageSize,
+      total_items: totalItems,
+      total_pages: Math.max(1, Math.ceil(totalItems / pageSize)),
+      has_prev: currentPage > 1,
+      has_next: offset + checklists.length < totalItems,
+    },
+  };
 }
 
 async function avaliarCompleto(id, dadosAvaliacao) {

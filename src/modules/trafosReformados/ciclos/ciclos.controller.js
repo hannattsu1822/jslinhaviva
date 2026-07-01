@@ -67,10 +67,22 @@ async function importarCiclos(req, res) {
       .json({ success: false, message: "Nenhum arquivo enviado" });
   }
   try {
-    const results = await service.importarCiclos(req.file.path);
+    const dryRun = String(req.query.dryRun || "").toLowerCase() === "true";
+    const results = await service.importarCiclos(req.file.path, { dryRun });
+    const partes = [
+      `${results.imported} novos ciclos criados`,
+      results.retorno_pos_avaria ? `${results.retorno_pos_avaria} retorno(s) pós-avaria` : null,
+      results.retorno_reforma ? `${results.retorno_reforma} retorno(s) de reforma` : null,
+      results.primeira_avaliacao ? `${results.primeira_avaliacao} 1ª avaliação` : null,
+      results.skipped ? `${results.skipped} ignorado(s) (já pendente)` : null,
+      results.failed ? `${results.failed} falha(s)` : null,
+    ].filter(Boolean);
+
     res.json({
-      success: results.imported > 0,
-      message: `Importação concluída: ${results.imported} novos registros criados, ${results.failed} falhas.`,
+      success: dryRun ? true : results.imported > 0 || results.skipped > 0,
+      message: dryRun
+        ? `Simulação concluída: ${partes.join(", ")}. Nenhuma alteração foi gravada.`
+        : `Importação concluída: ${partes.join(", ")}.`,
       ...results,
     });
   } catch (error) {

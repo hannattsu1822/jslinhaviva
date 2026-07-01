@@ -56,6 +56,20 @@
           </header>
 
           <div class="history-list-col">
+            <div class="card results-card-trafos mb-3">
+              <div class="card-header">
+                <span class="card-title mb-0">Histórico Unificado (Avarias, Remessas e Reformas)</span>
+              </div>
+              <div id="unifiedHistoryTimeline" class="list-group list-group-flush"></div>
+              <div class="card-footer d-flex justify-content-between align-items-center">
+                <small id="unifiedPaginationInfo" class="text-muted">Página 1</small>
+                <div class="btn-group btn-group-sm" role="group">
+                  <button type="button" id="btnUnifiedPrev" class="btn btn-outline-secondary">Anterior</button>
+                  <button type="button" id="btnUnifiedNext" class="btn btn-outline-secondary">Próxima</button>
+                </div>
+              </div>
+            </div>
+
             <div class="card results-card-trafos">
               <div
                 class="card-header d-flex justify-content-between align-items-center"
@@ -69,6 +83,13 @@
                 id="checklistHistoryList"
                 class="list-group list-group-flush"
               ></div>
+              <div class="card-footer d-flex justify-content-between align-items-center">
+                <small id="checklistPaginationInfo" class="text-muted">Página 1</small>
+                <div class="btn-group btn-group-sm" role="group">
+                  <button type="button" id="btnChecklistPrev" class="btn btn-outline-secondary">Anterior</button>
+                  <button type="button" id="btnChecklistNext" class="btn btn-outline-secondary">Próxima</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

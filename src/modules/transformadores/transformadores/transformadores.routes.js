@@ -26,4 +26,11 @@ router.get(
   controller.listarSupervisores
 );
 
+router.get(
+  "/api/transformadores/historico-unificado/:numero_serie",
+  autenticar,
+  verificarNivel(3),
+  controller.obterHistoricoUnificadoPorSerie
+);
+
 module.exports = router;

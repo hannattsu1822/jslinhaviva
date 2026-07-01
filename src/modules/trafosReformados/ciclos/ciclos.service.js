@@ -71,9 +71,16 @@ async function listarCiclos(filtros) {
   let dataQuery = `
         SELECT tr.*, u.nome as nome_tecnico,
             (SELECT COUNT(*) FROM trafos_reformados tr_hist WHERE tr_hist.numero_serie = tr.numero_serie) as total_ciclos,
-            (SELECT MAX(tr_anterior.data_avaliacao) FROM trafos_reformados tr_anterior WHERE tr_anterior.numero_serie = tr.numero_serie AND tr_anterior.id < tr.id AND tr_anterior.status_avaliacao != 'pendente') AS ultima_avaliacao_anterior
+            (SELECT MAX(tr_anterior.data_avaliacao) FROM trafos_reformados tr_anterior WHERE tr_anterior.numero_serie = tr.numero_serie AND tr_anterior.id < tr.id AND tr_anterior.status_avaliacao != 'pendente') AS ultima_avaliacao_anterior,
+            IF(t_av.numero_serie IS NOT NULL, 1, 0) AS tem_historico_avaria,
+            t_av.motivo_desativacao AS motivo_avaria,
+            t_av.local_retirada AS local_retirada_avaria,
+            t_av.regional AS regional_avaria,
+            t_av.data_entrada_almoxarifado AS data_entrada_avaria,
+            'REFORMADO' AS tipo_entrada
         FROM trafos_reformados tr
         LEFT JOIN users u ON tr.tecnico_responsavel = u.matricula
+        LEFT JOIN transformadores t_av ON t_av.numero_serie = tr.numero_serie
         ${conditions} ORDER BY tr.id DESC`;
 
   if (getAll !== "true") {
@@ -87,7 +94,18 @@ async function listarCiclos(filtros) {
 
 async function obterCicloPorId(id) {
   const [rows] = await promisePool.query(
-    "SELECT * FROM trafos_reformados WHERE id = ?",
+    `SELECT tr.*,
+      (SELECT COUNT(*) FROM trafos_reformados tr_hist WHERE tr_hist.numero_serie = tr.numero_serie) AS total_ciclos,
+      (SELECT MAX(tr_anterior.data_avaliacao) FROM trafos_reformados tr_anterior WHERE tr_anterior.numero_serie = tr.numero_serie AND tr_anterior.id < tr.id AND tr_anterior.status_avaliacao != 'pendente') AS ultima_avaliacao_anterior,
+      IF(t_av.numero_serie IS NOT NULL, 1, 0) AS tem_historico_avaria,
+      t_av.motivo_desativacao AS motivo_avaria,
+      t_av.local_retirada AS local_retirada_avaria,
+      t_av.regional AS regional_avaria,
+      t_av.data_entrada_almoxarifado AS data_entrada_avaria,
+      'REFORMADO' AS tipo_entrada
+     FROM trafos_reformados tr
+     LEFT JOIN transformadores t_av ON t_av.numero_serie = tr.numero_serie
+     WHERE tr.id = ?`,
     [id]
   );
   if (rows.length === 0) {
@@ -106,7 +124,97 @@ async function reverterStatusCiclo(id) {
   }
 }
 
-async function importarCiclos(filePath) {
+async function buscarContextoAvaria(connection, numeroSerie) {
+  const [rows] = await connection.query(
+    `SELECT motivo_desativacao, local_retirada, regional, data_entrada_almoxarifado
+     FROM transformadores WHERE numero_serie = ? LIMIT 1`,
+    [numeroSerie]
+  );
+
+  if (rows.length === 0) {
+    return {
+      tem_historico_avaria: 0,
+      motivo_avaria: null,
+      local_retirada_avaria: null,
+      regional_avaria: null,
+      data_entrada_avaria: null,
+    };
+  }
+
+  const trafo = rows[0];
+  return {
+    tem_historico_avaria: 1,
+    motivo_avaria: trafo.motivo_desativacao || null,
+    local_retirada_avaria: trafo.local_retirada || null,
+    regional_avaria: trafo.regional || null,
+    data_entrada_avaria: trafo.data_entrada_almoxarifado || null,
+  };
+}
+
+async function buscarPendentePorSerie(connection, numeroSerie) {
+  const [rows] = await connection.query(
+    `SELECT id FROM trafos_reformados
+     WHERE numero_serie = ? AND status_avaliacao = 'pendente'
+     LIMIT 1`,
+    [numeroSerie]
+  );
+  return rows.length > 0 ? rows[0].id : null;
+}
+
+async function contarCiclosPorSerie(connection, numeroSerie) {
+  const [rows] = await connection.query(
+    "SELECT COUNT(*) AS total FROM trafos_reformados WHERE numero_serie = ?",
+    [numeroSerie]
+  );
+  return rows[0].total || 0;
+}
+
+async function inserirCicloReformado(connection, rowData, contextoAvaria) {
+  const baseParams = [
+    rowData.item,
+    rowData.numero_projeto,
+    rowData.pot,
+    rowData.numero_serie,
+    rowData.numero_nota,
+    rowData.t_at,
+    rowData.t_bt,
+    rowData.taps,
+    rowData.fabricante,
+  ];
+
+  const extendedSql = `INSERT INTO trafos_reformados (
+      item, numero_projeto, pot, numero_serie, numero_nota, t_at, t_bt, taps, fabricante,
+      tipo_entrada, tem_historico_avaria, motivo_avaria, local_retirada_avaria, regional_avaria, data_entrada_avaria,
+      status_avaliacao, data_importacao
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'REFORMADO', ?, ?, ?, ?, ?, 'pendente', CURDATE())`;
+
+  const extendedParams = [
+    ...baseParams,
+    contextoAvaria.tem_historico_avaria,
+    contextoAvaria.motivo_avaria,
+    contextoAvaria.local_retirada_avaria,
+    contextoAvaria.regional_avaria,
+    contextoAvaria.data_entrada_avaria,
+  ];
+
+  try {
+    await connection.query(extendedSql, extendedParams);
+    return;
+  } catch (error) {
+    if (error.code !== "ER_BAD_FIELD_ERROR") {
+      throw error;
+    }
+  }
+
+  const legacySql = `INSERT INTO trafos_reformados (
+      item, numero_projeto, pot, numero_serie, numero_nota, t_at, t_bt, taps, fabricante,
+      status_avaliacao, data_importacao
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', CURDATE())`;
+  await connection.query(legacySql, baseParams);
+}
+
+async function importarCiclos(filePath, options = {}) {
+  const dryRun = options.dryRun === true;
   const connection = await promisePool.getConnection();
   try {
     await connection.beginTransaction();
@@ -166,8 +274,14 @@ async function importarCiclos(filePath) {
     const results = {
       total: worksheet.rowCount - 1,
       imported: 0,
+      retorno_pos_avaria: 0,
+      retorno_reforma: 0,
+      primeira_avaliacao: 0,
+      skipped: 0,
       failed: 0,
       errors_details: [],
+      skipped_details: [],
+      imported_details: [],
     };
 
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
@@ -188,20 +302,57 @@ async function importarCiclos(filePath) {
         if (!getValue("pot")) throw new Error("Coluna 'Potência (POT)' é obrigatória.");
         if (!getValue("fabricante")) throw new Error("Coluna 'Fabricante' é obrigatória.");
 
-        const sql = `INSERT INTO trafos_reformados (item, numero_projeto, pot, numero_serie, numero_nota, t_at, t_bt, taps, fabricante, status_avaliacao, data_importacao) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', CURDATE())`;
-        const params = [
-          getValue("item"),
-          getValue("numero_projeto"),
-          getValue("pot"),
-          numeroSerie,
-          getValue("numero_nota"),
-          getValue("t_at"),
-          getValue("t_bt"),
-          getValue("taps"),
-          getValue("fabricante"),
-        ];
-        await connection.query(sql, params);
+        const pendenteId = await buscarPendentePorSerie(connection, numeroSerie);
+        if (pendenteId) {
+          results.skipped++;
+          results.skipped_details.push({
+            linha: rowNumber,
+            numero_serie: numeroSerie,
+            motivo: `Já existe ciclo pendente (ID ${pendenteId}) para esta série.`,
+          });
+          continue;
+        }
+
+        const ciclosAnteriores = await contarCiclosPorSerie(connection, numeroSerie);
+        const contextoAvaria = await buscarContextoAvaria(connection, numeroSerie);
+        const rowData = {
+          item: getValue("item"),
+          numero_projeto: getValue("numero_projeto"),
+          pot: getValue("pot"),
+          numero_serie: numeroSerie,
+          numero_nota: getValue("numero_nota"),
+          t_at: getValue("t_at"),
+          t_bt: getValue("t_bt"),
+          taps: getValue("taps"),
+          fabricante: getValue("fabricante"),
+        };
+
+        await inserirCicloReformado(connection, rowData, contextoAvaria);
         results.imported++;
+
+        const tipoImportacao =
+          contextoAvaria.tem_historico_avaria === 1
+            ? "retorno_pos_avaria"
+            : ciclosAnteriores > 0
+              ? "retorno_reforma"
+              : "primeira_avaliacao";
+
+        if (tipoImportacao === "retorno_pos_avaria") {
+          results.retorno_pos_avaria++;
+        } else if (tipoImportacao === "retorno_reforma") {
+          results.retorno_reforma++;
+        } else {
+          results.primeira_avaliacao++;
+        }
+
+        results.imported_details.push({
+          linha: rowNumber,
+          numero_serie: numeroSerie,
+          tipo: tipoImportacao,
+          ciclo: ciclosAnteriores + 1,
+          motivo_avaria: contextoAvaria.motivo_avaria,
+          local_retirada: contextoAvaria.local_retirada_avaria,
+        });
       } catch (error) {
         results.failed++;
         results.errors_details.push({
@@ -211,8 +362,13 @@ async function importarCiclos(filePath) {
         });
       }
     }
+    if (dryRun) {
+      await connection.rollback();
+      return { ...results, dry_run: true };
+    }
+
     await connection.commit();
-    return results;
+    return { ...results, dry_run: false };
   } catch (error) {
     await connection.rollback();
     throw error;

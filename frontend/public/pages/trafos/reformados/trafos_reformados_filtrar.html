@@ -179,9 +179,10 @@
                     <th>Nº de Série</th>
                     <th>Fabricante</th>
                     <th>Potência</th>
+                    <th>Origem / Contexto</th>
                     <th>Data Importação</th>
                     <th>Status</th>
-                    <th>Última Avaliação</th>
+                    <th>Ciclo</th>
                     <th class="text-center">Ações</th>
                   </tr>
                 </thead>
@@ -224,6 +225,7 @@
           <div class="modal-body">
             <form id="formAvaliacao">
               <input type="hidden" id="trafoId" />
+              <div id="contextoAvariaBanner" class="alert d-none mb-3" role="alert"></div>
               <div class="row mb-3">
                 <div class="col-md-4">
                   <label for="numeroSerieModal" class="form-label"

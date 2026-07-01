@@ -87,7 +87,7 @@ async function carregarTrafos(page = 1) {
 
   const tbody = document.querySelector("#tabelaResultados tbody");
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Carregando...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Carregando...</td></tr>`;
 
   const paginationControlsContainer = document.getElementById(
     "paginationControlsContainer"
@@ -131,7 +131,7 @@ async function carregarTrafos(page = 1) {
     }
   } catch (error) {
     if (tbody)
-      tbody.innerHTML = safeHtml`<tr><td colspan="8" class="text-center text-danger py-4">Erro ao carregar dados: ${error.message}</td></tr>`;
+      tbody.innerHTML = safeHtml`<tr><td colspan="9" class="text-center text-danger py-4">Erro ao carregar dados: ${error.message}</td></tr>`;
     if (paginationInfoEl)
       paginationInfoEl.textContent = "Falha ao carregar dados";
   }
@@ -168,125 +168,122 @@ function renderizarControlesPaginacao(pagination) {
     return;
   }
 
-  const ul = document.createElement("ul");
-  ul.className = "pagination pagination-sm mb-0";
+  const wrapper = document.createElement("div");
+  wrapper.className = "d-flex align-items-center gap-2 flex-wrap";
 
-  const prevLi = document.createElement("li");
-  prevLi.className = `page-item ${currentPage === 1 ? "disabled" : ""}`;
-  const prevA = document.createElement("a");
-  prevA.className = "page-link";
-  prevA.href = "#";
-  prevA.innerHTML = "«";
-  prevA.setAttribute("aria-label", "Anterior");
-  prevA.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (currentPage > 1) {
-      carregarTrafos(currentPage - 1);
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.className = "btn btn-outline-secondary btn-sm";
+  prevBtn.textContent = "Prev";
+  prevBtn.disabled = currentPage <= 1;
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) carregarTrafos(currentPage - 1);
+  });
+
+  const pageLabel = document.createElement("span");
+  pageLabel.className = "small text-muted";
+  pageLabel.textContent = "Página";
+
+  const pageSelect = document.createElement("select");
+  pageSelect.className = "form-select form-select-sm";
+  pageSelect.style.width = "90px";
+  for (let i = 1; i <= totalPages; i += 1) {
+    const option = document.createElement("option");
+    option.value = String(i);
+    option.textContent = String(i);
+    option.selected = i === currentPage;
+    pageSelect.appendChild(option);
+  }
+  pageSelect.addEventListener("change", () => {
+    const selectedPage = parseInt(pageSelect.value, 10);
+    if (!Number.isNaN(selectedPage) && selectedPage !== currentPage) {
+      carregarTrafos(selectedPage);
     }
   });
-  prevLi.appendChild(prevA);
-  ul.appendChild(prevLi);
 
-  const maxPagesToShow = 5;
-  let startPage, endPage;
+  const totalLabel = document.createElement("span");
+  totalLabel.className = "small text-muted";
+  totalLabel.textContent = `de ${totalPages}`;
 
-  if (totalPages <= maxPagesToShow) {
-    startPage = 1;
-    endPage = totalPages;
-  } else {
-    if (currentPage <= Math.ceil(maxPagesToShow / 2)) {
-      startPage = 1;
-      endPage = maxPagesToShow;
-    } else if (currentPage + Math.floor(maxPagesToShow / 2) >= totalPages) {
-      startPage = totalPages - maxPagesToShow + 1;
-      endPage = totalPages;
-    } else {
-      startPage = currentPage - Math.floor(maxPagesToShow / 2);
-      endPage = currentPage + Math.floor(maxPagesToShow / 2);
-    }
-  }
-
-  if (startPage > 1) {
-    const firstPageLi = document.createElement("li");
-    firstPageLi.className = "page-item";
-    const firstPageA = document.createElement("a");
-    firstPageA.className = "page-link";
-    firstPageA.href = "#";
-    firstPageA.textContent = "1";
-    firstPageA.addEventListener("click", (e) => {
-      e.preventDefault();
-      carregarTrafos(1);
-    });
-    firstPageLi.appendChild(firstPageA);
-    ul.appendChild(firstPageLi);
-    if (startPage > 2) {
-      const ellipsisLi = document.createElement("li");
-      ellipsisLi.className = "page-item disabled";
-      ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
-      ul.appendChild(ellipsisLi);
-    }
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    const li = document.createElement("li");
-    li.className = `page-item ${i === currentPage ? "active" : ""}`;
-    const a = document.createElement("a");
-    a.className = "page-link";
-    a.href = "#";
-    a.textContent = i;
-    if (i !== currentPage) {
-      a.addEventListener(
-        "click",
-        ((pageNum) => (e) => {
-          e.preventDefault();
-          carregarTrafos(pageNum);
-        })(i)
-      );
-    }
-    li.appendChild(a);
-    ul.appendChild(li);
-  }
-
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
-      const ellipsisLi = document.createElement("li");
-      ellipsisLi.className = "page-item disabled";
-      ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
-      ul.appendChild(ellipsisLi);
-    }
-    const lastPageLi = document.createElement("li");
-    lastPageLi.className = "page-item";
-    const lastPageA = document.createElement("a");
-    lastPageA.className = "page-link";
-    lastPageA.href = "#";
-    lastPageA.textContent = totalPages;
-    lastPageA.addEventListener("click", (e) => {
-      e.preventDefault();
-      carregarTrafos(totalPages);
-    });
-    lastPageLi.appendChild(lastPageA);
-    ul.appendChild(lastPageLi);
-  }
-
-  const nextLi = document.createElement("li");
-  nextLi.className = `page-item ${
-    currentPage === totalPages ? "disabled" : ""
-  }`;
-  const nextA = document.createElement("a");
-  nextA.className = "page-link";
-  nextA.href = "#";
-  nextA.innerHTML = "»";
-  nextA.setAttribute("aria-label", "Próxima");
-  nextA.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (currentPage < totalPages) {
-      carregarTrafos(currentPage + 1);
-    }
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "btn btn-outline-secondary btn-sm";
+  nextBtn.textContent = "Next";
+  nextBtn.disabled = currentPage >= totalPages;
+  nextBtn.addEventListener("click", () => {
+    if (currentPage < totalPages) carregarTrafos(currentPage + 1);
   });
-  nextLi.appendChild(nextA);
-  ul.appendChild(nextLi);
 
-  container.appendChild(ul);
+  wrapper.appendChild(prevBtn);
+  wrapper.appendChild(pageLabel);
+  wrapper.appendChild(pageSelect);
+  wrapper.appendChild(totalLabel);
+  wrapper.appendChild(nextBtn);
+  container.appendChild(wrapper);
+}
+
+function formatarDataCurta(valor) {
+  if (!valor) return null;
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return null;
+  return data.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
+
+function temHistoricoAvaria(trafo) {
+  return trafo.tem_historico_avaria === 1 || trafo.tem_historico_avaria === true;
+}
+
+function renderOrigemContexto(trafo) {
+  const totalCiclos = Number(trafo.total_ciclos) || 1;
+  const dataAvaria = formatarDataCurta(trafo.data_entrada_avaria);
+
+  if (temHistoricoAvaria(trafo)) {
+    const motivo = trafo.motivo_avaria || "Não informado";
+    const local = trafo.local_retirada_avaria || "Não informado";
+    const regional = trafo.regional_avaria ? ` | ${trafo.regional_avaria}` : "";
+    const dataTxt = dataAvaria ? ` | Entrada: ${dataAvaria}` : "";
+    return {
+      badge: `<span class="badge bg-warning text-dark">Retorno pós-avaria</span>`,
+      detalhe: `${motivo} — ${local}${regional}${dataTxt}`,
+    };
+  }
+
+  if (totalCiclos > 1) {
+    return {
+      badge: `<span class="badge bg-info text-dark">Retorno de reforma</span>`,
+      detalhe: "Sem registro de avaria no almoxarifado",
+    };
+  }
+
+  return {
+    badge: `<span class="badge bg-secondary">1ª avaliação</span>`,
+    detalhe: "Sem registro de avaria anterior",
+  };
+}
+
+function renderContextoModal(trafo) {
+  const banner = document.getElementById("contextoAvariaBanner");
+  if (!banner) return;
+
+  const origem = renderOrigemContexto(trafo);
+  const totalCiclos = Number(trafo.total_ciclos) || 1;
+  const ultimaAvaliacao = formatarDataCurta(trafo.ultima_avaliacao_anterior);
+
+  banner.className = temHistoricoAvaria(trafo)
+    ? "alert alert-warning mb-3"
+    : totalCiclos > 1
+      ? "alert alert-info mb-3"
+      : "alert alert-secondary mb-3";
+  banner.classList.remove("d-none");
+
+  banner.innerHTML = safeHtml`
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      ${rawHtml(origem.badge)}
+      <span class="badge bg-dark">Ciclo ${totalCiclos}</span>
+      ${ultimaAvaliacao ? `<span class="small text-muted">Última avaliação: ${ultimaAvaliacao}</span>` : ""}
+    </div>
+    <div class="small mb-0">${origem.detalhe}</div>
+  `;
 }
 
 function preencherTabela(trafos) {
@@ -295,7 +292,7 @@ function preencherTabela(trafos) {
   tbody.innerHTML = "";
 
   if (!trafos || trafos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum transformador pendente encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4">Nenhum transformador pendente encontrado.</td></tr>`;
     return;
   }
 
@@ -308,13 +305,12 @@ function preencherTabela(trafos) {
         })
       : "-";
 
-    let ultimaAvaliacaoHtml = "Nenhuma";
-    if (trafo.ultima_avaliacao_anterior) {
-      const dataFormatada = new Date(
-        trafo.ultima_avaliacao_anterior
-      ).toLocaleDateString("pt-BR", { timeZone: "UTC" });
-      ultimaAvaliacaoHtml = `<span class="badge bg-warning text-dark">${dataFormatada}</span>`;
-    }
+    const origem = renderOrigemContexto(trafo);
+    const totalCiclos = Number(trafo.total_ciclos) || 1;
+    const cicloHtml =
+      totalCiclos > 1
+        ? `<span class="badge bg-dark">${totalCiclos}º ciclo</span>`
+        : `<span class="badge bg-light text-dark">1º ciclo</span>`;
 
     const actionButtonsHtml = `
         <button data-action="abrirModalAvaliacao" data-id="${trafo.id}" 
@@ -334,9 +330,15 @@ function preencherTabela(trafos) {
       <td data-label="Nº de Série">${trafo.numero_serie}</td>
       <td data-label="Fabricante">${trafo.fabricante || "-"}</td>
       <td data-label="Potência">${trafo.pot || "-"}</td>
+      <td data-label="Origem / Contexto">
+        <div class="d-flex flex-column gap-1">
+          ${rawHtml(origem.badge)}
+          <small class="text-muted">${origem.detalhe}</small>
+        </div>
+      </td>
       <td data-label="Data Importação">${dataImportacao}</td>
       <td data-label="Status"><span class="badge ${statusClass}">${statusText}</span></td>
-      <td data-label="Última Avaliação">${rawHtml(ultimaAvaliacaoHtml)}</td>
+      <td data-label="Ciclo">${rawHtml(cicloHtml)}</td>
       <td data-label="Ações" class="text-center">
         <div class="d-flex gap-1 justify-content-center">
           ${rawHtml(actionButtonsHtml)}
@@ -441,6 +443,11 @@ function resetChecklistModal() {
   fileList = [];
   document.getElementById("anexosInput").value = "";
   renderPreviews();
+  const banner = document.getElementById("contextoAvariaBanner");
+  if (banner) {
+    banner.className = "alert d-none mb-3";
+    banner.innerHTML = "";
+  }
 }
 
 window.abrirModalAvaliacao = async function (id) {
@@ -456,6 +463,8 @@ window.abrirModalAvaliacao = async function (id) {
       document.getElementById("fabricanteModal").value =
         trafo.fabricante || "-";
       document.getElementById("potenciaModal").value = trafo.pot || "-";
+
+      renderContextoModal(trafo);
 
       const statusSelect = document.getElementById("statusAvaliacao");
       statusSelect.value = "";

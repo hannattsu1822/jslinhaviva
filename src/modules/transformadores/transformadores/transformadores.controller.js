@@ -7,9 +7,14 @@ async function uploadPlanilha(req, res) {
       .json({ success: false, message: "Nenhum arquivo enviado!" });
   }
   try {
-    const results = await service.processarUploadPlanilha(req.file.path);
+    const dryRun = String(req.query.dryRun || "").toLowerCase() === "true";
+    const results = await service.processarUploadPlanilha(req.file.path, {
+      dryRun,
+    });
 
-    let feedbackMessage = `Importação concluída. Processadas ${results.total_rows} linhas.`;
+    let feedbackMessage = dryRun
+      ? `Simulação concluída. Processadas ${results.total_rows} linhas (nenhuma alteração foi gravada).`
+      : `Importação concluída. Processadas ${results.total_rows} linhas.`;
     if (results.new_trafos_imported > 0)
       feedbackMessage += ` ${results.new_trafos_imported} novos transformadores cadastrados.`;
     if (results.trafos_updated > 0)
@@ -20,10 +25,11 @@ async function uploadPlanilha(req, res) {
       feedbackMessage += ` ${results.failed_rows} linhas falharam.`;
 
     res.json({
-      success:
-        results.failed_rows < results.total_rows ||
-        results.new_trafos_imported > 0 ||
-        results.checklists_imported > 0,
+      success: dryRun
+        ? true
+        : results.failed_rows < results.total_rows ||
+          results.new_trafos_imported > 0 ||
+          results.checklists_imported > 0,
       message: feedbackMessage,
       data: results,
     });
@@ -54,8 +60,27 @@ async function listarSupervisores(req, res) {
   }
 }
 
+async function obterHistoricoUnificadoPorSerie(req, res) {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const data = await service.obterHistoricoUnificadoPorSerie(req.params.numero_serie, {
+      page,
+      limit,
+    });
+    res.json({ success: true, data });
+  } catch (error) {
+    const statusCode = error.message.includes("obrigatório") ? 400 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || "Erro ao buscar histórico unificado.",
+    });
+  }
+}
+
 module.exports = {
   uploadPlanilha,
   listarResponsaveis,
   listarSupervisores,
+  obterHistoricoUnificadoPorSerie,
 };

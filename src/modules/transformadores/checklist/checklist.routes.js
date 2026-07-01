@@ -10,6 +10,12 @@ router.get(
   controller.listarTrafosSemChecklist
 );
 router.get(
+  "/api/transformadores_avariados_pendentes",
+  autenticar,
+  verificarNivel(3),
+  controller.listarAvariadosPendentes
+);
+router.get(
   "/api/trafos_da_remessa_para_checklist_v2",
   autenticar,
   verificarNivel(3),

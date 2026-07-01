@@ -180,125 +180,58 @@ function renderizarControlesPaginacao(pagination) {
     return;
   }
 
-  const ul = document.createElement("ul");
-  ul.className = "pagination pagination-sm mb-0";
+  const wrapper = document.createElement("div");
+  wrapper.className = "d-flex align-items-center gap-2 flex-wrap";
 
-  const prevLi = document.createElement("li");
-  prevLi.className = `page-item ${currentPage === 1 ? "disabled" : ""}`;
-  const prevA = document.createElement("a");
-  prevA.className = "page-link";
-  prevA.href = "#";
-  prevA.innerHTML = "«";
-  prevA.setAttribute("aria-label", "Anterior");
-  prevA.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (currentPage > 1) {
-      buscarChecklistsAvaliados(currentPage - 1);
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.className = "btn btn-outline-secondary btn-sm";
+  prevBtn.textContent = "Prev";
+  prevBtn.disabled = currentPage <= 1;
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) buscarChecklistsAvaliados(currentPage - 1);
+  });
+
+  const pageLabel = document.createElement("span");
+  pageLabel.className = "small text-muted";
+  pageLabel.textContent = "Página";
+
+  const pageSelect = document.createElement("select");
+  pageSelect.className = "form-select form-select-sm";
+  pageSelect.style.width = "90px";
+  for (let i = 1; i <= totalPages; i += 1) {
+    const option = document.createElement("option");
+    option.value = String(i);
+    option.textContent = String(i);
+    option.selected = i === currentPage;
+    pageSelect.appendChild(option);
+  }
+  pageSelect.addEventListener("change", () => {
+    const selectedPage = parseInt(pageSelect.value, 10);
+    if (!Number.isNaN(selectedPage) && selectedPage !== currentPage) {
+      buscarChecklistsAvaliados(selectedPage);
     }
   });
-  prevLi.appendChild(prevA);
-  ul.appendChild(prevLi);
 
-  const maxPagesToShow = 5;
-  let startPage, endPage;
+  const totalLabel = document.createElement("span");
+  totalLabel.className = "small text-muted";
+  totalLabel.textContent = `de ${totalPages}`;
 
-  if (totalPages <= maxPagesToShow) {
-    startPage = 1;
-    endPage = totalPages;
-  } else {
-    if (currentPage <= Math.ceil(maxPagesToShow / 2)) {
-      startPage = 1;
-      endPage = maxPagesToShow;
-    } else if (currentPage + Math.floor(maxPagesToShow / 2) >= totalPages) {
-      startPage = totalPages - maxPagesToShow + 1;
-      endPage = totalPages;
-    } else {
-      startPage = currentPage - Math.floor(maxPagesToShow / 2);
-      endPage = currentPage + Math.floor(maxPagesToShow / 2);
-    }
-  }
-
-  if (startPage > 1) {
-    const firstPageLi = document.createElement("li");
-    firstPageLi.className = "page-item";
-    const firstPageA = document.createElement("a");
-    firstPageA.className = "page-link";
-    firstPageA.href = "#";
-    firstPageA.textContent = "1";
-    firstPageA.addEventListener("click", (e) => {
-      e.preventDefault();
-      buscarChecklistsAvaliados(1);
-    });
-    firstPageLi.appendChild(firstPageA);
-    ul.appendChild(firstPageLi);
-    if (startPage > 2) {
-      const ellipsisLi = document.createElement("li");
-      ellipsisLi.className = "page-item disabled";
-      ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
-      ul.appendChild(ellipsisLi);
-    }
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    const li = document.createElement("li");
-    li.className = `page-item ${i === currentPage ? "active" : ""}`;
-    const a = document.createElement("a");
-    a.className = "page-link";
-    a.href = "#";
-    a.textContent = i;
-    if (i !== currentPage) {
-      a.addEventListener(
-        "click",
-        ((pageNum) => (e) => {
-          e.preventDefault();
-          buscarChecklistsAvaliados(pageNum);
-        })(i)
-      );
-    }
-    li.appendChild(a);
-    ul.appendChild(li);
-  }
-
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
-      const ellipsisLi = document.createElement("li");
-      ellipsisLi.className = "page-item disabled";
-      ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
-      ul.appendChild(ellipsisLi);
-    }
-    const lastPageLi = document.createElement("li");
-    lastPageLi.className = "page-item";
-    const lastPageA = document.createElement("a");
-    lastPageA.className = "page-link";
-    lastPageA.href = "#";
-    lastPageA.textContent = totalPages;
-    lastPageA.addEventListener("click", (e) => {
-      e.preventDefault();
-      buscarChecklistsAvaliados(totalPages);
-    });
-    lastPageLi.appendChild(lastPageA);
-    ul.appendChild(lastPageLi);
-  }
-
-  const nextLi = document.createElement("li");
-  nextLi.className = `page-item ${
-    currentPage === totalPages ? "disabled" : ""
-  }`;
-  const nextA = document.createElement("a");
-  nextA.className = "page-link";
-  nextA.href = "#";
-  nextA.innerHTML = "»";
-  nextA.setAttribute("aria-label", "Próxima");
-  nextA.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (currentPage < totalPages) {
-      buscarChecklistsAvaliados(currentPage + 1);
-    }
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "btn btn-outline-secondary btn-sm";
+  nextBtn.textContent = "Next";
+  nextBtn.disabled = currentPage >= totalPages;
+  nextBtn.addEventListener("click", () => {
+    if (currentPage < totalPages) buscarChecklistsAvaliados(currentPage + 1);
   });
-  nextLi.appendChild(nextA);
-  ul.appendChild(nextLi);
 
-  container.appendChild(ul);
+  wrapper.appendChild(prevBtn);
+  wrapper.appendChild(pageLabel);
+  wrapper.appendChild(pageSelect);
+  wrapper.appendChild(totalLabel);
+  wrapper.appendChild(nextBtn);
+  container.appendChild(wrapper);
 }
 
 function preencherTabela(trafos) {

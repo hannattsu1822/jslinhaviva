@@ -43,6 +43,14 @@ router.get(
     );
   }
 );
+router.get(
+  "/avariados_pendentes",
+  autenticar,
+  verificarNivel(3),
+  (req, res) => {
+    res.sendFile(publicPage("trafos/avariados_pendentes.html"));
+  }
+);
 // ESTA É A ROTA QUE FALTAVA
 router.get("/relatorio_formulario", (req, res) => {
   res.sendFile(

@@ -31,6 +31,28 @@ async function listarTrafosSemChecklist(req, res) {
   }
 }
 
+async function listarAvariadosPendentes(req, res) {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 15;
+    const numero_serie = req.query.numero_serie || "";
+    const result = await service.listarAvariadosPendentes({
+      page,
+      limit,
+      numero_serie,
+    });
+    res.status(200).json({
+      success: true,
+      data: result.items,
+      pagination: result.pagination,
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ success: false, message: "Erro ao buscar avariados pendentes!" });
+  }
+}
+
 async function listarTrafosDaRemessa(req, res) {
   try {
     const { dataRemessaInicial, dataRemessaFinal } = req.query;
@@ -141,11 +163,17 @@ async function excluirChecklist(req, res) {
 
 async function filtrarChecklists(req, res) {
   try {
-    const checklists = await service.filtrarChecklists(req.body);
-    res.status(200).json(checklists);
+    const result = await service.filtrarChecklists(req.body);
+    res.status(200).json({
+      success: true,
+      data: result.items,
+      pagination: result.pagination,
+    });
   } catch (err) {
     console.error("Erro ao filtrar checklists:", err);
-    res.status(500).json({ message: "Erro ao filtrar checklists" });
+    res
+      .status(500)
+      .json({ success: false, message: "Erro ao filtrar checklists" });
   }
 }
 
@@ -204,6 +232,7 @@ async function gerarPdfTabela(req, res) {
 
 module.exports = {
   listarTrafosSemChecklist,
+  listarAvariadosPendentes,
   listarTrafosDaRemessa,
   obterHistoricoRemessas,
   salvarChecklist,

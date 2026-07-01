@@ -2,6 +2,9 @@
 
 let accessDeniedModalInstance;
 let developmentModalInstance;
+let currentPage = 1;
+const itemsPerPage = 15;
+let filtrosAtuais = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   if (
@@ -26,9 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const dataFinalInput = document.getElementById("dataFinal");
   if (dataFinalInput) dataFinalInput.value = hojeFormatada;
 
-  const filtrosIniciais = { dataFinal: hojeFormatada };
-  buscarTransformadores(filtrosIniciais)
-    .then((dados) => exibirResultados(dados))
+  filtrosAtuais = { dataFinal: hojeFormatada };
+  buscarTransformadores(filtrosAtuais, { page: 1 })
+    .then((resultado) =>
+      exibirResultados(resultado.data, resultado.pagination, filtrosAtuais)
+    )
     .catch((err) => {
       mostrarErro("Erro ao carregar dados iniciais");
     });
@@ -37,14 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (filtroFormEl) {
     filtroFormEl.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const filtros = {
-        numero_serie: document.getElementById("numero_serie").value.trim(),
-        matricula_responsavel: document
-          .getElementById("matricula_responsavel")
-          .value.trim(),
-        dataInicial: document.getElementById("dataInicial").value,
-        dataFinal: document.getElementById("dataFinal").value,
-      };
+      const filtros = getFiltrosForm();
       if (
         !filtros.numero_serie &&
         !filtros.matricula_responsavel &&
@@ -62,8 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
         mostrarErro("A data final deve ser maior ou igual à data inicial");
         return;
       }
-      const dados = await buscarTransformadores(filtros);
-      exibirResultados(dados);
+      filtrosAtuais = { ...filtros };
+      currentPage = 1;
+      const resultado = await buscarTransformadores(filtrosAtuais, { page: 1 });
+      exibirResultados(resultado.data, resultado.pagination, filtrosAtuais);
     });
   }
 
@@ -149,7 +149,18 @@ function toggleLoading(mostrar) {
   }
 }
 
-async function buscarTransformadores(filtros) {
+function getFiltrosForm() {
+  return {
+    numero_serie: document.getElementById("numero_serie").value.trim(),
+    matricula_responsavel: document
+      .getElementById("matricula_responsavel")
+      .value.trim(),
+    dataInicial: document.getElementById("dataInicial").value,
+    dataFinal: document.getElementById("dataFinal").value,
+  };
+}
+
+async function buscarTransformadores(filtros, { page = 1, limit = itemsPerPage } = {}) {
   toggleLoading(true);
   const errorMsgEl = document.getElementById("errorMessage");
   if (errorMsgEl) errorMsgEl.style.display = "none";
@@ -158,20 +169,138 @@ async function buscarTransformadores(filtros) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(filtros),
+      body: JSON.stringify({ ...filtros, page, limit }),
     });
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || "Erro ao buscar transformadores");
     }
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    const payload = await response.json();
+    if (Array.isArray(payload)) {
+      return {
+        data: payload,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: payload.length,
+          itemsPerPage: payload.length || itemsPerPage,
+          hasPrev: false,
+          hasNext: false,
+        },
+      };
+    }
+    return {
+      data: Array.isArray(payload?.data) ? payload.data : [],
+      pagination: payload?.pagination || {
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: limit,
+        hasPrev: false,
+        hasNext: false,
+      },
+    };
   } catch (error) {
     mostrarErro("Erro ao buscar transformadores: " + error.message);
-    return [];
+    return {
+      data: [],
+      pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: limit,
+        hasPrev: false,
+        hasNext: false,
+      },
+    };
   } finally {
     toggleLoading(false);
   }
+}
+
+function renderizarInfoPaginacao(pagination) {
+  const infoEl = document.getElementById("paginationInfo");
+  if (!infoEl) return;
+  const total = Number(pagination?.totalItems || 0);
+  const page = Number(pagination?.currentPage || 1);
+  const perPage = Number(pagination?.itemsPerPage || itemsPerPage);
+  if (!total) {
+    infoEl.textContent = "Mostrando 0 itens";
+    return;
+  }
+  const start = (page - 1) * perPage + 1;
+  const end = Math.min(start + perPage - 1, total);
+  infoEl.textContent = `Mostrando ${start}-${end} de ${total} itens`;
+}
+
+function renderizarControlesPaginacao(pagination, filtros) {
+  const container = document.getElementById("paginationControlsContainer");
+  if (!container) return;
+  container.innerHTML = "";
+  const page = Number(pagination?.currentPage || 1);
+  const totalPages = Number(pagination?.totalPages || 1);
+  if (totalPages <= 1) return;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "d-flex align-items-center gap-2 flex-wrap";
+
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.className = "btn btn-outline-secondary btn-sm";
+  prevBtn.textContent = "Prev";
+  prevBtn.disabled = page <= 1;
+  prevBtn.addEventListener("click", async () => {
+    if (page <= 1) return;
+    await carregarPagina(filtros, page - 1);
+  });
+
+  const pageLabel = document.createElement("span");
+  pageLabel.className = "small text-muted";
+  pageLabel.textContent = "Página";
+
+  const pageSelect = document.createElement("select");
+  pageSelect.className = "form-select form-select-sm";
+  pageSelect.style.width = "90px";
+  for (let i = 1; i <= totalPages; i += 1) {
+    const option = document.createElement("option");
+    option.value = String(i);
+    option.textContent = String(i);
+    option.selected = i === page;
+    pageSelect.appendChild(option);
+  }
+  pageSelect.addEventListener("change", async () => {
+    const selectedPage = parseInt(pageSelect.value, 10);
+    if (!Number.isNaN(selectedPage) && selectedPage !== page) {
+      await carregarPagina(filtros, selectedPage);
+    }
+  });
+
+  const totalLabel = document.createElement("span");
+  totalLabel.className = "small text-muted";
+  totalLabel.textContent = `de ${totalPages}`;
+
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "btn btn-outline-secondary btn-sm";
+  nextBtn.textContent = "Next";
+  nextBtn.disabled = page >= totalPages;
+  nextBtn.addEventListener("click", async () => {
+    if (page >= totalPages) return;
+    await carregarPagina(filtros, page + 1);
+  });
+
+  wrapper.appendChild(prevBtn);
+  wrapper.appendChild(pageLabel);
+  wrapper.appendChild(pageSelect);
+  wrapper.appendChild(totalLabel);
+  wrapper.appendChild(nextBtn);
+  container.appendChild(wrapper);
+}
+
+async function carregarPagina(filtros, page) {
+  currentPage = page;
+  const resultado = await buscarTransformadores(filtros, { page: currentPage });
+  exibirResultados(resultado.data, resultado.pagination, filtros);
 }
 
 function formatarData(dataString) {
@@ -206,22 +335,7 @@ async function gerarPDFTabela() {
   btnPDF.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
   btnPDF.disabled = true;
   try {
-    const dados = [];
-    const rows = document.querySelectorAll(
-      "#resultadosBody tr:not(#semResultados)"
-    );
-    rows.forEach((row) => {
-      if (row.id === "semResultados" || row.cells.length < 7) return;
-      dados.push({
-        id: row.cells[0].textContent.trim(),
-        numero_serie: row.cells[1].textContent.trim(),
-        potencia: row.cells[2].textContent.trim(),
-        marca: row.cells[3].textContent.trim(),
-        data_formulario: row.cells[4].textContent.trim(),
-        responsavel: row.cells[5].textContent.trim(),
-        destinado: row.cells[6].textContent.trim(),
-      });
-    });
+    const dados = await buscarTodosResultadosParaPdf();
     if (dados.length === 0) {
       throw new Error("Nenhum dado para gerar PDF. Aplique os filtros e aguarde os resultados.");
     }
@@ -262,6 +376,22 @@ async function gerarPDFTabela() {
     btnPDF.innerHTML = originalHTML;
     btnPDF.disabled = false;
   }
+}
+
+async function buscarTodosResultadosParaPdf() {
+  const resultados = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const resultado = await buscarTransformadores(filtrosAtuais, {
+      page,
+      limit: 100,
+    });
+    resultados.push(...(resultado.data || []));
+    totalPages = Number(resultado.pagination?.totalPages || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 200);
+  return resultados;
 }
 
 window.gerarPDF = async function gerarPDF(id, button) {
@@ -323,7 +453,7 @@ window.gerarPDF = async function gerarPDF(id, button) {
   }
 };
 
-function exibirResultados(dados) {
+function exibirResultados(dados, pagination = {}, filtros = {}) {
   const tbody = document.getElementById("resultadosBody");
   const contadorEl = document.getElementById("contadorResultados");
   const infoFiltrosEl = document.getElementById("infoFiltros");
@@ -342,6 +472,8 @@ function exibirResultados(dados) {
     tbody.appendChild(tr);
     contadorEl.textContent = "0 resultados encontrados";
     infoFiltrosEl.textContent = "Filtros aplicados: Nenhum ou sem resultados.";
+    renderizarInfoPaginacao(pagination);
+    renderizarControlesPaginacao(pagination, filtros);
     return;
   }
 
@@ -367,6 +499,9 @@ function exibirResultados(dados) {
           </button>
           <button data-action="abrirRelatorio" data-target="${item.id}" class="btn btn-sm btn-success glass-btn" title="Relatório">
             <i class="fas fa-file-alt"></i>
+          </button>
+          <button data-action="navigate" data-href="/transformadores/historico/${item.numero_serie}" class="btn btn-sm btn-info glass-btn" title="Histórico unificado">
+            <i class="fas fa-history"></i>
           </button>
           <button data-action="gerarPDF" data-target="${item.id}" class="btn btn-sm btn-pdf glass-btn" title="Gerar PDF">
             <i class="fas fa-file-pdf"></i>
@@ -407,6 +542,8 @@ function exibirResultados(dados) {
   infoFiltrosEl.textContent = algumFiltro
     ? infoFiltrosTxt.trim().slice(0, -1)
     : "Filtros: Nenhum filtro ativo.";
+  renderizarInfoPaginacao(pagination);
+  renderizarControlesPaginacao(pagination, filtros);
 }
 
 window.excluirTransformador = async function excluirTransformador(id) {
@@ -423,15 +560,10 @@ window.excluirTransformador = async function excluirTransformador(id) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Erro ao excluir transformador");
       }
-      const filtros = {
-        numero_serie: document.getElementById("numero_serie").value,
-        matricula_responsavel: document.getElementById("matricula_responsavel")
-          .value,
-        dataInicial: document.getElementById("dataInicial").value,
-        dataFinal: document.getElementById("dataFinal").value,
-      };
-      const dados = await buscarTransformadores(filtros);
-      exibirResultados(dados);
+      const resultado = await buscarTransformadores(filtrosAtuais, {
+        page: currentPage,
+      });
+      exibirResultados(resultado.data, resultado.pagination, filtrosAtuais);
       alert("Checklist de transformador excluído com sucesso!");
     } catch (error) {
       mostrarErro(error.message || "Erro ao excluir checklist");

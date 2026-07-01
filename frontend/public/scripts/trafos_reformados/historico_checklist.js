@@ -1,3 +1,5 @@
+const PAGE_LIMIT = 10;
+
 document.addEventListener("DOMContentLoaded", async () => {
   const pathParts = window.location.pathname.split("/");
   const numeroSerie = decodeURIComponent(pathParts[pathParts.length - 1]);
@@ -9,29 +11,53 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const historyListEl = document.getElementById("checklistHistoryList");
+  const unifiedTimelineEl = document.getElementById("unifiedHistoryTimeline");
   const trafoNumeroSerieEl = document.getElementById("trafoNumeroSerie");
+  const btnGerarPDFLista = document.getElementById("btnGerarPDFLista");
+  const state = {
+    numeroSerie,
+    checklistPage: 1,
+    unifiedPage: 1,
+    currentChecklists: [],
+  };
 
   trafoNumeroSerieEl.textContent = numeroSerie;
   historyListEl.innerHTML = '<div class="list-group-item">Carregando...</div>';
+  if (unifiedTimelineEl) {
+    unifiedTimelineEl.innerHTML = '<div class="list-group-item">Carregando...</div>';
+  }
+
+  document
+    .getElementById("btnUnifiedPrev")
+    .addEventListener("click", () => carregarHistoricoUnificado(state, -1));
+  document
+    .getElementById("btnUnifiedNext")
+    .addEventListener("click", () => carregarHistoricoUnificado(state, 1));
+  document
+    .getElementById("btnChecklistPrev")
+    .addEventListener("click", () => carregarHistoricoChecklist(state, -1));
+  document
+    .getElementById("btnChecklistNext")
+    .addEventListener("click", () => carregarHistoricoChecklist(state, 1));
+  btnGerarPDFLista.addEventListener("click", async () => {
+    try {
+      const todosChecklists = await carregarTodosChecklists(numeroSerie);
+      gerarPDFLista(todosChecklists, { numero_serie: numeroSerie });
+    } catch (error) {
+      alert("Erro ao preparar PDF da lista: " + error.message);
+    }
+  });
 
   try {
-    const historyResponse = await fazerRequisicao(
-      `/api/historico_por_serie/${numeroSerie}`
-    );
-
-    if (!historyResponse.success) {
-      throw new Error(historyResponse.message);
-    }
-
-    const checklists = historyResponse.data;
-    renderHistoryList(checklists);
-
-    const btnGerarPDFLista = document.getElementById("btnGerarPDFLista");
-    btnGerarPDFLista.addEventListener("click", () =>
-      gerarPDFLista(checklists, { numero_serie: numeroSerie })
-    );
+    await Promise.all([
+      carregarHistoricoUnificado(state, 0),
+      carregarHistoricoChecklist(state, 0),
+    ]);
   } catch (error) {
     historyListEl.innerHTML = safeHtml`<div class="list-group-item text-danger">Erro ao carregar: ${error.message}</div>`;
+    if (unifiedTimelineEl) {
+      unifiedTimelineEl.innerHTML = safeHtml`<div class="list-group-item text-danger">Erro ao carregar histórico unificado: ${error.message}</div>`;
+    }
   }
 });
 
@@ -70,16 +96,101 @@ async function fazerRequisicao(url, options = {}) {
   }
 }
 
+async function carregarHistoricoChecklist(state, pageDelta = 0) {
+  const nextPage = Math.max(1, state.checklistPage + pageDelta);
+  const historyResponse = await fazerRequisicao(
+    `/api/historico_por_serie/${encodeURIComponent(
+      state.numeroSerie
+    )}?page=${nextPage}&limit=${PAGE_LIMIT}`
+  );
+  if (!historyResponse?.success) {
+    throw new Error(historyResponse?.message || "Falha ao carregar histórico.");
+  }
+
+  state.checklistPage = nextPage;
+  state.currentChecklists = Array.isArray(historyResponse.data)
+    ? historyResponse.data
+    : [];
+  renderHistoryList(state.currentChecklists);
+  atualizarPaginacaoChecklist(historyResponse.pagination);
+}
+
+async function carregarTodosChecklists(numeroSerie) {
+  const todos = [];
+  let page = 1;
+  let hasNext = true;
+
+  while (hasNext && page <= 200) {
+    const response = await fazerRequisicao(
+      `/api/historico_por_serie/${encodeURIComponent(
+        numeroSerie
+      )}?page=${page}&limit=100`
+    );
+    if (!response?.success) {
+      throw new Error(response?.message || "Falha ao carregar checklists.");
+    }
+    todos.push(...(Array.isArray(response.data) ? response.data : []));
+    hasNext = Boolean(response.pagination?.has_next);
+    page += 1;
+  }
+
+  return todos;
+}
+
+async function carregarHistoricoUnificado(state, pageDelta = 0) {
+  const nextPage = Math.max(1, state.unifiedPage + pageDelta);
+  const unifiedResponse = await fazerRequisicao(
+    `/api/transformadores/historico-unificado/${encodeURIComponent(
+      state.numeroSerie
+    )}?page=${nextPage}&limit=${PAGE_LIMIT}`
+  );
+  if (!unifiedResponse?.success) {
+    throw new Error(
+      unifiedResponse?.message || "Falha ao carregar histórico unificado."
+    );
+  }
+
+  state.unifiedPage = nextPage;
+  renderUnifiedTimeline(unifiedResponse.data);
+  atualizarPaginacaoUnificada(unifiedResponse.data?.pagination);
+}
+
+function atualizarPaginacaoChecklist(pagination = {}) {
+  const infoEl = document.getElementById("checklistPaginationInfo");
+  const prevBtn = document.getElementById("btnChecklistPrev");
+  const nextBtn = document.getElementById("btnChecklistNext");
+  const page = Number(pagination.page || 1);
+  const totalPages = Number(pagination.total_pages || 1);
+  const totalItems = Number(pagination.total_items || 0);
+  infoEl.textContent = `Página ${page} de ${totalPages} • ${totalItems} item(ns)`;
+  prevBtn.disabled = !pagination.has_prev;
+  nextBtn.disabled = !pagination.has_next;
+}
+
+function atualizarPaginacaoUnificada(pagination = {}) {
+  const infoEl = document.getElementById("unifiedPaginationInfo");
+  const prevBtn = document.getElementById("btnUnifiedPrev");
+  const nextBtn = document.getElementById("btnUnifiedNext");
+  const page = Number(pagination.page || 1);
+  const totalPages = Number(pagination.total_pages || 1);
+  const totalItems = Number(pagination.total_items || 0);
+  infoEl.textContent = `Página ${page} de ${totalPages} • ${totalItems} evento(s)`;
+  prevBtn.disabled = !pagination.has_prev;
+  nextBtn.disabled = !pagination.has_next;
+}
+
 function renderHistoryList(checklists) {
   const historyListEl = document.getElementById("checklistHistoryList");
+  const btnGerarPDFLista = document.getElementById("btnGerarPDFLista");
   historyListEl.innerHTML = "";
 
   if (checklists.length === 0) {
     historyListEl.innerHTML =
       '<div class="list-group-item text-center p-4">Nenhuma avaliação encontrada para este transformador.</div>';
-    document.getElementById("btnGerarPDFLista").disabled = true;
+    btnGerarPDFLista.disabled = true;
     return;
   }
+  btnGerarPDFLista.disabled = false;
 
   checklists.forEach((checklist) => {
     const item = document.createElement("div");
@@ -118,6 +229,84 @@ function renderHistoryList(checklists) {
 
     historyListEl.appendChild(item);
   });
+}
+
+function renderUnifiedTimeline(data) {
+  const unifiedTimelineEl = document.getElementById("unifiedHistoryTimeline");
+  if (!unifiedTimelineEl) return;
+
+  const eventos = Array.isArray(data?.eventos) ? data.eventos : [];
+  unifiedTimelineEl.innerHTML = "";
+
+  if (!eventos.length) {
+    unifiedTimelineEl.innerHTML =
+      '<div class="list-group-item text-center p-4">Nenhum evento encontrado para esta série.</div>';
+    return;
+  }
+
+  eventos.forEach((evento) => {
+    const item = document.createElement("div");
+    item.className = "list-group-item";
+
+    const dataEvento = evento.data_evento
+      ? new Date(evento.data_evento).toLocaleString("pt-BR")
+      : "Data não informada";
+    const tipo = formatEventType(evento.tipo);
+    const detalhes = formatEventDetails(evento.detalhes || {});
+
+    item.innerHTML = safeHtml`
+      <div class="d-flex w-100 justify-content-between align-items-start gap-2">
+        <div>
+          <h6 class="mb-1">${evento.titulo || "Evento"}</h6>
+          <small class="text-muted">${tipo} • ${dataEvento}</small>
+          <div class="mt-2">${rawHtml(detalhes)}</div>
+        </div>
+      </div>
+    `;
+    unifiedTimelineEl.appendChild(item);
+  });
+}
+
+function formatEventType(tipo) {
+  const map = {
+    cadastro_transformador: "Cadastro",
+    movimentacao_almoxarifado: "Movimentação",
+    remessa_almoxarifado: "Remessa",
+    ciclo_reformado: "Ciclo Reformado",
+    avaliacao_reformado: "Avaliação Reformado",
+    checklist_transformador: "Checklist Transformador",
+  };
+  return map[tipo] || tipo || "Evento";
+}
+
+function formatEventDetails(details) {
+  const entries = Object.entries(details).filter(
+    ([, value]) => value !== null && value !== undefined && String(value).trim() !== ""
+  );
+  if (!entries.length) return "<small class=\"text-muted\">Sem detalhes.</small>";
+
+  return `<ul class="mb-0 ps-3">${entries
+    .slice(0, 8)
+    .map(
+      ([key, value]) =>
+        `<li><small><strong>${escapeLabel(key)}:</strong> ${escapeValue(value)}</small></li>`
+    )
+    .join("")}</ul>`;
+}
+
+function escapeLabel(value) {
+  return String(value)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function escapeValue(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 async function gerarPDFChecklistEspecifico(checklistData) {

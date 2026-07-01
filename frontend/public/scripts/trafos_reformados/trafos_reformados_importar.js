@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileNameDisplay = document.getElementById("fileName");
   const dropArea = document.getElementById("dropArea");
   const submitBtn = document.getElementById("submitBtn");
+  const previewBtn = document.getElementById("previewBtn");
   const messageArea = document.getElementById("messageArea");
   const form = document.getElementById("uploadForm");
 
@@ -53,44 +54,74 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (form && submitBtn) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!fileInput || !fileInput.files.length) {
-        showError("Por favor, selecione um arquivo para enviar.");
-        return;
-      }
+  async function enviarImportacao({ dryRun }) {
+    if (!fileInput || !fileInput.files.length) {
+      showError("Por favor, selecione um arquivo para enviar.");
+      return;
+    }
 
-      const originalSubmitBtnHTML = submitBtn.innerHTML;
+    const originalSubmitBtnHTML = submitBtn ? submitBtn.innerHTML : "";
+    const originalPreviewBtnHTML = previewBtn ? previewBtn.innerHTML : "";
+    if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.innerHTML =
         '<i class="fas fa-spinner fa-spin me-2"></i> Processando...';
-      clearMessage();
+    }
+    if (previewBtn) {
+      previewBtn.disabled = true;
+      previewBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin me-2"></i> Simulando...';
+    }
+    clearMessage();
 
-      try {
-        const formData = new FormData(form);
-        const response = await fetch("/api/importar_trafos_reformados", {
-          method: "POST",
-          body: formData,
-          credentials: "same-origin",
-        });
+    try {
+      const formData = new FormData(form);
+      const url = dryRun
+        ? "/api/importar_trafos_reformados?dryRun=true"
+        : "/api/importar_trafos_reformados";
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
 
-        const result = await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-          throw new Error(result.message || "Erro ao processar a planilha");
-        }
-        showSuccess(result);
+      if (!response.ok) {
+        throw new Error(result.message || "Erro ao processar a planilha");
+      }
+      showSuccess(result);
+
+      if (!dryRun) {
         form.reset();
         if (fileNameDisplay)
           fileNameDisplay.textContent = "Nenhum arquivo selecionado";
         if (dropArea) dropArea.classList.remove("has-file");
-      } catch (error) {
-        showError(error.message);
-      } finally {
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalSubmitBtnHTML;
       }
+      if (previewBtn) {
+        previewBtn.disabled = false;
+        previewBtn.innerHTML = originalPreviewBtnHTML;
+      }
+    }
+  }
+
+  if (form && submitBtn) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await enviarImportacao({ dryRun: false });
+    });
+  }
+
+  if (previewBtn) {
+    previewBtn.addEventListener("click", async () => {
+      await enviarImportacao({ dryRun: true });
     });
   }
 });
@@ -126,6 +157,30 @@ function showSuccess(result) {
             }</strong>
           </div>
           <div class="d-flex justify-content-between mb-2">
+            <span>Retorno pós-avaria (com histórico de avaria):</span>
+            <strong class="text-warning">${
+              result.retorno_pos_avaria !== undefined ? result.retorno_pos_avaria : 0
+            }</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Retorno de reforma (sem avaria registrada):</span>
+            <strong class="text-info">${
+              result.retorno_reforma !== undefined ? result.retorno_reforma : 0
+            }</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>1ª avaliação (série nova no módulo):</span>
+            <strong class="text-secondary">${
+              result.primeira_avaliacao !== undefined ? result.primeira_avaliacao : 0
+            }</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Ignorados (já pendente):</span>
+            <strong class="text-muted">${
+              result.skipped !== undefined ? result.skipped : 0
+            }</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
             <span>Falhas na importação (linhas não importadas):</span>
             <strong class="text-danger">${
               result.failed !== undefined ? result.failed : "N/A"
@@ -154,13 +209,34 @@ function showSuccess(result) {
             </div>`;
   }
 
-  messageArea.innerHTML = safeHtml`
+  let skippedDetailSection = "";
+  if (result.skipped_details && result.skipped_details.length > 0) {
+    skippedDetailSection = `
+            <div class="detail-section mt-3">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-forward text-muted me-2"></i>
+                    <h5 class="m-0">Ignorados (já pendentes):</h5>
+                </div>
+                <ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
+                    ${result.skipped_details
+                      .map(
+                        (item) =>
+                          `<li>Linha ${item.linha}: ${item.motivo} (Série: ${item.numero_serie})</li>`
+                      )
+                      .join("")}
+                </ul>
+            </div>`;
+  }
+
+  messageArea.innerHTML = `
         <div class="message-icon">
           <i class="fas fa-check-circle"></i>
         </div>
         <div class="message-content">
-          <h4>${result.message || "Importação Concluída!"}</h4>
+          <h4>${escapeText(result.message || "Importação Concluída!")}</h4>
+          ${result.dry_run ? '<div class="alert alert-info py-2 mb-3">Simulação concluída. Nenhuma alteração foi gravada no banco.</div>' : ""}
           ${successDetails}
+          ${skippedDetailSection}
           ${errorsDetailSection}
           <div class="action-buttons mt-4">
             <button type="button" class="btn btn-outline-secondary btn-sm" data-action="reload">
@@ -184,13 +260,13 @@ function showError(message) {
   const messageArea = document.getElementById("messageArea");
   if (!messageArea) return;
 
-  messageArea.innerHTML = safeHtml`
+  messageArea.innerHTML = `
         <div class="message-icon">
           <i class="fas fa-exclamation-circle"></i>
         </div>
         <div class="message-content">
           <h4>Erro na Importação</h4>
-          <p>${message || "Ocorreu um erro desconhecido."}</p>
+          <p>${escapeText(message || "Ocorreu um erro desconhecido.")}</p>
           <button type="button" class="btn btn-outline-danger mt-3 btn-sm" data-action="reload">
             <i class="fas fa-redo me-2"></i>Tentar Novamente
           </button>
@@ -202,4 +278,13 @@ function showError(message) {
     messageArea.style.padding = "1.5rem";
     messageArea.style.marginTop = "2rem";
   }, 10);
+}
+
+function escapeText(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
