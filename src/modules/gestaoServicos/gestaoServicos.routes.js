@@ -22,7 +22,29 @@ const relatorioController = require("./relatorio/relatorio.controller");
 
 const router = express.Router();
 
-router.get("/gestao-servicos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
+function usuarioConstrucaoRestrito(user) {
+  const nivel = user?.nivel ?? 0;
+  return nivel < NIVEL_ADMIN_SERVICOS && ehCargoConstrucaoAcompanhamento(user);
+}
+
+function redirecionarConstrucaoRestrito(req, res, next) {
+  if (usuarioConstrucaoRestrito(req.user)) {
+    return res.redirect("/acompanhamento_construcao");
+  }
+  next();
+}
+
+function bloquearConstrucaoRestritoApi(req, res, next) {
+  if (usuarioConstrucaoRestrito(req.user)) {
+    return res.status(403).json({
+      message:
+        "Perfil de Construção: acesso permitido apenas ao acompanhamento de construção.",
+    });
+  }
+  next();
+}
+
+router.get("/gestao-servicos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, (req, res) => {
   res.sendFile(
     publicPage("servicos/gestao_servico.html"),
   );
@@ -34,7 +56,7 @@ router.get("/registro_servicos", autenticar, verificarNivel(NIVEL_ADMIN_SERVICOS
   );
 });
 
-router.get("/servicos_ativos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
+router.get("/servicos_ativos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, (req, res) => {
   res.sendFile(
     publicPage("servicos/servicos_ativos.html"),
   );
@@ -44,6 +66,7 @@ router.get(
   "/servicos_concluidos",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  redirecionarConstrucaoRestrito,
   (req, res) => {
     res.sendFile(
       publicPage("servicos/servicos_concluidos.html"),
@@ -51,7 +74,7 @@ router.get(
   },
 );
 
-router.get("/detalhes_servico", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
+router.get("/detalhes_servico", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, (req, res) => {
   res.sendFile(
     publicPage("servicos/detalhes_servico.html"),
   );
@@ -61,6 +84,7 @@ router.get(
   "/servicos_atribuidos",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  redirecionarConstrucaoRestrito,
   (req, res) => {
     res.sendFile(
       publicPage("servicos/servicos_atribuidos.html"),
@@ -74,7 +98,7 @@ router.get("/editar_servico", autenticar, verificarNivel(NIVEL_ADMIN_SERVICOS), 
   );
 });
 
-router.get("/apr_formulario", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req, res) => {
+router.get("/apr_formulario", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, (req, res) => {
   res.sendFile(publicPage("servicos/apr_formulario.html"));
 });
 
@@ -101,6 +125,7 @@ router.get(
   "/api/servicos",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   coreController.listarServicos,
 );
 
@@ -141,6 +166,7 @@ router.get(
   "/api/servicos/:id",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   coreController.obterDetalhesServico,
 );
 
@@ -171,6 +197,7 @@ router.post(
   "/api/servicos/:id/concluir",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   lifecycleController.atualizarStatusParteServico,
 );
 
@@ -192,6 +219,7 @@ router.post(
   "/api/servicos/:servicoId/upload-foto-conclusao",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   upload.single("foto_conclusao"),
   anexoController.uploadFotoConclusao,
 );
@@ -200,6 +228,7 @@ router.post(
   "/api/servicos/:servicoId/anexos-posteriores",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   upload.array("anexos", 5),
   anexoController.anexarPosteriores,
 );
@@ -215,6 +244,7 @@ router.get(
   "/api/upload_arquivos/:identificador/:filename",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   async (req, res) => {
     const { identificador, filename } = req.params;
     const servicoId = extrairServicoIdDoIdentificador(identificador);
@@ -269,6 +299,7 @@ router.get(
   "/api/servicos/contador",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   queryController.contarServicos,
 );
 
@@ -283,6 +314,7 @@ router.get(
   "/api/subestacoes",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   queryController.listarSubestacoes,
 );
 
@@ -304,6 +336,7 @@ router.get(
   "/api/servicos/:id/consolidar-pdfs",
   autenticar,
   verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   relatorioController.gerarPdfConsolidado,
 );
 

@@ -6,6 +6,29 @@ let developmentModalInstance;
 function aplicarCardsGestaoServicos(user) {
   if (!user) return;
   const P = window.ServicosPermissions || {};
+  const cardIds = [
+    "card-registro-servico",
+    "card-servicos-ativos",
+    "card-servicos-concluidos",
+    "card-relatorios",
+    "card-acompanhamento-construcao",
+  ];
+  cardIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  const construcaoRestrito =
+    P.ehCargoConstrucaoAcompanhamento?.(user) && !P.temControleTotal?.(user);
+
+  if (construcaoRestrito) {
+    const cardAcompanhamento = document.getElementById(
+      "card-acompanhamento-construcao"
+    );
+    if (cardAcompanhamento) cardAcompanhamento.style.display = "block";
+    return;
+  }
+
   const cardPermissions = {
     "card-registro-servico": { check: () => P.podeRegistrarServico?.(user) },
     "card-servicos-ativos": { check: () => P.podeAcessarModuloServicos?.(user) },
