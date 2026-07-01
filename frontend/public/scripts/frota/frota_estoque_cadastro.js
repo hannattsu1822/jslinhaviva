@@ -1,4 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
+  function normalizarTexto(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  }
+  function usuarioSomenteVisualizacao(user) {
+    const nivel = Number(user?.nivel || 0);
+    if (nivel >= 2) return false;
+    const cargo = normalizarTexto(user?.cargo || "");
+    return cargo.includes("transporte") || cargo.includes("direcao");
+  }
+  let somenteVisualizacao = false;
+
   const itemEstoqueForm = document.getElementById("itemEstoqueForm");
   const itensEstoqueTableBody = document.getElementById(
     "itensEstoqueTableBody"
@@ -66,6 +81,15 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       itens.forEach((item) => {
         const row = document.createElement("tr");
+        const botaoExcluirHtml = somenteVisualizacao
+          ? ""
+          : safeHtml`
+                        <button class="btn btn-danger delete-btn" data-id="${
+                          item.id
+                        }" title="Excluir Peça">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    `;
         row.innerHTML = safeHtml`
                     <td>${item.id}</td>
                     <td>${item.cod || ""}</td>
@@ -81,11 +105,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }" title="Visualizar/Preencher Formulário">
                             <i class="material-icons">search</i>
                         </button>
-                        <button class="btn btn-danger delete-btn" data-id="${
-                          item.id
-                        }" title="Excluir Peça">
-                            <i class="material-icons">delete</i>
-                        </button>
+                        ${rawHtml(botaoExcluirHtml)}
                     </td>
                 `;
         itensEstoqueTableBody.appendChild(row);
@@ -136,6 +156,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (itemEstoqueForm) {
     itemEstoqueForm.addEventListener("submit", async function (event) {
+      if (somenteVisualizacao) return;
       event.preventDefault();
       const itemData = {
         cod: codInputForm.value.trim(),
@@ -190,6 +211,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const deleteButton = event.target.closest(".delete-btn");
       const viewButton = event.target.closest(".view-btn");
       if (deleteButton) {
+        if (somenteVisualizacao) return;
         const itemId = deleteButton.dataset.id;
         if (confirm("Tem certeza que deseja excluir esta peça do estoque?")) {
           try {
@@ -220,15 +242,30 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         }
       } else if (viewButton) {
-        preencherFormularioComItem(
-          viewButton.dataset.cod,
-          viewButton.dataset.nome,
-          viewButton.dataset.unid
-        );
+        if (!somenteVisualizacao) {
+          preencherFormularioComItem(
+            viewButton.dataset.cod,
+            viewButton.dataset.nome,
+            viewButton.dataset.unid
+          );
+        }
       }
     });
   }
 
-  itensEstoqueTableBody.innerHTML =
-    '<tr><td colspan="5" style="text-align: center;">Utilize os filtros para buscar as peças.</td></tr>';
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      somenteVisualizacao = usuarioSomenteVisualizacao(user);
+      if (somenteVisualizacao) {
+        if (toggleFormBtn) toggleFormBtn.style.display = "none";
+        if (formContainer) formContainer.classList.add("hidden");
+      }
+      itensEstoqueTableBody.innerHTML =
+        '<tr><td colspan="5" style="text-align: center;">Utilize os filtros para buscar as peças.</td></tr>';
+    })
+    .catch(() => {
+      itensEstoqueTableBody.innerHTML =
+        '<tr><td colspan="5" style="text-align: center;">Utilize os filtros para buscar as peças.</td></tr>';
+    });
 });

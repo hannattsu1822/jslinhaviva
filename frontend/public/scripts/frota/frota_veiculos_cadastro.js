@@ -1,4 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
+  function normalizarTexto(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  }
+  function usuarioSomenteVisualizacao(user) {
+    const nivel = Number(user?.nivel || 0);
+    if (nivel >= 2) return false;
+    const cargo = normalizarTexto(user?.cargo || "");
+    return cargo.includes("transporte") || cargo.includes("direcao");
+  }
+  let somenteVisualizacao = false;
+
   const vehicleForm = document.getElementById("vehicleForm");
   const vehicleTableBody = document.getElementById("vehicleTableBody");
   const toastContainer = document.getElementById("toastContainer");
@@ -51,17 +66,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
       vehicles.forEach((vehicle) => {
         const row = document.createElement("tr");
+        const acaoHtml = somenteVisualizacao
+          ? "-"
+          : safeHtml`
+                        <button class="btn btn-danger delete-btn" data-id="${
+                          vehicle.id
+                        }" title="Excluir">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    `;
         row.innerHTML = safeHtml`
                     <td>${vehicle.id}</td>
                     <td>${vehicle.codigo || ""}</td>
                     <td>${vehicle.placa}</td>
                     <td>${vehicle.nome}</td>
                     <td class="actions">
-                        <button class="btn btn-danger delete-btn" data-id="${
-                          vehicle.id
-                        }" title="Excluir">
-                            <i class="material-icons">delete</i>
-                        </button>
+                        ${rawHtml(acaoHtml)}
                     </td>
                 `;
         vehicleTableBody.appendChild(row);
@@ -101,6 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (vehicleForm) {
     vehicleForm.addEventListener("submit", async function (event) {
+      if (somenteVisualizacao) return;
       event.preventDefault();
       const vehicleData = {
         placa: document.getElementById("placa").value,
@@ -137,6 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (vehicleTableBody) {
     vehicleTableBody.addEventListener("click", async function (event) {
+      if (somenteVisualizacao) return;
       const deleteButton = event.target.closest(".delete-btn");
       if (deleteButton) {
         const vehicleId = deleteButton.dataset.id;
@@ -164,5 +186,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  loadVehicles();
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      somenteVisualizacao = usuarioSomenteVisualizacao(user);
+      if (somenteVisualizacao) {
+        if (toggleFormBtn) toggleFormBtn.style.display = "none";
+        if (formContainer) formContainer.classList.add("hidden");
+      }
+      loadVehicles();
+    })
+    .catch(() => loadVehicles());
 });

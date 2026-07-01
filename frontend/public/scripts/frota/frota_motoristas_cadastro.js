@@ -1,4 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
+  function normalizarTexto(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  }
+  function usuarioSomenteVisualizacao(user) {
+    const nivel = Number(user?.nivel || 0);
+    if (nivel >= 2) return false;
+    const cargo = normalizarTexto(user?.cargo || "");
+    return cargo.includes("transporte") || cargo.includes("direcao");
+  }
+  let somenteVisualizacao = false;
+
   const driverForm = document.getElementById("driverForm");
   const driverTableBody = document.getElementById("driverTableBody");
   const toastContainer = document.getElementById("toastContainer");
@@ -52,17 +67,22 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       drivers.forEach((driver) => {
         const row = document.createElement("tr");
+        const acaoHtml = somenteVisualizacao
+          ? "-"
+          : safeHtml`
+                        <button class="btn btn-danger delete-btn" data-id="${
+                          driver.id
+                        }" title="Excluir">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    `;
         row.innerHTML = safeHtml`
                     <td>${driver.id}</td>
                     <td>${driver.matricula || ""}</td>
                     <td>${driver.nome || ""}</td>
                     <td>${driver.situacao || "Ativo"}</td>
                     <td class="actions">
-                        <button class="btn btn-danger delete-btn" data-id="${
-                          driver.id
-                        }" title="Excluir">
-                            <i class="material-icons">delete</i>
-                        </button>
+                        ${rawHtml(acaoHtml)}
                     </td>
                 `;
         driverTableBody.appendChild(row);
@@ -102,6 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (driverForm) {
     driverForm.addEventListener("submit", async function (event) {
+      if (somenteVisualizacao) return;
       event.preventDefault();
       const driverData = {
         matricula: document.getElementById("matricula").value.trim(),
@@ -147,6 +168,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (driverTableBody) {
     driverTableBody.addEventListener("click", async function (event) {
+      if (somenteVisualizacao) return;
       const deleteButton = event.target.closest(".delete-btn");
       if (deleteButton) {
         const driverId = deleteButton.dataset.id;
@@ -177,5 +199,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  loadDrivers();
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      somenteVisualizacao = usuarioSomenteVisualizacao(user);
+      if (somenteVisualizacao) {
+        if (toggleFormBtn) toggleFormBtn.style.display = "none";
+        if (formContainer) formContainer.classList.add("hidden");
+      }
+      loadDrivers();
+    })
+    .catch(() => loadDrivers());
 });

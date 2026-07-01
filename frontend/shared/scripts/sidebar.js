@@ -275,6 +275,10 @@ function applySidebarPermissions(user) {
   const isTransporteDirecao =
     userCargoNormalized.includes("transporte") ||
     userCargoNormalized.includes("direcao");
+  const isTransporteRestrito =
+    isTransporteDirecao && (user.nivel ?? 0) < NIVEL_ACESSO_MIN;
+  const isConstrucaoRestrito =
+    isConstrucaoAcompanhamento && (user.nivel ?? 0) < NIVEL_ACESSO_MIN;
 
   const allManagedIds = [
     ...Object.keys(SIDEBAR_PERMISSIONS_BY_LEVEL),
@@ -299,6 +303,29 @@ function applySidebarPermissions(user) {
     return;
   }
 
+  if (isTransporteRestrito) {
+    allManagedIds.forEach((id) => hideSidebarItem(id));
+    showSidebarItem("sidebar-frota-link");
+    const frotaLink = document.querySelector(
+      '.sidebar .nav-link[href="/frota"]'
+    );
+    if (frotaLink) frotaLink.setAttribute("href", "/frota_controle");
+    hideDashboardNavItem();
+    return;
+  }
+
+  if (isConstrucaoRestrito) {
+    allManagedIds.forEach((id) => hideSidebarItem(id));
+    showSidebarItem("sidebar-construcao-link");
+    const construcaoLink = document.querySelector(
+      '.sidebar .nav-link[href="/acompanhamento_construcao"]'
+    );
+    if (construcaoLink)
+      construcaoLink.setAttribute("href", "/acompanhamento_construcao");
+    hideDashboardNavItem();
+    return;
+  }
+
   for (const [linkId, requiredLevel] of Object.entries(
     SIDEBAR_PERMISSIONS_BY_LEVEL
   )) {
@@ -309,10 +336,6 @@ function applySidebarPermissions(user) {
 
   if (isTransporteDirecao) {
     showSidebarItem("sidebar-frota-link");
-  }
-
-  if (isConstrucaoAcompanhamento) {
-    showSidebarItem("sidebar-avulsos-link");
   }
 
   const sidebarConstrucaoLink = document.getElementById(

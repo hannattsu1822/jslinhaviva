@@ -5,7 +5,7 @@ const { autenticar, verificarNivel, verificarNivelOuCargo } = require("../../../
 const controller = require("./veiculos.controller");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
-router.get("/frota", autenticar, verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]), (req, res) => {
+router.get("/frota", autenticar, verificarNivel(2), (req, res) => {
   res.sendFile(publicPage("frota/frota.html"));
 });
 
@@ -30,7 +30,7 @@ router.get("/frota_controle", autenticar, verificarNivelOuCargo(2, ["transporte"
 router.get(
   "/frota_motoristas_cadastro",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   (req, res) => {
     res.sendFile(
       publicPage("frota/frota_motoristas_cadastro.html")
@@ -41,7 +41,7 @@ router.get(
 router.get(
   "/frota_estoque_cadastro",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   (req, res) => {
     res.sendFile(
       publicPage("frota/frota_estoque_cadastro.html")
@@ -52,7 +52,7 @@ router.get(
 router.get(
   "/frota_veiculos_cadastro",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   (req, res) => {
     res.sendFile(
       publicPage("frota/frota_veiculos_cadastro.html")
@@ -111,7 +111,7 @@ router.get(
 router.get(
   "/api/frota_inventario",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   controller.listarInventario
 );
 router.post(
@@ -129,7 +129,7 @@ router.delete(
 router.get(
   "/api/frota/motoristas_crud",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   controller.listarMotoristasCrud
 );
 router.post(
@@ -147,7 +147,7 @@ router.delete(
 router.get(
   "/api/frota/estoque_crud",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   controller.listarEstoqueCrud
 );
 router.post(
