@@ -2,12 +2,8 @@ const {
   NIVEL_ADMIN,
   ehCargoConstrucaoAcompanhamento,
   ehCargoTransporteDirecao,
-  normalizarTexto,
+  ehCargoCOD,
 } = require("./moduloNivel.permissions");
-
-function ehCargoCOD(user) {
-  return normalizarTexto(user?.cargo) === "cod";
-}
 
 function usuarioConstrucaoRestrito(user) {
   return (user?.nivel ?? 0) < NIVEL_ADMIN && ehCargoConstrucaoAcompanhamento(user);
