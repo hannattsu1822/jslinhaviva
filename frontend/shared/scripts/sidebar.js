@@ -265,8 +265,16 @@ function applySidebarPermissions(user) {
   const userCargo = String(user.cargo || "")
     .trim()
     .toLowerCase();
+  const userCargoNormalized = userCargo
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   const isMotorista = userCargo === "motorista";
   const isCOD = userCargo === "cod";
+  const isConstrucaoAcompanhamento =
+    userCargoNormalized.includes("construcao");
+  const isTransporteDirecao =
+    userCargoNormalized.includes("transporte") ||
+    userCargoNormalized.includes("direcao");
 
   const allManagedIds = [
     ...Object.keys(SIDEBAR_PERMISSIONS_BY_LEVEL),
@@ -299,10 +307,21 @@ function applySidebarPermissions(user) {
     }
   }
 
+  if (isTransporteDirecao) {
+    showSidebarItem("sidebar-frota-link");
+  }
+
+  if (isConstrucaoAcompanhamento) {
+    showSidebarItem("sidebar-avulsos-link");
+  }
+
   const sidebarConstrucaoLink = document.getElementById(
     "sidebar-construcao-link"
   );
-  if (sidebarConstrucaoLink && (user.nivel ?? 0) >= NIVEL_ADMIN) {
+  if (
+    sidebarConstrucaoLink &&
+    ((user.nivel ?? 0) >= NIVEL_ADMIN || isConstrucaoAcompanhamento)
+  ) {
     showSidebarItem("sidebar-construcao-link");
   }
 }

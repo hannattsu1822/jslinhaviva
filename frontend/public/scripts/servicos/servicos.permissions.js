@@ -18,5 +18,7 @@
     podeReativarServico: base.podeReativar,
     podeRegistrarServico: base.podeRegistrar,
     podeOperacaoBasica: base.podeOperacaoBasica,
+    podeAcompanharConstrucao: (user) =>
+      base.temControleTotal?.(user) || base.ehCargoConstrucaoAcompanhamento?.(user),
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -2,10 +2,11 @@ const express = require("express");
 const path = require("path");
 const { promisePool } = require("../../infrastructure/database");
 const { upload } = require("../../infrastructure/uploads");
-const { autenticar, verificarNivel } = require("../../auth");
+const { autenticar, verificarNivel, verificarNivelOuCargo } = require("../../auth");
 const {
   NIVEL_ADMIN_SERVICOS,
   NIVEL_ACESSO_MIN,
+  ehCargoConstrucaoAcompanhamento,
 } = require("./servicos.permissions");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 const { resolvePathWithinBase, sendSafeFile } = require("../../shared/pathSecurity.helper");
@@ -80,7 +81,7 @@ router.get("/apr_formulario", autenticar, verificarNivel(NIVEL_ACESSO_MIN), (req
 router.get(
   "/acompanhamento_construcao",
   autenticar,
-  verificarNivel(NIVEL_ADMIN_SERVICOS),
+  verificarNivelOuCargo(NIVEL_ADMIN_SERVICOS, ["construcao", "construção"]),
   (req, res) => {
     res.sendFile(
       publicPage("servicos/servicos_construcao.html"),
@@ -106,11 +107,31 @@ router.get(
 router.get(
   "/api/servicos/origem/:origem",
   autenticar,
-  verificarNivel(NIVEL_ADMIN_SERVICOS),
+  verificarNivelOuCargo(NIVEL_ADMIN_SERVICOS, ["construcao", "construção"]),
   (req, res, next) => {
     const origemOriginal = req.params.origem;
     const origemDecoded = decodeURIComponent(origemOriginal);
     req.params.origem = origemDecoded;
+
+    const ehAdmin = (req.user?.nivel ?? 0) >= NIVEL_ADMIN_SERVICOS;
+    const ehConstrucao = ehCargoConstrucaoAcompanhamento(req.user);
+    const origemNormalizada = String(origemDecoded || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+
+    if (!ehAdmin) {
+      if (!ehConstrucao) {
+        return res.status(403).json({ message: "Acesso negado." });
+      }
+      if (origemNormalizada !== "construcao") {
+        return res.status(403).json({
+          message: "Acesso permitido apenas para origem Construção.",
+        });
+      }
+    }
+
     next();
   },
   queryController.listarServicosPorOrigem,

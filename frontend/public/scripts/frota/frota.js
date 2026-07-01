@@ -5,6 +5,32 @@ let developmentModalInstance; // Para o caso de navigateTo usar
 // A variável 'user' será pega pelo sidebar.js e populada na interface.
 // Se esta página precisar do 'user' para alguma lógica específica, pegue do localStorage aqui.
 
+function normalizarTexto(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function usuarioSomenteControleFrota(user) {
+  const nivel = Number(user?.nivel || 0);
+  if (nivel >= 2) return false;
+  const cargo = normalizarTexto(user?.cargo || "");
+  return cargo.includes("transporte") || cargo.includes("direcao");
+}
+
+function aplicarPermissoesCardsFrota(user) {
+  if (!usuarioSomenteControleFrota(user)) return;
+
+  document
+    .querySelectorAll('[data-target="/checklist_veiculos"], [data-target="/agendar_checklist"], [data-target="/filtrar_veiculos"], [data-target="/proxima_troca_oleo"], [data-target="/registro_oleo"]')
+    .forEach((card) => {
+      const col = card.closest(".col-md-6, .col-lg-4, .col-xl-3");
+      if (col) col.style.display = "none";
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   // Inicializa tooltips do Bootstrap (se houver algum nesta página)
   const tooltipTriggerList = [].slice.call(
@@ -27,6 +53,17 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
   console.log("Frota: Script específico da página carregado e DOM pronto.");
+
+  document.addEventListener("sidebar:ready", (event) => {
+    aplicarPermissoesCardsFrota(event.detail?.user);
+  });
+
+  fetch("/api/me", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((user) => {
+      if (user) aplicarPermissoesCardsFrota(user);
+    })
+    .catch(() => {});
 });
 
 // Função navigateTo padronizada para os links da sidebar e cards

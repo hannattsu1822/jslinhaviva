@@ -14,7 +14,7 @@ function aplicarCardsGestaoServicos(user) {
     },
     "card-relatorios": { check: () => P.temControleTotal?.(user) },
     "card-acompanhamento-construcao": {
-      check: () => P.temControleTotal?.(user),
+      check: () => P.podeAcompanharConstrucao?.(user),
     },
   };
 

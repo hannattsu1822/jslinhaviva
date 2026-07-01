@@ -1,50 +1,50 @@
 const express = require("express");
 const router = express.Router();
-const { autenticar, verificarNivel } = require("../../../auth");
+const { autenticar, verificarNivelOuCargo } = require("../../../auth");
 const { upload } = require("../../../infrastructure/uploads");
 const controller = require("./bas.controller");
 
 router.post(
   "/api/bas/importar-dados-processos",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["construcao", "construção"]),
   upload.single("csvFile"),
   controller.importarDadosProcessos
 );
 router.get(
   "/api/bas/user-info",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["construcao", "construção"]),
   controller.obterInfoUsuario
 );
 router.get(
   "/api/bas/processos-construcao",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["construcao", "construção"]),
   controller.listarProcessosConstrucao
 );
 router.get(
   "/api/bas/processos-linhaviva",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["construcao", "construção"]),
   controller.listarProcessosLinhaViva
 );
 router.post(
   "/api/bas/salvar-bas-cadastro",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["construcao", "construção"]),
   controller.salvarCadastroBas
 );
 router.post(
   "/api/bas/gerar-relatorio-processos-txt",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["construcao", "construção"]),
   controller.gerarRelatorioTxt
 );
 router.post(
   "/api/bas/gerar-relatorio-processos-txt-linhaviva",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["construcao", "construção"]),
   controller.gerarRelatorioTxtLinhaViva
 );
 

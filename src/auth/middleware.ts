@@ -72,6 +72,56 @@ export function verificarNivel(nivelRequerido: number) {
   };
 }
 
+function normalizarTextoPermissao(value: string): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function cargoContemAlgumTermo(cargoUsuario: string, termosPermitidos: string[]): boolean {
+  const cargoNormalizado = normalizarTextoPermissao(cargoUsuario);
+  return termosPermitidos.some((termo) =>
+    cargoNormalizado.includes(normalizarTextoPermissao(termo))
+  );
+}
+
+export function verificarNivelOuCargo(nivelRequerido: number, termosCargoPermitidos: string[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const nivelUsuario = req.user?.nivel;
+    const cargoUsuario = req.user?.cargo || "";
+
+    if (nivelUsuario === undefined) {
+      logger.warn("[Auth] Acesso negado: nível não definido na sessão");
+      res.status(403).json({
+        message: "Acesso negado! Nível de permissão não encontrado.",
+      });
+      return;
+    }
+
+    if (nivelUsuario >= nivelRequerido) {
+      next();
+      return;
+    }
+
+    if (
+      termosCargoPermitidos.length > 0 &&
+      cargoContemAlgumTermo(cargoUsuario, termosCargoPermitidos)
+    ) {
+      next();
+      return;
+    }
+
+    logger.warn(
+      `[Auth] Nível/cargo insuficiente: nível ${nivelUsuario} < ${nivelRequerido}, cargo "${cargoUsuario}" não autorizado`
+    );
+    res.status(403).json({
+      message: "Acesso negado! Você não tem permissão para acessar este recurso.",
+    });
+  };
+}
+
 export function verificarCargo(cargosPermitidos: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const cargoUsuario = req.user?.cargo;

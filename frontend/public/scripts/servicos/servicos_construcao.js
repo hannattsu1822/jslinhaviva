@@ -393,7 +393,9 @@ document.addEventListener("DOMContentLoaded", () => {
   fetch("/api/me", { credentials: "same-origin" })
     .then((r) => (r.ok ? r.json() : null))
     .then((user) => {
-      if ((user?.nivel ?? 0) < 7) {
+      const P = window.ServicosPermissions || {};
+      const podeAcompanhar = P.podeAcompanharConstrucao?.(user);
+      if (!podeAcompanhar) {
         window.location.replace("/gestao-servicos");
       }
     })
@@ -469,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const linkConstrucao = document.getElementById("sidebar-construcao-link");
       const P = window.ServicosPermissions || {};
 
-      if (linkConstrucao && P.temControleTotal?.(user)) {
+      if (linkConstrucao && P.podeAcompanharConstrucao?.(user)) {
         linkConstrucao.style.display = "block";
       }
     } catch (error) {

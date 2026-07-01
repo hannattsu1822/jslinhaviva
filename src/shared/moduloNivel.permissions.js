@@ -30,6 +30,27 @@ function podeOperacaoBasica(user) {
   return temNivelBasico(user) || temControleTotal(user);
 }
 
+function normalizarTexto(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function cargoContem(user, termos) {
+  const cargo = normalizarTexto(user?.cargo || "");
+  return termos.some((termo) => cargo.includes(normalizarTexto(termo)));
+}
+
+function ehCargoConstrucaoAcompanhamento(user) {
+  return cargoContem(user, ["construcao", "construção"]);
+}
+
+function ehCargoTransporteDirecao(user) {
+  return cargoContem(user, ["transporte", "direcao", "direção"]);
+}
+
 module.exports = {
   NIVEL_ADMIN,
   NIVEL_BASICO_MAX,
@@ -49,4 +70,6 @@ module.exports = {
   podeRegistrar: temControleTotal,
   podeForcarConclusao: temControleTotal,
   podeConcluirAdministrativo: temControleTotal,
+  ehCargoConstrucaoAcompanhamento,
+  ehCargoTransporteDirecao,
 };

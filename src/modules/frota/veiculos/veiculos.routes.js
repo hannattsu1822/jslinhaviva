@@ -1,11 +1,11 @@
 const express = require("express");
 const path = require("path");
 const router = express.Router();
-const { autenticar, verificarNivel } = require("../../../auth");
+const { autenticar, verificarNivel, verificarNivelOuCargo } = require("../../../auth");
 const controller = require("./veiculos.controller");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../../shared/path.helper");
 
-router.get("/frota", autenticar, verificarNivel(2), (req, res) => {
+router.get("/frota", autenticar, verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]), (req, res) => {
   res.sendFile(publicPage("frota/frota.html"));
 });
 
@@ -21,7 +21,7 @@ router.get("/agendar_checklist", autenticar, verificarNivel(4), (req, res) => {
   );
 });
 
-router.get("/frota_controle", autenticar, verificarNivel(2), (req, res) => {
+router.get("/frota_controle", autenticar, verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]), (req, res) => {
   res.sendFile(
     publicPage("frota/frota_controle.html")
   );
@@ -105,7 +105,7 @@ router.get(
 router.get(
   "/api/veiculos_controle",
   autenticar,
-  verificarNivel(2),
+  verificarNivelOuCargo(2, ["transporte", "direcao", "direção"]),
   controller.listarVeiculosControle
 );
 router.get(
