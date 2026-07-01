@@ -428,6 +428,12 @@
   right: -8px;
 }
 
+@media (max-width: 767.98px) {
+  .item-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media print {
   body {
     background-color: #fff;

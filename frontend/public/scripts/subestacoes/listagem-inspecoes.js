@@ -332,6 +332,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <td data-label="Status" class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
         <td data-label="APR" class="text-center">${rawHtml(aprButtonHtml)}</td>
         <td data-label="Utilidades" class="actions-column">
+            <div class="actions-wrapper">
             <button class="btn text-info btn-ver-detalhes-inspecao" data-id="${
               insp.id
             }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
@@ -342,6 +343,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ${rawHtml(btnConcluirHtml)}
             ${rawHtml(btnRecoveryHtml)}
             ${rawHtml(btnExcluirHtml)}
+            </div>
         </td>`;
 
       tr.querySelector(".btn-ver-detalhes-inspecao")?.addEventListener(

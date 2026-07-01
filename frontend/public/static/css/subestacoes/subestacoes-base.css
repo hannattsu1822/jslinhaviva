@@ -375,6 +375,46 @@ body.subestacoes-page {
 }
 
 /* â”€â”€ Responsivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.subestacoes-page .pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-top: 1px solid #e2e8f0;
+}
+
+.subestacoes-page .pagination-button {
+  border: 1px solid #dce4e9;
+  background-color: #fff;
+  color: var(--lv-text);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--lv-radius-sm);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.subestacoes-page .pagination-button:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.subestacoes-page .pagination-button.active {
+  background-color: var(--lv-primary);
+  color: #fff;
+  border-color: var(--lv-primary);
+  cursor: default;
+  font-weight: 700;
+}
+
+.subestacoes-page .pagination-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 @media (max-width: 991.98px) {
   .subestacoes-page .main-content {
     padding-top: 3.5rem;
@@ -413,18 +453,50 @@ body.subestacoes-page {
     width: 100%;
     margin: 0 !important;
   }
+
+  .subestacoes-page .card-header,
+  .subestacoes-page .custom-card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .subestacoes-page .card-header .btn,
+  .subestacoes-page .custom-card-header .btn,
+  .subestacoes-page .custom-card-header a.btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .subestacoes-page .filter-actions,
+  .subestacoes-page .form-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .subestacoes-page .filter-actions .btn,
+  .subestacoes-page .form-actions .btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 767.98px) {
+  .subestacoes-page .table-responsive {
+    overflow-x: visible;
+    border: none;
+  }
+
   .subestacoes-page .subestacoes-data-table thead,
   .subestacoes-page .data-table thead,
-  .subestacoes-page #tabelaInspecoes thead {
+  .subestacoes-page #tabelaInspecoes thead,
+  .subestacoes-page #tabelaServicos thead {
     display: none;
   }
 
   .subestacoes-page .subestacoes-data-table tbody tr,
   .subestacoes-page .data-table tbody tr,
-  .subestacoes-page #tabelaInspecoes tbody tr {
+  .subestacoes-page #tabelaInspecoes tbody tr,
+  .subestacoes-page #tabelaServicos tbody tr {
     display: block;
     margin-bottom: 0.85rem;
     border: 1px solid #e2e8f0;
@@ -435,23 +507,130 @@ body.subestacoes-page {
 
   .subestacoes-page .subestacoes-data-table tbody td,
   .subestacoes-page .data-table tbody td,
-  .subestacoes-page #tabelaInspecoes tbody td {
+  .subestacoes-page #tabelaInspecoes tbody td,
+  .subestacoes-page #tabelaServicos tbody td {
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 0.75rem;
     padding: 0.55rem 0.75rem;
     border-bottom: 1px solid #f1f5f9;
+    white-space: normal;
+    text-align: right;
+  }
+
+  .subestacoes-page .subestacoes-data-table tbody td:last-child,
+  .subestacoes-page .data-table tbody td:last-child,
+  .subestacoes-page #tabelaInspecoes tbody td:last-child,
+  .subestacoes-page #tabelaServicos tbody td:last-child {
+    border-bottom: none;
   }
 
   .subestacoes-page .subestacoes-data-table tbody td::before,
   .subestacoes-page .data-table tbody td::before,
-  .subestacoes-page #tabelaInspecoes tbody td::before {
+  .subestacoes-page #tabelaInspecoes tbody td::before,
+  .subestacoes-page #tabelaServicos tbody td::before {
     content: attr(data-label);
     font-weight: 700;
     color: var(--lv-text-muted);
     font-size: 0.72rem;
     text-transform: uppercase;
     flex-shrink: 0;
+    text-align: left;
+    padding-top: 0.15rem;
+  }
+
+  .subestacoes-page .data-table tbody td.text-center,
+  .subestacoes-page #tabelaInspecoes tbody td.text-center,
+  .subestacoes-page #tabelaServicos tbody td.text-center {
+    justify-content: space-between;
+  }
+
+  .subestacoes-page .actions-column,
+  .subestacoes-page #tabelaInspecoes tbody td.actions-column {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .subestacoes-page .actions-column::before,
+  .subestacoes-page #tabelaInspecoes tbody td.actions-column::before {
+    flex: 0 0 100%;
+    width: 100%;
+    margin-bottom: 0.15rem;
+  }
+
+  .subestacoes-page .actions-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .subestacoes-page .actions-column .btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .subestacoes-page .item-management-card {
+    grid-template-columns: 1fr;
+  }
+
+  .subestacoes-page .modal-footer {
+    flex-direction: column;
+  }
+
+  .subestacoes-page .modal-footer .btn {
+    width: 100%;
+  }
+
+  .subestacoes-page .subestacoes-shell {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .subestacoes-page .details-grid,
+  .subestacoes-page .info-grid,
+  .subestacoes-page .item-details-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .subestacoes-page .item-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .subestacoes-page .item-anexos-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .subestacoes-page .anexos-container {
+    justify-content: flex-end;
+  }
+
+  .subestacoes-page .botoes-anexo {
+    flex-direction: column;
+  }
+
+  .subestacoes-page .botoes-anexo .btn {
+    width: 100%;
+  }
+
+  .subestacoes-page .data-table tbody td[colspan],
+  .subestacoes-page #tabelaInspecoes tbody td[colspan],
+  .subestacoes-page #tabelaServicos tbody td[colspan] {
+    display: block;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .subestacoes-page .data-table tbody td[colspan]::before,
+  .subestacoes-page #tabelaInspecoes tbody td[colspan]::before,
+  .subestacoes-page #tabelaServicos tbody td[colspan]::before {
+    content: none;
   }
 }
 

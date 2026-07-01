@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentPage = page;
     corpoTabelaServicosElem.innerHTML =
       '<tr><td colspan="10"><div class="feedback-message">Carregando serviços...</div></td></tr>';
-    nenhumServicoMsgElem.classList.add("d-none");
+    nenhumServicoMsgElem.classList.add("hidden");
     const params = Object.fromEntries(
       new FormData(formFiltrosServicos).entries()
     );
@@ -238,10 +238,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function popularTabelaServicos(servicos) {
     corpoTabelaServicosElem.innerHTML = "";
     if (!servicos || servicos.length === 0) {
-      nenhumServicoMsgElem.classList.remove("d-none");
+      nenhumServicoMsgElem.classList.remove("hidden");
       return;
     }
-    nenhumServicoMsgElem.classList.add("d-none");
+    nenhumServicoMsgElem.classList.add("hidden");
 
     servicos.forEach((serv) => {
       const tr = document.createElement("tr");
@@ -542,7 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
       processoServico || servicoId;
     listaItensParaGerenciamentoDiv.innerHTML =
       '<div class="feedback-message">Carregando...</div>';
-    nenhumItemEscopoParaGerenciarMsg.classList.add("d-none");
+    nenhumItemEscopoParaGerenciarMsg.classList.add("hidden");
     mostrarModal(modalGerenciarItensServicoEl);
 
     try {
@@ -554,7 +554,7 @@ document.addEventListener("DOMContentLoaded", () => {
       listaItensParaGerenciamentoDiv.innerHTML = "";
 
       if (servicoDetalhes.itens_escopo.length === 0) {
-        nenhumItemEscopoParaGerenciarMsg.classList.remove("d-none");
+        nenhumItemEscopoParaGerenciarMsg.classList.remove("hidden");
         return;
       }
 

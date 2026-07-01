@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentPage = page;
     corpoTabelaServicosElem.innerHTML =
       '<tr><td colspan="10"><div class="feedback-message">Carregando histórico...</div></td></tr>';
-    nenhumServicoMsgElem.classList.add("d-none");
+    nenhumServicoMsgElem.classList.add("hidden");
 
     const params = Object.fromEntries(
       new FormData(formFiltrosServicos).entries()
@@ -183,10 +183,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     corpoTabelaServicosElem.innerHTML = "";
     if (!servicos || servicos.length === 0) {
-      nenhumServicoMsgElem.classList.remove("d-none");
+      nenhumServicoMsgElem.classList.remove("hidden");
       return;
     }
-    nenhumServicoMsgElem.classList.add("d-none");
+    nenhumServicoMsgElem.classList.add("hidden");
 
     servicos.forEach((serv) => {
       const tr = document.createElement("tr");
