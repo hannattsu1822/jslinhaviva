@@ -278,7 +278,7 @@ function applySidebarPermissions(user) {
   const isTransporteRestrito =
     isTransporteDirecao && (user.nivel ?? 0) < NIVEL_ACESSO_MIN;
   const isConstrucaoRestrito =
-    isConstrucaoAcompanhamento && (user.nivel ?? 0) < NIVEL_ACESSO_MIN;
+    isConstrucaoAcompanhamento && (user.nivel ?? 0) < NIVEL_ADMIN;
 
   const allManagedIds = [
     ...Object.keys(SIDEBAR_PERMISSIONS_BY_LEVEL),
