@@ -122,11 +122,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function formatarNomes(nomesString) {
     if (!nomesString) return "-";
+    const esc = window.escapeHtml || ((v) => String(v ?? ""));
     return nomesString
       .split(",")
       .map((nome) => {
         const partes = nome.trim().split(" ");
-        return partes.length > 1 ? `${partes[0]} ${partes[1]}` : partes[0];
+        const curto =
+          partes.length > 1 ? `${partes[0]} ${partes[1]}` : partes[0];
+        return esc(curto);
       })
       .join("<br>");
   }
@@ -283,13 +286,13 @@ document.addEventListener("DOMContentLoaded", () => {
           <td data-label="Prioridade"><span class="prioridade-badge ${prioridadeClasse}">${prioridade}</span></td>
           <td data-label="Data Prevista">${dataPrevistaFormatada}</td>
           <td data-label="Responsável">${serv.responsavel_nome || "-"}</td>
-          <td data-label="Encarregado(s)">${formatarNomes(serv.encarregados_itens_nomes)}</td>
+          <td data-label="Encarregado(s)">${rawHtml(formatarNomes(serv.encarregados_itens_nomes))}</td>
           <td data-label="Progresso" class="text-center ${progressoClasse}">${progressoItens}</td>
           <td data-label="Status" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
           <td data-label="Ações" class="actions-column">
               <div class="actions-wrapper">
                   <button class="btn text-info btn-ver-detalhes" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-                  ${botoesAdmin}
+                  ${rawHtml(botoesAdmin)}
                   <button class="btn text-success btn-concluir-servico" data-id="${
                     serv.id
                   }" data-processo="${

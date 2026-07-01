@@ -336,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ${titulo}
         </h2>
         <div class="detail-card-body">
-          ${renderAnexos(anexosFiltrados)}
+          ${rawHtml(renderAnexos(anexosFiltrados))}
         </div>
       </div>`;
   }

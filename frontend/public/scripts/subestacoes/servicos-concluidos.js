@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td data-label="Data Conclusão" class="text-center">${dataConclusaoFormatada}</td>
           <td data-label="Responsável">${esc(serv.responsavel_nome || "-")}</td>
           <td data-label="Status" class="text-center"><span class="status-badge status-${statusCls}">${statusTxt}</span></td>
-          <td data-label="APR" class="actions-column text-center">${aprButtonHtml}</td>
+          <td data-label="APR" class="actions-column text-center">${rawHtml(aprButtonHtml)}</td>
           <td data-label="Ações" class="actions-column text-center">
             <div class="actions-wrapper">
               <button class="btn text-info btn-ver-detalhes" data-id="${
@@ -266,7 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <button class="btn text-danger btn-gerar-relatorio" data-id="${
                 serv.id
               }" title="Gerar Relatório PDF"><span class="material-symbols-outlined">picture_as_pdf</span></button>
-              ${botoesAdmin}
+              ${rawHtml(botoesAdmin)}
             </div>
           </td>`;
 

@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     card.innerHTML = safeHtml`
-      <div class="anexo-thumbnail">${thumbnailHtml}</div>
+      <div class="anexo-thumbnail">${rawHtml(thumbnailHtml)}</div>
       <div class="file-info">
           <span class="file-name">${anexo.nome_original}</span>
       </div>
@@ -257,25 +257,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       itemCard.innerHTML = safeHtml`
             <p class="item-description">${item.descricao_item_servico}</p>
-            ${origemHtml}
+            ${rawHtml(origemHtml)}
             <div class="item-details-grid">
-                ${
+                ${rawHtml(
                   item.catalogo_equipamento_nome
                     ? `<div><strong>Equipamento:</strong><span>${item.catalogo_equipamento_nome}</span></div>`
                     : ""
-                }
-                ${
+                )}
+                ${rawHtml(
                   item.tag_equipamento_alvo
                     ? `<div><strong>TAG:</strong><span>${item.tag_equipamento_alvo}</span></div>`
                     : ""
-                }
+                )}
                 <div><strong>Encarregado:</strong><span>${
                   item.encarregado_item_nome || "N/A"
                 }</span></div>
                 <div><strong>Status do Item:</strong><span class="status-badge status-${statusClasse}">${statusTexto}</span></div>
                 <div><strong>Data Conclusão do Item:</strong><span>${dataConclusaoItemFmt}</span></div>
             </div>
-            ${obsConclusaoHtml}
+            ${rawHtml(obsConclusaoHtml)}
         `;
 
       if (item.anexos && item.anexos.length > 0) {

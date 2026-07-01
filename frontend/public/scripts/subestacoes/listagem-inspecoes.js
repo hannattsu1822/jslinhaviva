@@ -330,18 +330,18 @@ document.addEventListener("DOMContentLoaded", () => {
         <td data-label="Data Avaliação" class="text-center">${dataAvaliacaoFormatada}</td>
         <td data-label="Responsável">${insp.responsavel_nome}</td>
         <td data-label="Status" class="text-center"><span class="status-badge status-${statusClasseFinal}">${statusTextoDisplay}</span></td>
-        <td data-label="APR" class="text-center">${aprButtonHtml}</td>
+        <td data-label="APR" class="text-center">${rawHtml(aprButtonHtml)}</td>
         <td data-label="Utilidades" class="actions-column">
             <button class="btn text-info btn-ver-detalhes-inspecao" data-id="${
               insp.id
             }" title="Ver Detalhes"><span class="material-symbols-outlined">visibility</span></button>
-            ${btnEditarHtml}
+            ${rawHtml(btnEditarHtml)}
             <button class="btn text-secondary btn-anexar-escritorio" data-id="${
               insp.id
             }" title="Anexar Documentos"><span class="material-symbols-outlined">attach_file</span></button>
-            ${btnConcluirHtml}
-            ${btnRecoveryHtml}
-            ${btnExcluirHtml}
+            ${rawHtml(btnConcluirHtml)}
+            ${rawHtml(btnRecoveryHtml)}
+            ${rawHtml(btnExcluirHtml)}
         </td>`;
 
       tr.querySelector(".btn-ver-detalhes-inspecao")?.addEventListener(

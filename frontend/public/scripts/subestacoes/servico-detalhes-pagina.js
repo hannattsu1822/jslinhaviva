@@ -325,16 +325,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const detailsContainer = itemCard.querySelector(".item-details-grid");
       detailsContainer.innerHTML = safeHtml`
-        ${
+        ${rawHtml(
           item.catalogo_equipamento_nome
             ? `<div><strong>Equipamento:</strong><span>${item.catalogo_equipamento_nome}</span></div>`
             : ""
-        }
-        ${
+        )}
+        ${rawHtml(
           item.tag_equipamento_alvo
             ? `<div><strong>TAG:</strong><span>${item.tag_equipamento_alvo}</span></div>`
             : ""
-        }
+        )}
         <div><strong>Encarregado:</strong><span>${
           item.encarregado_item_nome || "N/A"
         }</span></div>
