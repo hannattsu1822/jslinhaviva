@@ -178,6 +178,26 @@ async function performLogin() {
       document.removeEventListener("keydown", handleEnterKey);
 
       setTimeout(() => {
+        const cargo = String(result.user?.cargo || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim()
+          .toLowerCase();
+        const nivel = result.user?.nivel ?? 0;
+
+        if (cargo.includes("construcao") && nivel < 7) {
+          window.location.href = "/acompanhamento_construcao";
+          return;
+        }
+
+        if (
+          (cargo.includes("transporte") || cargo.includes("direcao")) &&
+          nivel < 2
+        ) {
+          window.location.href = "/frota_controle";
+          return;
+        }
+
         window.location.href = "/dashboard";
       }, 2750);
     } else {

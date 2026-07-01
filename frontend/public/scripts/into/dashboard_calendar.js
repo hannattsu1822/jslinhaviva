@@ -19,15 +19,35 @@ document.addEventListener("DOMContentLoaded", async function () {
   const userString = localStorage.getItem("user");
   let loggedInUserMatricula = null;
   let loggedInUserCargo = null;
+  let loggedInUser = null;
 
   if (userString) {
     try {
-      const user = JSON.parse(userString);
-      loggedInUserMatricula = user.matricula;
-      loggedInUserCargo = user.cargo;
+      loggedInUser = JSON.parse(userString);
+      loggedInUserMatricula = loggedInUser.matricula;
+      loggedInUserCargo = loggedInUser.cargo;
     } catch (e) {
       console.error("Erro ao parsear dados do usuário do localStorage:", e);
     }
+  }
+
+  const calendarCard = document.querySelector(".dashboard-calendar-card");
+  const userCargoNormalized = String(loggedInUserCargo || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  const userLevel = loggedInUser?.nivel ?? 0;
+  const isConstrucaoRestrito =
+    userCargoNormalized.includes("construcao") && userLevel < 7;
+  const isTransporteRestrito =
+    (userCargoNormalized.includes("transporte") ||
+      userCargoNormalized.includes("direcao")) &&
+    userLevel < 2;
+
+  if (isConstrucaoRestrito || isTransporteRestrito) {
+    if (calendarCard) calendarCard.style.display = "none";
+    return;
   }
 
   if (!loggedInUserMatricula) {

@@ -1,6 +1,12 @@
 const express = require("express");
 const { autenticar } = require("./auth");
 const { publicPage } = require("./shared/path.helper");
+const {
+  NIVEL_ADMIN,
+  NIVEL_ACESSO_MIN,
+  ehCargoConstrucaoAcompanhamento,
+  ehCargoTransporteDirecao,
+} = require("./shared/moduloNivel.permissions");
 
 const rotasAuth = require("./routes/rotas_auth");
 const rotasAuditoria = require("./routes/rotas_auditoria");
@@ -61,8 +67,27 @@ router.get("/login", (req, res) => {
   res.sendFile(publicPage("login/login.html"));
 });
 
-router.get("/dashboard", autenticar, (req, res) => {
-  res.sendFile(publicPage("into/dashboard.html"));
-});
+function redirecionarDashboardRestrito(req, res, next) {
+  const nivel = req.user?.nivel ?? 0;
+
+  if (nivel < NIVEL_ADMIN && ehCargoConstrucaoAcompanhamento(req.user)) {
+    return res.redirect("/acompanhamento_construcao");
+  }
+
+  if (nivel < NIVEL_ACESSO_MIN && ehCargoTransporteDirecao(req.user)) {
+    return res.redirect("/frota_controle");
+  }
+
+  next();
+}
+
+router.get(
+  "/dashboard",
+  autenticar,
+  redirecionarDashboardRestrito,
+  (req, res) => {
+    res.sendFile(publicPage("into/dashboard.html"));
+  }
+);
 
 module.exports = router;
