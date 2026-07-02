@@ -30,7 +30,14 @@ const BASE_SELECT = `
 
 async function listarAtivos() {
   const [rows] = await promisePool.query(
-    `${BASE_SELECT} AND p.status_geral IN ('ativo', 'em_progresso') ORDER BY p.id DESC`,
+    `${BASE_SELECT}
+      AND p.status_geral IN ('ativo', 'em_progresso')
+      AND EXISTS (
+        SELECT 1
+        FROM servicos_responsaveis sr
+        WHERE sr.servico_id = p.id
+      )
+     ORDER BY p.id DESC`,
     [ORIGEM_CONSTRUCAO]
   );
   return rows;
