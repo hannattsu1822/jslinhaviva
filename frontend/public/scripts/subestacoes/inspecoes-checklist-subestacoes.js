@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSalvarGerarServico = document.getElementById(
     "btnSalvarGerarServico"
   );
+  let dicaGerarServicoEl = null;
 
   const checklistContainer = document.getElementById("checklistContainer");
   const formInspecaoAvulsaContainer = document.getElementById(
@@ -389,8 +390,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function checkAnormalidades() {
-    const temAnormal = avulsoItems.some((item) => item.condicao === "Anormal");
-    btnSalvarGerarServico.classList.toggle("hidden", !temAnormal);
+    if (!btnSalvarGerarServico) return;
+    const temAnormalAvulsa = avulsoItems.some(
+      (item) => item.condicao === "Anormal"
+    );
+    const temAnormalChecklist = Object.values(checklistState.itens || {}).some(
+      (item) => item.avaliacao === "A"
+    );
+    const temAnormalidade = temAnormalAvulsa || temAnormalChecklist;
+    btnSalvarGerarServico.classList.toggle("hidden", !temAnormalidade);
+    if (dicaGerarServicoEl) {
+      dicaGerarServicoEl.classList.toggle("hidden", temAnormalidade);
+    }
   }
 
   function renderAvulsoItemPreviews(item, container) {
@@ -722,6 +733,8 @@ document.addEventListener("DOMContentLoaded", () => {
       renderEquipamentosObservados(checklistState.equipamentosObservados);
       renderVerificacoesAdicionais(checklistState.verificacoesAdicionais);
     }
+
+      checkAnormalidades();
   }
 
   function renderMedicoes(medicoes) {
@@ -935,6 +948,7 @@ document.addEventListener("DOMContentLoaded", () => {
             radio.addEventListener("change", (e) => {
               checklistState.itens[item.id].avaliacao = e.target.value;
               atualizarEstiloBotaoDetalhes(item.id);
+              checkAnormalidades();
             });
           });
         itensList.appendChild(itemDiv);
@@ -1352,10 +1366,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  formChecklistInspecao.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  async function salvarInspecao(gerarServico = false) {
     btnSalvarInspecao.disabled = true;
     btnSalvarInspecao.innerHTML = `Salvando...`;
+    if (btnSalvarGerarServico) {
+      btnSalvarGerarServico.disabled = true;
+      btnSalvarGerarServico.innerHTML = `Salvando...`;
+    }
 
     const formElements = formChecklistInspecao.elements;
     const payload = {
@@ -1486,7 +1503,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const method = isEditMode ? "PUT" : "POST";
 
     try {
-      await fetchData(url, {
+      const response = await fetchData(url, {
         method: method,
         headers: {
           "Content-Type": "application/json",
@@ -1494,6 +1511,11 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(payload),
       });
       alert(`Inspeção ${isEditMode ? "atualizada" : "salva"} com sucesso!`);
+      const inspecaoIdFinal = response?.id || editInspecaoId;
+      if (gerarServico && inspecaoIdFinal) {
+        window.location.href = `/registrar-servico-subestacao?inspecao_id=${inspecaoIdFinal}`;
+        return;
+      }
       window.location.href = "/pagina-listagem-inspecoes-subestacoes";
     } catch (error) {
       alert(`Falha ao salvar inspeção: ${error.message}`);
@@ -1502,8 +1524,32 @@ document.addEventListener("DOMContentLoaded", () => {
       btnSalvarInspecao.innerHTML = safeHtml`<span class="material-symbols-outlined">save</span> ${
         isEditMode ? "Salvar Alterações" : "Salvar Inspeção"
       }`;
+      if (btnSalvarGerarServico) {
+        btnSalvarGerarServico.disabled = false;
+        btnSalvarGerarServico.innerHTML =
+          '<span class="material-symbols-outlined">bolt</span> Salvar e Gerar Serviço';
+      }
     }
+  }
+
+  formChecklistInspecao.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await salvarInspecao(false);
   });
+
+  if (btnSalvarGerarServico) {
+    dicaGerarServicoEl = document.createElement("small");
+    dicaGerarServicoEl.id = "dicaGerarServico";
+    dicaGerarServicoEl.className = "text-muted hidden";
+    dicaGerarServicoEl.textContent =
+      "Para gerar serviço, marque ao menos um item/equipamento como Anormal.";
+    btnSalvarGerarServico.insertAdjacentElement("beforebegin", dicaGerarServicoEl);
+
+    btnSalvarGerarServico.addEventListener("click", async () => {
+      if (btnSalvarGerarServico.classList.contains("hidden")) return;
+      await salvarInspecao(true);
+    });
+  }
 
   btnCancelarChecklist.addEventListener("click", () => {
     if (

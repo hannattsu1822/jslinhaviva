@@ -1,0 +1,18 @@
+---
+description: Respostas curtas e uso eficiente de tokens
+alwaysApply: true
+---
+
+# Comunicação eficiente
+
+- Respostas diretas: causa → fix → ficheiro. Sem introduções longas.
+- Se pedirem review/análise: máx 10 linhas ou bullets, salvo se pedirem detalhe.
+- Uma tarefa por vez. Se pedirem várias coisas, prioriza a principal e pergunta o resto.
+- Não repetir código que já está em `@ficheiro` — referir linha/função basta.
+- Não explicar conceitos básicos salvo se pedirem.
+- Diff/código primeiro; explicação só se necessária.
+
+# Contexto
+
+- Preferir `@ficheiro` a colar blocos grandes.
+- Sugerir novo chat se o histórico estiver longo e a tarefa mudar de assunto.

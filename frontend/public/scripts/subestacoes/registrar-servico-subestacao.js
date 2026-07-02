@@ -105,6 +105,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let itensDeServico = [];
   let modalAnexosTemporarios = [];
   let anexosGeraisFinais = [];
+  const urlParams = new URLSearchParams(window.location.search);
+  const inspecaoIdOrigem = urlParams.get("inspecao_id");
 
   function mostrarModal(modalEl) {
     if (modalEl) modalEl.classList.remove("hidden");
@@ -567,6 +569,60 @@ document.addEventListener("DOMContentLoaded", () => {
     return `Verificar/Corrigir: ${descricao}`;
   }
 
+  function adicionarItensDeInspecoesAoServico(detalhesInspecoes) {
+    detalhesInspecoes.forEach((insp) => {
+      insp.itens_anormais.forEach((itemAnormal) => {
+        const temEspecificacoes =
+          itemAnormal.especificacoes && itemAnormal.especificacoes.length > 0;
+        const descricaoAnormalidade = inverterDescricaoParaAnormalidade(
+          itemAnormal.descricao_item
+        );
+
+        if (temEspecificacoes) {
+          itemAnormal.especificacoes.forEach((esp) => {
+            const itemEspecifico = {
+              tipo: "inspecao",
+              temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_esp_${esp.id}`,
+              descricao: `${descricaoAnormalidade} (Equipamento: ${esp.descricao_equipamento})`,
+              origem: {
+                inspecao_id: insp.id,
+                formulario_inspecao_num: insp.formulario_inspecao_num,
+                subestacao_sigla: insp.subestacao_sigla,
+                resposta_id: itemAnormal.resposta_id,
+                especificacao_id: esp.id,
+                anexos: esp.anexos || [],
+              },
+              anexos: [],
+            };
+            if (
+              !itensDeServico.some((i) => i.temp_id === itemEspecifico.temp_id)
+            ) {
+              itensDeServico.push(itemEspecifico);
+            }
+          });
+        } else {
+          const itemGeral = {
+            tipo: "inspecao",
+            temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_geral`,
+            descricao: descricaoAnormalidade,
+            origem: {
+              inspecao_id: insp.id,
+              formulario_inspecao_num: insp.formulario_inspecao_num,
+              subestacao_sigla: insp.subestacao_sigla,
+              resposta_id: itemAnormal.resposta_id,
+              especificacao_id: null,
+              anexos: itemAnormal.anexos_gerais || [],
+            },
+            anexos: [],
+          };
+          if (!itensDeServico.some((i) => i.temp_id === itemGeral.temp_id)) {
+            itensDeServico.push(itemGeral);
+          }
+        }
+      });
+    });
+  }
+
   async function handleConfirmarSelecaoInspecoes() {
     salvarEstadoDosItensNaTela();
     const idsSelecionados = Array.from(
@@ -589,60 +645,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ inspecao_ids: idsSelecionados }),
         }
       );
-
-      detalhesInspecoes.forEach((insp) => {
-        insp.itens_anormais.forEach((itemAnormal) => {
-          const temEspecificacoes =
-            itemAnormal.especificacoes && itemAnormal.especificacoes.length > 0;
-          const descricaoAnormalidade = inverterDescricaoParaAnormalidade(
-            itemAnormal.descricao_item
-          );
-
-          if (temEspecificacoes) {
-            itemAnormal.especificacoes.forEach((esp) => {
-              const itemEspecifico = {
-                tipo: "inspecao",
-                temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_esp_${esp.id}`,
-                descricao: `${descricaoAnormalidade} (Equipamento: ${esp.descricao_equipamento})`,
-                origem: {
-                  inspecao_id: insp.id,
-                  formulario_inspecao_num: insp.formulario_inspecao_num,
-                  subestacao_sigla: insp.subestacao_sigla,
-                  resposta_id: itemAnormal.resposta_id,
-                  especificacao_id: esp.id,
-                  anexos: esp.anexos || [],
-                },
-                anexos: [],
-              };
-              if (
-                !itensDeServico.some(
-                  (i) => i.temp_id === itemEspecifico.temp_id
-                )
-              ) {
-                itensDeServico.push(itemEspecifico);
-              }
-            });
-          } else {
-            const itemGeral = {
-              tipo: "inspecao",
-              temp_id: `insp_${insp.id}_${itemAnormal.resposta_id}_geral`,
-              descricao: descricaoAnormalidade,
-              origem: {
-                inspecao_id: insp.id,
-                formulario_inspecao_num: insp.formulario_inspecao_num,
-                subestacao_sigla: insp.subestacao_sigla,
-                resposta_id: itemAnormal.resposta_id,
-                especificacao_id: null,
-                anexos: itemAnormal.anexos_gerais || [],
-              },
-              anexos: [],
-            };
-            if (!itensDeServico.some((i) => i.temp_id === itemGeral.temp_id)) {
-              itensDeServico.push(itemGeral);
-            }
-          }
-        });
-      });
+      adicionarItensDeInspecoesAoServico(detalhesInspecoes);
       renderizarItensDeServico();
       ocultarModal(modalSelecionarInspecaoEl);
     } catch (error) {
@@ -777,6 +780,40 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  async function preCarregarServicoDaInspecao(inspecaoId) {
+    if (!inspecaoId || Number.isNaN(Number(inspecaoId))) {
+      mostrarModal(modalPreSelecaoServicoEl);
+      return;
+    }
+
+    try {
+      const [detalhesInspecao, detalhesServico] = await Promise.all([
+        fetchData(`/inspecoes-subestacoes/${inspecaoId}`),
+        fetchData("/api/inspecoes/detalhes-para-servico", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ inspecao_ids: [inspecaoId] }),
+        }),
+      ]);
+
+      if (detalhesInspecao?.subestacao_id) {
+        servicoSubestacaoSelect.value = String(detalhesInspecao.subestacao_id);
+      }
+      if (detalhesInspecao?.processo && !formServico.elements.processo.value) {
+        formServico.elements.processo.value = detalhesInspecao.processo;
+      }
+
+      adicionarItensDeInspecoesAoServico(detalhesServico);
+      renderizarItensDeServico();
+      ocultarModal(modalPreSelecaoServicoEl);
+    } catch (error) {
+      alert(
+        "Não foi possível carregar automaticamente os itens da inspeção para este serviço."
+      );
+      mostrarModal(modalPreSelecaoServicoEl);
+    }
+  }
+
   async function init() {
     await buscarCatalogos();
     await popularSelectsIniciais();
@@ -799,7 +836,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "id"
     );
 
-    mostrarModal(modalPreSelecaoServicoEl);
+    await preCarregarServicoDaInspecao(inspecaoIdOrigem);
   }
 
   init();
