@@ -80,6 +80,32 @@ function formatarHora(horaString) {
   }
 }
 
+function renderResumoServico(data) {
+  const processoEl = document.getElementById("overview-processo");
+  const statusEl = document.getElementById("overview-status");
+  const equipeEl = document.getElementById("overview-equipe");
+  const anexosEl = document.getElementById("overview-anexos");
+
+  if (processoEl) {
+    processoEl.textContent = data.processo || "Não informado";
+  }
+  if (statusEl) {
+    const mapaStatus = {
+      ativo: "Ativo",
+      em_progresso: "Em Progresso",
+      concluido: "Concluído",
+      nao_concluido: "Não Concluído",
+    };
+    statusEl.textContent = mapaStatus[data.status] || (data.status || "Não informado");
+  }
+  if (equipeEl) {
+    equipeEl.textContent = String((data.responsaveis || []).length);
+  }
+  if (anexosEl) {
+    anexosEl.textContent = String((data.anexos || []).length);
+  }
+}
+
 async function carregarDetalhesServico() {
   const urlParams = new URLSearchParams(window.location.search);
   const servicoId = urlParams.get("id");
@@ -116,6 +142,8 @@ async function carregarDetalhesServico() {
 
     const { success, data } = await response.json();
     if (!success || !data) throw new Error("Detalhes do serviço não encontrados.");
+
+    renderResumoServico(data);
 
     document.getElementById("servico-id").textContent = data.id || "-";
     document.getElementById("servico-processo").textContent = data.processo || "Não informado";

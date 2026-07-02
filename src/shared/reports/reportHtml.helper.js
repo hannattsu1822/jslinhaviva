@@ -90,6 +90,75 @@ function gerarListaDocumentosHtml(documentos, emptyMessage) {
   return listHtml;
 }
 
+function gerarGaleriaDestaqueHtml(imagens = []) {
+  if (!imagens || imagens.length === 0) {
+    return '<p class="srv-pdf__empty">Nenhum registro fotográfico encontrado.</p>';
+  }
+
+  return `<div class="srv-pdf__photo-focus-grid">
+    ${imagens
+      .map(
+        (img, index) => `
+      <figure class="srv-pdf__photo-focus">
+        <div class="srv-pdf__photo-focus-frame">
+          <img src="${img.src}" alt="${escapeHtml(img.nome)}" />
+        </div>
+        <figcaption class="srv-pdf__photo-focus-caption">
+          Foto ${index + 1} — ${escapeHtml(img.nome)}
+        </figcaption>
+      </figure>`
+      )
+      .join("")}
+  </div>`;
+}
+
+function renderPdfField(label, value, fullWidth = false) {
+  return `
+    <div class="srv-pdf__field${fullWidth ? " srv-pdf__field--full" : ""}">
+      <span class="srv-pdf__label">${escapeHtml(label)}</span>
+      <div class="srv-pdf__value">${value}</div>
+    </div>`;
+}
+
+function renderPdfStatusBadge(status) {
+  const map = {
+    ativo: { text: "Ativo", cls: "srv-pdf__badge--warning" },
+    em_progresso: { text: "Em Progresso", cls: "srv-pdf__badge--info" },
+    concluido: { text: "Concluído", cls: "srv-pdf__badge--success" },
+    nao_concluido: { text: "Não Concluído", cls: "srv-pdf__badge--danger" },
+    pendente: { text: "Pendente", cls: "srv-pdf__badge--warning" },
+  };
+  const normalized = String(status || "").toLowerCase();
+  const item = map[normalized] || {
+    text: status || "N/A",
+    cls: "srv-pdf__badge--secondary",
+  };
+  return `<span class="srv-pdf__badge ${item.cls}">${escapeHtml(item.text)}</span>`;
+}
+
+function gerarAnexosDetalhesPdfHtml(anexos = []) {
+  if (!anexos || anexos.length === 0) {
+    return '<p class="srv-pdf__empty">Nenhum anexo encontrado.</p>';
+  }
+
+  return `<div class="srv-pdf__anexos">
+    ${anexos
+      .map((anexo) => {
+        const nome = escapeHtml(anexo.nome || anexo.nomeOriginal || "arquivo");
+        const isImage = anexo.src && anexo.tipo !== "pdf";
+        const thumb = isImage
+          ? `<img src="${anexo.src}" alt="${nome}" />`
+          : `<span style="font-size:9pt;color:#64748b;">PDF / Doc</span>`;
+        return `
+      <div class="srv-pdf__anexo">
+        <div class="srv-pdf__anexo-thumb">${thumb}</div>
+        <p class="srv-pdf__anexo-name">${nome}</p>
+      </div>`;
+      })
+      .join("")}
+  </div>`;
+}
+
 function renderInfoItem(label, value, options = false) {
   let fullWidth = false;
   let span = 0;
@@ -317,6 +386,10 @@ module.exports = {
   renderStatusBadge,
   renderInspecaoStatusBadge,
   gerarGaleriaHtml,
+  gerarGaleriaDestaqueHtml,
+  gerarAnexosDetalhesPdfHtml,
+  renderPdfField,
+  renderPdfStatusBadge,
   gerarListaDocumentosHtml,
   gerarAnexoImpressaoIndividualHtml,
   gerarTabelaChecklistHtml,

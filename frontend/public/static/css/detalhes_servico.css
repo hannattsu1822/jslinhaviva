@@ -146,9 +146,11 @@ body {
 }
 
 .page-title {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--cor-primaria);
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
+  font-size: 1.65rem;
+  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
 }
@@ -312,14 +314,16 @@ body {
 
 /* Cards de detalhes */
 .detail-card {
-  border-radius: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--cor-borda);
   border-left: 4px solid var(--cor-primaria);
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 12px rgba(30, 60, 114, 0.06);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .detail-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(30, 60, 114, 0.1);
 }
 
 .detail-card .card-header {
@@ -342,6 +346,37 @@ body {
   color: var(--cor-texto-secundario);
   margin-bottom: 0.25rem;
   display: block;
+}
+
+/* Resumo rápido do serviço */
+.detail-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-overview__card {
+  border: 1px solid var(--cor-borda);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 12px rgba(30, 60, 114, 0.05);
+}
+
+.detail-overview__label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--cor-texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.detail-overview__value {
+  display: block;
+  color: var(--cor-secundaria);
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 /* Anexos */
@@ -441,10 +476,32 @@ body {
   .detail-card {
     margin-bottom: 1.5rem;
   }
+
+  .detail-overview__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Transição para campos de horário */
 #hora-inicio-container,
 #hora-fim-container {
   transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .detail-overview__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .action-buttons .btn {
+    margin: 0 !important;
+    width: 100%;
+  }
 }

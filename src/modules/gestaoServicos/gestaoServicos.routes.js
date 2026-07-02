@@ -61,7 +61,8 @@ router.get(
 router.get(
   "/detalhes_servico",
   autenticar,
-  verificarNivelOuCargo(NIVEL_ADMIN_SERVICOS, ["construcao", "construção"]),
+  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
+  redirecionarConstrucaoRestrito,
   redirecionarCodRestrito,
   redirecionarTransporteRestrito,
   (req, res) => {

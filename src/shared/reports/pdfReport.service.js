@@ -3,7 +3,7 @@ const fs = require("fs/promises");
 const ejs = require("ejs");
 const playwright = require("playwright");
 const { PDFDocument } = require("pdf-lib");
-const { loadReportStyles, loadCompanyLogoDataUri } = require("./reportTheme.helper");
+const { loadReportStyles, loadCompanyLogoDataUri, loadServicoDetailsPdfStyles } = require("./reportTheme.helper");
 const { escapeHtml } = require("../htmlEscape.helper");
 
 const REPORTS_DIR = path.join(__dirname);
@@ -229,6 +229,20 @@ async function renderReportTemplate(templateName, data = {}) {
   });
 }
 
+async function renderServicoDetailsReport(data = {}) {
+  const templatePath = path.join(TEMPLATES_DIR, "servico-details-report.ejs");
+  const [reportStyles, logoDataUri] = await Promise.all([
+    loadServicoDetailsPdfStyles(),
+    loadCompanyLogoDataUri(),
+  ]);
+  return ejs.renderFile(templatePath, {
+    ...data,
+    reportStyles,
+    logoDataUri,
+    formatReportDate,
+  });
+}
+
 async function htmlToPdf(html, options = {}) {
   const {
     landscape = true,
@@ -315,6 +329,7 @@ module.exports = {
   buildFooterOnlyTemplate,
   wrapReportHtml,
   renderReportTemplate,
+  renderServicoDetailsReport,
   htmlToPdf,
   mergePdfAttachments,
 };

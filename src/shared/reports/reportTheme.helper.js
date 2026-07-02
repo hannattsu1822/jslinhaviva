@@ -3,6 +3,7 @@ const path = require("path");
 const { publicDir } = require("../path.helper");
 
 let cachedStyles = null;
+let cachedServicoDetailsPdfStyles = null;
 let cachedLogoDataUri = null;
 
 const LOGO_PATH = path.join(publicDir, "static/images/brand/sulgipe-logo.png");
@@ -16,6 +17,17 @@ async function loadReportStyles() {
   const themePath = path.join(publicDir, "static/css/base/report-theme.css");
   cachedStyles = await fs.readFile(themePath, "utf-8");
   return cachedStyles;
+}
+
+async function loadServicoDetailsPdfStyles() {
+  if (cachedServicoDetailsPdfStyles) return cachedServicoDetailsPdfStyles;
+
+  const cssPath = path.join(
+    publicDir,
+    "static/css/servicos/servico-details-pdf.css"
+  );
+  cachedServicoDetailsPdfStyles = await fs.readFile(cssPath, "utf-8");
+  return cachedServicoDetailsPdfStyles;
 }
 
 /** Logo SULGIPE em base64 para embutir no PDF (sem dependência de URL externa). */
@@ -34,11 +46,13 @@ async function loadCompanyLogoDataUri() {
 /** Limpa cache (útil em dev ao editar o CSS ou logo). */
 function clearReportStylesCache() {
   cachedStyles = null;
+  cachedServicoDetailsPdfStyles = null;
   cachedLogoDataUri = null;
 }
 
 module.exports = {
   loadReportStyles,
+  loadServicoDetailsPdfStyles,
   loadCompanyLogoDataUri,
   clearReportStylesCache,
 };

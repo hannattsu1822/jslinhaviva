@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Detalhes do Serviço — <%= servicoId %></title>
+  <style><%- reportStyles %></style>
+</head>
+<body class="srv-pdf-body">
+  <div class="srv-pdf">
+    <header class="srv-pdf__header">
+      <% if (logoDataUri) { %>
+        <img class="srv-pdf__logo" src="<%= logoDataUri %>" alt="SULGIPE" />
+      <% } else { %>
+        <span class="srv-pdf__logo-fallback">SULGIPE</span>
+      <% } %>
+      <div class="srv-pdf__header-main">
+        <h1 class="srv-pdf__title">Detalhes do Serviço</h1>
+        <p class="srv-pdf__meta">
+          ID: <strong><%= servicoId %></strong> · Processo: <strong><%= processo %></strong><br />
+          Emitido em: <%= generatedAt %>
+        </p>
+      </div>
+    </header>
+
+    <section class="srv-pdf__overview" aria-label="Resumo">
+      <article class="srv-pdf__overview-card">
+        <span class="srv-pdf__overview-label">Processo</span>
+        <span class="srv-pdf__overview-value"><%= overviewProcesso %></span>
+      </article>
+      <article class="srv-pdf__overview-card">
+        <span class="srv-pdf__overview-label">Status</span>
+        <span class="srv-pdf__overview-value"><%= overviewStatus %></span>
+      </article>
+      <article class="srv-pdf__overview-card">
+        <span class="srv-pdf__overview-label">Equipe</span>
+        <span class="srv-pdf__overview-value"><%= overviewEquipe %></span>
+      </article>
+      <article class="srv-pdf__overview-card">
+        <span class="srv-pdf__overview-label">Anexos</span>
+        <span class="srv-pdf__overview-value"><%= overviewAnexos %></span>
+      </article>
+    </section>
+
+    <div class="srv-pdf__row">
+      <article class="srv-pdf__card">
+        <div class="srv-pdf__card-header">Informações Básicas</div>
+        <div class="srv-pdf__card-body">
+          <div class="srv-pdf__fields">
+            <%- basicInfoHtml %>
+          </div>
+        </div>
+      </article>
+      <article class="srv-pdf__card">
+        <div class="srv-pdf__card-header">Datas e Horários</div>
+        <div class="srv-pdf__card-body">
+          <div class="srv-pdf__fields">
+            <%- datasHtml %>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="srv-pdf__row">
+      <article class="srv-pdf__card">
+        <div class="srv-pdf__card-header">Equipe Responsável</div>
+        <div class="srv-pdf__card-body">
+          <%- equipeHtml %>
+        </div>
+      </article>
+      <article class="srv-pdf__card">
+        <div class="srv-pdf__card-header">Localização Google Maps</div>
+        <div class="srv-pdf__card-body">
+          <%- mapsHtml %>
+        </div>
+      </article>
+    </div>
+
+    <article class="srv-pdf__card">
+      <div class="srv-pdf__card-header">Descrição e Observações do Registro</div>
+      <div class="srv-pdf__card-body">
+        <div class="srv-pdf__fields">
+          <%- descricaoHtml %>
+        </div>
+      </div>
+    </article>
+
+    <% if (showFinalizacao) { %>
+    <article class="srv-pdf__card">
+      <div class="srv-pdf__card-header">Informações de Finalização</div>
+      <div class="srv-pdf__card-body">
+        <div class="srv-pdf__fields">
+          <%- finalizacaoHtml %>
+        </div>
+      </div>
+    </article>
+    <% } %>
+
+    <article class="srv-pdf__card">
+      <div class="srv-pdf__card-header">Anexos do Registro</div>
+      <div class="srv-pdf__card-body">
+        <%- anexosGridHtml %>
+      </div>
+    </article>
+
+    <%- appendixImpressaoHtml %>
+
+    <p class="srv-pdf__footer-note">
+      Documento gerado automaticamente pelo Linha Viva System — <%= docCode %>
+    </p>
+  </div>
+</body>
+</html>
