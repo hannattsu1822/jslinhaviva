@@ -134,13 +134,7 @@ function normalizeKmPayload(payload) {
       tipoLancamentoChegada.checked = true;
       toggleFormFields("chegada");
       const saida = currentState.viagemAberta;
-      const motoristaInfo = saida.motorista_matricula
-        ? `<br>Motorista: <strong>${saida.motorista_matricula}</strong>`
-        : "";
-      const delegadoInfo = saida.criado_por_matricula
-        ? `<br><small class="text-muted">Registrado por gestor: ${saida.criado_por_matricula}</small>`
-        : "";
-      infoViagemAbertaEl.innerHTML = safeHtml`
+      let viagemAbertaHtml = safeHtml`
         <strong>Viagem em andamento:</strong><br>
         Saindo de: <strong>${saida.saida_local}</strong><br>
         KM de Saída: <strong>${
@@ -148,7 +142,14 @@ function normalizeKmPayload(payload) {
         }</strong> | Horário: <strong>${saida.saida_horario.substring(
         0,
         5
-      )}</strong>${motoristaInfo}${delegadoInfo}`;
+      )}</strong>`;
+      if (saida.motorista_matricula) {
+        viagemAbertaHtml += safeHtml`<br>Motorista: <strong>${saida.motorista_matricula}</strong>`;
+      }
+      if (saida.criado_por_matricula) {
+        viagemAbertaHtml += safeHtml`<br><small class="text-muted">Registrado por gestor: ${saida.criado_por_matricula}</small>`;
+      }
+      infoViagemAbertaEl.innerHTML = viagemAbertaHtml;
       preencherDadosAtuaisChegada();
     } else {
       tipoLancamentoSaida.disabled = false;
@@ -236,9 +237,13 @@ function normalizeKmPayload(payload) {
   };
 
   const carregarMotoristasDelegaveis = async () => {
+    motoristaDelegadoContainer.classList.remove("d-none");
     try {
       const response = await fetch("/api/prv/motoristas");
-      if (!response.ok) return;
+      if (!response.ok) {
+        showToast("Não foi possível carregar a lista de motoristas.", "error");
+        return;
+      }
       const motoristas = await response.json();
       motoristaMatriculaSelect.innerHTML =
         '<option value="">Eu (registrar em meu nome)</option>';
@@ -246,9 +251,9 @@ function normalizeKmPayload(payload) {
         if (m.matricula === currentState.currentUser?.matricula) return;
         motoristaMatriculaSelect.innerHTML += safeHtml`<option value="${m.matricula}">${m.nome} (${m.matricula})</option>`;
       });
-      motoristaDelegadoContainer.classList.remove("d-none");
     } catch (error) {
       console.error("Erro ao carregar motoristas:", error);
+      showToast("Erro ao carregar motoristas para delegação.", "error");
     }
   };
 
@@ -262,7 +267,7 @@ function normalizeKmPayload(payload) {
       if (meRes.ok) {
         currentState.currentUser = await meRes.json();
         currentState.podeDelegarMotorista =
-          (currentState.currentUser?.nivel ?? 0) >= 7;
+          Number(currentState.currentUser?.nivel ?? 0) >= 7;
         if (currentState.podeDelegarMotorista) {
           await carregarMotoristasDelegaveis();
         }
