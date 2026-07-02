@@ -95,27 +95,49 @@
                         >Registrar Chegada</label
                       >
                     </div>
+
+                    <div
+                      id="gestor-tipos-extra"
+                      class="form-check form-check-inline d-none"
+                    >
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        name="tipoLancamento"
+                        id="tipoLancamentoRetroativa"
+                        value="retroativa"
+                      />
+                      <label
+                        class="form-check-label"
+                        for="tipoLancamentoRetroativa"
+                        >Viagem completa (retroativa)</label
+                      >
+                    </div>
+                  </div>
+                  <div
+                    id="gestor-modo-ajuda"
+                    class="form-text text-muted d-none"
+                  ></div>
+                </div>
+
+                <div id="motorista-delegado-container" class="row d-none">
+                  <div class="col-12 mb-3">
+                    <label for="motorista_matricula" class="form-label"
+                      >Motorista responsável</label
+                    >
+                    <select class="form-select" id="motorista_matricula">
+                      <option value="">Selecione o motorista...</option>
+                    </select>
+                    <small class="form-text text-muted"
+                      >Registre a viagem em nome de quem utilizou o
+                      veículo.</small
+                    >
                   </div>
                 </div>
 
                 <div id="saida-fields">
                   <div class="prv-form-section">
                     <h6 class="border-bottom pb-2 mb-3">Dados da Saída</h6>
-
-                    <div id="motorista-delegado-container" class="row d-none">
-                      <div class="col-12 mb-3">
-                        <label for="motorista_matricula" class="form-label"
-                          >Motorista responsável</label
-                        >
-                        <select class="form-select" id="motorista_matricula">
-                          <option value="">Eu (registrar em meu nome)</option>
-                        </select>
-                        <small class="form-text text-muted"
-                          >Use para registrar a saída em nome de outro
-                          colaborador.</small
-                        >
-                      </div>
-                    </div>
 
                     <div class="row">
                       <div class="col-md-4 mb-3">
@@ -172,6 +194,10 @@
                     <h6 class="border-bottom pb-2 mb-3">Dados da Chegada</h6>
 
                     <div class="alert alert-info" id="info-viagem-aberta"></div>
+                    <div
+                      class="alert alert-warning d-none"
+                      id="gestor-chegada-aviso"
+                    ></div>
 
                     <div class="row">
                       <div class="col-md-6 mb-3">

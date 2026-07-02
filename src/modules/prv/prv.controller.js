@@ -103,15 +103,58 @@ async function iniciarViagem(req, res) {
   }
 }
 
+async function criarViagemRetroativa(req, res) {
+  try {
+    const { matricula, nivel } = req.session.user;
+    const resultado = await service.criarViagemRetroativa(
+      req.body,
+      matricula,
+      nivel
+    );
+    const detalhesAuditoria = resultado.criadoPorMatricula
+      ? `ID: ${resultado.id} | Motorista: ${resultado.motoristaMatricula} | Registrado por gestor: ${matricula}`
+      : `ID: ${resultado.id} | Motorista: ${resultado.motoristaMatricula}`;
+    await registrarAuditoria(
+      matricula,
+      "CRIAR_VIAGEM_RETROATIVA_PRV",
+      detalhesAuditoria
+    );
+    res.status(201).json({
+      message: "Viagem retroativa registrada com sucesso!",
+      id: resultado.id,
+    });
+  } catch (error) {
+    console.error("Erro ao registrar viagem retroativa na PRV:", error);
+    const statusCode =
+      error.message.includes("obrigatórios") ||
+      error.message.includes("obrigatório") ||
+      error.message.includes("não corresponde") ||
+      error.message.includes("permissão") ||
+      error.message.includes("não encontrado") ||
+      error.message.includes("deve ser")
+        ? 400
+        : error.message.includes("em andamento")
+        ? 409
+        : 500;
+    res.status(statusCode).json({ message: error.message });
+  }
+}
+
 async function finalizarViagem(req, res) {
   try {
     const { id } = req.params;
     const { matricula, nivel } = req.session.user;
-    await service.finalizarViagem(id, req.body, matricula, nivel);
+    const resultado = await service.finalizarViagem(id, req.body, matricula, nivel);
+    const detalhesAuditoria =
+      resultado.motoristaMatricula &&
+      resultado.motoristaMatricula !== matricula &&
+      nivel >= 4
+        ? `ID: ${id} | Motorista: ${resultado.motoristaMatricula} | Finalizado por gestor: ${matricula}`
+        : `ID do Registro: ${id}`;
     await registrarAuditoria(
       matricula,
       "FINALIZAR_VIAGEM_PRV",
-      `ID do Registro: ${id}`
+      detalhesAuditoria
     );
     res.json({ message: "Chegada registrada com sucesso!" });
   } catch (error) {
@@ -150,6 +193,7 @@ module.exports = {
   obterStatusViagem,
   listarRegistros,
   iniciarViagem,
+  criarViagemRetroativa,
   finalizarViagem,
   excluirRegistro,
 };

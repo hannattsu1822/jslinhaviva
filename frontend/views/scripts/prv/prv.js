@@ -20,6 +20,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const tipoLancamentoChegada = document.getElementById(
     "tipoLancamentoChegada"
   );
+  const tipoLancamentoRetroativa = document.getElementById(
+    "tipoLancamentoRetroativa"
+  );
+  const gestorTiposExtra = document.getElementById("gestor-tipos-extra");
+  const gestorModoAjuda = document.getElementById("gestor-modo-ajuda");
+  const gestorChegadaAviso = document.getElementById("gestor-chegada-aviso");
   const saidaFields = document.getElementById("saida-fields");
   const chegadaFields = document.getElementById("chegada-fields");
   const infoViagemAbertaEl = document.getElementById("info-viagem-aberta");
@@ -111,26 +117,81 @@ function normalizeKmPayload(payload) {
 
   const toggleFormFields = (tipo) => {
     const dataViagemInput = document.getElementById("data_viagem");
+    const mostrarMotorista =
+      currentState.podeDelegarMotorista &&
+      (tipo === "saida" || tipo === "retroativa");
+
+    if (motoristaDelegadoContainer) {
+      motoristaDelegadoContainer.classList.toggle("d-none", !mostrarMotorista);
+    }
+
     if (tipo === "saida") {
       saidaFields.classList.remove("d-none");
       chegadaFields.classList.add("d-none");
       salvarBtn.innerHTML =
         '<i class="fa-solid fa-truck-fast me-2"></i>Salvar Saída';
       dataViagemInput.required = true;
+      if (gestorModoAjuda) {
+        gestorModoAjuda.classList.toggle(
+          "d-none",
+          !currentState.podeDelegarMotorista
+        );
+        gestorModoAjuda.textContent =
+          "Como gestor, você pode iniciar a saída em nome de outro colaborador.";
+      }
+    } else if (tipo === "retroativa") {
+      saidaFields.classList.remove("d-none");
+      chegadaFields.classList.remove("d-none");
+      if (infoViagemAbertaEl) infoViagemAbertaEl.classList.add("d-none");
+      if (gestorChegadaAviso) gestorChegadaAviso.classList.add("d-none");
+      salvarBtn.innerHTML =
+        '<i class="fa-solid fa-clock-rotate-left me-2"></i>Salvar Viagem Completa';
+      dataViagemInput.required = true;
+      if (gestorModoAjuda) {
+        gestorModoAjuda.classList.remove("d-none");
+        gestorModoAjuda.textContent =
+          "Use quando o colaborador saiu e voltou sem registrar nada na PRV.";
+      }
+      preencherDadosAtuaisChegada();
     } else {
       saidaFields.classList.add("d-none");
       chegadaFields.classList.remove("d-none");
+      if (infoViagemAbertaEl) infoViagemAbertaEl.classList.remove("d-none");
       salvarBtn.innerHTML =
         '<i class="fa-solid fa-flag-checkered me-2"></i>Salvar Chegada';
       dataViagemInput.required = false;
+      if (gestorModoAjuda) gestorModoAjuda.classList.add("d-none");
+    }
+  };
+
+  const obterTipoLancamentoSelecionado = () =>
+    document.querySelector('input[name="tipoLancamento"]:checked')?.value ||
+    "saida";
+
+  const atualizarOpcoesGestor = () => {
+    const semViagemAberta = !currentState.viagemAberta;
+    if (gestorTiposExtra) {
+      gestorTiposExtra.classList.toggle(
+        "d-none",
+        !(currentState.podeDelegarMotorista && semViagemAberta)
+      );
+    }
+    if (
+      currentState.viagemAberta &&
+      tipoLancamentoRetroativa?.checked
+    ) {
+      tipoLancamentoChegada.checked = true;
     }
   };
 
   const atualizarUiComEstado = () => {
     const saidaKmInput = document.getElementById("saida_km");
+    atualizarOpcoesGestor();
+
     if (currentState.viagemAberta) {
       tipoLancamentoSaida.disabled = true;
       tipoLancamentoChegada.disabled = false;
+      if (tipoLancamentoRetroativa) tipoLancamentoRetroativa.disabled = true;
       tipoLancamentoChegada.checked = true;
       toggleFormFields("chegada");
       const saida = currentState.viagemAberta;
@@ -147,15 +208,36 @@ function normalizeKmPayload(payload) {
         viagemAbertaHtml += safeHtml`<br>Motorista: <strong>${saida.motorista_matricula}</strong>`;
       }
       if (saida.criado_por_matricula) {
-        viagemAbertaHtml += safeHtml`<br><small class="text-muted">Registrado por gestor: ${saida.criado_por_matricula}</small>`;
+        viagemAbertaHtml += safeHtml`<br><small class="text-muted">Saída registrada por gestor: ${saida.criado_por_matricula}</small>`;
       }
       infoViagemAbertaEl.innerHTML = viagemAbertaHtml;
+
+      if (
+        gestorChegadaAviso &&
+        currentState.podeDelegarMotorista &&
+        saida.motorista_matricula &&
+        saida.motorista_matricula !== currentState.currentUser?.matricula
+      ) {
+        gestorChegadaAviso.classList.remove("d-none");
+        gestorChegadaAviso.innerHTML = safeHtml`Como gestor, você pode finalizar esta chegada em nome do motorista <strong>${saida.motorista_matricula}</strong> sem acessar a conta dele.`;
+      } else if (gestorChegadaAviso) {
+        gestorChegadaAviso.classList.add("d-none");
+        gestorChegadaAviso.innerHTML = "";
+      }
+
       preencherDadosAtuaisChegada();
     } else {
       tipoLancamentoSaida.disabled = false;
       tipoLancamentoChegada.disabled = true;
-      tipoLancamentoSaida.checked = true;
-      toggleFormFields("saida");
+      if (tipoLancamentoRetroativa) tipoLancamentoRetroativa.disabled = false;
+      if (!tipoLancamentoRetroativa?.checked) {
+        tipoLancamentoSaida.checked = true;
+      }
+      toggleFormFields(obterTipoLancamentoSelecionado());
+      if (gestorChegadaAviso) {
+        gestorChegadaAviso.classList.add("d-none");
+        gestorChegadaAviso.innerHTML = "";
+      }
       if (currentState.ultimoKmRegistrado !== null) {
         saidaKmInput.value = currentState.ultimoKmRegistrado;
         saidaKmInput.readOnly = true;
@@ -168,9 +250,11 @@ function normalizeKmPayload(payload) {
     }
   };
 
-  [tipoLancamentoSaida, tipoLancamentoChegada].forEach((el) =>
-    el.addEventListener("change", (e) => toggleFormFields(e.target.value))
-  );
+  [tipoLancamentoSaida, tipoLancamentoChegada, tipoLancamentoRetroativa]
+    .filter(Boolean)
+    .forEach((el) =>
+      el.addEventListener("change", (e) => toggleFormFields(e.target.value))
+    );
 
   const renderTable = () => {
     prvTableBody.innerHTML = "";
@@ -246,7 +330,7 @@ function normalizeKmPayload(payload) {
       }
       const motoristas = await response.json();
       motoristaMatriculaSelect.innerHTML =
-        '<option value="">Eu (registrar em meu nome)</option>';
+        '<option value="">Selecione o motorista...</option>';
       motoristas.forEach((m) => {
         if (m.matricula === currentState.currentUser?.matricula) return;
         motoristaMatriculaSelect.innerHTML += safeHtml`<option value="${m.matricula}">${m.nome} (${m.matricula})</option>`;
@@ -308,11 +392,17 @@ function normalizeKmPayload(payload) {
     carregarDadosPrv();
   });
 
+  const obterMotoristaDelegado = () => {
+    if (!currentState.podeDelegarMotorista || !motoristaMatriculaSelect) {
+      return null;
+    }
+    const motoristaSelecionado = motoristaMatriculaSelect.value.trim();
+    return motoristaSelecionado || null;
+  };
+
   prvForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const tipoLancamento = document.querySelector(
-      'input[name="tipoLancamento"]:checked'
-    ).value;
+    const tipoLancamento = obterTipoLancamentoSelecionado();
     let formData = {};
     let url = "/api/prv/registros";
     let method = "POST";
@@ -325,12 +415,32 @@ function normalizeKmPayload(payload) {
         saida_km: document.getElementById("saida_km").value || null,
         saida_local: document.getElementById("saida_local").value,
       };
-      if (currentState.podeDelegarMotorista && motoristaMatriculaSelect) {
-        const motoristaSelecionado = motoristaMatriculaSelect.value.trim();
-        if (motoristaSelecionado) {
-          formData.motorista_matricula = motoristaSelecionado;
-        }
+      const motoristaDelegado = obterMotoristaDelegado();
+      if (motoristaDelegado) {
+        formData.motorista_matricula = motoristaDelegado;
       }
+    } else if (tipoLancamento === "retroativa") {
+      const motoristaDelegado = obterMotoristaDelegado();
+      if (!motoristaDelegado) {
+        showToast("Selecione o motorista responsável pela viagem.", "error");
+        return;
+      }
+      formData = {
+        veiculo_id: currentState.veiculoId,
+        data_viagem: document.getElementById("data_viagem").value,
+        saida_horario: document.getElementById("saida_horario").value || null,
+        saida_km: document.getElementById("saida_km").value || null,
+        saida_local: document.getElementById("saida_local").value,
+        chegada_horario:
+          document.getElementById("chegada_horario").value || null,
+        chegada_km: document.getElementById("chegada_km").value || null,
+        chegada_local: document.getElementById("chegada_local").value,
+        processo: document.getElementById("processo").value,
+        tipo_servico: document.getElementById("tipo_servico").value,
+        ocorrencias: document.getElementById("ocorrencias").value,
+        motorista_matricula: motoristaDelegado,
+      };
+      url = "/api/prv/registros/retroativo";
     } else {
       formData = {
         chegada_horario:

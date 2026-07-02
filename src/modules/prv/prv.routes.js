@@ -22,6 +22,12 @@ router.get("/api/prv/ultimo-km", autenticar, verificarNivel(1), controller.obter
 router.get("/api/prv/status", autenticar, verificarNivel(1), controller.obterStatusViagem);
 router.get("/api/prv/registros", autenticar, verificarNivel(1), controller.listarRegistros);
 router.post("/api/prv/registros", autenticar, verificarNivel(1), controller.iniciarViagem);
+router.post(
+  "/api/prv/registros/retroativo",
+  autenticar,
+  verificarNivel(7),
+  controller.criarViagemRetroativa
+);
 router.put("/api/prv/registros/:id", autenticar, verificarNivel(1), controller.finalizarViagem);
 router.delete("/api/prv/registros/:id", autenticar, verificarNivel(1), controller.excluirRegistro);
 

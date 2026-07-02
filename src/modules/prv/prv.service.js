@@ -68,6 +68,59 @@ async function listarRegistros(veiculoId, mesAno) {
   return registros;
 }
 
+async function resolverMotoristaDelegado(
+  motoristaInformado,
+  matriculaOperador,
+  nivelOperador
+) {
+  let motoristaMatricula = matriculaOperador;
+  const matriculaInformada =
+    typeof motoristaInformado === "string" ? motoristaInformado.trim() : "";
+
+  if (matriculaInformada && matriculaInformada !== matriculaOperador) {
+    if (nivelOperador < NIVEL_DELEGAR_MOTORISTA) {
+      throw new Error(
+        "Você não tem permissão para registrar viagem em nome de outro motorista."
+      );
+    }
+    await assertMotoristaExiste(matriculaInformada);
+    motoristaMatricula = matriculaInformada;
+  }
+
+  return {
+    motoristaMatricula,
+    criadoPorMatricula:
+      motoristaMatricula !== matriculaOperador ? matriculaOperador : null,
+  };
+}
+
+async function assertSemViagemAberta(veiculoId) {
+  const [viagemAberta] = await promisePool.query(
+    "SELECT id FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NULL",
+    [veiculoId]
+  );
+  if (viagemAberta.length > 0) {
+    throw new Error(
+      "Não é possível iniciar uma nova viagem. Já existe uma em andamento para este veículo."
+    );
+  }
+}
+
+async function assertKmSaidaValido(veiculoId, saidaKm) {
+  const [ultimoKmRows] = await promisePool.query(
+    "SELECT chegada_km FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NOT NULL ORDER BY id DESC LIMIT 1",
+    [veiculoId]
+  );
+  if (ultimoKmRows.length > 0) {
+    const ultimoKmRegistrado = ultimoKmRows[0].chegada_km;
+    if (parseInt(saidaKm, 10) !== ultimoKmRegistrado) {
+      throw new Error(
+        `O KM de saída (${saidaKm}) não corresponde ao último KM final registrado (${ultimoKmRegistrado}) para este veículo.`
+      );
+    }
+  }
+}
+
 async function iniciarViagem(dadosViagem, matriculaOperador, nivelOperador) {
   const {
     veiculo_id,
@@ -81,47 +134,15 @@ async function iniciarViagem(dadosViagem, matriculaOperador, nivelOperador) {
     throw new Error("Veículo, Data da Viagem e KM de Saída são obrigatórios.");
   }
 
-  let motoristaMatricula = matriculaOperador;
-  const matriculaInformada =
-    typeof motoristaInformado === "string"
-      ? motoristaInformado.trim()
-      : "";
-
-  if (matriculaInformada && matriculaInformada !== matriculaOperador) {
-    if (nivelOperador < NIVEL_DELEGAR_MOTORISTA) {
-      throw new Error(
-        "Você não tem permissão para registrar saída em nome de outro motorista."
-      );
-    }
-    await assertMotoristaExiste(matriculaInformada);
-    motoristaMatricula = matriculaInformada;
-  }
-
-  const criadoPorMatricula =
-    motoristaMatricula !== matriculaOperador ? matriculaOperador : null;
-
-  const [viagemAberta] = await promisePool.query(
-    "SELECT id FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NULL",
-    [veiculo_id]
-  );
-  if (viagemAberta.length > 0) {
-    throw new Error(
-      "Não é possível iniciar uma nova viagem. Já existe uma em andamento para este veículo."
+  const { motoristaMatricula, criadoPorMatricula } =
+    await resolverMotoristaDelegado(
+      motoristaInformado,
+      matriculaOperador,
+      nivelOperador
     );
-  }
 
-  const [ultimoKmRows] = await promisePool.query(
-    "SELECT chegada_km FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NOT NULL ORDER BY id DESC LIMIT 1",
-    [veiculo_id]
-  );
-  if (ultimoKmRows.length > 0) {
-    const ultimoKmRegistrado = ultimoKmRows[0].chegada_km;
-    if (parseInt(saida_km, 10) !== ultimoKmRegistrado) {
-      throw new Error(
-        `O KM de saída (${saida_km}) não corresponde ao último KM final registrado (${ultimoKmRegistrado}) para este veículo.`
-      );
-    }
-  }
+  await assertSemViagemAberta(veiculo_id);
+  await assertKmSaidaValido(veiculo_id, saida_km);
 
   const [ano, mes, dia] = data_viagem.split("-");
   const mesAnoFormatado = `${mes}/${ano}`;
@@ -140,6 +161,86 @@ async function iniciarViagem(dadosViagem, matriculaOperador, nivelOperador) {
     motoristaMatricula,
     criadoPorMatricula,
   ]);
+  return {
+    id: result.insertId,
+    motoristaMatricula,
+    criadoPorMatricula,
+  };
+}
+
+async function criarViagemRetroativa(dadosViagem, matriculaOperador, nivelOperador) {
+  if (nivelOperador < NIVEL_DELEGAR_MOTORISTA) {
+    throw new Error(
+      "Você não tem permissão para registrar viagem retroativa completa."
+    );
+  }
+
+  const {
+    veiculo_id,
+    data_viagem,
+    saida_horario,
+    saida_local,
+    saida_km,
+    chegada_horario,
+    chegada_local,
+    chegada_km,
+    processo,
+    tipo_servico,
+    ocorrencias,
+    motorista_matricula: motoristaInformado,
+  } = dadosViagem;
+
+  if (!veiculo_id || !data_viagem || !saida_km || !chegada_km) {
+    throw new Error(
+      "Veículo, Data da Viagem, KM de Saída e KM de Chegada são obrigatórios."
+    );
+  }
+
+  const saidaKmNum = parseInt(saida_km, 10);
+  const chegadaKmNum = parseInt(chegada_km, 10);
+  if (!Number.isFinite(saidaKmNum) || !Number.isFinite(chegadaKmNum)) {
+    throw new Error("KM de saída e chegada devem ser números válidos.");
+  }
+  if (chegadaKmNum <= saidaKmNum) {
+    throw new Error("O KM de chegada deve ser maior que o KM de saída.");
+  }
+
+  const { motoristaMatricula, criadoPorMatricula } =
+    await resolverMotoristaDelegado(
+      motoristaInformado,
+      matriculaOperador,
+      nivelOperador
+    );
+
+  await assertSemViagemAberta(veiculo_id);
+  await assertKmSaidaValido(veiculo_id, saida_km);
+
+  const [ano, mes, dia] = data_viagem.split("-");
+  const mesAnoFormatado = `${mes}/${ano}`;
+  const sql = `
+        INSERT INTO prv_registros
+        (veiculo_id, mes_ano_referencia, dia, saida_horario, saida_local, saida_km,
+         chegada_horario, chegada_local, chegada_km, motorista_matricula, criado_por_matricula,
+         processo, tipo_servico, ocorrencias)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+  const [result] = await promisePool.query(sql, [
+    veiculo_id,
+    mesAnoFormatado,
+    dia,
+    saida_horario,
+    saida_local,
+    saida_km,
+    chegada_horario,
+    chegada_local,
+    chegada_km,
+    motoristaMatricula,
+    criadoPorMatricula,
+    processo,
+    tipo_servico,
+    ocorrencias,
+  ]);
+
   return {
     id: result.insertId,
     motoristaMatricula,
@@ -167,10 +268,8 @@ async function finalizarViagem(id, dadosChegada, matriculaUsuario, nivelUsuario)
   if (registros.length === 0) {
     throw new Error("Registro de saída não encontrado.");
   }
-  if (
-    nivelUsuario < 4 &&
-    registros[0].motorista_matricula !== matriculaUsuario
-  ) {
+  const motoristaRegistro = registros[0].motorista_matricula;
+  if (nivelUsuario < 4 && motoristaRegistro !== matriculaUsuario) {
     throw new Error("Você não tem permissão para finalizar este registro.");
   }
 
@@ -189,6 +288,8 @@ async function finalizarViagem(id, dadosChegada, matriculaUsuario, nivelUsuario)
   if (result.affectedRows === 0) {
     throw new Error("Registro de saída não encontrado.");
   }
+
+  return { motoristaMatricula: motoristaRegistro };
 }
 
 async function excluirRegistro(id, matriculaUsuario, nivelUsuario) {
@@ -223,6 +324,7 @@ module.exports = {
   obterStatusViagem,
   listarRegistros,
   iniciarViagem,
+  criarViagemRetroativa,
   finalizarViagem,
   excluirRegistro,
 };
