@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
           servico.processo
         }</strong><br /><small>ID: ${servico.id}</small></td>
         <td data-label="Data Prevista">${dataFormatada}</td>
-        <td data-label="Status" class="col-status">${getStatusBadge(servico.status)}</td>
+        <td data-label="Status" class="col-status">${rawHtml(getStatusBadge(servico.status))}</td>
         <td data-label="Responsável">${servico.responsaveis_execucao}</td>
         <td data-label="Alimentador">${servico.alimentador || "N/A"}</td>
         <td data-label="Subestação">${servico.subestacao || "N/A"}</td>
@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }/coletar" class="btn btn-outline-primary btn-icon" title="Coletar Pontos">
               <span class="material-icons">edit_location_alt</span>
             </a>
-            ${
+            ${rawHtml(
               isAdmin
                 ? `<button type="button" class="btn btn-outline-secondary btn-icon btn-atribuir" title="Atribuir Responsável">
               <span class="material-icons">group_add</span>
@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
               <span class="material-icons">delete</span>
             </button>`
                 : ""
-            }
+            )}
           </div>
         </td>
       `;

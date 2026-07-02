@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
           servico.processo
         }</strong><br /><small>ID: ${servico.id}</small></td>
         <td data-label="Data Prevista">${dataFormatada}</td>
-        <td data-label="Status" class="col-status">${getStatusBadge(servico.status)}</td>
+        <td data-label="Status" class="col-status">${rawHtml(getStatusBadge(servico.status))}</td>
         <td data-label="Responsável">${servico.responsaveis_execucao}</td>
         <td data-label="Alimentador">${servico.alimentador || "N/A"}</td>
         <td data-label="Subestação">${servico.subestacao || "N/A"}</td>
@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }/relatorio" class="btn btn-outline-dark btn-icon" title="Gerar Relatório PDF" target="_blank">
               <span class="material-icons">picture_as_pdf</span>
             </a>
-            ${
+            ${rawHtml(
               isAdmin
                 ? `<button type="button" class="btn btn-outline-warning btn-icon btn-reativar" title="Reativar Inspeção">
               <span class="material-icons">replay</span>
@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
               <span class="material-icons">attach_file</span>
             </button>`
                 : ""
-            }
+            )}
           </div>
         </td>
       `;
