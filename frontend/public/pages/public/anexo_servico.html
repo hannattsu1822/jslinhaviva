@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visualização de Anexo | Linha Viva</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      .viewer-shell {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px 16px 32px;
+      }
+      .viewer-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .viewer-title {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      .viewer-subtitle {
+        margin: 4px 0 0;
+        font-size: 0.85rem;
+        color: #94a3b8;
+      }
+      .viewer-actions a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: #1e293b;
+        color: #f8fafc;
+        text-decoration: none;
+        font-size: 0.9rem;
+        border: 1px solid #334155;
+      }
+      .viewer-frame {
+        background: #111827;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        overflow: hidden;
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .viewer-frame img {
+        max-width: 100%;
+        max-height: 85vh;
+        object-fit: contain;
+      }
+      .viewer-frame iframe,
+      .viewer-frame embed {
+        width: 100%;
+        min-height: 75vh;
+        border: 0;
+        background: #fff;
+      }
+      .viewer-error {
+        padding: 32px 20px;
+        text-align: center;
+        color: #fca5a5;
+      }
+      .viewer-loading {
+        padding: 40px;
+        text-align: center;
+        color: #94a3b8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="viewer-shell">
+      <header class="viewer-header">
+        <div>
+          <h1 class="viewer-title" id="viewer-title">Anexo do Serviço</h1>
+          <p class="viewer-subtitle">Visualização compartilhada via link do relatório PDF</p>
+        </div>
+        <div class="viewer-actions">
+          <a id="btn-download" href="#" download hidden>Baixar arquivo</a>
+        </div>
+      </header>
+      <div class="viewer-frame" id="viewer-content">
+        <div class="viewer-loading">Carregando anexo...</div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const match = window.location.pathname.match(
+          /\/public\/anexo-servico\/(\d+)\/?$/
+        );
+        const anexoId = match ? match[1] : null;
+        const token = new URLSearchParams(window.location.search).get("token");
+        const container = document.getElementById("viewer-content");
+        const downloadBtn = document.getElementById("btn-download");
+
+        if (!anexoId || !token) {
+          container.innerHTML =
+            '<div class="viewer-error">Link inválido. Utilize o endereço completo gerado no relatório PDF.</div>';
+          return;
+        }
+
+        const arquivoUrl = `/api/public/anexo-servico/${anexoId}/arquivo?token=${encodeURIComponent(token)}`;
+        downloadBtn.href = `${arquivoUrl}&download=1`;
+        downloadBtn.removeAttribute("hidden");
+
+        fetch(arquivoUrl, { method: "HEAD" })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(
+                response.status === 403
+                  ? "Link inválido ou expirado."
+                  : "Não foi possível abrir o anexo."
+              );
+            }
+            const type = (response.headers.get("content-type") || "").toLowerCase();
+            if (type.startsWith("image/")) {
+              const img = document.createElement("img");
+              img.src = arquivoUrl;
+              img.alt = "Anexo do serviço";
+              container.innerHTML = "";
+              container.appendChild(img);
+              return;
+            }
+            if (type.includes("pdf")) {
+              container.innerHTML = `<iframe src="${arquivoUrl}" title="Visualização PDF"></iframe>`;
+              return;
+            }
+            container.innerHTML = `<iframe src="${arquivoUrl}" title="Visualização do anexo"></iframe>`;
+          })
+          .catch((error) => {
+            container.innerHTML = `<div class="viewer-error">${error.message}</div>`;
+          });
+      })();
+    </script>
+  </body>
+</html>

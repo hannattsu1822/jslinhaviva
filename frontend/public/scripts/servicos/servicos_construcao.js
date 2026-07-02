@@ -1,7 +1,14 @@
 let allServices = [];
 let filteredServices = [];
 let currentPage = 1;
+let abaAtiva = "ativos";
 const itemsPerPage = 8;
+
+function getApiUrl() {
+  return abaAtiva === "historico"
+    ? "/api/construcao/servicos/concluidos"
+    : "/api/construcao/servicos/ativos";
+}
 
 function debounce(func, wait) {
   let timeout;
@@ -248,7 +255,7 @@ function renderTable() {
       <td>${rawHtml(getStatusHtml(service))}</td>
       <td class="text-center">
         <a
-          href="detalhes_servico?id=${service.id}"
+          href="/construcao/detalhes_servico?id=${service.id}"
           class="btn btn-sm btn-outline-primary me-1"
           title="Ver Detalhes"
         >
@@ -256,7 +263,7 @@ function renderTable() {
         </a>
         <button
           class="btn btn-sm btn-outline-secondary"
-          data-action="open-url" data-url="/api/servicos/${service.id}/consolidar-pdfs"
+          data-action="open-url" data-url="/api/construcao/servicos/${service.id}/pdf"
           title="Gerar Relatório PDF"
         >
           <i class="fas fa-file-pdf"></i>
@@ -354,16 +361,14 @@ async function carregarServicos() {
       `;
     }
 
-    const origem = "Construção";
-    const response = await fetch(
-      `/api/servicos/origem/${encodeURIComponent(origem)}`,
-    );
+    const response = await fetch(getApiUrl(), { credentials: "same-origin" });
 
     if (!response.ok) {
       throw new Error(`Erro HTTP: ${response.status}`);
     }
 
-    const data = await response.json();
+    const payload = await response.json();
+    const data = Array.isArray(payload) ? payload : payload.data;
 
     allServices = Array.isArray(data) ? data : [];
     filteredServices = [...allServices];
@@ -389,19 +394,60 @@ async function carregarServicos() {
   }
 }
 
+function atualizarUiAba() {
+  const titulo = document.getElementById("titulo-lista");
+  const tabAtivos = document.getElementById("tab-ativos");
+  const tabHistorico = document.getElementById("tab-historico");
+  const filtroStatusWrapper = document.getElementById("filtro-status-wrapper");
+  const filtroPeriodoWrapper = document.getElementById("filtro-periodo-wrapper");
+
+  if (titulo) {
+    titulo.textContent =
+      abaAtiva === "historico" ? "Histórico / Concluídos" : "Serviços Ativos";
+  }
+
+  tabAtivos?.classList.toggle("active", abaAtiva === "ativos");
+  tabHistorico?.classList.toggle("active", abaAtiva === "historico");
+
+  if (filtroStatusWrapper) {
+    filtroStatusWrapper.style.display =
+      abaAtiva === "historico" ? "" : "none";
+  }
+  if (filtroPeriodoWrapper) {
+    filtroPeriodoWrapper.style.display =
+      abaAtiva === "historico" ? "" : "none";
+  }
+}
+
+function trocarAba(novaAba) {
+  if (novaAba === abaAtiva) return;
+  abaAtiva = novaAba;
+  currentPage = 1;
+  atualizarUiAba();
+  carregarServicos();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   fetch("/api/me", { credentials: "same-origin" })
     .then((r) => (r.ok ? r.json() : null))
     .then((user) => {
-      const P = window.ServicosPermissions || {};
-      const podeAcompanhar = P.podeAcompanharConstrucao?.(user);
+      const P = window.ConstrucaoPermissions || {};
+      const podeAcompanhar = P.podeAcessarModuloConstrucao?.(user);
       if (!podeAcompanhar) {
-        window.location.replace("/gestao-servicos");
+        window.location.replace("/login");
       }
     })
     .catch(() => {});
 
+  atualizarUiAba();
   carregarServicos();
+
+  document.getElementById("tab-ativos")?.addEventListener("click", () => {
+    trocarAba("ativos");
+  });
+  document.getElementById("tab-historico")?.addEventListener("click", () => {
+    trocarAba("historico");
+  });
 
   const filtroProcesso = document.getElementById("filtro-processo");
   const filtroStatus = document.getElementById("filtro-status");
@@ -469,9 +515,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const user = JSON.parse(userRaw);
       const linkConstrucao = document.getElementById("sidebar-construcao-link");
-      const P = window.ServicosPermissions || {};
+      const P = window.ConstrucaoPermissions || {};
 
-      if (linkConstrucao && P.podeAcompanharConstrucao?.(user)) {
+      if (linkConstrucao && P.podeAcessarModuloConstrucao?.(user)) {
         linkConstrucao.style.display = "block";
       }
     } catch (error) {

@@ -148,12 +148,21 @@ function gerarAnexosDetalhesPdfHtml(anexos = []) {
         const isImage = anexo.src && anexo.tipo !== "pdf";
         const thumb = isImage
           ? `<img src="${anexo.src}" alt="${nome}" />`
-          : `<span style="font-size:9pt;color:#64748b;">PDF / Doc</span>`;
-        return `
-      <div class="srv-pdf__anexo">
+          : `<span class="srv-pdf__anexo-icon">${anexo.tipo === "pdf" ? "PDF" : "DOC"}</span>`;
+        const href = anexo.href ? escapeHtml(anexo.href) : "";
+        const inner = `
         <div class="srv-pdf__anexo-thumb">${thumb}</div>
         <p class="srv-pdf__anexo-name">${nome}</p>
-      </div>`;
+        ${href ? '<p class="srv-pdf__anexo-hint">Clique para visualizar</p>' : ""}`;
+
+        if (!href) {
+          return `<div class="srv-pdf__anexo">${inner}</div>`;
+        }
+
+        return `
+      <a class="srv-pdf__anexo srv-pdf__anexo-link" href="${href}" target="_blank" rel="noopener noreferrer">
+        ${inner}
+      </a>`;
       })
       .join("")}
   </div>`;

@@ -12,12 +12,12 @@ const {
 const {
   NIVEL_ADMIN_SERVICOS,
   NIVEL_ACESSO_MIN,
-  ehCargoConstrucaoAcompanhamento,
 } = require("./servicos.permissions");
 const { projectRootDir, publicDir, publicPage, viewsDir, viewsPage } = require("../../shared/path.helper");
 const { resolvePathWithinBase, sendSafeFile } = require("../../shared/pathSecurity.helper");
 const {
   assertAcessoServicoGestao,
+  assertAcessoVisualizacaoAnexosServico,
   extrairServicoIdDoIdentificador,
 } = require("../../shared/accessControl.helper");
 const coreController = require("./core/core.controller");
@@ -25,8 +25,22 @@ const anexoController = require("./anexo/anexo.controller");
 const lifecycleController = require("./lifecycle/lifecycle.controller");
 const queryController = require("./query/query.controller");
 const relatorioController = require("./relatorio/relatorio.controller");
+const anexoPublicoController = require("./anexo/anexoPublico.controller");
 
 const router = express.Router();
+
+router.get(
+  "/public/anexo-servico/:anexoId",
+  anexoPublicoController.paginaVisualizacao
+);
+router.get(
+  "/api/public/anexo-servico/:anexoId/arquivo",
+  anexoPublicoController.servirArquivo
+);
+router.head(
+  "/api/public/anexo-servico/:anexoId/arquivo",
+  anexoPublicoController.servirArquivo
+);
 
 router.get("/gestao-servicos", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, redirecionarCodRestrito, redirecionarTransporteRestrito, (req, res) => {
   res.sendFile(
@@ -61,7 +75,7 @@ router.get(
 router.get(
   "/detalhes_servico",
   autenticar,
-  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
+  verificarNivel(NIVEL_ACESSO_MIN),
   redirecionarConstrucaoRestrito,
   redirecionarCodRestrito,
   redirecionarTransporteRestrito,
@@ -94,19 +108,6 @@ router.get("/apr_formulario", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redi
   res.sendFile(publicPage("servicos/apr_formulario.html"));
 });
 
-router.get(
-  "/acompanhamento_construcao",
-  autenticar,
-  verificarNivelOuCargo(NIVEL_ADMIN_SERVICOS, ["construcao", "construção"]),
-  redirecionarCodRestrito,
-  redirecionarTransporteRestrito,
-  (req, res) => {
-    res.sendFile(
-      publicPage("servicos/servicos_construcao.html"),
-    );
-  },
-);
-
 router.post(
   "/api/servicos",
   autenticar,
@@ -124,42 +125,10 @@ router.get(
 );
 
 router.get(
-  "/api/servicos/origem/:origem",
-  autenticar,
-  verificarNivelOuCargo(NIVEL_ADMIN_SERVICOS, ["construcao", "construção"]),
-  (req, res, next) => {
-    const origemOriginal = req.params.origem;
-    const origemDecoded = decodeURIComponent(origemOriginal);
-    req.params.origem = origemDecoded;
-
-    const ehAdmin = (req.user?.nivel ?? 0) >= NIVEL_ADMIN_SERVICOS;
-    const ehConstrucao = ehCargoConstrucaoAcompanhamento(req.user);
-    const origemNormalizada = String(origemDecoded || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim()
-      .toLowerCase();
-
-    if (!ehAdmin) {
-      if (!ehConstrucao) {
-        return res.status(403).json({ message: "Acesso negado." });
-      }
-      if (origemNormalizada !== "construcao") {
-        return res.status(403).json({
-          message: "Acesso permitido apenas para origem Construção.",
-        });
-      }
-    }
-
-    next();
-  },
-  queryController.listarServicosPorOrigem,
-);
-
-router.get(
   "/api/servicos/:id",
   autenticar,
-  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
+  verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   coreController.obterDetalhesServico,
 );
 
@@ -236,7 +205,7 @@ router.patch(
 router.get(
   "/api/upload_arquivos/:identificador/:filename",
   autenticar,
-  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
+  verificarNivel(NIVEL_ACESSO_MIN),
   async (req, res) => {
     const { identificador, filename } = req.params;
     const servicoId = extrairServicoIdDoIdentificador(identificador);
@@ -246,7 +215,7 @@ router.get(
     }
 
     try {
-      await assertAcessoServicoGestao(req.user, servicoId);
+      await assertAcessoVisualizacaoAnexosServico(req.user, servicoId);
     } catch (error) {
       return res.status(error.statusCode || 403).json({
         success: false,
@@ -327,7 +296,8 @@ router.delete(
 router.get(
   "/api/servicos/:id/consolidar-pdfs",
   autenticar,
-  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
+  verificarNivel(NIVEL_ACESSO_MIN),
+  bloquearConstrucaoRestritoApi,
   relatorioController.gerarPdfConsolidado,
 );
 

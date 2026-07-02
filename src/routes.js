@@ -13,6 +13,7 @@ const rotasAuditoria = require("./routes/rotas_auditoria");
 
 const rotasFrota = require("./modules/frota");
 const rotasGestaoServicos = require("./modules/gestaoServicos");
+const rotasConstrucaoAcompanhamento = require("./modules/construcaoAcompanhamento");
 const rotasGestao = require("./modules/gestao");
 const rotasGestaoTurmas = require("./modules/gestaoTurmas");
 const rotasTransformadores = require("./modules/transformadores");
@@ -37,6 +38,7 @@ router.use("/", rotasAuth);
 router.use("/", rotasAuditoria);
 router.use("/", rotasFrota);
 router.use("/", rotasGestaoServicos);
+router.use("/", rotasConstrucaoAcompanhamento);
 router.use("/", rotasGestao);
 router.use("/", rotasGestaoTurmas);
 router.use("/", rotasTransformadores);

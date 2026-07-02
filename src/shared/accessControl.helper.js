@@ -44,6 +44,26 @@ async function usuarioTemAcessoServicoGestao(user, servicoId) {
   return rows.length > 0;
 }
 
+async function usuarioTemAcessoVisualizacaoAnexosServico(user, servicoId) {
+  if (await usuarioTemAcessoServicoGestao(user, servicoId)) return true;
+
+  const {
+    podeAcessarModuloConstrucao,
+  } = require("../modules/construcaoAcompanhamento/construcao.permissions");
+
+  if (!podeAcessarModuloConstrucao(user)) return false;
+  return servicoEhOrigemConstrucao(servicoId);
+}
+
+async function assertAcessoVisualizacaoAnexosServico(user, servicoId) {
+  const permitido = await usuarioTemAcessoVisualizacaoAnexosServico(user, servicoId);
+  if (!permitido) {
+    const err = new Error("Acesso negado a este serviço.");
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 async function assertAcessoServicoGestao(user, servicoId) {
   const permitido = await usuarioTemAcessoServicoGestao(user, servicoId);
   if (!permitido) {
@@ -134,6 +154,8 @@ module.exports = {
   extrairServicoIdDoIdentificador,
   usuarioTemAcessoServicoGestao,
   assertAcessoServicoGestao,
+  usuarioTemAcessoVisualizacaoAnexosServico,
+  assertAcessoVisualizacaoAnexosServico,
   usuarioTemAcessoServicoFibra,
   assertAcessoServicoFibra,
   usuarioTemAcessoServicoRede,

@@ -39,7 +39,7 @@
             <div>
               <div class="servicos-header__badge">
                 <i class="fa-solid fa-screwdriver-wrench"></i>
-                Gestão de Serviços
+                Construção
               </div>
               <h1 class="page-title mb-0">
                 <i class="fa-solid fa-hard-hat"></i>
@@ -50,16 +50,25 @@
               </p>
             </div>
             <div class="header-actions-stack">
-              <a href="/gestao-servicos" class="btn btn-secondary">
-                <i class="fa-solid fa-arrow-left"></i>
-                Voltar
-              </a>
               <button class="btn btn-outline-primary" id="btn-atualizar">
                 <i class="fa-solid fa-sync-alt"></i>
                 Atualizar
               </button>
             </div>
           </header>
+
+        <ul class="nav nav-tabs mb-3" id="abas-construcao" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-ativos" data-aba="ativos" type="button" role="tab">
+              Serviços Ativos
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-historico" data-aba="historico" type="button" role="tab">
+              Histórico / Concluídos
+            </button>
+          </li>
+        </ul>
 
         <div class="card glass-card mb-4">
           <div class="card-body">
@@ -69,21 +78,12 @@
 
             <div class="row g-3 align-items-end">
               <div class="col-lg-3 col-md-6">
-                <label for="filtro-processo" class="form-label">
-                  Filtrar por ID ou Processo
-                </label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="filtro-processo"
-                  placeholder="Digite para buscar..."
-                />
+                <label for="filtro-processo" class="form-label">Filtrar por ID ou Processo</label>
+                <input type="text" class="form-control" id="filtro-processo" placeholder="Digite para buscar..." />
               </div>
 
-              <div class="col-lg-3 col-md-6">
-                <label for="filtro-status" class="form-label">
-                  Filtrar por Status
-                </label>
+              <div class="col-lg-3 col-md-6" id="filtro-status-wrapper">
+                <label for="filtro-status" class="form-label">Filtrar por Status</label>
                 <select class="form-select" id="filtro-status">
                   <option value="">Todos</option>
                   <option value="andamento">Em Andamento</option>
@@ -92,38 +92,29 @@
                 </select>
               </div>
 
-              <div class="col-lg-6 col-md-12 periodo-wrapper">
+              <div class="col-lg-6 col-md-12 periodo-wrapper" id="filtro-periodo-wrapper">
                 <label class="form-label">Período de Término</label>
-
                 <div class="periodo-range">
                   <div class="periodo-campo">
                     <span class="periodo-label">De</span>
-                    <input
-                      type="date"
-                      class="form-control"
-                      id="filtro-data-inicio"
-                      aria-label="Data inicial"
-                    />
+                    <input type="date" class="form-control" id="filtro-data-inicio" aria-label="Data inicial" />
                   </div>
-
                   <div class="periodo-campo">
                     <span class="periodo-label">Até</span>
-                    <input
-                      type="date"
-                      class="form-control"
-                      id="filtro-data-fim"
-                      aria-label="Data final"
-                    />
+                    <input type="date" class="form-control" id="filtro-data-fim" aria-label="Data final" />
                   </div>
                 </div>
-
-                <small class="text-muted">Ex.: de 03 até 10.</small>
               </div>
 
               <div class="col-lg-3 col-md-6">
-                <label for="filtro-desligamento" class="form-label">
-                  Desligamento
-                </label>
+                <label for="filtro-equipe" class="form-label">Equipe</label>
+                <select class="form-select" id="filtro-equipe">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+
+              <div class="col-lg-3 col-md-6">
+                <label for="filtro-desligamento" class="form-label">Desligamento</label>
                 <select class="form-select" id="filtro-desligamento">
                   <option value="">Todos</option>
                   <option value="SIM">Com desligamento</option>
@@ -147,10 +138,8 @@
         <div class="card glass-card">
           <div class="card-body">
             <div class="table-header">
-              <h5 class="table-title">Lista de Serviços</h5>
-              <span class="badge bg-primary" id="contador-servicos"
-                >0 serviços</span
-              >
+              <h5 class="table-title" id="titulo-lista">Serviços Ativos</h5>
+              <span class="badge bg-primary" id="contador-servicos">0 serviços</span>
             </div>
 
             <div class="table-responsive">
@@ -171,9 +160,7 @@
                 </thead>
                 <tbody id="tabela-servicos-construcao">
                   <tr>
-                    <td colspan="10" class="text-center py-5">
-                      Carregando serviços...
-                    </td>
+                    <td colspan="10" class="text-center py-5">Carregando serviços...</td>
                   </tr>
                 </tbody>
               </table>
@@ -183,35 +170,11 @@
               <div class="pagination-info">
                 <span id="info-paginacao">Página 1 de 1</span>
               </div>
-
               <div class="pagination-buttons">
-                <button
-                  class="btn btn-sm btn-outline-primary"
-                  id="btn-primeira-pagina"
-                >
-                  <i class="fas fa-angle-double-left"></i>
-                </button>
-
-                <button
-                  class="btn btn-sm btn-outline-primary"
-                  id="btn-pagina-anterior"
-                >
-                  <i class="fas fa-angle-left"></i> Anterior
-                </button>
-
-                <button
-                  class="btn btn-sm btn-outline-primary"
-                  id="btn-proxima-pagina"
-                >
-                  Próxima <i class="fas fa-angle-right"></i>
-                </button>
-
-                <button
-                  class="btn btn-sm btn-outline-primary"
-                  id="btn-ultima-pagina"
-                >
-                  <i class="fas fa-angle-double-right"></i>
-                </button>
+                <button class="btn btn-sm btn-outline-primary" id="btn-primeira-pagina"><i class="fas fa-angle-double-left"></i></button>
+                <button class="btn btn-sm btn-outline-primary" id="btn-pagina-anterior"><i class="fas fa-angle-left"></i> Anterior</button>
+                <button class="btn btn-sm btn-outline-primary" id="btn-proxima-pagina">Próxima <i class="fas fa-angle-right"></i></button>
+                <button class="btn btn-sm btn-outline-primary" id="btn-ultima-pagina"><i class="fas fa-angle-double-right"></i></button>
               </div>
             </div>
           </div>
@@ -223,7 +186,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/shared/scripts/sidebar.js"></script>
     <script src="/scripts/shared/moduloNivel.permissions.js"></script>
-    <script src="/scripts/servicos/servicos.permissions.js"></script>
+    <script src="/scripts/construcao/construcao.permissions.js"></script>
     <script src="/scripts/servicos/servicos_construcao.js"></script>
   </body>
 </html>

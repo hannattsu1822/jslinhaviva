@@ -1,12 +1,15 @@
 const service = require("./relatorio.service");
 const { assertAcessoServicoGestao } = require("../../../shared/accessControl.helper");
+const { buildBaseUrl } = require("../../../shared/reports/publicAnexoUrl.helper");
 
 async function gerarPdfConsolidado(req, res) {
   try {
     const { id: servicoId } = req.params;
     await assertAcessoServicoGestao(req.user, servicoId);
+    const baseUrl = buildBaseUrl(req);
     const { nomeArquivo, buffer } = await service.gerarPdfConsolidado(
-      servicoId
+      servicoId,
+      baseUrl
     );
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(

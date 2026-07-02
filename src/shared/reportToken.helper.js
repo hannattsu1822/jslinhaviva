@@ -1,5 +1,8 @@
 const crypto = require("crypto");
 
+/** Validade dos links de anexo embutidos em PDFs (10 anos). */
+const ANEXO_PUBLICO_TTL_SEC = 60 * 60 * 24 * 365 * 10;
+
 function getReportTokenSecret() {
   return process.env.REPORT_TOKEN_SECRET || process.env.SESSION_SECRET;
 }
@@ -46,4 +49,8 @@ function verifyReportToken(token, scope, resourceId) {
   }
 }
 
-module.exports = { createReportToken, verifyReportToken };
+module.exports = {
+  ANEXO_PUBLICO_TTL_SEC,
+  createReportToken,
+  verifyReportToken,
+};

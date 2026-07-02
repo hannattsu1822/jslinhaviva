@@ -7,16 +7,18 @@ const { escapeHtml } = require("../../../shared/htmlEscape.helper");
 const {
   renderServicoDetailsReport,
   htmlToPdf,
-  mergePdfAttachments,
   formatReportDate,
   buildDocumentCode,
 } = require("../../../shared/reports/pdfReport.service");
 const {
-  gerarAnexoImpressaoIndividualHtml,
   gerarAnexosDetalhesPdfHtml,
   renderPdfField,
   renderPdfStatusBadge,
 } = require("../../../shared/reports/reportHtml.helper");
+const {
+  buildPublicAnexoViewUrl,
+  createPublicAnexoToken,
+} = require("../../../shared/reports/publicAnexoUrl.helper");
 
 async function processarImagensParaBase64(imagens) {
   const imagensProcessadas = await Promise.all(
@@ -83,7 +85,8 @@ function statusLabel(status) {
   return map[status] || status || "Não informado";
 }
 
-async function preencherTemplateHtml(servicoData) {
+async function preencherTemplateHtml(servicoData, options = {}) {
+  const { baseUrl = "" } = options;
   const anexos = servicoData.anexos || [];
   const responsaveis = servicoData.responsaveis || [];
   const imagens = anexos.filter((anexo) =>
@@ -97,11 +100,17 @@ async function preencherTemplateHtml(servicoData) {
     );
     const isPdf =
       anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf");
+    const token = anexo.id ? createPublicAnexoToken(anexo.id) : "";
+    const viewUrl =
+      anexo.id && baseUrl
+        ? buildPublicAnexoViewUrl(baseUrl, anexo.id, token)
+        : "";
     return {
       nome: anexo.nomeOriginal,
       nomeOriginal: anexo.nomeOriginal,
       tipo: isPdf ? "pdf" : anexo.tipo,
       src: imgProc ? imgProc.src : null,
+      href: viewUrl,
     };
   });
 
@@ -249,28 +258,6 @@ async function preencherTemplateHtml(servicoData) {
 
   const docCode = buildDocumentCode(servicoData.processo, servicoData.id);
 
-  const anexosPDF = anexos.filter(
-    (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
-  );
-  const anexoImpressaoItems = [
-    ...imagensBase64.map((img) => ({
-      type: "photo",
-      src: img.src,
-      nome: img.nome,
-    })),
-    ...anexosPDF.map((pdf) => ({
-      type: "document",
-      nome: pdf.nomeOriginal || pdf.nome || "Documento.pdf",
-    })),
-  ];
-  const appendixImpressaoHtml = gerarAnexoImpressaoIndividualHtml(
-    anexoImpressaoItems,
-    {
-      docCode,
-      processo: servicoData.processo || "N/A",
-    }
-  );
-
   return renderServicoDetailsReport({
     servicoId: servicoData.id,
     processo: servicoData.processo || "N/A",
@@ -288,11 +275,10 @@ async function preencherTemplateHtml(servicoData) {
     showFinalizacao,
     finalizacaoHtml,
     anexosGridHtml,
-    appendixImpressaoHtml,
   });
 }
 
-async function gerarPdfConsolidado(servicoId) {
+async function gerarPdfConsolidado(servicoId, baseUrl = "") {
   const connection = await promisePool.getConnection();
   try {
     const [servicoRows] = await connection.query(
@@ -336,7 +322,7 @@ async function gerarPdfConsolidado(servicoId) {
     );
 
     const servicoData = { ...servicoRows[0], anexos: anexos || [], responsaveis };
-    const htmlContent = await preencherTemplateHtml(servicoData);
+    const htmlContent = await preencherTemplateHtml(servicoData, { baseUrl });
     const docCode = buildDocumentCode(
       servicoData.processo,
       servicoData.id
@@ -349,28 +335,11 @@ async function gerarPdfConsolidado(servicoId) {
       margin: { top: "8mm", right: "10mm", bottom: "12mm", left: "10mm" },
     });
 
-    const pdfAttachmentPaths = anexos
-      .filter(
-        (anexo) => anexo.caminho && anexo.caminho.toLowerCase().endsWith(".pdf")
-      )
-      .map((anexo) => {
-        const caminhoRelativo = anexo.caminho.replace(
-          "/api/upload_arquivos/",
-          ""
-        );
-        return path.join(projectRootDir, "upload_arquivos", caminhoRelativo);
-      });
-
-    const finalBuffer = await mergePdfAttachments(
-      pdfBuffer,
-      pdfAttachmentPaths
-    );
-
     return {
       nomeArquivo: `relatorio_servico_${(
         servicoData.processo || servicoId
       ).replace(/\//g, "-")}.pdf`,
-      buffer: finalBuffer,
+      buffer: pdfBuffer,
     };
   } finally {
     connection.release();
