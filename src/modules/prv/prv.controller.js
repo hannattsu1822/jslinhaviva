@@ -67,21 +67,34 @@ async function listarRegistros(req, res) {
   }
 }
 
+async function listarMotoristas(req, res) {
+  try {
+    const motoristas = await service.listarMotoristas();
+    res.json(motoristas);
+  } catch (error) {
+    console.error("Erro ao buscar motoristas para PRV:", error);
+    res.status(500).json({ message: "Erro interno ao buscar motoristas." });
+  }
+}
+
 async function iniciarViagem(req, res) {
   try {
-    const { matricula } = req.session.user;
-    const { id } = await service.iniciarViagem(req.body, matricula);
-    await registrarAuditoria(
-      matricula,
-      "INICIAR_VIAGEM_PRV",
-      `ID do Registro: ${id}`
-    );
-    res.status(201).json({ message: "Saída registrada com sucesso!", id });
+    const { matricula, nivel } = req.session.user;
+    const resultado = await service.iniciarViagem(req.body, matricula, nivel);
+    const detalhesAuditoria = resultado.criadoPorMatricula
+      ? `ID: ${resultado.id} | Motorista: ${resultado.motoristaMatricula} | Registrado por gestor: ${matricula}`
+      : `ID do Registro: ${resultado.id}`;
+    await registrarAuditoria(matricula, "INICIAR_VIAGEM_PRV", detalhesAuditoria);
+    res
+      .status(201)
+      .json({ message: "Saída registrada com sucesso!", id: resultado.id });
   } catch (error) {
     console.error("Erro ao registrar saída na PRV:", error);
     const statusCode =
       error.message.includes("obrigatórios") ||
-      error.message.includes("não corresponde")
+      error.message.includes("não corresponde") ||
+      error.message.includes("permissão") ||
+      error.message.includes("não encontrado")
         ? 400
         : error.message.includes("em andamento")
         ? 409
@@ -132,6 +145,7 @@ async function excluirRegistro(req, res) {
 
 module.exports = {
   listarVeiculos,
+  listarMotoristas,
   obterUltimoKm,
   obterStatusViagem,
   listarRegistros,

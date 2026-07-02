@@ -12,6 +12,12 @@ router.get("/prv", autenticar, (req, res) => {
 });
 
 router.get("/api/prv/veiculos", autenticar, verificarNivel(1), controller.listarVeiculos);
+router.get(
+  "/api/prv/motoristas",
+  autenticar,
+  verificarNivel(7),
+  controller.listarMotoristas
+);
 router.get("/api/prv/ultimo-km", autenticar, verificarNivel(1), controller.obterUltimoKm);
 router.get("/api/prv/status", autenticar, verificarNivel(1), controller.obterStatusViagem);
 router.get("/api/prv/registros", autenticar, verificarNivel(1), controller.listarRegistros);

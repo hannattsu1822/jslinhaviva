@@ -1,5 +1,24 @@
 const { promisePool } = require("../../infrastructure/database");
 
+const NIVEL_DELEGAR_MOTORISTA = 7;
+
+async function assertMotoristaExiste(matricula) {
+  const [rows] = await promisePool.query(
+    "SELECT matricula FROM users WHERE matricula = ? AND nivel > 0",
+    [matricula]
+  );
+  if (rows.length === 0) {
+    throw new Error("Motorista não encontrado ou inativo.");
+  }
+}
+
+async function listarMotoristas() {
+  const [rows] = await promisePool.query(
+    "SELECT matricula, nome, cargo FROM users WHERE nivel > 0 ORDER BY nome ASC"
+  );
+  return rows;
+}
+
 async function listarVeiculos() {
   const [veiculos] = await promisePool.query(
     "SELECT id, placa, modelo FROM veiculos_frota WHERE status = 'ATIVO' ORDER BY modelo, placa"
@@ -49,12 +68,37 @@ async function listarRegistros(veiculoId, mesAno) {
   return registros;
 }
 
-async function iniciarViagem(dadosViagem, matriculaMotorista) {
-  const { veiculo_id, data_viagem, saida_horario, saida_local, saida_km } =
-    dadosViagem;
+async function iniciarViagem(dadosViagem, matriculaOperador, nivelOperador) {
+  const {
+    veiculo_id,
+    data_viagem,
+    saida_horario,
+    saida_local,
+    saida_km,
+    motorista_matricula: motoristaInformado,
+  } = dadosViagem;
   if (!veiculo_id || !data_viagem || !saida_km) {
     throw new Error("Veículo, Data da Viagem e KM de Saída são obrigatórios.");
   }
+
+  let motoristaMatricula = matriculaOperador;
+  const matriculaInformada =
+    typeof motoristaInformado === "string"
+      ? motoristaInformado.trim()
+      : "";
+
+  if (matriculaInformada && matriculaInformada !== matriculaOperador) {
+    if (nivelOperador < NIVEL_DELEGAR_MOTORISTA) {
+      throw new Error(
+        "Você não tem permissão para registrar saída em nome de outro motorista."
+      );
+    }
+    await assertMotoristaExiste(matriculaInformada);
+    motoristaMatricula = matriculaInformada;
+  }
+
+  const criadoPorMatricula =
+    motoristaMatricula !== matriculaOperador ? matriculaOperador : null;
 
   const [viagemAberta] = await promisePool.query(
     "SELECT id FROM prv_registros WHERE veiculo_id = ? AND chegada_km IS NULL",
@@ -83,8 +127,8 @@ async function iniciarViagem(dadosViagem, matriculaMotorista) {
   const mesAnoFormatado = `${mes}/${ano}`;
   const sql = `
         INSERT INTO prv_registros 
-        (veiculo_id, mes_ano_referencia, dia, saida_horario, saida_local, saida_km, motorista_matricula)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (veiculo_id, mes_ano_referencia, dia, saida_horario, saida_local, saida_km, motorista_matricula, criado_por_matricula)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
   const [result] = await promisePool.query(sql, [
     veiculo_id,
@@ -93,9 +137,14 @@ async function iniciarViagem(dadosViagem, matriculaMotorista) {
     saida_horario,
     saida_local,
     saida_km,
-    matriculaMotorista,
+    motoristaMatricula,
+    criadoPorMatricula,
   ]);
-  return { id: result.insertId };
+  return {
+    id: result.insertId,
+    motoristaMatricula,
+    criadoPorMatricula,
+  };
 }
 
 async function finalizarViagem(id, dadosChegada, matriculaUsuario, nivelUsuario) {
@@ -167,6 +216,8 @@ async function excluirRegistro(id, matriculaUsuario, nivelUsuario) {
 }
 
 module.exports = {
+  NIVEL_DELEGAR_MOTORISTA,
+  listarMotoristas,
   listarVeiculos,
   obterUltimoKm,
   obterStatusViagem,

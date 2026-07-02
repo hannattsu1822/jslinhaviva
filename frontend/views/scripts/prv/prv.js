@@ -23,6 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const saidaFields = document.getElementById("saida-fields");
   const chegadaFields = document.getElementById("chegada-fields");
   const infoViagemAbertaEl = document.getElementById("info-viagem-aberta");
+  const motoristaDelegadoContainer = document.getElementById(
+    "motorista-delegado-container"
+  );
+  const motoristaMatriculaSelect = document.getElementById("motorista_matricula");
 
   const hiddenRegistroIdInput = document.createElement("input");
   hiddenRegistroIdInput.type = "hidden";
@@ -36,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
     registros: [],
     viagemAberta: null,
     ultimoKmRegistrado: null,
+    currentUser: null,
+    podeDelegarMotorista: false,
   };
 
 function normalizeKmPayload(payload) {
@@ -75,6 +81,9 @@ function normalizeKmPayload(payload) {
   const limparFormulario = () => {
     prvForm.reset();
     hiddenRegistroIdInput.value = "";
+    if (motoristaMatriculaSelect) {
+      motoristaMatriculaSelect.value = "";
+    }
     document.getElementById("data_viagem").value = new Date()
       .toISOString()
       .slice(0, 10);
@@ -125,6 +134,12 @@ function normalizeKmPayload(payload) {
       tipoLancamentoChegada.checked = true;
       toggleFormFields("chegada");
       const saida = currentState.viagemAberta;
+      const motoristaInfo = saida.motorista_matricula
+        ? `<br>Motorista: <strong>${saida.motorista_matricula}</strong>`
+        : "";
+      const delegadoInfo = saida.criado_por_matricula
+        ? `<br><small class="text-muted">Registrado por gestor: ${saida.criado_por_matricula}</small>`
+        : "";
       infoViagemAbertaEl.innerHTML = safeHtml`
         <strong>Viagem em andamento:</strong><br>
         Saindo de: <strong>${saida.saida_local}</strong><br>
@@ -133,7 +148,7 @@ function normalizeKmPayload(payload) {
         }</strong> | Horário: <strong>${saida.saida_horario.substring(
         0,
         5
-      )}</strong>`;
+      )}</strong>${motoristaInfo}${delegadoInfo}`;
       preencherDadosAtuaisChegada();
     } else {
       tipoLancamentoSaida.disabled = false;
@@ -220,13 +235,41 @@ function normalizeKmPayload(payload) {
     }
   };
 
+  const carregarMotoristasDelegaveis = async () => {
+    try {
+      const response = await fetch("/api/prv/motoristas");
+      if (!response.ok) return;
+      const motoristas = await response.json();
+      motoristaMatriculaSelect.innerHTML =
+        '<option value="">Eu (registrar em meu nome)</option>';
+      motoristas.forEach((m) => {
+        if (m.matricula === currentState.currentUser?.matricula) return;
+        motoristaMatriculaSelect.innerHTML += safeHtml`<option value="${m.matricula}">${m.nome} (${m.matricula})</option>`;
+      });
+      motoristaDelegadoContainer.classList.remove("d-none");
+    } catch (error) {
+      console.error("Erro ao carregar motoristas:", error);
+    }
+  };
+
   const loadInitialData = async () => {
     mesAnoInput.value = new Date().toISOString().slice(0, 7);
     try {
-      const response = await fetch("/api/prv/veiculos");
-      if (!response.ok)
+      const [meRes, veiculosRes] = await Promise.all([
+        fetch("/api/me"),
+        fetch("/api/prv/veiculos"),
+      ]);
+      if (meRes.ok) {
+        currentState.currentUser = await meRes.json();
+        currentState.podeDelegarMotorista =
+          (currentState.currentUser?.nivel ?? 0) >= 7;
+        if (currentState.podeDelegarMotorista) {
+          await carregarMotoristasDelegaveis();
+        }
+      }
+      if (!veiculosRes.ok)
         throw new Error("Não foi possível carregar a lista de veículos.");
-      const veiculos = await response.json();
+      const veiculos = await veiculosRes.json();
       veiculoSelect.innerHTML =
         '<option value="" selected>Selecione um veículo...</option>';
       veiculos.forEach((v) => {
@@ -277,6 +320,12 @@ function normalizeKmPayload(payload) {
         saida_km: document.getElementById("saida_km").value || null,
         saida_local: document.getElementById("saida_local").value,
       };
+      if (currentState.podeDelegarMotorista && motoristaMatriculaSelect) {
+        const motoristaSelecionado = motoristaMatriculaSelect.value.trim();
+        if (motoristaSelecionado) {
+          formData.motorista_matricula = motoristaSelecionado;
+        }
+      }
     } else {
       formData = {
         chegada_horario:
