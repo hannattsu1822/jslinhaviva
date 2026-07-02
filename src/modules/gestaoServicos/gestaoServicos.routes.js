@@ -58,11 +58,18 @@ router.get(
   },
 );
 
-router.get("/detalhes_servico", autenticar, verificarNivel(NIVEL_ACESSO_MIN), redirecionarConstrucaoRestrito, (req, res) => {
-  res.sendFile(
-    publicPage("servicos/detalhes_servico.html"),
-  );
-});
+router.get(
+  "/detalhes_servico",
+  autenticar,
+  verificarNivelOuCargo(NIVEL_ADMIN_SERVICOS, ["construcao", "construção"]),
+  redirecionarCodRestrito,
+  redirecionarTransporteRestrito,
+  (req, res) => {
+    res.sendFile(
+      publicPage("servicos/detalhes_servico.html"),
+    );
+  },
+);
 
 router.get(
   "/servicos_atribuidos",
@@ -151,8 +158,7 @@ router.get(
 router.get(
   "/api/servicos/:id",
   autenticar,
-  verificarNivel(NIVEL_ACESSO_MIN),
-  bloquearConstrucaoRestritoApi,
+  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
   coreController.obterDetalhesServico,
 );
 
@@ -229,8 +235,7 @@ router.patch(
 router.get(
   "/api/upload_arquivos/:identificador/:filename",
   autenticar,
-  verificarNivel(NIVEL_ACESSO_MIN),
-  bloquearConstrucaoRestritoApi,
+  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
   async (req, res) => {
     const { identificador, filename } = req.params;
     const servicoId = extrairServicoIdDoIdentificador(identificador);
@@ -321,8 +326,7 @@ router.delete(
 router.get(
   "/api/servicos/:id/consolidar-pdfs",
   autenticar,
-  verificarNivel(NIVEL_ACESSO_MIN),
-  bloquearConstrucaoRestritoApi,
+  verificarNivelOuCargo(NIVEL_ACESSO_MIN, ["construcao", "construção"]),
   relatorioController.gerarPdfConsolidado,
 );
 

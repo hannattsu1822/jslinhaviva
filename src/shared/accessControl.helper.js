@@ -1,10 +1,27 @@
 const { promisePool } = require("../infrastructure/database");
-const { temControleTotal } = require("../shared/moduloNivel.permissions");
+const {
+  temControleTotal,
+  ehCargoConstrucaoAcompanhamento,
+} = require("../shared/moduloNivel.permissions");
 
-function extrairServicoIdDoIdentificador(identificador) {
-  const part = String(identificador || "").split("_")[0];
-  const id = parseInt(part, 10);
-  return Number.isFinite(id) && id > 0 ? id : null;
+function normalizarOrigem(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+async function servicoEhOrigemConstrucao(servicoId) {
+  const id = parseInt(servicoId, 10);
+  if (!Number.isFinite(id) || id <= 0) return false;
+
+  const [rows] = await promisePool.query(
+    `SELECT origem FROM processos WHERE id = ? LIMIT 1`,
+    [id]
+  );
+  if (!rows.length) return false;
+  return normalizarOrigem(rows[0].origem).includes("construcao");
 }
 
 async function usuarioTemAcessoServicoGestao(user, servicoId) {
@@ -13,6 +30,10 @@ async function usuarioTemAcessoServicoGestao(user, servicoId) {
 
   const id = parseInt(servicoId, 10);
   if (!Number.isFinite(id) || id <= 0) return false;
+
+  if (ehCargoConstrucaoAcompanhamento(user)) {
+    return servicoEhOrigemConstrucao(id);
+  }
 
   const [rows] = await promisePool.query(
     `SELECT 1 FROM servicos_responsaveis
@@ -30,6 +51,12 @@ async function assertAcessoServicoGestao(user, servicoId) {
     err.statusCode = 403;
     throw err;
   }
+}
+
+function extrairServicoIdDoIdentificador(identificador) {
+  const part = String(identificador || "").split("_")[0];
+  const id = parseInt(part, 10);
+  return Number.isFinite(id) && id > 0 ? id : null;
 }
 
 async function usuarioTemAcessoServicoFibra(user, servicoId) {

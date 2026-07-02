@@ -1,8 +1,10 @@
 const service = require("./relatorio.service");
+const { assertAcessoServicoGestao } = require("../../../shared/accessControl.helper");
 
 async function gerarPdfConsolidado(req, res) {
   try {
     const { id: servicoId } = req.params;
+    await assertAcessoServicoGestao(req.user, servicoId);
     const { nomeArquivo, buffer } = await service.gerarPdfConsolidado(
       servicoId
     );

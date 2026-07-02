@@ -134,6 +134,7 @@ const SIDEBAR_MODULE_ROUTES = {
   "/acompanhamento_construcao": [
     "/acompanhamento_construcao",
     "/servicos_construcao",
+    "/detalhes_servico",
   ],
   "/gestao-turmas": [
     "/gestao-turmas",
